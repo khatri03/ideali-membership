@@ -13,6 +13,7 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  type Modifier,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -32,6 +33,33 @@ import type {
 import { APP_ROUTES } from "../routes";
 
 const CANVAS_ID = "custom-form-canvas";
+const constrainFieldDragToCanvas: Modifier = ({
+  active,
+  activeNodeRect,
+  containerNodeRect,
+  transform,
+}) => {
+  const activeData = active?.data.current as
+    | { source?: "palette"; control?: CustomFormControl }
+    | { source?: "field" }
+    | undefined;
+
+  if (activeData?.source !== "field" || !activeNodeRect || !containerNodeRect) {
+    return transform;
+  }
+
+  const minX = containerNodeRect.left - activeNodeRect.left;
+  const maxX = containerNodeRect.right - activeNodeRect.right;
+  const minY = containerNodeRect.top - activeNodeRect.top;
+  const maxY = containerNodeRect.bottom - activeNodeRect.bottom;
+
+  return {
+    ...transform,
+    x: Math.min(Math.max(transform.x, minX), maxX),
+    y: Math.min(Math.max(transform.y, minY), maxY),
+  };
+};
+
 type ActiveDragItem =
   | { kind: "palette"; control: CustomFormControl }
   | { kind: "field"; field: CustomFormFieldDraft }
@@ -124,7 +152,13 @@ function getControlGlyph(iconClass: string, controlType: string, label: string) 
   );
 }
 
-function ControlPaletteItem({ control }: { control: CustomFormControl }) {
+function ControlPaletteItem({
+  control,
+  onDoubleClick,
+}: {
+  control: CustomFormControl;
+  onDoubleClick: (control: CustomFormControl) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `palette-${control.id}`,
     data: {
@@ -139,6 +173,7 @@ function ControlPaletteItem({ control }: { control: CustomFormControl }) {
     <button
       ref={setNodeRef}
       type="button"
+      onDoubleClick={() => onDoubleClick(control)}
       {...listeners}
       {...attributes}
       style={isDragging ? undefined : style}
@@ -210,8 +245,11 @@ function SortableFieldCard({
       className={[
         "rounded-3xl border bg-white p-4 shadow-sm transition",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
+        "cursor-grab active:cursor-grabbing select-none touch-none",
         isDragging ? "opacity-70" : "",
       ].join(" ")}
+      {...attributes}
+      {...listeners}
       onClick={() => onSelect(field.id)}
     >
       <div className="flex items-start justify-between gap-3">
@@ -373,15 +411,26 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
   }
 
   return (
-    <div className="flex w-[28rem] cursor-grabbing items-center gap-3 rounded-3xl border border-cyan-200 bg-white px-4 py-4 shadow-2xl shadow-slate-900/10">
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-cyan-700">
-        <span className="text-sm font-bold">
-          {getControlGlyph(item.field.iconClass, item.field.controlType, item.field.controlName)}
-        </span>
+    <div className="w-full min-w-[20rem] cursor-grabbing rounded-3xl border border-cyan-200 bg-white p-4 shadow-2xl shadow-slate-900/10">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate font-semibold text-slate-900">{item.field.label}</h3>
+            {item.field.required ? (
+              <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-700">
+                Required
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500">
+          Remove
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-slate-900">{item.field.label}</p>
-        <p className="text-sm text-slate-500">{item.field.controlName}</p>
+
+      <div className="mt-4">
+        <FieldCanvasPreview field={item.field} />
       </div>
     </div>
   );
@@ -566,6 +615,10 @@ export function CustomFormCreatePage() {
       return normalizeFields(next);
     });
     setSelectedFieldId(nextField.id);
+  }
+
+  function appendFieldToCanvas(control: CustomFormControl) {
+    addFieldFromControl(control, fields.length);
   }
 
   function onDragStart(event: DragStartEvent) {
@@ -760,6 +813,7 @@ export function CustomFormCreatePage() {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
+        modifiers={[constrainFieldDragToCanvas]}
         onDragStart={onDragStart}
         onDragMove={onDragMove}
         onDragOver={onDragOver}
@@ -821,7 +875,11 @@ export function CustomFormCreatePage() {
                   </div>
                 ) : filteredControls.length > 0 ? (
                   filteredControls.map((control) => (
-                    <ControlPaletteItem key={control.id} control={control} />
+                    <ControlPaletteItem
+                      key={control.id}
+                      control={control}
+                      onDoubleClick={appendFieldToCanvas}
+                    />
                   ))
                 ) : (
                   <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
