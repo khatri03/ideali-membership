@@ -9,8 +9,8 @@ npm install
 npm run dev
 ```
 
-Set `VITE_API_BASE_URL` if your API is not served from the same origin as the
-frontend. The login flow calls:
+Set `VITE_API_BASE_URL` in `.env` if your API is not served from the same
+origin as the frontend. The login flow calls:
 
 - `POST /api/identity/account/authenticate`
 - `POST /api/identity/account/2fa/{twoFaToken}/verify`

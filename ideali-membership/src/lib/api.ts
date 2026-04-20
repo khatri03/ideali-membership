@@ -1,3 +1,5 @@
+import { AUTH_STORAGE_KEY } from "../auth/authStorage";
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
 export function createApiUrl(path: string) {
@@ -17,6 +19,36 @@ async function readJsonResponse<T>(response: Response) {
   return payload;
 }
 
+function readStoredAccessToken() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const candidate = JSON.parse(raw) as Record<string, unknown>;
+    const token = candidate.AccessToken ?? candidate.accessToken;
+    return typeof token === "string" && token.length > 0 ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildHeaders(init?: HeadersInit) {
+  const headers = new Headers(init);
+  const accessToken = readStoredAccessToken();
+
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  return headers;
+}
+
 export async function postForm<T>(path: string, fields: Record<string, string>) {
   const formData = new FormData();
   for (const [key, value] of Object.entries(fields)) {
@@ -25,6 +57,7 @@ export async function postForm<T>(path: string, fields: Record<string, string>) 
 
   const response = await fetch(createApiUrl(path), {
     method: "POST",
+    headers: buildHeaders(),
     body: formData,
   });
 
@@ -34,10 +67,19 @@ export async function postForm<T>(path: string, fields: Record<string, string>) 
 export async function postJson<T>(path: string, body: unknown) {
   const response = await fetch(createApiUrl(path), {
     method: "POST",
-    headers: {
+    headers: buildHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(body),
+  });
+
+  return readJsonResponse<T>(response);
+}
+
+export async function getJson<T>(path: string) {
+  const response = await fetch(createApiUrl(path), {
+    method: "GET",
+    headers: buildHeaders(),
   });
 
   return readJsonResponse<T>(response);

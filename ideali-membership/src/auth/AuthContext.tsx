@@ -2,8 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { AuthSession, LoginChallenge } from "../types/auth";
 import { postForm, postJson } from "../lib/api";
-
-const AUTH_STORAGE_KEY = "ideali-membership.auth";
+import { AUTH_STORAGE_KEY } from "./authStorage";
 
 type AuthStatus = "loading" | "anonymous" | "pending-2fa" | "authenticated";
 
@@ -30,8 +29,7 @@ function readStoredSession(): AuthSession | null {
   }
 
   try {
-    const parsed = JSON.parse(raw) as AuthSession;
-    return parsed;
+    return toAuthSession(JSON.parse(raw));
   } catch {
     return null;
   }
@@ -41,12 +39,117 @@ function isExpired(session: AuthSession) {
   return new Date(session.expiresOnUtc).getTime() <= Date.now();
 }
 
-function resolveResponseData(payload: unknown) {
-  if (payload && typeof payload === "object" && "data" in payload) {
+function getResponseData(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return payload;
+  }
+
+  if ("Data" in payload) {
+    return (payload as { Data?: unknown }).Data;
+  }
+
+  if ("data" in payload) {
     return (payload as { data?: unknown }).data;
   }
 
   return payload;
+}
+
+function readText(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function readNumber(value: unknown) {
+  return typeof value === "number" ? value : 0;
+}
+
+function readBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : false;
+}
+
+function toAuthSession(raw: unknown): AuthSession | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const candidate = raw as Record<string, unknown>;
+  const userDetail = (candidate.UserDetail ?? candidate.userDetail) as
+    | Record<string, unknown>
+    | undefined;
+  const organizerDetail = (candidate.OrganizerDetail ?? candidate.organizerDetail) as
+    | Record<string, unknown>
+    | undefined;
+
+  if (!candidate.AccessToken && !candidate.accessToken) {
+    return null;
+  }
+
+  return {
+    accessToken: readText(candidate.AccessToken ?? candidate.accessToken),
+    refreshToken: readText(candidate.RefreshToken ?? candidate.refreshToken),
+    expiresOnUtc: readText(candidate.ExpiresOnUtc ?? candidate.expiresOnUtc),
+    expiresInMinutes: readNumber(candidate.ExpiresInMinutes ?? candidate.expiresInMinutes),
+    userDetail: {
+      email: readText(userDetail?.Email ?? userDetail?.email),
+      name: readText(userDetail?.Name ?? userDetail?.name),
+      logoUrl: (userDetail?.LogoUrl ?? userDetail?.logoUrl) as string | null | undefined,
+      userId: readNumber(userDetail?.UserId ?? userDetail?.userId),
+      roles: Array.isArray(userDetail?.Roles ?? userDetail?.roles)
+        ? ((userDetail?.Roles ?? userDetail?.roles) as string[])
+        : [],
+    },
+    organizerDetail: {
+      email: readText(organizerDetail?.Email ?? organizerDetail?.email),
+      name: readText(organizerDetail?.Name ?? organizerDetail?.name),
+      organizerId: readNumber(organizerDetail?.OrganizerId ?? organizerDetail?.organizerId),
+      organizerUniqueId: readText(
+        organizerDetail?.OrganizerUniqueId ?? organizerDetail?.organizerUniqueId,
+      ),
+      emailBrandingEnabled: readBoolean(
+        organizerDetail?.EmailBrandingEnabled ?? organizerDetail?.emailBrandingEnabled,
+      ),
+      profiles: Array.isArray(organizerDetail?.Profiles ?? organizerDetail?.profiles)
+        ? ((organizerDetail?.Profiles ?? organizerDetail?.profiles) as Array<Record<string, unknown>>).map(
+            (profile) => ({
+              name: readText(profile.Name ?? profile.name),
+              uniqueId: readText(profile.UniqueId ?? profile.uniqueId),
+            }),
+          )
+        : [],
+      paymentAccounts: Array.isArray(
+        organizerDetail?.PaymentAccounts ?? organizerDetail?.paymentAccounts,
+      )
+        ? ((organizerDetail?.PaymentAccounts ?? organizerDetail?.paymentAccounts) as Array<
+            Record<string, unknown>
+          >).map((account) => ({
+            name: readText(account.Name ?? account.name),
+            uniqueId: readText(account.UniqueId ?? account.uniqueId),
+            stripeAccountNo: (account.StripeAccountNo ?? account.stripeAccountNo) as
+              | string
+              | null
+              | undefined,
+            stripePublishableKey: (account.StripePublishableKey ?? account.stripePublishableKey) as
+              | string
+              | null
+              | undefined,
+          }))
+        : [],
+    },
+  };
+}
+
+function toChallenge(payload: unknown): LoginChallenge | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const candidate = payload as Record<string, unknown>;
+  if (!(candidate.requiresTwoFactor ?? candidate.RequiresTwoFactor)) {
+    return null;
+  }
+
+  const twoFaToken = readText(candidate.twoFaToken ?? candidate.TwoFaToken);
+  return twoFaToken ? { requiresTwoFactor: true, twoFaToken } : null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -94,32 +197,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      const data = resolveResponseData(payload) as
-        | (AuthSession & { requiresTwoFactor?: boolean; twoFaToken?: string })
-        | undefined;
-
-      if (!data) {
-        throw new Error("Unexpected login response.");
-      }
-
-      if (data.requiresTwoFactor && data.twoFaToken) {
-        setPendingChallenge({
-          requiresTwoFactor: true,
-          twoFaToken: data.twoFaToken,
-        });
+      const responseData = getResponseData(payload);
+      const challenge = toChallenge(responseData);
+      if (challenge) {
+        setPendingChallenge(challenge);
         setSession(null);
         setStatus("pending-2fa");
         return;
       }
 
-      const nextSession: AuthSession = {
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        expiresOnUtc: data.expiresOnUtc,
-        expiresInMinutes: data.expiresInMinutes,
-        userDetail: data.userDetail,
-        organizerDetail: data.organizerDetail,
-      };
+      const nextSession = toAuthSession(responseData);
+      if (!nextSession) {
+        throw new Error("Unexpected login response.");
+      }
 
       setSession(nextSession);
       setPendingChallenge(null);
@@ -145,12 +235,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { emailCode },
       );
 
-      const data = resolveResponseData(payload) as AuthSession | undefined;
-      if (!data?.accessToken) {
+      const responseData = getResponseData(payload);
+      const nextSession = toAuthSession(responseData);
+      if (!nextSession) {
         throw new Error("Unexpected verification response.");
       }
 
-      setSession(data);
+      setSession(nextSession);
       setPendingChallenge(null);
       setStatus("authenticated");
     } catch (error) {
