@@ -256,11 +256,8 @@ function SortableFieldCard({
       className={[
         "rounded-3xl border bg-white p-4 shadow-sm transition",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
-        "cursor-grab active:cursor-grabbing select-none touch-none",
         isDragging ? "opacity-70" : "",
       ].join(" ")}
-      {...attributes}
-      {...listeners}
       onClick={() => onSelect(field.id)}
     >
       <div className="flex items-start justify-between gap-3">
@@ -279,16 +276,49 @@ function SortableFieldCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onRemove(field.id);
-          }}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
-        >
-          Remove
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            title="Drag to reorder"
+            aria-label="Drag to reorder"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-cyan-300 hover:text-cyan-700 cursor-grab active:cursor-grabbing select-none touch-none"
+            {...attributes}
+            {...listeners}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span aria-hidden="true" className="text-sm font-bold leading-none">
+              ::
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove(field.id);
+            }}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-600 shadow-sm transition hover:bg-rose-100 hover:text-rose-700"
+            title="Remove field"
+            aria-label="Remove field"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18" />
+              <path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6" />
+              <path d="M19 6l-1 12.2A1.8 1.8 0 0 1 16.2 20H7.8A1.8 1.8 0 0 1 6 18.2L5 6" />
+              <path d="M10 11v5" />
+              <path d="M14 11v5" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -562,6 +592,11 @@ export function CustomFormCreatePage() {
   const selectedField = useMemo(
     () => fields.find((field) => field.id === selectedFieldId) ?? null,
     [fields, selectedFieldId],
+  );
+
+  const selectedControl = useMemo(
+    () => controls.find((control) => control.id === selectedField?.controlId) ?? null,
+    [controls, selectedField?.controlId],
   );
 
   const controlUsageCounts = useMemo(() => {
@@ -948,7 +983,7 @@ export function CustomFormCreatePage() {
           <main
             ref={setCanvasRef}
             className={[
-              "rounded-[2rem] border bg-white/90 p-5 shadow-sm transition",
+              "flex max-h-[calc(100vh-14rem)] min-h-0 flex-col rounded-[2rem] border bg-white/90 p-5 shadow-sm transition overflow-hidden",
               isCanvasOver || isCanvasTargeted
                 ? "border-cyan-400 ring-4 ring-cyan-100"
                 : "border-slate-200",
@@ -965,6 +1000,7 @@ export function CustomFormCreatePage() {
                 {fields.length} field{fields.length === 1 ? "" : "s"}
               </span>
             </div>
+
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
@@ -976,44 +1012,46 @@ export function CustomFormCreatePage() {
               </button>
             </div>
 
-            <div
-              ref={canvasDropRef}
-              className={[
-                "mt-5 min-h-[420px] rounded-[2rem] border border-dashed bg-slate-50 p-4 transition",
-                isCanvasOver || isCanvasTargeted
-                  ? "border-cyan-400 bg-cyan-50/60 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
-                  : "border-slate-200",
-              ].join(" ")}
-            >
-              {isCanvasOver || isCanvasTargeted ? (
-                <div className="mb-4 rounded-2xl border border-cyan-200 bg-white/80 px-4 py-3 text-sm font-medium text-cyan-800">
-                  Release to drop into the form canvas.
-                </div>
-              ) : null}
-              <SortableContext items={fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
-                {fields.length > 0 ? (
-                  <div className="space-y-4">
-                    {fields.map((field) => (
-                      <SortableFieldCard
-                        key={field.id}
-                        field={field}
-                        selected={field.id === selectedFieldId}
-                        onSelect={setSelectedFieldId}
-                        onRemove={removeField}
-                      />
-                    ))}
+            <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+              <div
+                ref={canvasDropRef}
+                className={[
+                  "min-h-[420px] rounded-[2rem] border border-dashed bg-slate-50 p-4 transition",
+                  isCanvasOver || isCanvasTargeted
+                    ? "border-cyan-400 bg-cyan-50/60 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
+                    : "border-slate-200",
+                ].join(" ")}
+              >
+                {isCanvasOver || isCanvasTargeted ? (
+                  <div className="mb-4 rounded-2xl border border-cyan-200 bg-white/80 px-4 py-3 text-sm font-medium text-cyan-800">
+                    Release to drop into the form canvas.
                   </div>
-                ) : (
-                  <div className="flex min-h-[380px] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-6 text-center">
-                    <div className="max-w-md">
-                      <p className="text-lg font-semibold text-slate-900">Drop your first field here</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-500">
-                        Choose a control from the left palette to start building the form layout.
-                      </p>
+                ) : null}
+                <SortableContext items={fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
+                  {fields.length > 0 ? (
+                    <div className="space-y-4">
+                      {fields.map((field) => (
+                        <SortableFieldCard
+                          key={field.id}
+                          field={field}
+                          selected={field.id === selectedFieldId}
+                          onSelect={setSelectedFieldId}
+                          onRemove={removeField}
+                        />
+                      ))}
                     </div>
-                  </div>
-                )}
-              </SortableContext>
+                  ) : (
+                    <div className="flex min-h-[380px] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-6 text-center">
+                      <div className="max-w-md">
+                        <p className="text-lg font-semibold text-slate-900">Drop your first field here</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                          Choose a control from the left palette to start building the form layout.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </SortableContext>
+              </div>
             </div>
           </main>
 
@@ -1032,17 +1070,19 @@ export function CustomFormCreatePage() {
                       }))
                     }
                   />
-                  <FieldPreview
-                    title="Placeholder"
-                    value={selectedField.placeholder}
-                    onChange={(value) =>
-                      updateSelectedField((field) => ({
-                        ...field,
-                        placeholder: value,
-                      }))
-                    }
-                    placeholder="Shown inside the input"
-                  />
+                  {selectedControl?.canHavePlaceHolder ? (
+                    <FieldPreview
+                      title="Placeholder"
+                      value={selectedField.placeholder}
+                      onChange={(value) =>
+                        updateSelectedField((field) => ({
+                          ...field,
+                          placeholder: value,
+                        }))
+                      }
+                      placeholder="Shown inside the input"
+                    />
+                  ) : null}
                   <FieldPreview
                     title="Tooltip"
                     value={selectedField.tooltip}
@@ -1157,18 +1197,12 @@ export function CustomFormCreatePage() {
                 </div>
               ) : (
                 <div className="mt-4 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-500">
-                  Select a field on the canvas to configure its label, placeholder, tooltip, and
-                  validation rules.
+                  Select a field on the canvas to configure its label, tooltip, and validation
+                  rules.
                 </div>
               )}
             </div>
 
-            <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Current drag state</p>
-              <p className="mt-2 text-sm text-slate-500">
-                {activeDragId ? `Dragging ${activeDragId}` : "Idle"}
-              </p>
-            </div>
           </aside>
         </div>
       </DndContext>
