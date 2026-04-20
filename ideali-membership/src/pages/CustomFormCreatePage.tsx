@@ -152,6 +152,15 @@ function getControlGlyph(iconClass: string, controlType: string, label: string) 
   );
 }
 
+function getControlTooltip(control: CustomFormControl) {
+  const details = [
+    control.name,
+    "Double-click to add",
+  ].filter(Boolean);
+
+  return details.join(" • ");
+}
+
 function ControlPaletteItem({
   control,
   count,
@@ -176,6 +185,7 @@ function ControlPaletteItem({
       ref={setNodeRef}
       type="button"
       onDoubleClick={() => onDoubleClick(control)}
+      title={getControlTooltip(control)}
       {...listeners}
       {...attributes}
       style={isDragging ? undefined : style}
@@ -415,6 +425,119 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
   }
 }
 
+function PreviewFieldLabel({ field }: { field: CustomFormFieldDraft }) {
+  return (
+    <div className="mb-2 flex items-center gap-2">
+      <span className="text-sm font-semibold text-slate-800">{field.label}</span>
+      {field.required ? (
+        <span className="text-sm font-bold leading-none text-rose-600" aria-label="Required" title="Required">
+          *
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
+  const controlType = field.controlType.toLowerCase();
+
+  switch (controlType) {
+    case "text":
+    case "email":
+    case "number":
+    case "date":
+    case "password":
+    case "tel":
+      return (
+        <input
+          type={controlType}
+          disabled
+          placeholder={field.placeholder || field.label}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+        />
+      );
+    case "textarea":
+      return (
+        <textarea
+          disabled
+          rows={4}
+          placeholder={field.placeholder || field.label}
+          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+        />
+      );
+    case "select":
+      return (
+        <select
+          disabled
+          value=""
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+        >
+          <option value="" disabled>
+            {field.placeholder || "Select one"}
+          </option>
+          {field.options.map((option) => (
+            <option key={option.id} value={option.value}>
+              {option.displayText}
+            </option>
+          ))}
+        </select>
+      );
+    case "checkbox":
+      return (
+        <label className="inline-flex items-center gap-3">
+          <input type="checkbox" disabled className="h-4 w-4 accent-cyan-600" />
+          <span className="text-sm font-medium text-slate-800">{field.label}</span>
+        </label>
+      );
+    case "radio":
+      return (
+        <div className="space-y-3">
+          {field.options.map((option) => (
+            <label key={option.id} className="flex items-center gap-3 text-sm text-slate-700">
+              <input type="radio" disabled name={`preview-${field.id}`} className="h-4 w-4 accent-cyan-600" />
+              <span>{option.displayText}</span>
+            </label>
+          ))}
+        </div>
+      );
+    case "file":
+      return <input type="file" disabled className="block w-full text-sm text-slate-500" />;
+    case "range":
+      return <input type="range" disabled className="w-full accent-cyan-600" />;
+    case "color":
+      return <input type="color" disabled value="#0ea5e9" className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
+    case "submit":
+      return (
+        <button
+          type="button"
+          disabled
+          className="w-full rounded-2xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+        >
+          {field.label}
+        </button>
+      );
+    default:
+      return (
+        <input
+          type="text"
+          disabled
+          placeholder={field.placeholder || field.label}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+        />
+      );
+  }
+}
+
+function FormPreviewField({ field }: { field: CustomFormFieldDraft }) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+      <PreviewFieldLabel field={field} />
+      <PreviewFieldRenderer field={field} />
+      {field.tooltip ? <p className="mt-2 text-xs text-slate-500">{field.tooltip}</p> : null}
+    </div>
+  );
+}
+
 function FieldPreview({
   title,
   value,
@@ -529,6 +652,8 @@ export function CustomFormCreatePage() {
   const [activeDragItem, setActiveDragItem] = useState<ActiveDragItem>(null);
   const [isCanvasTargeted, setIsCanvasTargeted] = useState(false);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [fieldToRemoveId, setFieldToRemoveId] = useState<string | null>(null);
   const lastDropTargetIdRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -599,6 +724,11 @@ export function CustomFormCreatePage() {
     [controls, selectedField?.controlId],
   );
 
+  const fieldToRemove = useMemo(
+    () => fields.find((field) => field.id === fieldToRemoveId) ?? null,
+    [fieldToRemoveId, fields],
+  );
+
   const controlUsageCounts = useMemo(() => {
     const counts = new Map<number, number>();
 
@@ -661,7 +791,7 @@ export function CustomFormCreatePage() {
     );
   }
 
-  function removeField(fieldId: string) {
+  function deleteField(fieldId: string) {
     setFields((current) => {
       const next = current.filter((field) => field.id !== fieldId);
       return normalizeFields(next);
@@ -674,6 +804,23 @@ export function CustomFormCreatePage() {
 
       return fields.find((field) => field.id !== fieldId)?.id ?? null;
     });
+  }
+
+  function removeField(fieldId: string) {
+    setFieldToRemoveId(fieldId);
+  }
+
+  function confirmRemoveField() {
+    if (!fieldToRemoveId) {
+      return;
+    }
+
+    deleteField(fieldToRemoveId);
+    setFieldToRemoveId(null);
+  }
+
+  function cancelRemoveField() {
+    setFieldToRemoveId(null);
   }
 
   function addFieldFromControl(control: CustomFormControl, index?: number) {
@@ -695,6 +842,20 @@ export function CustomFormCreatePage() {
     setFields([]);
     setSelectedFieldId(null);
     setIsClearConfirmOpen(false);
+    setFieldToRemoveId(null);
+    setIsPreviewOpen(false);
+  }
+
+  function closePreview() {
+    setIsPreviewOpen(false);
+  }
+
+  function openPreview() {
+    if (fields.length === 0) {
+      return;
+    }
+
+    setIsPreviewOpen(true);
   }
 
   function onDragStart(event: DragStartEvent) {
@@ -902,11 +1063,7 @@ export function CustomFormCreatePage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Field palette</h2>
-                  <p className="mt-1 text-sm text-slate-500">Drag controls into the builder.</p>
                 </div>
-                <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700">
-                  {filteredControls.length} types
-                </span>
               </div>
 
               <div className="mt-4">
@@ -996,20 +1153,27 @@ export function CustomFormCreatePage() {
                   Drop controls here and drag to reorder them.
                 </p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                {fields.length} field{fields.length === 1 ? "" : "s"}
-              </span>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsClearConfirmOpen(true)}
-                disabled={fields.length === 0}
-                className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Clear all
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                  {fields.length} field{fields.length === 1 ? "" : "s"}
+                </span>
+                <button
+                  type="button"
+                  onClick={openPreview}
+                  disabled={fields.length === 0}
+                  className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-slate-100"
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsClearConfirmOpen(true)}
+                  disabled={fields.length === 0}
+                  className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Clear all
+                </button>
+              </div>
             </div>
 
             <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
@@ -1206,6 +1370,92 @@ export function CustomFormCreatePage() {
           </aside>
         </div>
       </DndContext>
+
+      {fieldToRemove ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/20">
+            <div className="flex items-start gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-700">
+                !
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-semibold tracking-tight text-slate-900">
+                  Remove “{fieldToRemove.label}”?
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  This will permanently remove the field from the canvas. Any current
+                  configuration for this field will be lost.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={cancelRemoveField}
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveField}
+                className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+              >
+                Remove field
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isPreviewOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
+                  Preview
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+                  {draft.name || "Untitled form"}
+                </h3>
+                {draft.headerText ? (
+                  <p className="mt-1 text-sm text-slate-600">{draft.headerText}</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={closePreview}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
+              <div className="mx-auto max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                {draft.description ? (
+                  <p className="mb-6 text-sm leading-6 text-slate-600">{draft.description}</p>
+                ) : null}
+
+                <div className="space-y-5">
+                  {fields.length > 0 ? (
+                    fields.map((field) => <FormPreviewField key={field.id} field={field} />)
+                  ) : (
+                    <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                      <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Add controls to the canvas to see the rendered form here.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isClearConfirmOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
