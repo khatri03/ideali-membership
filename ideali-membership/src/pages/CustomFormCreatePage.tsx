@@ -807,7 +807,7 @@ export function CustomFormCreatePage() {
   );
 
   useEffect(() => {
-    if (!selectedField) {
+    if (!selectedFieldId) {
       return;
     }
 
@@ -816,7 +816,7 @@ export function CustomFormCreatePage() {
     });
 
     return () => window.cancelAnimationFrame(focusHandle);
-  }, [selectedFieldId, selectedField]);
+  }, [selectedFieldId]);
 
   const createFormIssues = useMemo(() => {
     const issues: string[] = [];
