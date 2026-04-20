@@ -589,16 +589,25 @@ function FieldPreview({
   onChange,
   placeholder,
   type = "text",
+  required = false,
 }: {
   title: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   type?: string;
+  required?: boolean;
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">{title}</span>
+      <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+        <span>{title}</span>
+        {required ? (
+          <span className="text-sm font-bold leading-none text-rose-600" aria-label="Required" title="Required">
+            *
+          </span>
+        ) : null}
+      </span>
       <input
         type={type}
         value={value}
@@ -1062,12 +1071,14 @@ export function CustomFormCreatePage() {
             value={draft.name}
             onChange={(value) => setDraft((current) => ({ ...current, name: value }))}
             placeholder="Membership enrollment form"
+            required
           />
           <FieldPreview
             title="Header Text"
             value={draft.headerText}
             onChange={(value) => setDraft((current) => ({ ...current, headerText: value }))}
             placeholder="Tell us a little about you"
+            required
           />
           <FieldPreview
             title="Description"
@@ -1076,7 +1087,12 @@ export function CustomFormCreatePage() {
             placeholder="Optional supporting copy"
           />
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Layout Columns</span>
+            <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span>Layout Columns</span>
+              <span className="text-sm font-bold leading-none text-rose-600" aria-label="Required" title="Required">
+                *
+              </span>
+            </span>
             <select
               value={draft.layoutColumn}
               onChange={(event) =>
@@ -1466,11 +1482,8 @@ export function CustomFormCreatePage() {
                   Preview
                 </p>
                 <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-                  {draft.name || "Untitled form"}
+                  {draft.headerText || "Untitled header"}
                 </h3>
-                {draft.headerText ? (
-                  <p className="mt-1 text-sm text-slate-600">{draft.headerText}</p>
-                ) : null}
               </div>
               <button
                 type="button"
