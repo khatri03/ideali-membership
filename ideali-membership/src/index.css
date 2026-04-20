@@ -42,6 +42,14 @@ a {
   text-decoration: none;
 }
 
+button:not(:disabled),
+a,
+[role="button"],
+summary,
+label[for] {
+  cursor: pointer;
+}
+
 button,
 input,
 textarea,

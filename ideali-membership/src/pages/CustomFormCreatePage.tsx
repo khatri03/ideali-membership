@@ -191,11 +191,11 @@ function ControlPaletteItem({
       style={isDragging ? undefined : style}
       className={[
         "group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition",
-        "cursor-grab hover:cursor-grab hover:border-cyan-300 hover:shadow-md select-none touch-none",
+        "cursor-pointer hover:cursor-pointer hover:border-cyan-300 hover:shadow-md select-none touch-none",
         isDragging ? "scale-[0.98] opacity-60 cursor-grabbing" : "",
       ].join(" ")}
     >
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700 cursor-grab hover:cursor-grab select-none touch-none">
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700 cursor-pointer hover:cursor-pointer select-none touch-none">
         {getControlGlyph(control.iconClass, control.controlType, control.name)}
       </div>
       <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
@@ -264,7 +264,7 @@ function SortableFieldCard({
       ref={setNodeRef}
       style={isDragging ? { transition, opacity: 0 } : style}
       className={[
-        "rounded-3xl border bg-white p-4 shadow-sm transition",
+        "rounded-3xl border bg-white p-4 shadow-sm transition cursor-pointer hover:cursor-pointer",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
         isDragging ? "opacity-70" : "",
       ].join(" ")}
@@ -426,6 +426,10 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
 }
 
 function PreviewFieldLabel({ field }: { field: CustomFormFieldDraft }) {
+  if (field.controlType.toLowerCase() === "checkbox") {
+    return null;
+  }
+
   return (
     <div className="mb-2 flex items-center gap-2">
       <span className="text-sm font-semibold text-slate-800">{field.label}</span>
@@ -440,6 +444,7 @@ function PreviewFieldLabel({ field }: { field: CustomFormFieldDraft }) {
 
 function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
   const controlType = field.controlType.toLowerCase();
+  const placeholder = field.placeholder || field.label;
 
   switch (controlType) {
     case "text":
@@ -451,28 +456,26 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type={controlType}
-          disabled
-          placeholder={field.placeholder || field.label}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+          placeholder={placeholder}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
       );
     case "textarea":
       return (
         <textarea
-          disabled
           rows={4}
-          placeholder={field.placeholder || field.label}
-          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+          placeholder={placeholder}
+          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
       );
     case "select":
       return (
         <select
-          disabled
           value=""
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+          onChange={() => undefined}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         >
-          <option value="" disabled>
+          <option value="">
             {field.placeholder || "Select one"}
           </option>
           {field.options.map((option) => (
@@ -485,7 +488,7 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "checkbox":
       return (
         <label className="inline-flex items-center gap-3">
-          <input type="checkbox" disabled className="h-4 w-4 accent-cyan-600" />
+          <input type="checkbox" className="h-4 w-4 accent-cyan-600" />
           <span className="text-sm font-medium text-slate-800">{field.label}</span>
         </label>
       );
@@ -494,24 +497,23 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
         <div className="space-y-3">
           {field.options.map((option) => (
             <label key={option.id} className="flex items-center gap-3 text-sm text-slate-700">
-              <input type="radio" disabled name={`preview-${field.id}`} className="h-4 w-4 accent-cyan-600" />
+              <input type="radio" name={`preview-${field.id}`} className="h-4 w-4 accent-cyan-600" />
               <span>{option.displayText}</span>
             </label>
           ))}
         </div>
       );
     case "file":
-      return <input type="file" disabled className="block w-full text-sm text-slate-500" />;
+      return <input type="file" className="block w-full text-sm text-slate-500" />;
     case "range":
-      return <input type="range" disabled className="w-full accent-cyan-600" />;
+      return <input type="range" className="w-full accent-cyan-600" />;
     case "color":
-      return <input type="color" disabled value="#0ea5e9" className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
+      return <input type="color" defaultValue="#0ea5e9" className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
     case "submit":
       return (
         <button
           type="button"
-          disabled
-          className="w-full rounded-2xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+          className="w-full rounded-2xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700"
         >
           {field.label}
         </button>
@@ -520,9 +522,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type="text"
-          disabled
-          placeholder={field.placeholder || field.label}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm"
+          placeholder={placeholder}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
       );
   }
