@@ -15,6 +15,7 @@ export interface CustomFormOptionDraft {
   id: string;
   displayText: string;
   value: string;
+  isDefault: boolean;
 }
 
 export interface CustomFormFieldDraft {

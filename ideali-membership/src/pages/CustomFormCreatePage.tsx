@@ -94,6 +94,13 @@ function createOptionId() {
   return `option-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function clearDefaultOption(options: CustomFormOptionDraft[], optionId: string) {
+  return options.map((option) => ({
+    ...option,
+    isDefault: option.id === optionId,
+  }));
+}
+
 function normalizeFields(fields: CustomFormFieldDraft[]) {
   return fields.map((field, index) => ({
     ...field,
@@ -102,6 +109,9 @@ function normalizeFields(fields: CustomFormFieldDraft[]) {
 }
 
 function createFieldDraft(control: CustomFormControl, displayOrder: number): CustomFormFieldDraft {
+  const hasOptions = control.hasOptions;
+  const defaultOptionValue = hasOptions ? "option-1" : "";
+
   return {
     id: createFieldId(),
     controlId: control.id,
@@ -114,14 +124,15 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
     required: false,
     minLength: "",
     maxLength: "",
-    defaultValue: "",
+    defaultValue: defaultOptionValue,
     displayOrder,
-    options: control.hasOptions
+    options: hasOptions
       ? [
           {
             id: createOptionId(),
             displayText: "Option 1",
-            value: "option-1",
+            value: defaultOptionValue,
+            isDefault: true,
           },
         ]
       : [],
@@ -166,7 +177,13 @@ function isTruthyValue(value: string) {
 }
 
 function getDefaultOptionValue(field: CustomFormFieldDraft) {
-  return field.defaultValue || field.options[0]?.value || "";
+  return (
+    field.options.find((option) => option.isDefault)?.value ||
+    field.options.find((option) => option.value === field.defaultValue)?.value ||
+    field.defaultValue ||
+    field.options[0]?.value ||
+    ""
+  );
 }
 
 function ControlPaletteItem({
@@ -424,7 +441,7 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
               <input
                 type="radio"
                 name={field.id}
-                checked={field.defaultValue === option.value}
+                checked={getDefaultOptionValue(field) === option.value}
                 readOnly
                 className="h-4 w-4 accent-cyan-600"
               />
@@ -539,7 +556,7 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
               <input
                 type="radio"
                 name={`preview-${field.id}`}
-                defaultChecked={field.defaultValue === option.value}
+                defaultChecked={getDefaultOptionValue(field) === option.value}
                 className="h-4 w-4 accent-cyan-600"
               />
               <span>{option.displayText}</span>
@@ -708,6 +725,8 @@ export function CustomFormCreatePage() {
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [fieldToRemoveId, setFieldToRemoveId] = useState<string | null>(null);
+  const [optionToRemoveId, setOptionToRemoveId] = useState<string | null>(null);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const lastDropTargetIdRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -782,6 +801,32 @@ export function CustomFormCreatePage() {
     () => fields.find((field) => field.id === fieldToRemoveId) ?? null,
     [fieldToRemoveId, fields],
   );
+
+  const optionToRemove = useMemo(() => {
+    if (!selectedField || !optionToRemoveId) {
+      return null;
+    }
+
+    return selectedField.options.find((option) => option.id === optionToRemoveId) ?? null;
+  }, [optionToRemoveId, selectedField]);
+
+  const selectedOption = useMemo(() => {
+    if (!selectedField || !selectedOptionId) {
+      return (
+        selectedField?.options.find((option) => option.isDefault) ??
+        selectedField?.options.find((option) => option.value === selectedField.defaultValue) ??
+        selectedField?.options[0] ??
+        null
+      );
+    }
+
+    return (
+      selectedField.options.find((option) => option.id === selectedOptionId) ??
+      selectedField.options.find((option) => option.isDefault) ??
+      selectedField.options[0] ??
+      null
+    );
+  }, [selectedField, selectedOptionId]);
 
   const previewColumnCount = Math.max(1, Math.min(4, Number(draft.layoutColumn) || 1));
 
@@ -873,6 +918,8 @@ export function CustomFormCreatePage() {
 
     deleteField(fieldToRemoveId);
     setFieldToRemoveId(null);
+    setOptionToRemoveId(null);
+    setSelectedOptionId(null);
   }
 
   function cancelRemoveField() {
@@ -899,6 +946,7 @@ export function CustomFormCreatePage() {
     setSelectedFieldId(null);
     setIsClearConfirmOpen(false);
     setFieldToRemoveId(null);
+    setOptionToRemoveId(null);
     setIsPreviewOpen(false);
   }
 
@@ -1019,6 +1067,7 @@ export function CustomFormCreatePage() {
           id: createOptionId(),
           displayText: `Option ${field.options.length + 1}`,
           value: `option-${field.options.length + 1}`,
+          isDefault: field.options.length === 0,
         },
       ],
     }));
@@ -1033,11 +1082,62 @@ export function CustomFormCreatePage() {
     }));
   }
 
+  function setDefaultOption(optionId: string) {
+    updateSelectedField((field) => {
+      const nextOptions = clearDefaultOption(field.options, optionId);
+      const nextDefault = nextOptions.find((option) => option.id === optionId);
+
+      return {
+        ...field,
+        defaultValue: nextDefault?.value || "",
+        options: nextOptions,
+      };
+    });
+    setSelectedOptionId(optionId);
+  }
+
   function removeOption(optionId: string) {
+    setOptionToRemoveId(optionId);
+  }
+
+  function confirmRemoveOption() {
+    if (!optionToRemoveId) {
+      return;
+    }
+
     updateSelectedField((field) => ({
       ...field,
-      options: field.options.filter((option) => option.id !== optionId),
+      options: (() => {
+        const next = field.options.filter((option) => option.id !== optionToRemoveId);
+
+        if (next.length > 0 && !next.some((option) => option.isDefault)) {
+          next[0] = { ...next[0], isDefault: true };
+        }
+
+        return next;
+      })(),
+      defaultValue: (() => {
+        const next = field.options.filter((option) => option.id !== optionToRemoveId);
+
+        if (next.length === 0) {
+          return "";
+        }
+
+        const nextDefault = next.find((option) => option.isDefault) ?? next[0];
+        return nextDefault?.value || "";
+      })(),
     }));
+
+    setSelectedOptionId((current) => (current === optionToRemoveId ? null : current));
+    setOptionToRemoveId(null);
+  }
+
+  function cancelRemoveOption() {
+    setOptionToRemoveId(null);
+  }
+
+  function selectOption(optionId: string) {
+    setSelectedOptionId(optionId);
   }
 
   return (
@@ -1386,13 +1486,62 @@ export function CustomFormCreatePage() {
                           <div
                             key={option.id}
                             role="group"
-                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50"
+                            className={[
+                              "inline-flex items-center gap-2 rounded-full border bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition",
+                              selectedOption?.id === option.id
+                                ? "border-cyan-400 ring-2 ring-cyan-100"
+                                : "border-slate-200 hover:border-cyan-300 hover:bg-cyan-50",
+                            ].join(" ")}
                             title={`Option ${index + 1}: ${option.displayText}`}
                           >
-                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[11px] font-semibold text-cyan-700">
-                              {index + 1}
-                            </span>
-                            <span className="max-w-[14rem] truncate">{option.displayText}</span>
+                            <button
+                              type="button"
+                              onClick={() => selectOption(option.id)}
+                              className="inline-flex items-center gap-2 rounded-full text-left"
+                              aria-label={`Select option ${index + 1}`}
+                              title="Click to edit"
+                            >
+                              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[11px] font-semibold text-cyan-700">
+                                {index + 1}
+                              </span>
+                              <span className="max-w-[14rem] truncate">{option.displayText}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDefaultOption(option.id);
+                              }}
+                              className={[
+                                "inline-flex h-6 w-6 items-center justify-center rounded-full transition",
+                                option.isDefault || selectedField.defaultValue === option.value
+                                  ? "bg-amber-100 text-amber-600"
+                                  : "text-slate-400 hover:bg-amber-50 hover:text-amber-600",
+                              ].join(" ")}
+                              aria-label={
+                                option.isDefault || selectedField.defaultValue === option.value
+                                  ? `Default option ${index + 1}`
+                                  : `Set option ${index + 1} as default`
+                              }
+                              title={
+                                option.isDefault || selectedField.defaultValue === option.value
+                                  ? "Default option"
+                                  : "Set as default"
+                              }
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill={option.isDefault || selectedField.defaultValue === option.value ? "currentColor" : "none"}
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              >
+                                <path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.4L12 17.9 6.2 20.8l1.1-6.4-4.7-4.6 6.5-.9Z" />
+                              </svg>
+                            </button>
                             <button
                               type="button"
                               onClick={(event) => {
@@ -1424,9 +1573,9 @@ export function CustomFormCreatePage() {
                         <div className="grid gap-3 sm:grid-cols-2">
                           <FieldPreview
                             title="Display text"
-                            value={selectedField.options[selectedField.options.length - 1]?.displayText || ""}
+                            value={selectedOption?.displayText || ""}
                             onChange={(value) => {
-                              const option = selectedField.options[selectedField.options.length - 1];
+                              const option = selectedOption;
                               if (option) {
                                 updateOption(option.id, "displayText", value);
                               }
@@ -1434,9 +1583,9 @@ export function CustomFormCreatePage() {
                           />
                           <FieldPreview
                             title="Value"
-                            value={selectedField.options[selectedField.options.length - 1]?.value || ""}
+                            value={selectedOption?.value || ""}
                             onChange={(value) => {
-                              const option = selectedField.options[selectedField.options.length - 1];
+                              const option = selectedOption;
                               if (option) {
                                 updateOption(option.id, "value", value);
                               }
@@ -1491,6 +1640,43 @@ export function CustomFormCreatePage() {
                 className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
               >
                 Remove field
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {optionToRemove ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/20">
+            <div className="flex items-start gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-700">
+                !
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-semibold tracking-tight text-slate-900">
+                  Remove option “{optionToRemove.displayText}”?
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  This will permanently remove the option from the selected field.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={cancelRemoveOption}
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveOption}
+                className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+              >
+                Remove option
               </button>
             </div>
           </div>
