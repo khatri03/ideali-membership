@@ -531,7 +531,7 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
 
 function FormPreviewField({ field }: { field: CustomFormFieldDraft }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+    <div className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4">
       <PreviewFieldLabel field={field} />
       <PreviewFieldRenderer field={field} />
       {field.tooltip ? <p className="mt-2 text-xs text-slate-500">{field.tooltip}</p> : null}
@@ -729,6 +729,8 @@ export function CustomFormCreatePage() {
     () => fields.find((field) => field.id === fieldToRemoveId) ?? null,
     [fieldToRemoveId, fields],
   );
+
+  const previewColumnCount = Math.max(1, Math.min(4, Number(draft.layoutColumn) || 1));
 
   const controlUsageCounts = useMemo(() => {
     const counts = new Map<number, number>();
@@ -1412,7 +1414,7 @@ export function CustomFormCreatePage() {
 
       {isPreviewOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+          <div className="flex max-h-[90vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
@@ -1435,16 +1437,21 @@ export function CustomFormCreatePage() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
-              <div className="mx-auto max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mx-auto w-full max-w-7xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 {draft.description ? (
                   <p className="mb-6 text-sm leading-6 text-slate-600">{draft.description}</p>
                 ) : null}
 
-                <div className="space-y-5">
+                <div
+                  className="grid gap-5"
+                  style={{
+                    gridTemplateColumns: `repeat(${previewColumnCount}, minmax(0, 1fr))`,
+                  }}
+                >
                   {fields.length > 0 ? (
                     fields.map((field) => <FormPreviewField key={field.id} field={field} />)
                   ) : (
-                    <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                    <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
                       <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>
                       <p className="mt-2 text-sm text-slate-500">
                         Add controls to the canvas to see the rendered form here.
