@@ -214,35 +214,16 @@ function SortableFieldCard({
       ].join(" ")}
       onClick={() => onSelect(field.id)}
     >
-      <div className="flex items-start gap-3">
-        <ControlIcon iconClass={field.iconClass} controlType={field.controlType} label={field.controlName} />
-
-        <button
-          type="button"
-          className={[
-            "mt-0.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500",
-            "cursor-grab hover:cursor-grab active:cursor-grabbing select-none touch-none",
-            isDragging ? "cursor-grabbing" : "",
-          ].join(" ")}
-          {...attributes}
-          {...listeners}
-        >
-          Drag
-        </button>
-
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{field.label}</h3>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-              #{field.displayOrder}
-            </span>
             {field.required ? (
               <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-700">
                 Required
               </span>
             ) : null}
           </div>
-          <p className="mt-1 text-sm text-slate-500">{field.controlName}</p>
         </div>
 
         <button
@@ -257,24 +238,93 @@ function SortableFieldCard({
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 text-sm text-slate-500 sm:grid-cols-2">
-        <div className="rounded-2xl bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Placeholder
-          </p>
-          <p className="mt-1 truncate">{field.placeholder || "Not set"}</p>
-        </div>
-        <div className="rounded-2xl bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Constraints
-          </p>
-          <p className="mt-1 truncate">
-            {field.minLength || field.maxLength ? `${field.minLength || "0"} - ${field.maxLength || "∞"}` : "None"}
-          </p>
-        </div>
+      <div className="mt-4">
+        <FieldCanvasPreview field={field} />
       </div>
     </article>
   );
+}
+
+function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
+  const controlType = field.controlType.toLowerCase();
+
+  switch (controlType) {
+    case "text":
+    case "email":
+    case "number":
+    case "date":
+    case "password":
+    case "tel":
+      return (
+        <input
+          type={controlType}
+          disabled
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+        />
+      );
+    case "textarea":
+      return (
+        <textarea
+          disabled
+          rows={4}
+          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+        />
+      );
+    case "select":
+      return (
+        <select
+          disabled
+          value=""
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+        >
+          <option value="" disabled>
+            Select one
+          </option>
+          {field.options.map((option) => (
+            <option key={option.id} value={option.value}>
+              {option.displayText}
+            </option>
+          ))}
+        </select>
+      );
+    case "checkbox":
+      return <input type="checkbox" disabled className="h-4 w-4 accent-cyan-600" />;
+    case "radio":
+      return (
+        <div className="space-y-2">
+          {field.options.map((option) => (
+            <label key={option.id} className="flex items-center gap-3 text-sm text-slate-700">
+              <input type="radio" disabled name={field.id} className="h-4 w-4 accent-cyan-600" />
+              <span>{option.displayText}</span>
+            </label>
+          ))}
+        </div>
+      );
+    case "file":
+      return <input type="file" disabled className="block w-full text-sm text-slate-500" />;
+    case "range":
+      return <input type="range" disabled className="w-full accent-cyan-600" />;
+    case "color":
+      return <input type="color" disabled value="#0ea5e9" className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
+    case "submit":
+      return (
+        <button
+          type="button"
+          disabled
+          className="w-full rounded-2xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+        >
+          {field.label}
+        </button>
+      );
+    default:
+      return (
+        <input
+          type="text"
+          disabled
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+        />
+      );
+  }
 }
 
 function FieldPreview({
@@ -791,7 +841,7 @@ export function CustomFormCreatePage() {
               </p>
             </div>
           </aside>
-          <DragOverlay>
+          <DragOverlay dropAnimation={null}>
             <DragGhost item={activeDragItem} />
           </DragOverlay>
 
