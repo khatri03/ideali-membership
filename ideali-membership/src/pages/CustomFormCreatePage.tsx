@@ -161,6 +161,14 @@ function getControlTooltip(control: CustomFormControl) {
   return details.join(" • ");
 }
 
+function isTruthyValue(value: string) {
+  return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
+}
+
+function getDefaultOptionValue(field: CustomFormFieldDraft) {
+  return field.defaultValue || field.options[0]?.value || "";
+}
+
 function ControlPaletteItem({
   control,
   count,
@@ -241,11 +249,13 @@ function SortableFieldCard({
   selected,
   onSelect,
   onRemove,
+  showDragHandle,
 }: {
   field: CustomFormFieldDraft;
   selected: boolean;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
+  showDragHandle: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: field.id,
@@ -264,11 +274,12 @@ function SortableFieldCard({
       ref={setNodeRef}
       style={isDragging ? { transition, opacity: 0 } : style}
       className={[
-        "rounded-3xl border bg-white p-4 shadow-sm transition cursor-pointer hover:cursor-pointer",
+        "rounded-3xl border bg-white p-4 shadow-sm transition cursor-default hover:cursor-default",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
         isDragging ? "opacity-70" : "",
       ].join(" ")}
       onClick={() => onSelect(field.id)}
+      title="Click to select"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -287,19 +298,31 @@ function SortableFieldCard({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            title="Drag to reorder"
-            aria-label="Drag to reorder"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-cyan-300 hover:text-cyan-700 cursor-grab active:cursor-grabbing select-none touch-none"
-            {...attributes}
-            {...listeners}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <span aria-hidden="true" className="text-sm font-bold leading-none">
-              ::
-            </span>
-          </button>
+          {showDragHandle ? (
+            <button
+              type="button"
+              title="Drag to reorder"
+              aria-label="Drag to reorder"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-cyan-300 hover:text-cyan-700 cursor-grab hover:cursor-grab active:cursor-grabbing select-none touch-none"
+              {...attributes}
+              {...listeners}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <circle cx="6" cy="5" r="1.2" />
+                <circle cx="14" cy="5" r="1.2" />
+                <circle cx="6" cy="10" r="1.2" />
+                <circle cx="14" cy="10" r="1.2" />
+                <circle cx="6" cy="15" r="1.2" />
+                <circle cx="14" cy="15" r="1.2" />
+              </svg>
+            </button>
+          ) : null}
 
           <button
             type="button"
@@ -340,6 +363,8 @@ function SortableFieldCard({
 
 function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
   const controlType = field.controlType.toLowerCase();
+  const placeholder = field.placeholder || field.label;
+  const defaultOptionValue = getDefaultOptionValue(field);
 
   switch (controlType) {
     case "text":
@@ -351,27 +376,31 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type={controlType}
-          disabled
+          value={field.defaultValue}
+          readOnly
+          placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
         />
       );
     case "textarea":
       return (
         <textarea
-          disabled
           rows={4}
+          value={field.defaultValue}
+          readOnly
+          placeholder={placeholder}
           className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
         />
       );
     case "select":
       return (
         <select
-          disabled
-          value=""
+          value={defaultOptionValue}
+          readOnly
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
         >
           <option value="" disabled>
-            Select one
+            {placeholder || "Select one"}
           </option>
           {field.options.map((option) => (
             <option key={option.id} value={option.value}>
@@ -383,7 +412,7 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
     case "checkbox":
       return (
         <label className="inline-flex items-center gap-3">
-          <input type="checkbox" disabled className="h-4 w-4 accent-cyan-600" />
+          <input type="checkbox" checked={isTruthyValue(field.defaultValue)} readOnly className="h-4 w-4 accent-cyan-600" />
           <span className="text-sm font-semibold text-slate-800">{field.label}</span>
         </label>
       );
@@ -392,23 +421,28 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
         <div className="space-y-2">
           {field.options.map((option) => (
             <label key={option.id} className="flex items-center gap-3 text-sm text-slate-700">
-              <input type="radio" disabled name={field.id} className="h-4 w-4 accent-cyan-600" />
+              <input
+                type="radio"
+                name={field.id}
+                checked={field.defaultValue === option.value}
+                readOnly
+                className="h-4 w-4 accent-cyan-600"
+              />
               <span>{option.displayText}</span>
             </label>
           ))}
         </div>
       );
     case "file":
-      return <input type="file" disabled className="block w-full text-sm text-slate-500" />;
+      return <input type="file" readOnly className="block w-full text-sm text-slate-500" />;
     case "range":
-      return <input type="range" disabled className="w-full accent-cyan-600" />;
+      return <input type="range" value={field.defaultValue || undefined} readOnly className="w-full accent-cyan-600" />;
     case "color":
-      return <input type="color" disabled value="#0ea5e9" className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
+      return <input type="color" value={field.defaultValue || "#0ea5e9"} readOnly className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
     case "submit":
       return (
         <button
           type="button"
-          disabled
           className="w-full rounded-2xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-sm"
         >
           {field.label}
@@ -418,7 +452,9 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type="text"
-          disabled
+          value={field.defaultValue}
+          readOnly
+          placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
         />
       );
@@ -445,6 +481,7 @@ function PreviewFieldLabel({ field }: { field: CustomFormFieldDraft }) {
 function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
   const controlType = field.controlType.toLowerCase();
   const placeholder = field.placeholder || field.label;
+  const defaultOptionValue = getDefaultOptionValue(field);
 
   switch (controlType) {
     case "text":
@@ -456,6 +493,7 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type={controlType}
+          defaultValue={field.defaultValue}
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -464,6 +502,7 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <textarea
           rows={4}
+          defaultValue={field.defaultValue}
           placeholder={placeholder}
           className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -471,7 +510,7 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "select":
       return (
         <select
-          value=""
+          defaultValue={defaultOptionValue}
           onChange={() => undefined}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         >
@@ -488,7 +527,7 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "checkbox":
       return (
         <label className="inline-flex items-center gap-3">
-          <input type="checkbox" className="h-4 w-4 accent-cyan-600" />
+          <input type="checkbox" defaultChecked={isTruthyValue(field.defaultValue)} className="h-4 w-4 accent-cyan-600" />
           <span className="text-sm font-medium text-slate-800">{field.label}</span>
         </label>
       );
@@ -497,7 +536,12 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
         <div className="space-y-3">
           {field.options.map((option) => (
             <label key={option.id} className="flex items-center gap-3 text-sm text-slate-700">
-              <input type="radio" name={`preview-${field.id}`} className="h-4 w-4 accent-cyan-600" />
+              <input
+                type="radio"
+                name={`preview-${field.id}`}
+                defaultChecked={field.defaultValue === option.value}
+                className="h-4 w-4 accent-cyan-600"
+              />
               <span>{option.displayText}</span>
             </label>
           ))}
@@ -506,9 +550,9 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "file":
       return <input type="file" className="block w-full text-sm text-slate-500" />;
     case "range":
-      return <input type="range" className="w-full accent-cyan-600" />;
+      return <input type="range" defaultValue={field.defaultValue || undefined} className="w-full accent-cyan-600" />;
     case "color":
-      return <input type="color" defaultValue="#0ea5e9" className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
+      return <input type="color" defaultValue={field.defaultValue || "#0ea5e9"} className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
     case "submit":
       return (
         <button
@@ -1204,6 +1248,7 @@ export function CustomFormCreatePage() {
                           selected={field.id === selectedFieldId}
                           onSelect={setSelectedFieldId}
                           onRemove={removeField}
+                          showDragHandle={fields.length > 1}
                         />
                       ))}
                     </div>
@@ -1505,3 +1550,4 @@ export function CustomFormCreatePage() {
     </section>
   );
 }
+
