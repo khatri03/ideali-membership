@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
+  closestCenter,
   type DragEndEvent,
+  type DragMoveEvent,
+  type DragOverEvent,
   type DragStartEvent,
   PointerSensor,
-  closestCenter,
+  type DragCancelEvent,
   useDraggable,
   useDroppable,
   useSensor,
@@ -308,7 +311,7 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
 
   if (item.kind === "palette") {
     return (
-      <div className="flex w-72 items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10">
+      <div className="flex w-72 cursor-grabbing items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700">
           {getControlGlyph(item.control.iconClass, item.control.controlType, item.control.name)}
         </div>
@@ -320,7 +323,7 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
   }
 
   return (
-    <div className="flex w-[28rem] items-center gap-3 rounded-3xl border border-cyan-200 bg-white px-4 py-4 shadow-2xl shadow-slate-900/10">
+    <div className="flex w-[28rem] cursor-grabbing items-center gap-3 rounded-3xl border border-cyan-200 bg-white px-4 py-4 shadow-2xl shadow-slate-900/10">
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-cyan-700">
         <span className="text-sm font-bold">
           {getControlGlyph(item.field.iconClass, item.field.controlType, item.field.controlName)}
@@ -371,6 +374,11 @@ export function CustomFormCreatePage() {
   const [fields, setFields] = useState<CustomFormFieldDraft[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [activeDragItem, setActiveDragItem] = useState<ActiveDragItem>(null);
+  const [isCanvasTargeted, setIsCanvasTargeted] = useState(false);
+  const lastDropTargetIdRef = useRef<string | null>(null);
+  const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
+  const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
+  const canvasDropRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -402,10 +410,37 @@ export function CustomFormCreatePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    const body = document.body;
+
+    if (activeDragId) {
+      root.style.cursor = "grabbing";
+      body.style.cursor = "grabbing";
+      body.style.userSelect = "none";
+    } else {
+      root.style.cursor = "";
+      body.style.cursor = "";
+      body.style.userSelect = "";
+    }
+
+    return () => {
+      root.style.cursor = "";
+      body.style.cursor = "";
+      body.style.userSelect = "";
+    };
+  }, [activeDragId]);
+
   const selectedField = useMemo(
     () => fields.find((field) => field.id === selectedFieldId) ?? null,
     [fields, selectedFieldId],
   );
+
+  const fieldIdSet = useMemo(() => new Set(fields.map((field) => field.id)), [fields]);
 
   const filteredControls = useMemo(() => {
     const query = controlSearch.trim().toLowerCase();
@@ -437,6 +472,15 @@ export function CustomFormCreatePage() {
   const { setNodeRef: setCanvasRef, isOver: isCanvasOver } = useDroppable({
     id: CANVAS_ID,
   });
+
+  function isPointInsideCanvas(point: { x: number; y: number } | null) {
+    if (!point || !canvasDropRef.current) {
+      return false;
+    }
+
+    const rect = canvasDropRef.current.getBoundingClientRect();
+    return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+  }
 
   function updateSelectedField(updater: (field: CustomFormFieldDraft) => CustomFormFieldDraft) {
     if (!selectedFieldId) {
@@ -476,6 +520,16 @@ export function CustomFormCreatePage() {
 
   function onDragStart(event: DragStartEvent) {
     setActiveDragId(String(event.active.id));
+    lastDropTargetIdRef.current = null;
+    setIsCanvasTargeted(false);
+    const activatorEvent = event.activatorEvent as PointerEvent | MouseEvent | undefined;
+    if (typeof activatorEvent?.clientX === "number" && typeof activatorEvent?.clientY === "number") {
+      dragStartPointRef.current = { x: activatorEvent.clientX, y: activatorEvent.clientY };
+      lastPointerPointRef.current = { x: activatorEvent.clientX, y: activatorEvent.clientY };
+    } else {
+      dragStartPointRef.current = null;
+      lastPointerPointRef.current = null;
+    }
     const activeData = event.active.data.current as
       | { source?: "palette"; control?: CustomFormControl }
       | { source?: "field" }
@@ -495,14 +549,44 @@ export function CustomFormCreatePage() {
     setActiveDragItem(null);
   }
 
-  function onDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    setActiveDragId(null);
-    setActiveDragItem(null);
-
-    if (!over) {
+  function onDragMove(event: DragMoveEvent) {
+    if (!dragStartPointRef.current) {
       return;
     }
+
+    const nextPoint = {
+      x: dragStartPointRef.current.x + event.delta.x,
+      y: dragStartPointRef.current.y + event.delta.y,
+    };
+
+    lastPointerPointRef.current = nextPoint;
+    setIsCanvasTargeted(isPointInsideCanvas(nextPoint));
+  }
+
+  function onDragOver(event: DragOverEvent) {
+    const targetId = event.over?.id ? String(event.over.id) : null;
+    if (targetId && targetId === CANVAS_ID) {
+      lastDropTargetIdRef.current = targetId;
+    }
+  }
+
+  function onDragCancel(_event: DragCancelEvent) {
+    setActiveDragId(null);
+    setActiveDragItem(null);
+    setIsCanvasTargeted(false);
+    lastDropTargetIdRef.current = null;
+  }
+
+  function onDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    const pointerInsideCanvas = isPointInsideCanvas(lastPointerPointRef.current);
+
+    setActiveDragId(null);
+    setActiveDragItem(null);
+    setIsCanvasTargeted(false);
+    lastDropTargetIdRef.current = null;
+    dragStartPointRef.current = null;
+    lastPointerPointRef.current = null;
 
     const activeData = active.data.current as
       | { source?: "palette"; control?: CustomFormControl }
@@ -510,15 +594,19 @@ export function CustomFormCreatePage() {
       | undefined;
 
     if (activeData?.source === "palette" && activeData.control) {
-      const overIndex = over.id === CANVAS_ID ? fields.length : fields.findIndex((field) => field.id === over.id);
-      addFieldFromControl(activeData.control, overIndex >= 0 ? overIndex : undefined);
+      if (pointerInsideCanvas) {
+        addFieldFromControl(activeData.control, fields.length);
+      }
       return;
     }
 
     if (activeData?.source === "field") {
+      if (!over) {
+        return;
+      }
+
       const oldIndex = fields.findIndex((field) => field.id === active.id);
-      const newIndex =
-        over.id === CANVAS_ID ? fields.length - 1 : fields.findIndex((field) => field.id === over.id);
+      const newIndex = fields.findIndex((field) => field.id === String(over.id));
 
       if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
         setFields((current) => normalizeFields(arrayMove(current, oldIndex, newIndex)));
@@ -623,7 +711,10 @@ export function CustomFormCreatePage() {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={onDragStart}
+        onDragMove={onDragMove}
+        onDragOver={onDragOver}
         onDragEnd={onDragEnd}
+        onDragCancel={onDragCancel}
       >
         <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_340px]">
           <aside className="space-y-4">
@@ -704,7 +795,15 @@ export function CustomFormCreatePage() {
             <DragGhost item={activeDragItem} />
           </DragOverlay>
 
-          <main className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm transition">
+          <main
+            ref={setCanvasRef}
+            className={[
+              "rounded-[2rem] border bg-white/90 p-5 shadow-sm transition",
+              isCanvasOver || isCanvasTargeted
+                ? "border-cyan-400 ring-4 ring-cyan-100"
+                : "border-slate-200",
+            ].join(" ")}
+          >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Form canvas</h2>
@@ -718,12 +817,19 @@ export function CustomFormCreatePage() {
             </div>
 
             <div
-              ref={setCanvasRef}
+              ref={canvasDropRef}
               className={[
                 "mt-5 min-h-[420px] rounded-[2rem] border border-dashed bg-slate-50 p-4 transition",
-                isCanvasOver ? "border-cyan-400 ring-4 ring-cyan-100" : "border-slate-200",
+                isCanvasOver || isCanvasTargeted
+                  ? "border-cyan-400 bg-cyan-50/60 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
+                  : "border-slate-200",
               ].join(" ")}
             >
+              {isCanvasOver || isCanvasTargeted ? (
+                <div className="mb-4 rounded-2xl border border-cyan-200 bg-white/80 px-4 py-3 text-sm font-medium text-cyan-800">
+                  Release to drop into the form canvas.
+                </div>
+              ) : null}
               <SortableContext items={fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
                 {fields.length > 0 ? (
                   <div className="space-y-4">
