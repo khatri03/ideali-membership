@@ -22,8 +22,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Link } from "react-router-dom";
-import { fetchCustomFormControls } from "../lib/customForms";
+import { Link, useNavigate } from "react-router-dom";
+import { createCustomForm, fetchCustomFormControls } from "../lib/customForms";
 import type {
   CustomFormControl,
   CustomFormDraft,
@@ -607,6 +607,7 @@ function FieldPreview({
   placeholder,
   type = "text",
   required = false,
+  error,
 }: {
   title: string;
   value: string;
@@ -614,6 +615,7 @@ function FieldPreview({
   placeholder?: string;
   type?: string;
   required?: boolean;
+  error?: string;
 }) {
   return (
     <label className="block">
@@ -630,8 +632,12 @@ function FieldPreview({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        className={[
+          "w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
+          error ? "border-rose-300 focus:border-rose-500 focus:ring-rose-100" : "border-slate-200",
+        ].join(" ")}
       />
+      {error ? <p className="mt-2 text-xs font-medium text-rose-600">{error}</p> : null}
     </label>
   );
 }
@@ -727,10 +733,14 @@ export function CustomFormCreatePage() {
   const [fieldToRemoveId, setFieldToRemoveId] = useState<string | null>(null);
   const [optionToRemoveId, setOptionToRemoveId] = useState<string | null>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [isSavingForm, setIsSavingForm] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showCreateValidation, setShowCreateValidation] = useState(false);
   const lastDropTargetIdRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const canvasDropRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -791,6 +801,32 @@ export function CustomFormCreatePage() {
     () => fields.find((field) => field.id === selectedFieldId) ?? null,
     [fields, selectedFieldId],
   );
+
+  const createFormIssues = useMemo(() => {
+    const issues: string[] = [];
+
+    if (!draft.name.trim()) {
+      issues.push("Name");
+    }
+
+    if (!draft.headerText.trim()) {
+      issues.push("Header Text");
+    }
+
+    return issues;
+  }, [draft.headerText, draft.name]);
+
+  const canCreateForm = createFormIssues.length === 0;
+  const nameError = showCreateValidation && !draft.name.trim() ? "Name is required." : "";
+  const headerTextError =
+    showCreateValidation && !draft.headerText.trim() ? "Header Text is required." : "";
+  const layoutColumnError =
+    showCreateValidation && (!Number.isInteger(draft.layoutColumn) || draft.layoutColumn < 1)
+      ? "Layout Columns is required."
+      : "";
+  const canvasFieldError = showCreateValidation && fields.length === 0
+    ? "Add at least one field to the canvas."
+    : "";
 
   const selectedControl = useMemo(
     () => controls.find((control) => control.id === selectedField?.controlId) ?? null,
@@ -960,6 +996,36 @@ export function CustomFormCreatePage() {
     }
 
     setIsPreviewOpen(true);
+  }
+
+  async function handleCreateForm() {
+    if (isSavingForm) {
+      return;
+    }
+
+    if (!canCreateForm) {
+      setShowCreateValidation(true);
+      setSaveError(null);
+      return;
+    }
+
+    setIsSavingForm(true);
+    setSaveError(null);
+    setShowCreateValidation(false);
+
+    try {
+      const formId = await createCustomForm(draft, fields);
+      if (formId > 0) {
+        navigate(APP_ROUTES.customForms, { replace: true });
+        return;
+      }
+
+      setSaveError("We couldn't create the form. Please try again.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to create the form.");
+    } finally {
+      setIsSavingForm(false);
+    }
   }
 
   function onDragStart(event: DragStartEvent) {
@@ -1165,6 +1231,20 @@ export function CustomFormCreatePage() {
           </Link>
         </div>
 
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-slate-500">
+            {saveError ? <span className="text-rose-600">{saveError}</span> : "Ready to save."}
+          </div>
+          <button
+            type="button"
+            onClick={handleCreateForm}
+            disabled={isSavingForm}
+            className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {isSavingForm ? "Creating..." : "Create"}
+          </button>
+        </div>
+
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <FieldPreview
             title="Name"
@@ -1172,6 +1252,7 @@ export function CustomFormCreatePage() {
             onChange={(value) => setDraft((current) => ({ ...current, name: value }))}
             placeholder="Membership enrollment form"
             required
+            error={nameError}
           />
           <FieldPreview
             title="Header Text"
@@ -1179,6 +1260,7 @@ export function CustomFormCreatePage() {
             onChange={(value) => setDraft((current) => ({ ...current, headerText: value }))}
             placeholder="Tell us a little about you"
             required
+            error={headerTextError}
           />
           <FieldPreview
             title="Description"
@@ -1206,6 +1288,7 @@ export function CustomFormCreatePage() {
                 </option>
               ))}
             </select>
+            {layoutColumnError ? <p className="mt-2 text-xs font-medium text-rose-600">{layoutColumnError}</p> : null}
           </label>
         </div>
       </div>
@@ -1315,6 +1398,9 @@ export function CustomFormCreatePage() {
                 <p className="mt-1 text-sm text-slate-500">
                   Drop controls here and drag to reorder them.
                 </p>
+                {canvasFieldError ? (
+                  <p className="mt-2 text-sm font-medium text-rose-600">{canvasFieldError}</p>
+                ) : null}
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">

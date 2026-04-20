@@ -1,5 +1,10 @@
-import { getJson } from "./api";
-import type { CustomFormControl } from "../types/customForms";
+import { getJson, postJson } from "./api";
+import type {
+  CustomFormControl,
+  CustomFormDraft,
+  CustomFormFieldDraft,
+  CustomFormOptionDraft,
+} from "../types/customForms";
 
 function getResponseData(payload: unknown) {
   if (!payload || typeof payload !== "object") {
@@ -52,4 +57,89 @@ export async function fetchCustomFormControls() {
       canHaveMaxLength: asBoolean(candidate.CanHaveMaxLength ?? candidate.canHaveMaxLength),
     };
   });
+}
+
+interface CustomFormOptionPayload {
+  Value: string;
+  DisplayText: string;
+  IsDefault: boolean;
+}
+
+interface CustomFormFieldPayload {
+  FormControlTypeId: number;
+  DisplayOrder: number;
+  ControlLabel: string;
+  PlaceHolder: string | null;
+  Tooltip: string | null;
+  IsMandatory: boolean;
+  MinLength: number | null;
+  MaxLength: number | null;
+  DefaultValue: string | null;
+  Options: CustomFormOptionPayload[];
+}
+
+interface CustomFormPayload {
+  Name: string;
+  HeaderText: string;
+  Description: string | null;
+  LayoutColumn: number;
+  Fields: CustomFormFieldPayload[];
+}
+
+function asNullableString(value: string) {
+  return value.trim().length > 0 ? value : null;
+}
+
+function asNullableNumber(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function mapFieldOptions(options: CustomFormOptionDraft[]) {
+  return options.map((option) => ({
+    Value: option.value,
+    DisplayText: option.displayText,
+    IsDefault: option.isDefault,
+  }));
+}
+
+function mapFields(fields: CustomFormFieldDraft[]): CustomFormFieldPayload[] {
+  return fields.map((field) => ({
+    FormControlTypeId: field.controlId,
+    DisplayOrder: field.displayOrder,
+    ControlLabel: field.label,
+    PlaceHolder: asNullableString(field.placeholder),
+    Tooltip: asNullableString(field.tooltip),
+    IsMandatory: field.required,
+    MinLength: asNullableNumber(field.minLength),
+    MaxLength: asNullableNumber(field.maxLength),
+    DefaultValue: asNullableString(field.defaultValue),
+    Options: mapFieldOptions(field.options),
+  }));
+}
+
+export async function createCustomForm(
+  draft: CustomFormDraft,
+  fields: CustomFormFieldDraft[],
+) {
+  const payload: CustomFormPayload = {
+    Name: draft.name.trim(),
+    HeaderText: draft.headerText.trim(),
+    Description: asNullableString(draft.description),
+    LayoutColumn: draft.layoutColumn,
+    Fields: mapFields(fields),
+  };
+
+  const response = await postJson<unknown>("/api/organizer/custom-form/create-form", payload);
+  const data = getResponseData(response);
+
+  if (typeof data === "number") {
+    return data;
+  }
+
+  if (typeof data === "string" && data.length > 0 && !Number.isNaN(Number(data))) {
+    return Number(data);
+  }
+
+  return 0;
 }
