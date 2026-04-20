@@ -154,9 +154,11 @@ function getControlGlyph(iconClass: string, controlType: string, label: string) 
 
 function ControlPaletteItem({
   control,
+  count,
   onDoubleClick,
 }: {
   control: CustomFormControl;
+  count: number;
   onDoubleClick: (control: CustomFormControl) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -189,6 +191,15 @@ function ControlPaletteItem({
       <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
         {control.name}
       </p>
+      <span
+        className={[
+          "ml-auto inline-flex min-w-8 items-center justify-center rounded-full px-2 py-1 text-xs font-semibold",
+          count > 0 ? "bg-cyan-600 text-white" : "bg-slate-100 text-slate-400",
+        ].join(" ")}
+        title={`${count} field${count === 1 ? "" : "s"} on canvas`}
+      >
+        {count}
+      </span>
     </button>
   );
 }
@@ -257,8 +268,12 @@ function SortableFieldCard({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{field.label}</h3>
             {field.required ? (
-              <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-700">
-                Required
+              <span
+                className="text-sm font-bold leading-none text-rose-600"
+                aria-label="Required"
+                title="Required"
+              >
+                *
               </span>
             ) : null}
           </div>
@@ -326,7 +341,12 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
         </select>
       );
     case "checkbox":
-      return <input type="checkbox" disabled className="h-4 w-4 accent-cyan-600" />;
+      return (
+        <label className="inline-flex items-center gap-3">
+          <input type="checkbox" disabled className="h-4 w-4 accent-cyan-600" />
+          <span className="text-sm font-semibold text-slate-800">{field.label}</span>
+        </label>
+      );
     case "radio":
       return (
         <div className="space-y-2">
@@ -417,8 +437,12 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{item.field.label}</h3>
             {item.field.required ? (
-              <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-700">
-                Required
+              <span
+                className="text-sm font-bold leading-none text-rose-600"
+                aria-label="Required"
+                title="Required"
+              >
+                *
               </span>
             ) : null}
           </div>
@@ -474,6 +498,7 @@ export function CustomFormCreatePage() {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [activeDragItem, setActiveDragItem] = useState<ActiveDragItem>(null);
   const [isCanvasTargeted, setIsCanvasTargeted] = useState(false);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const lastDropTargetIdRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -538,6 +563,16 @@ export function CustomFormCreatePage() {
     () => fields.find((field) => field.id === selectedFieldId) ?? null,
     [fields, selectedFieldId],
   );
+
+  const controlUsageCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+
+    for (const field of fields) {
+      counts.set(field.controlId, (counts.get(field.controlId) ?? 0) + 1);
+    }
+
+    return counts;
+  }, [fields]);
 
   const fieldIdSet = useMemo(() => new Set(fields.map((field) => field.id)), [fields]);
 
@@ -619,6 +654,12 @@ export function CustomFormCreatePage() {
 
   function appendFieldToCanvas(control: CustomFormControl) {
     addFieldFromControl(control, fields.length);
+  }
+
+  function clearAllCanvasFields() {
+    setFields([]);
+    setSelectedFieldId(null);
+    setIsClearConfirmOpen(false);
   }
 
   function onDragStart(event: DragStartEvent) {
@@ -878,6 +919,7 @@ export function CustomFormCreatePage() {
                     <ControlPaletteItem
                       key={control.id}
                       control={control}
+                      count={controlUsageCounts.get(control.id) ?? 0}
                       onDoubleClick={appendFieldToCanvas}
                     />
                   ))
@@ -922,6 +964,16 @@ export function CustomFormCreatePage() {
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
                 {fields.length} field{fields.length === 1 ? "" : "s"}
               </span>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsClearConfirmOpen(true)}
+                disabled={fields.length === 0}
+                className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Clear all
+              </button>
             </div>
 
             <div
@@ -1120,6 +1172,44 @@ export function CustomFormCreatePage() {
           </aside>
         </div>
       </DndContext>
+
+      {isClearConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/20">
+            <div className="flex items-start gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-700">
+                !
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-semibold tracking-tight text-slate-900">
+                  Clear all canvas fields?
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  This will remove every field from the canvas. Your inspector settings will be
+                  cleared for the current selection, and this action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setIsClearConfirmOpen(false)}
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={clearAllCanvasFields}
+                className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+              >
+                Clear canvas
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
