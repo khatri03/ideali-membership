@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -608,6 +608,7 @@ function FieldPreview({
   type = "text",
   required = false,
   error,
+  inputRef,
 }: {
   title: string;
   value: string;
@@ -616,6 +617,7 @@ function FieldPreview({
   type?: string;
   required?: boolean;
   error?: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   return (
     <label className="block">
@@ -628,6 +630,7 @@ function FieldPreview({
         ) : null}
       </span>
       <input
+        ref={inputRef}
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -740,6 +743,7 @@ export function CustomFormCreatePage() {
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const canvasDropRef = useRef<HTMLDivElement | null>(null);
+  const inspectorLabelRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -801,6 +805,18 @@ export function CustomFormCreatePage() {
     () => fields.find((field) => field.id === selectedFieldId) ?? null,
     [fields, selectedFieldId],
   );
+
+  useEffect(() => {
+    if (!selectedField) {
+      return;
+    }
+
+    const focusHandle = window.requestAnimationFrame(() => {
+      inspectorLabelRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(focusHandle);
+  }, [selectedFieldId, selectedField]);
 
   const createFormIssues = useMemo(() => {
     const issues: string[] = [];
@@ -1483,6 +1499,7 @@ export function CustomFormCreatePage() {
                         label: value,
                       }))
                     }
+                    inputRef={inspectorLabelRef}
                   />
                   {selectedControl?.canHavePlaceHolder ? (
                     <FieldPreview
