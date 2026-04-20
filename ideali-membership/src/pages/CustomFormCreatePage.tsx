@@ -1373,52 +1373,76 @@ export function CustomFormCreatePage() {
 
                   {controls.find((control) => control.id === selectedField.controlId)?.hasOptions ? (
                     <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">Options</p>
-                          <p className="text-xs text-slate-500">For select, radio, and checkbox controls.</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={addOption}
-                          className="rounded-full bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cyan-700"
-                        >
-                          Add option
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={addOption}
+                        className="inline-flex w-full items-center justify-center rounded-full bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700"
+                      >
+                        Add option
+                      </button>
 
-                      <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
                         {selectedField.options.map((option, index) => (
                           <div
                             key={option.id}
-                            className="rounded-2xl border border-slate-200 bg-white p-3"
+                            role="group"
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50"
+                            title={`Option ${index + 1}: ${option.displayText}`}
                           >
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                Option {index + 1}
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => removeOption(option.id)}
-                                className="text-xs font-medium text-rose-600 transition hover:text-rose-700"
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[11px] font-semibold text-cyan-700">
+                              {index + 1}
+                            </span>
+                            <span className="max-w-[14rem] truncate">{option.displayText}</span>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                removeOption(option.id);
+                              }}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
+                              aria-label={`Remove option ${index + 1}`}
+                              title="Remove option"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
                               >
-                                Remove
-                              </button>
-                            </div>
-                            <div className="mt-3 grid gap-3">
-                              <FieldPreview
-                                title="Display text"
-                                value={option.displayText}
-                                onChange={(value) => updateOption(option.id, "displayText", value)}
-                              />
-                              <FieldPreview
-                                title="Value"
-                                value={option.value}
-                                onChange={(value) => updateOption(option.id, "value", value)}
-                              />
-                            </div>
+                                <path d="M18 6 6 18" />
+                                <path d="M6 6l12 12" />
+                              </svg>
+                            </button>
                           </div>
                         ))}
+                      </div>
+                      <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-4">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <FieldPreview
+                            title="Display text"
+                            value={selectedField.options[selectedField.options.length - 1]?.displayText || ""}
+                            onChange={(value) => {
+                              const option = selectedField.options[selectedField.options.length - 1];
+                              if (option) {
+                                updateOption(option.id, "displayText", value);
+                              }
+                            }}
+                          />
+                          <FieldPreview
+                            title="Value"
+                            value={selectedField.options[selectedField.options.length - 1]?.value || ""}
+                            onChange={(value) => {
+                              const option = selectedField.options[selectedField.options.length - 1];
+                              if (option) {
+                                updateOption(option.id, "value", value);
+                              }
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : null}
