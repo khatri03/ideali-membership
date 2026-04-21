@@ -42,35 +42,39 @@ export function WizardSideNav({
           <p className="px-4 py-3 text-sm font-semibold text-slate-900">Membership setup</p>
           <div className="space-y-2">
             {MEMBERSHIP_WIZARD_STEPS.map((step, index) => (
-              index <= currentStepIndex ? (
+              index < currentStepIndex ? (
                 <NavLink
                   key={step.to}
                   to={getStepPath(step.to)}
                   onClick={onNavigate}
-                  className={({ isActive }) =>
-                    [
-                      "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
-                      isActive
-                        ? "bg-cyan-500/10 text-cyan-800"
-                        : "text-slate-700 hover:bg-white",
-                    ].join(" ")
-                  }
+                  className="group flex w-full items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm font-medium text-emerald-900 transition hover:bg-emerald-100"
                 >
-                  {({ isActive }) => (
-                    <>
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-xs font-semibold text-slate-500 shadow-sm">
-                          {index + 1}
-                        </span>
-                        <span className="min-w-0 truncate">{step.label}</span>
-                      </span>
-                      {isActive ? (
-                        <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                          Active
-                        </span>
-                      ) : null}
-                    </>
-                  )}
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-600 text-xs font-semibold text-white shadow-sm">
+                      ✓
+                    </span>
+                    <span className="min-w-0 truncate">{step.label}</span>
+                  </span>
+                  <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                    Done
+                  </span>
+                </NavLink>
+              ) : index === currentStepIndex ? (
+                <NavLink
+                  key={step.to}
+                  to={getStepPath(step.to)}
+                  onClick={onNavigate}
+                  className="flex w-full items-center justify-between rounded-2xl border border-cyan-200 bg-cyan-500/10 px-4 py-3 text-left text-sm font-medium text-cyan-800 transition hover:bg-cyan-500/15"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-cyan-600 text-xs font-semibold text-white shadow-sm">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 truncate">{step.label}</span>
+                  </span>
+                  <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                    Active
+                  </span>
                 </NavLink>
               ) : (
                 <button
