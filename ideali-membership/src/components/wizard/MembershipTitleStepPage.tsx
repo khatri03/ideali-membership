@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
-import { APP_ROUTES } from "../../routes";
+import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import { saveMembershipTitleStep } from "../../lib/membershipWizard";
 
 const MIN_TITLE_LENGTH = 3;
@@ -72,22 +72,23 @@ export function MembershipTitleStepPage() {
       saveNextLabel: "Save & Continue",
       saveExitLabel: "Save & Exit",
       isSaving,
-      onSaveNext: async () =>
-        saveMembershipTitleStepWithFeedback({
-          title,
-          stepNumber: 1,
-          setError,
-          setIsSaving,
-          onSuccess: async (membershipTypeUniqueId) => {
-            navigate(
-              {
-                pathname: APP_ROUTES.membershipWizardDescription,
-                search: `?membershipTypeUniqueId=${encodeURIComponent(membershipTypeUniqueId)}`,
+          onSaveNext: async () =>
+            saveMembershipTitleStepWithFeedback({
+              title,
+              stepNumber: 1,
+              setError,
+              setIsSaving,
+              onSuccess: async (membershipTypeUniqueId) => {
+                navigate(
+                  buildMembershipWizardStepPath(
+                    APP_ROUTES.membershipWizardDescription,
+                    membershipTypeUniqueId,
+                    2,
+                  ),
+                  { replace: true },
+                );
               },
-              { replace: true },
-            );
-          },
-        }),
+            }),
       onSaveExit: async () =>
         saveMembershipTitleStepWithFeedback({
           title,

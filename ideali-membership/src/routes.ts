@@ -1,3 +1,5 @@
+import { generatePath } from "react-router-dom";
+
 export const APP_ROUTES = {
   root: "/",
   login: "/login",
@@ -9,14 +11,31 @@ export const APP_ROUTES = {
   membershipPendingApprovals: "/membership/type/pending-approvals",
   membershipWizard: "/membership/type/wizard",
   membershipWizardTitle: "/membership/type/wizard/title",
-  membershipWizardDescription: "/membership/type/wizard/description",
-  membershipWizardColor: "/membership/type/wizard/color",
-  membershipWizardBanner: "/membership/type/wizard/banner",
-  membershipWizardPricing: "/membership/type/wizard/pricing",
-  membershipWizardCustomForms: "/membership/type/wizard/custom-forms",
-  membershipWizardThankYouEmail: "/membership/type/wizard/thank-you-email",
-  membershipWizardAdvanceSettings: "/membership/type/wizard/advance-settings",
-  membershipWizardReview: "/membership/type/wizard/review",
+  membershipWizardDescription: "/membership/type/wizard/:membershipTypeUniqueId/description",
+  membershipWizardColor: "/membership/type/wizard/:membershipTypeUniqueId/color",
+  membershipWizardBanner: "/membership/type/wizard/:membershipTypeUniqueId/banner",
+  membershipWizardPricing: "/membership/type/wizard/:membershipTypeUniqueId/pricing",
+  membershipWizardCustomForms: "/membership/type/wizard/:membershipTypeUniqueId/custom-forms",
+  membershipWizardThankYouEmail: "/membership/type/wizard/:membershipTypeUniqueId/thank-you-email",
+  membershipWizardAdvanceSettings: "/membership/type/wizard/:membershipTypeUniqueId/advance-settings",
+  membershipWizardReview: "/membership/type/wizard/:membershipTypeUniqueId/review",
   customForms: "/organizer/custom-form/list",
   customFormsCreate: "/organizer/custom-form/create-form",
 } as const;
+
+export function buildMembershipWizardStepPath(
+  path: (typeof APP_ROUTES)[keyof typeof APP_ROUTES],
+  membershipTypeUniqueId?: string,
+  stepNo?: number,
+) {
+  if (!path.includes(":membershipTypeUniqueId")) {
+    return stepNo ? `${path}?stepNo=${stepNo}` : path;
+  }
+
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for wizard step navigation.");
+  }
+
+  const resolvedPath = generatePath(path, { membershipTypeUniqueId });
+  return stepNo ? `${resolvedPath}?stepNo=${stepNo}` : resolvedPath;
+}

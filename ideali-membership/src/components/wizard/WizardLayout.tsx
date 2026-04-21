@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { matchPath, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import { buildMembershipWizardStepPath } from "../../routes";
 import {
   defaultWizardFooterActions,
   WizardFooterActionsProvider,
@@ -15,7 +16,7 @@ interface WizardLayoutProps {
 
 function getCurrentWizardStep(pathname: string) {
   return (
-    MEMBERSHIP_WIZARD_STEPS.find((step) => pathname.startsWith(step.to)) ??
+    MEMBERSHIP_WIZARD_STEPS.find((step) => matchPath({ path: step.to, end: true }, pathname)) ??
     MEMBERSHIP_WIZARD_STEPS[0]
   );
 }
@@ -23,12 +24,13 @@ function getCurrentWizardStep(pathname: string) {
 export function WizardLayout({ children }: WizardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [footerActions, setFooterActions] = useState(defaultWizardFooterActions);
 
   const currentStepIndex = useMemo(() => {
     const index = MEMBERSHIP_WIZARD_STEPS.findIndex((step) =>
-      location.pathname.startsWith(step.to),
+      matchPath({ path: step.to, end: true }, location.pathname),
     );
     return index >= 0 ? index : 0;
   }, [location.pathname]);
@@ -63,7 +65,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
           {isNavVisible ? (
             <WizardSideNav
               currentStepIndex={currentStepIndex}
-              locationSearch={location.search}
+              membershipTypeUniqueId={membershipTypeUniqueId}
               onNavigate={() => {
                 if (window.innerWidth < 1024) {
                   setIsNavVisible(false);
@@ -81,7 +83,17 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                   {footerActions.showBack ? (
                     <button
                       type="button"
-                      onClick={footerActions.onBack ?? (() => navigate(previousStep.to))}
+                      onClick={
+                        footerActions.onBack ??
+                        (() =>
+                          navigate(
+                            buildMembershipWizardStepPath(
+                              previousStep.to,
+                              membershipTypeUniqueId,
+                              currentStepIndex,
+                            ),
+                          ))
+                      }
                       className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                     >
                       Back

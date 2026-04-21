@@ -1,17 +1,27 @@
 import { NavLink } from "react-router-dom";
+import { buildMembershipWizardStepPath } from "../../routes";
 import { MEMBERSHIP_WIZARD_STEPS } from "./membershipWizardSteps";
 
 interface WizardSideNavProps {
   currentStepIndex: number;
-  locationSearch: string;
+  membershipTypeUniqueId?: string;
   onNavigate?: () => void;
 }
 
 export function WizardSideNav({
   currentStepIndex,
-  locationSearch,
+  membershipTypeUniqueId,
   onNavigate,
 }: WizardSideNavProps) {
+  function getStepPath(stepPath: string) {
+    const stepIndex = MEMBERSHIP_WIZARD_STEPS.findIndex((step) => step.to === stepPath);
+    return buildMembershipWizardStepPath(
+      stepPath as (typeof MEMBERSHIP_WIZARD_STEPS)[number]["to"],
+      membershipTypeUniqueId,
+      stepIndex >= 0 ? stepIndex + 1 : undefined,
+    );
+  }
+
   return (
     <aside className="fixed inset-y-0 left-0 z-40 w-80 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:sticky lg:top-[73px] lg:h-[calc(100vh-73px)] lg:shadow-none">
       <div className="flex items-center justify-between lg:hidden">
@@ -35,7 +45,7 @@ export function WizardSideNav({
               index <= currentStepIndex ? (
                 <NavLink
                   key={step.to}
-                  to={{ pathname: step.to, search: locationSearch }}
+                  to={getStepPath(step.to)}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     [
