@@ -22,7 +22,7 @@ function readText(value: unknown) {
 
 export async function saveMembershipTitleStep(name: string, stepNumber: number) {
   const payload = await postJson<unknown>(
-    `/api/organizer/membership-type/wizard/title?stepNumber=${stepNumber}`,
+    `/api/membership/type/wizard/title?stepNumber=${stepNumber}`,
     { name },
   );
 

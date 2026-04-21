@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { APP_ROUTES } from "../../routes";
 import {
   defaultWizardFooterActions,
   WizardFooterActionsProvider,
@@ -37,15 +36,16 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const currentStep = getCurrentWizardStep(location.pathname);
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === MEMBERSHIP_WIZARD_STEPS.length - 1;
-  const nextStep = MEMBERSHIP_WIZARD_STEPS[currentStepIndex + 1];
   const previousStep = MEMBERSHIP_WIZARD_STEPS[currentStepIndex - 1];
 
   useEffect(() => {
-    setFooterActions({
+    setFooterActions((current) => ({
       ...defaultWizardFooterActions,
+      ...current,
       showBack: !isFirstStep,
       showSaveNext: !isLastStep,
-    });
+      showSaveExit: true,
+    }));
   }, [currentStepIndex, isFirstStep, isLastStep, setFooterActions]);
 
   return (
@@ -94,8 +94,8 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                     {footerActions.showSaveNext ? (
                       <button
                         type="button"
-                        onClick={footerActions.onSaveNext ?? (() => navigate(nextStep.to))}
-                        disabled={footerActions.isSaving}
+                        onClick={footerActions.onSaveNext}
+                        disabled={footerActions.isSaving || !footerActions.onSaveNext}
                         className="rounded-full border border-cyan-200 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {footerActions.saveNextLabel}
@@ -104,8 +104,8 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                     {footerActions.showSaveExit ? (
                       <button
                         type="button"
-                        onClick={footerActions.onSaveExit ?? (() => navigate(APP_ROUTES.membershipDashboard))}
-                        disabled={footerActions.isSaving}
+                        onClick={footerActions.onSaveExit}
+                        disabled={footerActions.isSaving || !footerActions.onSaveExit}
                         className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {footerActions.saveExitLabel}

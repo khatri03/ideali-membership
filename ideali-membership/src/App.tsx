@@ -65,7 +65,7 @@ function RouterApp() {
       <Route path={APP_ROUTES.root} element={<AppHome />} />
       <Route path={APP_ROUTES.login} element={<LoginRoute />} />
       <Route
-        path={APP_ROUTES.app}
+        path={APP_ROUTES.root}
         element={
           <RequireAuth>
             <ProtectedShell />
@@ -74,8 +74,7 @@ function RouterApp() {
       >
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-          <Route path="dashboard" element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-          <Route path="membership">
+          <Route path="membership/type">
             <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="types" element={<MembershipTypesPage />} />
@@ -85,14 +84,14 @@ function RouterApp() {
               element={<SimplePage title="Pending Approvals" description="Review and approve membership requests here." />}
             />
           </Route>
-          <Route path="custom-forms">
-            <Route index element={<CustomFormsPage />} />
-            <Route path="create" element={<CustomFormCreatePage />} />
+          <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />
+          <Route path="organizer/custom-form">
+            <Route path="create-form" element={<CustomFormCreatePage />} />
           </Route>
         </Route>
 
         <Route element={<WizardLayout />}>
-          <Route path="membership/wizard">
+          <Route path="membership/type/wizard">
             <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
             <Route path="title" element={<MembershipTitleStepPage />} />
             {MEMBERSHIP_WIZARD_STEPS.slice(1).map((step) => (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import { APP_ROUTES } from "../../routes";
@@ -64,9 +64,7 @@ export function MembershipTitleStepPage() {
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const validationError = getTitleError(title);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     setFooterActions({
       showBack: false,
       showSaveNext: true,
@@ -128,12 +126,7 @@ export function MembershipTitleStepPage() {
           <input
             type="text"
             value={title}
-            onChange={(event) => {
-              setTitle(event.target.value);
-              if (error) {
-                setError("");
-              }
-            }}
+            onChange={(event) => setTitle(event.target.value)}
             placeholder="Enter membership title"
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
             aria-invalid={Boolean(error)}
@@ -143,9 +136,9 @@ export function MembershipTitleStepPage() {
 
         <p className="text-xs text-slate-500">3-80 characters.</p>
 
-        {error || validationError ? (
+        {error ? (
           <p id="membership-title-error" className="text-sm font-medium text-rose-600">
-            {error || validationError}
+            {error}
           </p>
         ) : null}
       </div>
