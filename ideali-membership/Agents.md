@@ -16,6 +16,8 @@ This file defines the working rules for agents contributing to `ideali-membershi
 - Keep the app production-ready by default: typed, lint-friendly, responsive, and easy to extend.
 - Use React and TypeScript patterns that improve maintainability. Avoid unnecessary abstraction.
 - Prefer reusable components and small focused files over large monolith components.
+- Avoid creating long methods. Break longer logic into small helper functions or focused hooks.
+- Strictly follow SOLID, KISS, and DRY principles.
 - Preserve the existing design direction unless the user requests a redesign.
 - Use Tailwind utility classes for styling. Add custom CSS only when utility classes are not enough.
 - When backend work is needed, refer to the API project at `D:\My Projects\V4Ideas\Ideali\ideali.api` as the source backend codebase.

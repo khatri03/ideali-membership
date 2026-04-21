@@ -3,6 +3,7 @@ import { useAuth } from "./auth/AuthContext";
 import { LoginScreen } from "./components/LoginScreen";
 import { ProtectedShell } from "./components/ProtectedShell";
 import { AppLayout } from "./components/layout/AppLayout";
+import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
 import { WizardLayout } from "./components/wizard/WizardLayout";
 import { WizardStepPage } from "./components/wizard/WizardStepPage";
 import { MEMBERSHIP_WIZARD_STEPS } from "./components/wizard/membershipWizardSteps";
@@ -93,7 +94,8 @@ function RouterApp() {
         <Route element={<WizardLayout />}>
           <Route path="membership/wizard">
             <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
-            {MEMBERSHIP_WIZARD_STEPS.map((step) => (
+            <Route path="title" element={<MembershipTitleStepPage />} />
+            {MEMBERSHIP_WIZARD_STEPS.slice(1).map((step) => (
               <Route
                 key={step.to}
                 path={step.to.replace(`${APP_ROUTES.membershipWizard}/`, "")}

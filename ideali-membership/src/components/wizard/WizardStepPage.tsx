@@ -1,9 +1,21 @@
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+
 interface WizardStepPageProps {
   title: string;
   description: string;
 }
 
 export function WizardStepPage({ title, description }: WizardStepPageProps) {
+  const [searchParams] = useSearchParams();
+  const membershipTypeUniqueId = searchParams.get("membershipTypeUniqueId");
+
+  useEffect(() => {
+    if (membershipTypeUniqueId) {
+      console.log("Membership type unique id:", membershipTypeUniqueId);
+    }
+  }, [membershipTypeUniqueId]);
+
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
       <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-700">
