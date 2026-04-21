@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { APP_ROUTES } from "../../routes";
 
@@ -14,6 +15,14 @@ const membershipItems = [
 
 export function SideNav({ onNavigate }: SideNavProps) {
   const location = useLocation();
+  const isMembershipRoute = location.pathname.startsWith(APP_ROUTES.membership);
+  const [isMembershipExpanded, setIsMembershipExpanded] = useState(isMembershipRoute);
+
+  useEffect(() => {
+    if (isMembershipRoute) {
+      setIsMembershipExpanded(true);
+    }
+  }, [isMembershipRoute]);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 w-72 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:sticky lg:top-[73px] lg:h-[calc(100vh-73px)] lg:shadow-none">
@@ -32,45 +41,59 @@ export function SideNav({ onNavigate }: SideNavProps) {
 
       <nav className="mt-6 space-y-3 lg:mt-0">
         <div className="rounded-3xl border border-slate-200 bg-slate-50 p-2">
-          <div className="flex items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-semibold text-slate-900">
+          <button
+            type="button"
+            onClick={() => setIsMembershipExpanded((current) => !current)}
+            className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-white"
+            aria-expanded={isMembershipExpanded}
+            aria-controls="membership-nav-group"
+          >
             <span>Membership</span>
-            <span className="text-slate-500" aria-hidden="true">
+            <span
+              className={[
+                "text-slate-500 transition-transform",
+                isMembershipExpanded ? "rotate-180" : "",
+              ].join(" ")}
+              aria-hidden="true"
+            >
               v
             </span>
-          </div>
+          </button>
 
-          <div
-            id="membership-nav-group"
-            className="mt-2 space-y-2"
-          >
-            {membershipItems.map((item) => (
-              <NavLink
-                key={item.label}
-                to={item.to}
-                end={item.to === APP_ROUTES.membershipDashboard}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  [
-                    "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
-                    isActive
-                      ? "bg-cyan-500/10 text-cyan-800"
-                      : "text-slate-700 hover:bg-slate-100",
-                  ].join(" ")
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span>{item.label}</span>
-                    {isActive ? (
-                      <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                        Active
-                      </span>
-                    ) : null}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </div>
+          {isMembershipExpanded ? (
+            <div
+              id="membership-nav-group"
+              className="mt-2 space-y-2"
+            >
+              {membershipItems.map((item) => (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  end={item.to === APP_ROUTES.membershipDashboard}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    [
+                      "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
+                      isActive
+                        ? "bg-cyan-500/10 text-cyan-800"
+                        : "text-slate-700 hover:bg-slate-100",
+                    ].join(" ")
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span>{item.label}</span>
+                      {isActive ? (
+                        <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                          Active
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
