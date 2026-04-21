@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+import { APP_ROUTES } from "../routes";
+
 const metrics = [
   { label: "Active members", value: "4,218", delta: "+12.4%" },
   { label: "Renewal rate", value: "96.2%", delta: "+3.1%" },
@@ -34,6 +37,12 @@ export function DashboardPage() {
               This area is only available after authentication. The route now
               stays visible in the URL so navigation works like a real app.
             </p>
+            <Link
+              to={APP_ROUTES.membershipWizardTitle}
+              className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+            >
+              Open membership wizard
+            </Link>
           </div>
         </div>
 
@@ -111,4 +120,3 @@ export function DashboardPage() {
     </section>
   );
 }
-

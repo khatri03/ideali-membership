@@ -1,6 +1,5 @@
-import { AppLayout } from "./layout/AppLayout";
+import { Outlet } from "react-router-dom";
 
 export function ProtectedShell() {
-  return <AppLayout />;
+  return <Outlet />;
 }
-

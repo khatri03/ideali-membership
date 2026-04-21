@@ -2,9 +2,14 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { useAuth } from "./auth/AuthContext";
 import { LoginScreen } from "./components/LoginScreen";
 import { ProtectedShell } from "./components/ProtectedShell";
+import { AppLayout } from "./components/layout/AppLayout";
+import { WizardLayout } from "./components/wizard/WizardLayout";
+import { WizardStepPage } from "./components/wizard/WizardStepPage";
+import { MEMBERSHIP_WIZARD_STEPS } from "./components/wizard/membershipWizardSteps";
 import { CustomFormCreatePage } from "./pages/CustomFormCreatePage";
 import { CustomFormsPage } from "./pages/CustomFormsPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { MembershipTypesPage } from "./pages/MembershipTypesPage";
 import { MembersPage } from "./pages/MembersPage";
 import { SimplePage } from "./pages/SimplePage";
 import { APP_ROUTES } from "./routes";
@@ -66,20 +71,36 @@ function RouterApp() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-        <Route path="dashboard" element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-        <Route path="membership">
+        <Route element={<AppLayout />}>
           <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="types" element={<SimplePage title="Types" description="Membership types will be managed here." />} />
-          <Route path="members" element={<MembersPage />} />
-          <Route path="pending-approvals" element={<SimplePage title="Pending Approvals" description="Review and approve membership requests here." />} />
+          <Route path="dashboard" element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
+          <Route path="membership">
+            <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="types" element={<MembershipTypesPage />} />
+            <Route path="members" element={<MembersPage />} />
+            <Route
+              path="pending-approvals"
+              element={<SimplePage title="Pending Approvals" description="Review and approve membership requests here." />}
+            />
+          </Route>
+          <Route path="custom-forms">
+            <Route index element={<CustomFormsPage />} />
+            <Route path="create" element={<CustomFormCreatePage />} />
+          </Route>
         </Route>
-        <Route
-          path="custom-forms"
-        >
-          <Route index element={<CustomFormsPage />} />
-          <Route path="create" element={<CustomFormCreatePage />} />
+
+        <Route element={<WizardLayout />}>
+          <Route path="membership/wizard">
+            <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
+            {MEMBERSHIP_WIZARD_STEPS.map((step) => (
+              <Route
+                key={step.to}
+                path={step.to.replace(`${APP_ROUTES.membershipWizard}/`, "")}
+                element={<WizardStepPage title={step.label} description={step.description} />}
+              />
+            ))}
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to={APP_ROUTES.root} replace />} />
