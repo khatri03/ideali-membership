@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { matchPath, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { buildMembershipWizardStepPath } from "../../routes";
+import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
   defaultWizardFooterActions,
   WizardFooterActionsProvider,
@@ -45,6 +45,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
       ...defaultWizardFooterActions,
       ...current,
       showBack: !isFirstStep,
+      showSkip: current.showSkip ?? false,
       showSaveNext: !isLastStep,
       showSaveExit: true,
     }));
@@ -102,7 +103,17 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                 </div>
 
                 <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end lg:justify-end">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    {footerActions.showSkip ? (
+                      <button
+                        type="button"
+                        onClick={footerActions.onSkip}
+                        disabled={footerActions.isSaving}
+                        className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {footerActions.skipLabel}
+                      </button>
+                    ) : null}
                     {footerActions.showSaveNext ? (
                       <button
                         type="button"
@@ -116,8 +127,8 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                     {footerActions.showSaveExit ? (
                       <button
                         type="button"
-                        onClick={footerActions.onSaveExit}
-                        disabled={footerActions.isSaving || !footerActions.onSaveExit}
+                        onClick={footerActions.onSaveExit ?? (() => navigate(APP_ROUTES.membershipTypes))}
+                        disabled={footerActions.isSaving}
                         className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {footerActions.saveExitLabel}

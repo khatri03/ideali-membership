@@ -1,8 +1,8 @@
-import { useLayoutEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
-import { saveMembershipTitleStep } from "../../lib/membershipWizard";
+import { getMembershipTitleInfo, saveMembershipTitleStep } from "../../lib/membershipWizard";
 
 const MIN_TITLE_LENGTH = 3;
 const MAX_TITLE_LENGTH = 80;
@@ -28,12 +28,14 @@ function getTitleError(title: string) {
 async function saveMembershipTitleStepWithFeedback({
   title,
   stepNumber,
+  membershipTypeUniqueId,
   setError,
   setIsSaving,
   onSuccess,
 }: {
   title: string;
   stepNumber: number;
+  membershipTypeUniqueId?: string;
   setError: (value: string) => void;
   setIsSaving: (value: boolean) => void;
   onSuccess: (membershipTypeUniqueId: string) => void | Promise<void>;
@@ -48,7 +50,7 @@ async function saveMembershipTitleStepWithFeedback({
   setIsSaving(true);
 
   try {
-    const result = await saveMembershipTitleStep(title.trim(), stepNumber);
+    const result = await saveMembershipTitleStep(title.trim(), stepNumber, membershipTypeUniqueId);
     await onSuccess(result.membershipTypeUniqueId);
   } catch (saveError) {
     setError(saveError instanceof Error ? saveError.message : "Unable to save membership title.");
@@ -59,10 +61,42 @@ async function saveMembershipTitleStepWithFeedback({
 
 export function MembershipTitleStepPage() {
   const navigate = useNavigate();
+  const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const { setFooterActions } = useWizardFooterActions();
   const [title, setTitle] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!membershipTypeUniqueId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadMembershipTitle() {
+      try {
+        const info = await getMembershipTitleInfo(membershipTypeUniqueId);
+        if (!isMounted) {
+          return;
+        }
+
+        setTitle(info.name);
+      } catch (loadError) {
+        if (!isMounted) {
+          return;
+        }
+
+        setError(loadError instanceof Error ? loadError.message : "Unable to load membership title.");
+      }
+    }
+
+    void loadMembershipTitle();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [membershipTypeUniqueId]);
 
   useLayoutEffect(() => {
     setFooterActions({
@@ -72,27 +106,29 @@ export function MembershipTitleStepPage() {
       saveNextLabel: "Save & Continue",
       saveExitLabel: "Save & Exit",
       isSaving,
-          onSaveNext: async () =>
-            saveMembershipTitleStepWithFeedback({
-              title,
-              stepNumber: 1,
-              setError,
-              setIsSaving,
-              onSuccess: async (membershipTypeUniqueId) => {
-                navigate(
-                  buildMembershipWizardStepPath(
-                    APP_ROUTES.membershipWizardDescription,
-                    membershipTypeUniqueId,
-                    2,
-                  ),
-                  { replace: true },
-                );
-              },
-            }),
+      onSaveNext: async () =>
+        saveMembershipTitleStepWithFeedback({
+          title,
+          stepNumber: 1,
+          membershipTypeUniqueId,
+          setError,
+          setIsSaving,
+          onSuccess: async (savedMembershipTypeUniqueId) => {
+            navigate(
+              buildMembershipWizardStepPath(
+                APP_ROUTES.membershipWizardDescription,
+                savedMembershipTypeUniqueId,
+                2,
+              ),
+              { replace: true },
+            );
+          },
+        }),
       onSaveExit: async () =>
         saveMembershipTitleStepWithFeedback({
           title,
           stepNumber: 1,
+          membershipTypeUniqueId,
           setError,
           setIsSaving,
           onSuccess: async () => {
@@ -100,7 +136,7 @@ export function MembershipTitleStepPage() {
           },
         }),
     });
-  }, [navigate, setFooterActions, title, isSaving]);
+  }, [membershipTypeUniqueId, navigate, setFooterActions, title, isSaving]);
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">

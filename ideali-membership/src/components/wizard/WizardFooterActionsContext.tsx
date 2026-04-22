@@ -3,20 +3,25 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 export interface WizardFooterActions {
   showBack: boolean;
+  showSkip?: boolean;
   showSaveNext: boolean;
   showSaveExit: boolean;
+  skipLabel?: string;
   saveNextLabel: string;
   saveExitLabel: string;
   isSaving: boolean;
   onBack?: () => void;
+  onSkip?: () => void;
   onSaveNext?: () => void;
   onSaveExit?: () => void;
 }
 
 export const defaultWizardFooterActions: WizardFooterActions = {
   showBack: true,
+  showSkip: false,
   showSaveNext: true,
   showSaveExit: true,
+  skipLabel: "Skip",
   saveNextLabel: "Save & Next",
   saveExitLabel: "Save & Exit",
   isSaving: false,

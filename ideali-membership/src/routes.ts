@@ -11,6 +11,8 @@ export const APP_ROUTES = {
   membershipPendingApprovals: "/membership/type/pending-approvals",
   membershipWizard: "/membership/type/wizard",
   membershipWizardTitle: "/membership/type/wizard/title",
+  membershipWizardTitleWithId: "/membership/type/wizard/:membershipTypeUniqueId/title",
+  membershipWizardResume: "/membership/type/wizard/:membershipTypeUniqueId",
   membershipWizardDescription: "/membership/type/wizard/:membershipTypeUniqueId/description",
   membershipWizardColor: "/membership/type/wizard/:membershipTypeUniqueId/color",
   membershipWizardBanner: "/membership/type/wizard/:membershipTypeUniqueId/banner",
@@ -28,6 +30,13 @@ export function buildMembershipWizardStepPath(
   membershipTypeUniqueId?: string,
   stepNo?: number,
 ) {
+  if (path === APP_ROUTES.membershipWizardTitle && membershipTypeUniqueId) {
+    const resolvedTitlePath = generatePath(APP_ROUTES.membershipWizardTitleWithId, {
+      membershipTypeUniqueId,
+    });
+    return stepNo ? `${resolvedTitlePath}?stepNo=${stepNo}` : resolvedTitlePath;
+  }
+
   if (!path.includes(":membershipTypeUniqueId")) {
     return stepNo ? `${path}?stepNo=${stepNo}` : path;
   }

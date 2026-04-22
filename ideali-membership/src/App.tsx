@@ -1,9 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { LoginScreen } from "./components/LoginScreen";
 import { ProtectedShell } from "./components/ProtectedShell";
 import { AppLayout } from "./components/layout/AppLayout";
+import { MembershipDescriptionStepPage } from "./components/wizard/MembershipDescriptionStepPage";
 import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
+import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage";
 import { WizardLayout } from "./components/wizard/WizardLayout";
 import { WizardStepPage } from "./components/wizard/WizardStepPage";
 import { MEMBERSHIP_WIZARD_STEPS } from "./components/wizard/membershipWizardSteps";
@@ -13,7 +15,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { MembershipTypesPage } from "./pages/MembershipTypesPage";
 import { MembersPage } from "./pages/MembersPage";
 import { SimplePage } from "./pages/SimplePage";
-import { APP_ROUTES, buildMembershipWizardStepPath } from "./routes";
+import { APP_ROUTES } from "./routes";
 
 function AppLoading() {
   return (
@@ -59,25 +61,6 @@ function AppHome() {
   return <Navigate to={APP_ROUTES.membershipDashboard} replace />;
 }
 
-function WizardDescriptionRedirect() {
-  const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
-
-  if (!membershipTypeUniqueId) {
-    return <Navigate to={APP_ROUTES.membershipWizardTitle} replace />;
-  }
-
-  return (
-    <Navigate
-      to={buildMembershipWizardStepPath(
-        APP_ROUTES.membershipWizardDescription,
-        membershipTypeUniqueId,
-        2,
-      )}
-      replace
-    />
-  );
-}
-
 function getWizardStepSegment(stepPath: string) {
   return stepPath.slice(stepPath.lastIndexOf("/") + 1);
 }
@@ -118,8 +101,10 @@ function RouterApp() {
             <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
             <Route path="title" element={<MembershipTitleStepPage />} />
             <Route path=":membershipTypeUniqueId">
-              <Route index element={<WizardDescriptionRedirect />} />
-              {MEMBERSHIP_WIZARD_STEPS.slice(1).map((step) => (
+              <Route index element={<MembershipWizardResumePage />} />
+              <Route path="title" element={<MembershipTitleStepPage />} />
+              <Route path="description" element={<MembershipDescriptionStepPage />} />
+              {MEMBERSHIP_WIZARD_STEPS.slice(2).map((step) => (
                 <Route
                   key={step.to}
                   path={getWizardStepSegment(step.to)}
