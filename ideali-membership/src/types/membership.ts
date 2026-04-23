@@ -21,3 +21,10 @@ export interface MembershipPaymentMethodOption {
   text: string;
   value: number;
 }
+
+export interface MembershipQuestionsInfo {
+  uniqueId: string;
+  customFormUniqueId: string;
+  customFormName: string;
+  stepNo: number;
+}

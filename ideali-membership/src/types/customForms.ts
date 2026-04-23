@@ -11,6 +11,11 @@ export interface CustomFormControl {
   canHaveMaxLength: boolean;
 }
 
+export interface CustomFormListItem {
+  text: string;
+  value: string;
+}
+
 export interface CustomFormOptionDraft {
   id: string;
   displayText: string;

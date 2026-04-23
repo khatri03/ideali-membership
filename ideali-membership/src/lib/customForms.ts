@@ -34,6 +34,23 @@ function asString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+export async function fetchCustomFormListItems() {
+  const payload = await getJson<unknown>("/api/organizer/custom-form/list-items");
+  const data = getResponseData(payload);
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map((item) => {
+    const candidate = item as Record<string, unknown>;
+    return {
+      text: asString(candidate.Text ?? candidate.text),
+      value: asString(candidate.Value ?? candidate.value),
+    };
+  }).filter((item) => item.text && item.value);
+}
+
 export async function fetchCustomFormControls() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/controls");
   const data = getResponseData(payload);

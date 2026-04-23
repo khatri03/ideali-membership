@@ -201,7 +201,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
 
             <footer className="rounded-[2rem] border border-slate-200 bg-white/90 px-6 py-5 shadow-sm">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex w-full items-stretch sm:w-auto">
                   {footerActions.showBack ? (
                     <button
                       type="button"
@@ -216,7 +216,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                             ),
                           ))
                       }
-                      className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      className="w-full rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:w-auto"
                     >
                       Back
                     </button>

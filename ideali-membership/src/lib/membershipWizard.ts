@@ -1,6 +1,7 @@
 import { getJson, postJson } from "./api";
 import type {
   MembershipPaymentMethodOption,
+  MembershipQuestionsInfo,
   MembershipTitleInfo,
   MembershipTypeListItem,
   OrganizerPaymentAccountSelectionItem,
@@ -89,6 +90,10 @@ export function invalidateMembershipWizardBannerCache(membershipTypeUniqueId: st
 
 export function invalidateMembershipWizardPaymentAccountCache(membershipTypeUniqueId: string) {
   invalidateWizardCache(`wizard:payment-account:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardQuestionsCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:questions:${membershipTypeUniqueId}`);
 }
 
 export function invalidateOrganizerPaymentAccountSelectionCache() {
@@ -404,6 +409,31 @@ export async function getMembershipPaymentAccountInfo(membershipTypeUniqueId: st
   });
 }
 
+export async function getMembershipQuestionsInfo(membershipTypeUniqueId: string) {
+  return getCachedWizardResponse(`wizard:questions:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/questions`);
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const customFormUniqueId = readText(
+      responseData?.CustomFormUniqueId ?? responseData?.customFormUniqueId,
+    );
+    const customFormName = readText(responseData?.CustomFormName ?? responseData?.customFormName);
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+
+    if (!uniqueId) {
+      throw new Error("Unexpected membership questions response.");
+    }
+
+    return {
+      uniqueId,
+      customFormUniqueId,
+      customFormName,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 7,
+    } satisfies MembershipQuestionsInfo;
+  });
+}
+
 export async function getOrganizerPaymentAccountSelectionItems() {
   return getCachedWizardResponse("organizer:payment-account-selection-items", async () => {
     const payload = await getJson<unknown>("/api/organizer/payment-account/selection-items");
@@ -478,6 +508,47 @@ export async function saveMembershipPaymentAccountStep(
 
   invalidateMembershipWizardPaymentAccountCache(savedMembershipTypeUniqueId);
   invalidateOrganizerPaymentMethodsCache(paymentAccountUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
+}
+
+export async function saveMembershipQuestionsStep(
+  customFormUniqueId: string | null,
+  stepNumber: number,
+  membershipTypeUniqueId?: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for membership questions saving.");
+  }
+
+  const payload = await postJson<unknown>(
+    `/api/membership/type/wizard/${membershipTypeUniqueId}/questions?stepNumber=${stepNumber}`,
+    {
+      customFormUniqueId: customFormUniqueId || null,
+    },
+  );
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  if (!savedMembershipTypeUniqueId) {
+    throw new Error("Unexpected membership questions response.");
+  }
+
+  invalidateMembershipWizardQuestionsCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
