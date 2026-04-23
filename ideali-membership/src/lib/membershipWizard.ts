@@ -97,6 +97,61 @@ export async function getMembershipTitleInfo(membershipTypeUniqueId: string) {
   } satisfies MembershipTitleInfo;
 }
 
+export async function getMembershipColorInfo(membershipTypeUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/color`);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+  const color = readText(responseData?.Color ?? responseData?.color);
+  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+
+  if (!uniqueId) {
+    throw new Error("Unexpected membership color response.");
+  }
+
+  return {
+    uniqueId,
+    color: color || "",
+    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 3,
+  };
+}
+
+export async function saveMembershipColorStep(
+  color: string | null,
+  stepNumber: number,
+  membershipTypeUniqueId?: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for membership color saving.");
+  }
+
+  const payload = await postJson<unknown>(
+    `/api/membership/type/wizard/${membershipTypeUniqueId}/color?stepNumber=${stepNumber}`,
+    { color },
+  );
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  if (!savedMembershipTypeUniqueId) {
+    throw new Error("Unexpected membership color response.");
+  }
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
+}
+
 export async function getMembershipWizardProgress(membershipTypeUniqueId: string) {
   const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/progress`);
   const responseData = readResponseData(payload);
@@ -111,7 +166,7 @@ export async function getMembershipWizardProgress(membershipTypeUniqueId: string
       readNumber(record.StepNumber ?? record.stepNumber ?? record.StepNo ?? record.stepNo ?? record.Data) ??
       readNumber(record.data);
 
-    if (Number.isFinite(stepNumber) && stepNumber >= 0) {
+    if (typeof stepNumber === "number" && Number.isFinite(stepNumber) && stepNumber >= 0) {
       return stepNumber;
     }
   }

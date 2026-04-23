@@ -62,13 +62,14 @@ async function saveMembershipTitleStepWithFeedback({
 export function MembershipTitleStepPage() {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
+  const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
   const [title, setTitle] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!membershipTypeUniqueId) {
+    if (!currentMembershipTypeUniqueId) {
       return;
     }
 
@@ -76,7 +77,7 @@ export function MembershipTitleStepPage() {
 
     async function loadMembershipTitle() {
       try {
-        const info = await getMembershipTitleInfo(membershipTypeUniqueId);
+        const info = await getMembershipTitleInfo(currentMembershipTypeUniqueId);
         if (!isMounted) {
           return;
         }
@@ -96,7 +97,7 @@ export function MembershipTitleStepPage() {
     return () => {
       isMounted = false;
     };
-  }, [membershipTypeUniqueId]);
+  }, [currentMembershipTypeUniqueId]);
 
   useLayoutEffect(() => {
     setFooterActions({
@@ -110,7 +111,7 @@ export function MembershipTitleStepPage() {
         saveMembershipTitleStepWithFeedback({
           title,
           stepNumber: 1,
-          membershipTypeUniqueId,
+          membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setIsSaving,
           onSuccess: async (savedMembershipTypeUniqueId) => {
@@ -128,7 +129,7 @@ export function MembershipTitleStepPage() {
         saveMembershipTitleStepWithFeedback({
           title,
           stepNumber: 1,
-          membershipTypeUniqueId,
+          membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setIsSaving,
           onSuccess: async () => {
@@ -136,7 +137,7 @@ export function MembershipTitleStepPage() {
           },
         }),
     });
-  }, [membershipTypeUniqueId, navigate, setFooterActions, title, isSaving]);
+  }, [currentMembershipTypeUniqueId, navigate, setFooterActions, title, isSaving]);
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">

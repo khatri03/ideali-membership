@@ -126,7 +126,7 @@ export function MembershipDescriptionStepPage() {
 
     const savedValue = window.localStorage.getItem(storageKey);
     if (savedValue) {
-      editor.commands.setContent(savedValue, false);
+        editor.commands.setContent(savedValue, { emitUpdate: false });
     }
   }, [editor, storageKey]);
 

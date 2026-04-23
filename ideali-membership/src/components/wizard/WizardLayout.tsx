@@ -8,16 +8,16 @@ import {
 } from "./WizardFooterActionsContext";
 import { WizardSideNav } from "./WizardSideNav";
 import { WizardTopBar } from "./WizardTopBar";
-import { MEMBERSHIP_WIZARD_STEPS } from "./membershipWizardSteps";
+import { MEMBERSHIP_WIZARD_STEPS, type MembershipWizardStep } from "./membershipWizardSteps";
 
 interface WizardLayoutProps {
   children?: ReactNode;
 }
 
-function getCurrentWizardStep(pathname: string) {
+function getCurrentWizardStep(pathname: string): MembershipWizardStep {
   return (
     MEMBERSHIP_WIZARD_STEPS.find((step) => matchPath({ path: step.to, end: true }, pathname)) ??
-    MEMBERSHIP_WIZARD_STEPS[0]
+    MEMBERSHIP_WIZARD_STEPS[0]!
   );
 }
 
@@ -38,7 +38,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const currentStep = getCurrentWizardStep(location.pathname);
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === MEMBERSHIP_WIZARD_STEPS.length - 1;
-  const previousStep = MEMBERSHIP_WIZARD_STEPS[currentStepIndex - 1];
+  const previousStep = MEMBERSHIP_WIZARD_STEPS[Math.max(currentStepIndex - 1, 0)] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
 
   useEffect(() => {
     setFooterActions((current) => ({
@@ -103,7 +103,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                 </div>
 
                 <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end lg:justify-end">
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                     {footerActions.showSkip ? (
                       <button
                         type="button"
@@ -111,6 +111,9 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                         disabled={footerActions.isSaving}
                         className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
+                        {footerActions.isSaving ? (
+                          <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-700 border-t-transparent align-[-3px]" />
+                        ) : null}
                         {footerActions.skipLabel}
                       </button>
                     ) : null}
@@ -121,6 +124,9 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                         disabled={footerActions.isSaving || !footerActions.onSaveNext}
                         className="rounded-full border border-cyan-200 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
+                        {footerActions.isSaving ? (
+                          <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-cyan-700 border-t-transparent align-[-3px]" />
+                        ) : null}
                         {footerActions.saveNextLabel}
                       </button>
                     ) : null}
@@ -131,6 +137,9 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                         disabled={footerActions.isSaving}
                         className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
+                        {footerActions.isSaving ? (
+                          <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent align-[-3px]" />
+                        ) : null}
                         {footerActions.saveExitLabel}
                       </button>
                     ) : null}

@@ -13,10 +13,10 @@ export function WizardSideNav({
   membershipTypeUniqueId,
   onNavigate,
 }: WizardSideNavProps) {
-  function getStepPath(stepPath: string) {
+  function getStepPath(stepPath: (typeof MEMBERSHIP_WIZARD_STEPS)[number]["to"]) {
     const stepIndex = MEMBERSHIP_WIZARD_STEPS.findIndex((step) => step.to === stepPath);
     return buildMembershipWizardStepPath(
-      stepPath as (typeof MEMBERSHIP_WIZARD_STEPS)[number]["to"],
+      stepPath,
       membershipTypeUniqueId,
       stepIndex >= 0 ? stepIndex + 1 : undefined,
     );

@@ -3,7 +3,7 @@ import { APP_ROUTES } from "../../routes";
 export interface MembershipWizardStep {
   label: string;
   description: string;
-  to: string;
+  to: (typeof APP_ROUTES)[keyof typeof APP_ROUTES];
 }
 
 export const MEMBERSHIP_WIZARD_STEPS: MembershipWizardStep[] = [

@@ -2,20 +2,21 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { buildMembershipWizardStepPath } from "../../routes";
 import { getMembershipTitleInfo, getMembershipWizardProgress } from "../../lib/membershipWizard";
-import { MEMBERSHIP_WIZARD_STEPS } from "./membershipWizardSteps";
+import { MEMBERSHIP_WIZARD_STEPS, type MembershipWizardStep } from "./membershipWizardSteps";
 
-function getStepByNumber(stepNo: number) {
+function getStepByNumber(stepNo: number): MembershipWizardStep {
   const normalizedStepNo = Math.min(Math.max(stepNo, 1), MEMBERSHIP_WIZARD_STEPS.length);
-  return MEMBERSHIP_WIZARD_STEPS[normalizedStepNo - 1] ?? MEMBERSHIP_WIZARD_STEPS[0];
+  return MEMBERSHIP_WIZARD_STEPS[normalizedStepNo - 1] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
 }
 
 export function MembershipWizardResumePage() {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
+  const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!membershipTypeUniqueId) {
+    if (!currentMembershipTypeUniqueId) {
       setError("Membership type unique id is missing.");
       return;
     }
@@ -24,11 +25,11 @@ export function MembershipWizardResumePage() {
 
     async function loadWizardState() {
       try {
-        const info = await getMembershipTitleInfo(membershipTypeUniqueId);
+        const info = await getMembershipTitleInfo(currentMembershipTypeUniqueId);
         let completedStepNo = 0;
 
         try {
-          completedStepNo = await getMembershipWizardProgress(membershipTypeUniqueId);
+          completedStepNo = await getMembershipWizardProgress(currentMembershipTypeUniqueId);
         } catch {
           completedStepNo = 0;
         }
@@ -40,7 +41,7 @@ export function MembershipWizardResumePage() {
         const nextStepNo = Math.max(info.stepNo, completedStepNo > 0 ? completedStepNo + 1 : 1);
         const step = getStepByNumber(nextStepNo);
         navigate(
-          buildMembershipWizardStepPath(step.to, membershipTypeUniqueId, nextStepNo),
+          buildMembershipWizardStepPath(step.to, currentMembershipTypeUniqueId, nextStepNo),
           { replace: true },
         );
       } catch (loadError) {
@@ -57,7 +58,7 @@ export function MembershipWizardResumePage() {
     return () => {
       isMounted = false;
     };
-  }, [membershipTypeUniqueId, navigate]);
+  }, [currentMembershipTypeUniqueId, navigate]);
 
   if (error) {
     return (
