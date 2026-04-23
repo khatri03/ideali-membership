@@ -8,5 +8,5 @@ export const MEMBERSHIP_BANNER_CONTENT = {
   currentBannerLabel: "Current banner",
 } as const;
 
-export const MEMBERSHIP_BANNER_STEP_NUMBER = 4;
-export const MEMBERSHIP_BANNER_NEXT_STEP_NUMBER = 5;
+export const MEMBERSHIP_BANNER_STEP_NUMBER = 5;
+export const MEMBERSHIP_BANNER_NEXT_STEP_NUMBER = 6;

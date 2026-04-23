@@ -142,7 +142,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardColor,
+                APP_ROUTES.membershipWizardTenure,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_DESCRIPTION_NEXT_STEP_NUMBER,
               ),
@@ -160,7 +160,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardColor,
+                APP_ROUTES.membershipWizardTenure,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_DESCRIPTION_NEXT_STEP_NUMBER,
               ),

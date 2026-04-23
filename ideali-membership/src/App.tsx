@@ -7,6 +7,7 @@ import { MembershipDescriptionStepPage } from "./components/wizard/MembershipDes
 import { MembershipBannerStepPage } from "./components/wizard/MembershipBannerStepPage";
 import { MembershipColorStepPage } from "./components/wizard/MembershipColorStepPage";
 import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
+import { MembershipTenureStepPage } from "./components/wizard/MembershipTenureStepPage";
 import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage";
 import { WizardLayout } from "./components/wizard/WizardLayout";
 import { WizardStepPage } from "./components/wizard/WizardStepPage";
@@ -107,9 +108,10 @@ function RouterApp() {
               <Route index element={<MembershipWizardResumePage />} />
               <Route path="title" element={<MembershipTitleStepPage />} />
               <Route path="description" element={<MembershipDescriptionStepPage />} />
+              <Route path="tenure" element={<MembershipTenureStepPage />} />
               <Route path="color" element={<MembershipColorStepPage />} />
               <Route path="banner" element={<MembershipBannerStepPage />} />
-              {MEMBERSHIP_WIZARD_STEPS.slice(4).map((step) => (
+              {MEMBERSHIP_WIZARD_STEPS.slice(5).map((step) => (
                 <Route
                   key={step.to}
                   path={getWizardStepSegment(step.to)}

@@ -116,6 +116,64 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
   };
 }
 
+export async function getMembershipTenureInfo(membershipTypeUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/tenure`);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+  const tenureValue = readNumber(responseData?.Tenure ?? responseData?.tenure);
+  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+
+  if (!uniqueId) {
+    throw new Error("Unexpected membership tenure response.");
+  }
+
+  return {
+    uniqueId,
+    tenure:
+      typeof tenureValue === "number" && Number.isFinite(tenureValue)
+        ? tenureValue
+        : null,
+    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 3,
+  };
+}
+
+export async function saveMembershipTenureStep(
+  tenure: number | null,
+  stepNumber: number,
+  membershipTypeUniqueId?: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for membership tenure saving.");
+  }
+
+  const payload = await postJson<unknown>(
+    `/api/membership/type/wizard/${membershipTypeUniqueId}/tenure?stepNumber=${stepNumber}`,
+    { tenure },
+  );
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  if (!savedMembershipTypeUniqueId) {
+    throw new Error("Unexpected membership tenure response.");
+  }
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
+}
+
 export async function saveMembershipDescriptionStep(
   description: string | null,
   stepNumber: number,
@@ -167,7 +225,7 @@ export async function getMembershipColorInfo(membershipTypeUniqueId: string) {
   return {
     uniqueId,
     color: color || "",
-    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 3,
+    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 4,
   };
 }
 
@@ -186,7 +244,7 @@ export async function getMembershipBannerInfo(membershipTypeUniqueId: string) {
   return {
     uniqueId,
     bannerUrl: bannerUrl || "",
-    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 4,
+    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 5,
   };
 }
 

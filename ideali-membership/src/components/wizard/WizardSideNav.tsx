@@ -183,7 +183,6 @@ export function WizardSideNav({
                   <StepRow
                     key={step.to}
                     href={stepPath}
-                    stateLabel="Next"
                     stateClassName="bg-cyan-600 text-white"
                     rowClassName="border border-cyan-200 bg-cyan-50 text-cyan-900 hover:bg-cyan-100"
                   >
@@ -198,7 +197,6 @@ export function WizardSideNav({
               return (
                 <StepRow
                   key={step.to}
-                  stateLabel="Locked"
                   stateClassName="bg-slate-200 text-slate-500"
                   rowClassName="bg-transparent text-slate-400"
                   isDisabled

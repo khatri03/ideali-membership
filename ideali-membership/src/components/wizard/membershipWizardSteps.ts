@@ -18,6 +18,11 @@ export const MEMBERSHIP_WIZARD_STEPS: MembershipWizardStep[] = [
     to: APP_ROUTES.membershipWizardDescription,
   },
   {
+    label: "Tenure",
+    description: "Choose how long this membership stays active.",
+    to: APP_ROUTES.membershipWizardTenure,
+  },
+  {
     label: "Color",
     description: "Set the visual tone for the membership experience.",
     to: APP_ROUTES.membershipWizardColor,
