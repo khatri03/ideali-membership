@@ -413,7 +413,7 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
       return (
         <select
           value={defaultOptionValue}
-          readOnly
+          disabled
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
         >
           <option value="" disabled>
@@ -617,7 +617,7 @@ function FieldPreview({
   type?: string;
   required?: boolean;
   error?: string;
-  inputRef?: RefObject<HTMLInputElement | null>;
+  inputRef?: RefObject<HTMLInputElement>;
 }) {
   return (
     <label className="block">
@@ -1193,7 +1193,10 @@ export function CustomFormCreatePage() {
         const next = field.options.filter((option) => option.id !== optionToRemoveId);
 
         if (next.length > 0 && !next.some((option) => option.isDefault)) {
-          next[0] = { ...next[0], isDefault: true };
+          const firstOption = next[0];
+          if (firstOption) {
+            next[0] = { ...firstOption, isDefault: true };
+          }
         }
 
         return next;
