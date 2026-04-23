@@ -34,7 +34,9 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
-  const [isNavVisible, setIsNavVisible] = useState(true);
+  const [isNavVisible, setIsNavVisible] = useState(() =>
+    typeof window === "undefined" ? true : window.innerWidth >= 1024,
+  );
   const [completedStepNo, setCompletedStepNo] = useState(0);
   const [footerActions, setFooterActions] = useState(defaultWizardFooterActions);
   const isResumeRoute =
@@ -94,6 +96,19 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   }, [currentMembershipTypeUniqueId, location.pathname]);
 
   useEffect(() => {
+    const syncNavVisibility = () => {
+      setIsNavVisible(window.innerWidth >= 1024);
+    };
+
+    syncNavVisibility();
+    window.addEventListener("resize", syncNavVisibility);
+
+    return () => {
+      window.removeEventListener("resize", syncNavVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
     if (isResumeRoute) {
       setFooterActions({
         ...defaultWizardFooterActions,
@@ -126,12 +141,27 @@ export function WizardLayout({ children }: WizardLayoutProps) {
           totalSteps={MEMBERSHIP_WIZARD_STEPS.length}
         />
 
+        {!isNavVisible ? (
+          <button
+            type="button"
+            onClick={() => setIsNavVisible(true)}
+            className="fixed left-0 top-24 z-40 hidden h-10 w-10 items-center justify-center rounded-r-2xl border border-slate-200 bg-white text-slate-700 shadow-md transition hover:bg-slate-100 lg:flex"
+            aria-label="Show wizard sidebar"
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+              <path d="M7.5 4.5 12 10l-4.5 5.5-1.5-1.2L9.5 10 6 5.7z" />
+            </svg>
+          </button>
+        ) : null}
+
         <div className="flex w-full flex-1 items-start gap-6 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
           {isNavVisible ? (
             <WizardSideNav
+              isNavVisible={isNavVisible}
               currentStepIndex={currentStepIndex}
               completedStepNo={completedStepNo}
               membershipTypeUniqueId={membershipTypeUniqueId}
+              onNavToggle={() => setIsNavVisible((current) => !current)}
               onNavigate={() => {
                 if (window.innerWidth < 1024) {
                   setIsNavVisible(false);

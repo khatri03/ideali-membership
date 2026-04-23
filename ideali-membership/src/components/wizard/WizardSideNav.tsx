@@ -4,16 +4,20 @@ import { buildMembershipWizardStepPath } from "../../routes";
 import { MEMBERSHIP_WIZARD_STEPS } from "./membershipWizardSteps";
 
 interface WizardSideNavProps {
+  isNavVisible: boolean;
   currentStepIndex: number;
   completedStepNo: number;
   membershipTypeUniqueId?: string;
+  onNavToggle: () => void;
   onNavigate?: () => void;
 }
 
 export function WizardSideNav({
+  isNavVisible,
   currentStepIndex,
   completedStepNo,
   membershipTypeUniqueId,
+  onNavToggle,
   onNavigate,
 }: WizardSideNavProps) {
   const stateBadgeClass =
@@ -84,21 +88,32 @@ export function WizardSideNav({
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 w-80 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:relative lg:inset-y-auto lg:top-auto lg:h-auto lg:shadow-none">
-      <div className="flex items-center justify-between lg:hidden">
+    <aside className="relative fixed inset-y-0 left-0 z-40 w-80 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:relative lg:inset-y-auto lg:top-auto lg:h-auto lg:shadow-none">
+      <div className="flex items-center justify-between gap-3 pr-12">
         <p className="text-sm font-semibold tracking-[0.2em] text-cyan-700 uppercase">
           Wizard steps
         </p>
-        <button
-          type="button"
-          onClick={onNavigate}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600"
-        >
-          Close
-        </button>
       </div>
 
-      <nav className="mt-4 space-y-3 lg:mt-0">
+      <button
+        type="button"
+        onClick={onNavToggle}
+        className="absolute -right-3 top-5 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100"
+        aria-label={isNavVisible ? "Hide wizard sidebar" : "Show wizard sidebar"}
+        aria-pressed={isNavVisible}
+      >
+        {isNavVisible ? (
+          <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+            <path d="M12.5 4.5 8 10l4.5 5.5 1.5-1.2L10.5 10l3.5-4.3z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+            <path d="M7.5 4.5 12 10l-4.5 5.5-1.5-1.2L9.5 10 6 5.7z" />
+          </svg>
+        )}
+      </button>
+
+      <nav className="mt-4 space-y-3">
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-2">
           <p className="px-4 py-3 text-sm font-semibold text-slate-900">Membership setup</p>
           <div className="space-y-2">

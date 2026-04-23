@@ -22,7 +22,7 @@ export function WizardTopBar({
         <button
           type="button"
           onClick={onNavToggle}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-700 transition hover:bg-slate-100"
           aria-label={isNavVisible ? "Hide wizard sidebar" : "Show wizard sidebar"}
           aria-pressed={isNavVisible}
         >
@@ -31,7 +31,6 @@ export function WizardTopBar({
             <span className="block h-0.5 w-4 rounded-full bg-current" />
             <span className="block h-0.5 w-4 rounded-full bg-current" />
           </span>
-          <span className="hidden sm:inline">{isNavVisible ? "Hide sidebar" : "Show sidebar"}</span>
         </button>
 
         <div className="flex min-w-0 flex-1 items-center gap-3">
