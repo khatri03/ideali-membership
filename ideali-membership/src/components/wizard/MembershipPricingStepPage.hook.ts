@@ -11,11 +11,18 @@ import {
   MEMBERSHIP_PRICING_NEXT_STEP_NUMBER,
   MEMBERSHIP_PRICING_STEP_NUMBER,
 } from "./MembershipPricingStepPage.fields";
-import { getMembershipPricingError, normalizeMembershipPricing } from "./MembershipPricingStepPage.schema";
+import {
+  getMembershipPricingError,
+  normalizeMembershipPricing,
+  normalizeMembershipPricingDay,
+  normalizeMembershipPricingMonth,
+} from "./MembershipPricingStepPage.schema";
 import type { MembershipPricingStepState } from "./MembershipPricingStepPage.types";
 
 async function persistMembershipPricingStepWithFeedback({
   pricing,
+  customExpiryMonth,
+  customExpiryDay,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -23,6 +30,8 @@ async function persistMembershipPricingStepWithFeedback({
   onSuccess,
 }: {
   pricing: number | null;
+  customExpiryMonth: number | null;
+  customExpiryDay: number | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -35,11 +44,33 @@ async function persistMembershipPricingStepWithFeedback({
     return;
   }
 
+  const normalizedPricing = normalizeMembershipPricing(pricing);
+  const normalizedMonth = normalizeMembershipPricingMonth(customExpiryMonth);
+  const normalizedDay = normalizeMembershipPricingDay(customExpiryDay, normalizedMonth);
+
+  if (normalizedPricing === 2) {
+    if (!normalizedMonth) {
+      setError("Please select a month for the annual pricing option.");
+      return;
+    }
+
+    if (!normalizedDay) {
+      setError("Please select a date for the annual pricing option.");
+      return;
+    }
+  }
+
   setError("");
   setIsSaving(true);
 
   try {
-    const result = await saveMembershipPricingStep(normalizeMembershipPricing(pricing), stepNumber, membershipTypeUniqueId);
+    const result = await saveMembershipPricingStep(
+      normalizedPricing,
+      normalizedPricing === 2 ? normalizedMonth : null,
+      normalizedPricing === 2 ? normalizedDay : null,
+      stepNumber,
+      membershipTypeUniqueId,
+    );
     await onSuccess(result.membershipTypeUniqueId);
   } catch (saveError) {
     setError(saveError instanceof Error ? saveError.message : "Unable to save pricing.");
@@ -54,6 +85,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
   const [selectedPricing, setSelectedPricing] = useState<number | null>(null);
+  const [selectedCustomExpiryMonth, setSelectedCustomExpiryMonth] = useState<number | null>(null);
+  const [selectedCustomExpiryDay, setSelectedCustomExpiryDay] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -79,12 +112,16 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
         }
 
         setSelectedPricing(info.pricing);
+        setSelectedCustomExpiryMonth(info.pricing === 2 ? info.customExpiryMonth : null);
+        setSelectedCustomExpiryDay(info.pricing === 2 ? info.customExpiryDay : null);
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
         setSelectedPricing(null);
+        setSelectedCustomExpiryMonth(null);
+        setSelectedCustomExpiryDay(null);
         setError(loadError instanceof Error ? loadError.message : "Unable to load pricing.");
       } finally {
         if (isMounted) {
@@ -112,6 +149,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
       onSaveNext: () =>
         void persistMembershipPricingStepWithFeedback({
           pricing: selectedPricing,
+          customExpiryMonth: selectedCustomExpiryMonth,
+          customExpiryDay: selectedCustomExpiryDay,
           stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -130,6 +169,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
       onSaveExit: () =>
         void persistMembershipPricingStepWithFeedback({
           pricing: selectedPricing,
+          customExpiryMonth: selectedCustomExpiryMonth,
+          customExpiryDay: selectedCustomExpiryDay,
           stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -139,10 +180,20 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
           },
         }),
     });
-  }, [currentMembershipTypeUniqueId, isSaving, navigate, selectedPricing, setFooterActions]);
+  }, [
+    currentMembershipTypeUniqueId,
+    isSaving,
+    navigate,
+    selectedCustomExpiryDay,
+    selectedCustomExpiryMonth,
+    selectedPricing,
+    setFooterActions,
+  ]);
 
   return {
     selectedPricing,
+    selectedCustomExpiryMonth,
+    selectedCustomExpiryDay,
     error,
     isLoading,
     isSaving,
@@ -152,6 +203,17 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
       }
       setReloadTick((current) => current + 1);
     },
-    selectPricing: (value: number) => setSelectedPricing(value),
+    selectPricing: (value: number) => {
+      setSelectedPricing(value);
+      if (value !== 2) {
+        setSelectedCustomExpiryMonth(null);
+        setSelectedCustomExpiryDay(null);
+      }
+    },
+    selectCustomExpiryMonth: (value: number | null) => {
+      setSelectedCustomExpiryMonth(value);
+      setSelectedCustomExpiryDay(null);
+    },
+    selectCustomExpiryDay: (value: number | null) => setSelectedCustomExpiryDay(value),
   };
 }
