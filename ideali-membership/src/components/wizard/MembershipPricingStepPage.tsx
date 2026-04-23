@@ -10,7 +10,7 @@ function MembershipPricingSkeleton() {
   return (
     <div className="space-y-4">
       <div className="h-4 w-[min(24rem,92%)] animate-pulse rounded-full bg-slate-200" />
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div key={index} className="h-20 animate-pulse rounded-[1.5rem] border border-slate-200 bg-slate-100" />
         ))}
@@ -46,6 +46,7 @@ export function MembershipPricingStepPage() {
     selectedPricing,
     selectedCustomExpiryMonth,
     selectedCustomExpiryDay,
+    selectedCustomExpiryDays,
     error,
     isLoading,
     isSaving,
@@ -53,13 +54,19 @@ export function MembershipPricingStepPage() {
     selectPricing,
     selectCustomExpiryMonth,
     selectCustomExpiryDay,
+    selectCustomExpiryDays,
   } = useMembershipPricingStep();
   const selectedOption = MEMBERSHIP_PRICING_OPTIONS.find((option) => option.value === selectedPricing);
   const isAnnualSelected = selectedPricing === 2;
+  const isCustomSelected = selectedPricing === 4;
   const availableDays = getMembershipPricingDays(selectedCustomExpiryMonth);
-  const customPanelClassName = [
+  const annualPanelClassName = [
     "overflow-hidden transition-all duration-300 ease-out",
     isAnnualSelected ? "max-h-[18rem] opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-2",
+  ].join(" ");
+  const customPanelClassName = [
+    "overflow-hidden transition-all duration-300 ease-out",
+    isCustomSelected ? "max-h-[14rem] opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-2",
   ].join(" ");
 
   if (error) {
@@ -85,7 +92,7 @@ export function MembershipPricingStepPage() {
             <p className="text-sm text-slate-600">{MEMBERSHIP_PRICING_CONTENT.helper}</p>
 
             <fieldset disabled={isSaving} className="space-y-4">
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {MEMBERSHIP_PRICING_OPTIONS.map((option) => {
                   const isSelected = selectedPricing === option.value;
 
@@ -122,7 +129,7 @@ export function MembershipPricingStepPage() {
                 })}
               </div>
 
-              <div className={customPanelClassName}>
+              <div className={annualPanelClassName}>
                 <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -192,10 +199,39 @@ export function MembershipPricingStepPage() {
                 </div>
               </div>
 
+              <div className={customPanelClassName}>
+                <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-medium text-slate-700">Expires In</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      step={1}
+                      value={selectedCustomExpiryDays ?? ""}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        selectCustomExpiryDays(nextValue ? Number(nextValue) : null);
+                      }}
+                      placeholder="14"
+                      className="w-28 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                    />
+                    <span className="text-sm font-semibold text-slate-700">Days</span>
+                    <span className="text-rose-600 text-base font-semibold" aria-label="Required" title="Required">
+                      *
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-sm text-slate-500">{MEMBERSHIP_PRICING_CONTENT.customHelper} Value must be greater than 0.</p>
+                </div>
+              </div>
+
               <p className="text-sm text-slate-500">
                 {isAnnualSelected
-                  ? MEMBERSHIP_PRICING_CONTENT.customHelper
-                  : "Select Annual to reveal the required month and date dropdowns."}
+                  ? MEMBERSHIP_PRICING_CONTENT.annualHelper
+                  : isCustomSelected
+                    ? MEMBERSHIP_PRICING_CONTENT.customHelper
+                    : "Select Annual or Custom to reveal the required expiry controls."}
               </p>
             </fieldset>
 

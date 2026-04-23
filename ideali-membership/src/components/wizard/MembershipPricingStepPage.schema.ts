@@ -20,3 +20,7 @@ export function normalizeMembershipPricingDay(value: number | null, month: numbe
   const maxDays = new Date(2024, month, 0).getDate();
   return value >= 1 && value <= maxDays ? value : null;
 }
+
+export function normalizeMembershipPricingDays(value: number | null) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 1 ? Math.floor(value) : null;
+}

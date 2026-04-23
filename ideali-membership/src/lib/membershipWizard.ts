@@ -191,10 +191,11 @@ export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
     const tenureValue = readNumber(responseData?.Tenure ?? responseData?.tenure);
-    const customExpiryMonthValue = readNumber(
-      responseData?.CustomExpiryMonth ?? responseData?.customExpiryMonth,
+    const annualExpiryMonthValue = readNumber(
+      responseData?.AnnualExpiryMonth ?? responseData?.annualExpiryMonth,
     );
-    const customExpiryDayValue = readNumber(responseData?.CustomExpiryDay ?? responseData?.customExpiryDay);
+    const annualExpiryDayValue = readNumber(responseData?.AnnualExpiryDay ?? responseData?.annualExpiryDay);
+    const customExpiryDaysValue = readNumber(responseData?.CustomExpiryDays ?? responseData?.customExpiryDays);
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
@@ -207,13 +208,17 @@ export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
         typeof tenureValue === "number" && Number.isFinite(tenureValue)
           ? tenureValue
           : null,
-      customExpiryMonth:
-        typeof customExpiryMonthValue === "number" && Number.isFinite(customExpiryMonthValue)
-          ? customExpiryMonthValue
+      annualExpiryMonth:
+        typeof annualExpiryMonthValue === "number" && Number.isFinite(annualExpiryMonthValue)
+          ? annualExpiryMonthValue
           : null,
-      customExpiryDay:
-        typeof customExpiryDayValue === "number" && Number.isFinite(customExpiryDayValue)
-          ? customExpiryDayValue
+      annualExpiryDay:
+        typeof annualExpiryDayValue === "number" && Number.isFinite(annualExpiryDayValue)
+          ? annualExpiryDayValue
+          : null,
+      customExpiryDays:
+        typeof customExpiryDaysValue === "number" && Number.isFinite(customExpiryDaysValue)
+          ? customExpiryDaysValue
           : null,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 5,
     };
@@ -224,6 +229,7 @@ export async function saveMembershipPricingStep(
   pricing: number | null,
   customExpiryMonth: number | null,
   customExpiryDay: number | null,
+  customExpiryDays: number | null,
   stepNumber: number,
   membershipTypeUniqueId?: string,
 ) {
@@ -235,8 +241,9 @@ export async function saveMembershipPricingStep(
     `/api/membership/type/wizard/${membershipTypeUniqueId}/pricing?stepNumber=${stepNumber}`,
     {
       tenure: pricing,
-      customExpiryMonth,
-      customExpiryDay,
+      annualExpiryMonth: customExpiryMonth,
+      annualExpiryDay: customExpiryDay,
+      customExpiryDays,
     },
   );
 

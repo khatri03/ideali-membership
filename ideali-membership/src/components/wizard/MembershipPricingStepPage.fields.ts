@@ -5,7 +5,8 @@ export const MEMBERSHIP_PRICING_CONTENT = {
   title: "Pricing",
   description: "Set the billing cycle that defines this membership plan.",
   helper: "Choose one option before continuing to the next setup step.",
-  customHelper: "Choose both month and date while Annual is selected.",
+  annualHelper: "Choose both month and date while Annual is selected.",
+  customHelper: "Enter how many days after subscription this membership should expire.",
 } as const;
 
 export const MEMBERSHIP_PRICING_OPTIONS = [
@@ -27,7 +28,7 @@ export const MEMBERSHIP_PRICING_OPTIONS = [
   {
     label: "Custom",
     value: 4,
-    description: "Set a custom expiry pattern later.",
+    description: "Set a custom expiry period in days.",
   },
 ] as const;
 

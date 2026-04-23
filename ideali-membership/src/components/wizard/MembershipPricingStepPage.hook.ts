@@ -13,6 +13,7 @@ import {
 } from "./MembershipPricingStepPage.fields";
 import {
   getMembershipPricingError,
+  normalizeMembershipPricingDays,
   normalizeMembershipPricing,
   normalizeMembershipPricingDay,
   normalizeMembershipPricingMonth,
@@ -21,8 +22,9 @@ import type { MembershipPricingStepState } from "./MembershipPricingStepPage.typ
 
 async function persistMembershipPricingStepWithFeedback({
   pricing,
-  customExpiryMonth,
-  customExpiryDay,
+  annualExpiryMonth,
+  annualExpiryDay,
+  customExpiryDays,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -30,8 +32,9 @@ async function persistMembershipPricingStepWithFeedback({
   onSuccess,
 }: {
   pricing: number | null;
-  customExpiryMonth: number | null;
-  customExpiryDay: number | null;
+  annualExpiryMonth: number | null;
+  annualExpiryDay: number | null;
+  customExpiryDays: number | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -45,8 +48,9 @@ async function persistMembershipPricingStepWithFeedback({
   }
 
   const normalizedPricing = normalizeMembershipPricing(pricing);
-  const normalizedMonth = normalizeMembershipPricingMonth(customExpiryMonth);
-  const normalizedDay = normalizeMembershipPricingDay(customExpiryDay, normalizedMonth);
+  const normalizedMonth = normalizeMembershipPricingMonth(annualExpiryMonth);
+  const normalizedDay = normalizeMembershipPricingDay(annualExpiryDay, normalizedMonth);
+  const normalizedDays = normalizeMembershipPricingDays(customExpiryDays);
 
   if (normalizedPricing === 2) {
     if (!normalizedMonth) {
@@ -60,6 +64,11 @@ async function persistMembershipPricingStepWithFeedback({
     }
   }
 
+  if (normalizedPricing === 4 && !normalizedDays) {
+    setError("Please enter a number greater than 0 for the custom pricing option.");
+    return;
+  }
+
   setError("");
   setIsSaving(true);
 
@@ -68,6 +77,7 @@ async function persistMembershipPricingStepWithFeedback({
       normalizedPricing,
       normalizedPricing === 2 ? normalizedMonth : null,
       normalizedPricing === 2 ? normalizedDay : null,
+      normalizedPricing === 4 ? normalizedDays : null,
       stepNumber,
       membershipTypeUniqueId,
     );
@@ -87,6 +97,7 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
   const [selectedPricing, setSelectedPricing] = useState<number | null>(null);
   const [selectedCustomExpiryMonth, setSelectedCustomExpiryMonth] = useState<number | null>(null);
   const [selectedCustomExpiryDay, setSelectedCustomExpiryDay] = useState<number | null>(null);
+  const [selectedCustomExpiryDays, setSelectedCustomExpiryDays] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -112,8 +123,9 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
         }
 
         setSelectedPricing(info.pricing);
-        setSelectedCustomExpiryMonth(info.pricing === 2 ? info.customExpiryMonth : null);
-        setSelectedCustomExpiryDay(info.pricing === 2 ? info.customExpiryDay : null);
+        setSelectedCustomExpiryMonth(info.pricing === 2 ? info.annualExpiryMonth : null);
+        setSelectedCustomExpiryDay(info.pricing === 2 ? info.annualExpiryDay : null);
+        setSelectedCustomExpiryDays(info.pricing === 4 ? info.customExpiryDays ?? 14 : null);
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -122,6 +134,7 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
         setSelectedPricing(null);
         setSelectedCustomExpiryMonth(null);
         setSelectedCustomExpiryDay(null);
+        setSelectedCustomExpiryDays(null);
         setError(loadError instanceof Error ? loadError.message : "Unable to load pricing.");
       } finally {
         if (isMounted) {
@@ -149,8 +162,9 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
       onSaveNext: () =>
         void persistMembershipPricingStepWithFeedback({
           pricing: selectedPricing,
-          customExpiryMonth: selectedCustomExpiryMonth,
-          customExpiryDay: selectedCustomExpiryDay,
+          annualExpiryMonth: selectedCustomExpiryMonth,
+          annualExpiryDay: selectedCustomExpiryDay,
+          customExpiryDays: selectedCustomExpiryDays,
           stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -169,8 +183,9 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
       onSaveExit: () =>
         void persistMembershipPricingStepWithFeedback({
           pricing: selectedPricing,
-          customExpiryMonth: selectedCustomExpiryMonth,
-          customExpiryDay: selectedCustomExpiryDay,
+          annualExpiryMonth: selectedCustomExpiryMonth,
+          annualExpiryDay: selectedCustomExpiryDay,
+          customExpiryDays: selectedCustomExpiryDays,
           stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -186,6 +201,7 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
     navigate,
     selectedCustomExpiryDay,
     selectedCustomExpiryMonth,
+    selectedCustomExpiryDays,
     selectedPricing,
     setFooterActions,
   ]);
@@ -194,6 +210,7 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
     selectedPricing,
     selectedCustomExpiryMonth,
     selectedCustomExpiryDay,
+    selectedCustomExpiryDays,
     error,
     isLoading,
     isSaving,
@@ -209,11 +226,17 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
         setSelectedCustomExpiryMonth(null);
         setSelectedCustomExpiryDay(null);
       }
+      if (value !== 4) {
+        setSelectedCustomExpiryDays(null);
+      } else {
+        setSelectedCustomExpiryDays(14);
+      }
     },
     selectCustomExpiryMonth: (value: number | null) => {
       setSelectedCustomExpiryMonth(value);
       setSelectedCustomExpiryDay(null);
     },
     selectCustomExpiryDay: (value: number | null) => setSelectedCustomExpiryDay(value),
+    selectCustomExpiryDays: (value: number | null) => setSelectedCustomExpiryDays(value),
   };
 }
