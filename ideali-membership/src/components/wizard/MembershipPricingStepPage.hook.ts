@@ -61,7 +61,7 @@ async function persistMembershipPricingStepWithFeedback({
   const normalizedDays = normalizeMembershipPricingDays(customExpiryDays);
 
   if (normalizedCharges === null) {
-    setError("Please enter a valid membership price.");
+    setError("Please enter a valid membership price. Use 0.00 for a free membership.");
     return;
   }
 
