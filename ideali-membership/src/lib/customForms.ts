@@ -4,6 +4,7 @@ import type {
   CustomFormDraft,
   CustomFormFieldDraft,
   CustomFormOptionDraft,
+  CustomFormPreview,
 } from "../types/customForms";
 
 function getResponseData(payload: unknown) {
@@ -28,6 +29,10 @@ function asBoolean(value: unknown) {
 
 function asNumber(value: unknown) {
   return typeof value === "number" ? value : 0;
+}
+
+function asOptionalNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function asString(value: unknown) {
@@ -74,6 +79,73 @@ export async function fetchCustomFormControls() {
       canHaveMaxLength: asBoolean(candidate.CanHaveMaxLength ?? candidate.canHaveMaxLength),
     };
   });
+}
+
+export async function fetchCustomFormPreview(customFormUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/organizer/custom-form/${customFormUniqueId}`);
+  const data = getResponseData(payload) as Record<string, unknown> | null;
+
+  if (!data) {
+    throw new Error("Unexpected custom form response.");
+  }
+
+  const fields = Array.isArray(data.Fields ?? data.fields)
+    ? ((data.Fields ?? data.fields) as unknown[]).map((field) => {
+        const candidate = field as Record<string, unknown>;
+        const controlCandidate = (candidate.FormControl ?? candidate.formControl) as Record<string, unknown> | null;
+        const options = Array.isArray(candidate.Options ?? candidate.options)
+          ? ((candidate.Options ?? candidate.options) as unknown[]).map((option) => {
+              const optionCandidate = option as Record<string, unknown>;
+
+              return {
+                id: asNumber(optionCandidate.Id ?? optionCandidate.id),
+                value: asString(optionCandidate.Value ?? optionCandidate.value),
+                displayText: asString(optionCandidate.DisplayText ?? optionCandidate.displayText),
+              };
+            })
+          : [];
+
+        return {
+          id: asNumber(candidate.Id ?? candidate.id),
+          uniqueId: asString(candidate.UniqueId ?? candidate.uniqueId),
+          formId: asNumber(candidate.FormId ?? candidate.formId),
+          formControlTypeId: asNumber(candidate.FormControlTypeId ?? candidate.formControlTypeId),
+          controlUniqueId: asString(candidate.ControlUniqueId ?? candidate.controlUniqueId) || null,
+          displayOrder: asNumber(candidate.DisplayOrder ?? candidate.displayOrder),
+          controlLabel: asString(candidate.ControlLabel ?? candidate.controlLabel),
+          placeHolder: asString(candidate.PlaceHolder ?? candidate.placeHolder) || null,
+          tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
+          isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
+          minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
+          maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
+          defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
+          options,
+          formControl: controlCandidate
+            ? {
+                id: asNumber(controlCandidate.Id ?? controlCandidate.id),
+                name: asString(controlCandidate.Name ?? controlCandidate.name),
+                canBeRequired: asBoolean(controlCandidate.CanBeRequired ?? controlCandidate.canBeRequired),
+                canHaveMaxLength: asBoolean(controlCandidate.CanHaveMaxLength ?? controlCandidate.canHaveMaxLength),
+                canHaveMinLength: asBoolean(controlCandidate.CanHaveMinLength ?? controlCandidate.canHaveMinLength),
+                canHavePlaceHolder: asBoolean(controlCandidate.CanHavePlaceHolder ?? controlCandidate.canHavePlaceHolder),
+                controlType: asString(controlCandidate.ControlType ?? controlCandidate.controlType),
+                defaultLabel: asString(controlCandidate.DefaultLabel ?? controlCandidate.defaultLabel),
+                hasOptions: asBoolean(controlCandidate.HasOptions ?? controlCandidate.hasOptions),
+                iconClass: asString(controlCandidate.IconClass ?? controlCandidate.iconClass),
+              }
+            : null,
+        };
+      })
+    : [];
+
+  return {
+    uniqueId: asString(data.UniqueId ?? data.uniqueId),
+    name: asString(data.Name ?? data.name),
+    headerText: asString(data.HeaderText ?? data.headerText),
+    description: asString(data.Description ?? data.description) || null,
+    layoutColumn: Math.max(1, Math.min(4, asNumber(data.LayoutColumn ?? data.layoutColumn) || 1)),
+    fields,
+  } satisfies CustomFormPreview;
 }
 
 interface CustomFormOptionPayload {

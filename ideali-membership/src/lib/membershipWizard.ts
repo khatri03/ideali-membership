@@ -415,10 +415,13 @@ export async function getMembershipQuestionsInfo(membershipTypeUniqueId: string)
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-    const customFormUniqueId = readText(
-      responseData?.CustomFormUniqueId ?? responseData?.customFormUniqueId,
-    );
-    const customFormName = readText(responseData?.CustomFormName ?? responseData?.customFormName);
+    const customFormUniqueIds = Array.isArray(
+      responseData?.CustomFormUniqueIds ?? responseData?.customFormUniqueIds,
+    )
+      ? ((responseData?.CustomFormUniqueIds ?? responseData?.customFormUniqueIds) as unknown[])
+          .map((item) => readText(item))
+          .filter((item) => item.length > 0)
+      : [];
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
@@ -427,8 +430,7 @@ export async function getMembershipQuestionsInfo(membershipTypeUniqueId: string)
 
     return {
       uniqueId,
-      customFormUniqueId,
-      customFormName,
+      customFormUniqueIds,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 7,
     } satisfies MembershipQuestionsInfo;
   });
@@ -517,7 +519,7 @@ export async function saveMembershipPaymentAccountStep(
 }
 
 export async function saveMembershipQuestionsStep(
-  customFormUniqueId: string | null,
+  customFormUniqueIds: string[] | null,
   stepNumber: number,
   membershipTypeUniqueId?: string,
 ) {
@@ -528,7 +530,7 @@ export async function saveMembershipQuestionsStep(
   const payload = await postJson<unknown>(
     `/api/membership/type/wizard/${membershipTypeUniqueId}/questions?stepNumber=${stepNumber}`,
     {
-      customFormUniqueId: customFormUniqueId || null,
+      customFormUniqueIds: customFormUniqueIds && customFormUniqueIds.length > 0 ? customFormUniqueIds : null,
     },
   );
 

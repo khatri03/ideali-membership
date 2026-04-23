@@ -24,7 +24,6 @@ export interface MembershipPaymentMethodOption {
 
 export interface MembershipQuestionsInfo {
   uniqueId: string;
-  customFormUniqueId: string;
-  customFormName: string;
+  customFormUniqueIds: string[];
   stepNo: number;
 }

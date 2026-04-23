@@ -16,6 +16,50 @@ export interface CustomFormListItem {
   value: string;
 }
 
+export interface CustomFormPreviewOption {
+  id: number;
+  value: string;
+  displayText: string;
+}
+
+export interface CustomFormPreviewField {
+  id: number;
+  uniqueId: string;
+  formId: number;
+  formControlTypeId: number;
+  controlUniqueId: string | null;
+  displayOrder: number;
+  controlLabel: string;
+  placeHolder: string | null;
+  tooltip: string | null;
+  isMandatory: boolean;
+  minLength: number | null;
+  maxLength: number | null;
+  defaultValue: string | null;
+  options: CustomFormPreviewOption[];
+  formControl: {
+    id: number;
+    name: string;
+    canBeRequired: boolean;
+    canHaveMaxLength: boolean;
+    canHaveMinLength: boolean;
+    canHavePlaceHolder: boolean;
+    controlType: string;
+    defaultLabel: string;
+    hasOptions: boolean;
+    iconClass: string;
+  } | null;
+}
+
+export interface CustomFormPreview {
+  uniqueId: string;
+  name: string;
+  headerText: string;
+  description: string | null;
+  layoutColumn: number;
+  fields: CustomFormPreviewField[];
+}
+
 export interface CustomFormOptionDraft {
   id: string;
   displayText: string;
