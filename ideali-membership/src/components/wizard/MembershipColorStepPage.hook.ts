@@ -1,7 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
-import { getMembershipColorInfo, saveMembershipColorStep } from "../../lib/membershipWizard";
+import {
+  getMembershipColorInfo,
+  invalidateMembershipWizardColorCache,
+  saveMembershipColorStep,
+} from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import { MEMBERSHIP_COLOR_NEXT_STEP_NUMBER, MEMBERSHIP_COLOR_STEP_NUMBER } from "./MembershipColorStepPage.fields";
 import {
@@ -175,7 +179,12 @@ export function useMembershipColorStep(): MembershipColorStepState {
     error,
     isLoading,
     isSaving,
-    reload: () => setReloadTick((current) => current + 1),
+    reload: () => {
+      if (currentMembershipTypeUniqueId) {
+        invalidateMembershipWizardColorCache(currentMembershipTypeUniqueId);
+      }
+      setReloadTick((current) => current + 1);
+    },
     selectPresetColor: (value: string) =>
       setSelection((current) => ({
         selectedPresetColor: value,

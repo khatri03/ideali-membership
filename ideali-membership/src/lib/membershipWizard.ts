@@ -1,8 +1,6 @@
 import { getJson, postJson } from "./api";
 import type { MembershipTitleInfo, MembershipTypeListItem } from "../types/membership";
 
-const membershipWizardProgressCache = new Map<string, Promise<number> | number>();
-
 function readResponseData(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return payload;
@@ -25,6 +23,63 @@ function readText(value: unknown) {
 
 function readNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+const wizardResponseCache = new Map<string, unknown>();
+const wizardRequestCache = new Map<string, Promise<unknown>>();
+
+async function getCachedWizardResponse<T>(cacheKey: string, loader: () => Promise<T>) {
+  const cachedValue = wizardResponseCache.get(cacheKey);
+  if (cachedValue !== undefined) {
+    return cachedValue as T;
+  }
+
+  const cachedRequest = wizardRequestCache.get(cacheKey);
+  if (cachedRequest) {
+    return cachedRequest as Promise<T>;
+  }
+
+  const request = loader().then((value) => {
+    wizardResponseCache.set(cacheKey, value);
+    return value;
+  });
+
+  wizardRequestCache.set(cacheKey, request as Promise<unknown>);
+
+  try {
+    return await request;
+  } finally {
+    wizardRequestCache.delete(cacheKey);
+  }
+}
+
+function invalidateWizardCache(cacheKey: string) {
+  wizardResponseCache.delete(cacheKey);
+  wizardRequestCache.delete(cacheKey);
+}
+
+function invalidateMembershipWizardProgressCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:progress:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardTitleCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:title:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardDescriptionCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:description:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardPricingCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:pricing:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardColorCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:color:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardBannerCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:banner:${membershipTypeUniqueId}`);
 }
 
 export async function saveMembershipTitleStep(
@@ -57,7 +112,8 @@ export async function saveMembershipTitleStep(
     throw new Error("Unexpected membership title response.");
   }
 
-  invalidateMembershipWizardProgress(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardTitleCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
     membershipTypeUniqueId: savedMembershipTypeUniqueId,
@@ -83,63 +139,69 @@ export async function getMembershipTypes() {
 }
 
 export async function getMembershipTitleInfo(membershipTypeUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/title`);
-  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  return getCachedWizardResponse(`wizard:title:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/title`);
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-  const name = readText(responseData?.Name ?? responseData?.name);
-  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const name = readText(responseData?.Name ?? responseData?.name);
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
-  if (!uniqueId || !name) {
-    throw new Error("Unexpected membership title response.");
-  }
+    if (!uniqueId || !name) {
+      throw new Error("Unexpected membership title response.");
+    }
 
-  return {
-    uniqueId,
-    name,
-    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 1,
-  } satisfies MembershipTitleInfo;
+    return {
+      uniqueId,
+      name,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 1,
+    } satisfies MembershipTitleInfo;
+  });
 }
 
 export async function getMembershipDescriptionInfo(membershipTypeUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/description`);
-  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  return getCachedWizardResponse(`wizard:description:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/description`);
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-  const description = readText(responseData?.Description ?? responseData?.description);
-  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const description = readText(responseData?.Description ?? responseData?.description);
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
-  if (!uniqueId) {
-    throw new Error("Unexpected membership description response.");
-  }
+    if (!uniqueId) {
+      throw new Error("Unexpected membership description response.");
+    }
 
-  return {
-    uniqueId,
-    description,
-    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
-  };
+    return {
+      uniqueId,
+      description,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
+    };
+  });
 }
 
 export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/pricing`);
-  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  return getCachedWizardResponse(`wizard:pricing:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/pricing`);
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-  const tenureValue = readNumber(responseData?.Tenure ?? responseData?.tenure);
-  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const tenureValue = readNumber(responseData?.Tenure ?? responseData?.tenure);
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
-  if (!uniqueId) {
-    throw new Error("Unexpected membership pricing response.");
-  }
+    if (!uniqueId) {
+      throw new Error("Unexpected membership pricing response.");
+    }
 
-  return {
-    uniqueId,
-    pricing:
-      typeof tenureValue === "number" && Number.isFinite(tenureValue)
-        ? tenureValue
-        : null,
-    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 5,
-  };
+    return {
+      uniqueId,
+      pricing:
+        typeof tenureValue === "number" && Number.isFinite(tenureValue)
+          ? tenureValue
+          : null,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 5,
+    };
+  });
 }
 
 export async function saveMembershipPricingStep(
@@ -172,7 +234,8 @@ export async function saveMembershipPricingStep(
     throw new Error("Unexpected membership pricing response.");
   }
 
-  invalidateMembershipWizardProgress(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardPricingCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
     membershipTypeUniqueId: savedMembershipTypeUniqueId,
@@ -210,7 +273,8 @@ export async function saveMembershipDescriptionStep(
     throw new Error("Unexpected membership description response.");
   }
 
-  invalidateMembershipWizardProgress(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardDescriptionCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
     membershipTypeUniqueId: savedMembershipTypeUniqueId,
@@ -219,41 +283,45 @@ export async function saveMembershipDescriptionStep(
 }
 
 export async function getMembershipColorInfo(membershipTypeUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/color`);
-  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  return getCachedWizardResponse(`wizard:color:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/color`);
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-  const color = readText(responseData?.Color ?? responseData?.color);
-  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const color = readText(responseData?.Color ?? responseData?.color);
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
-  if (!uniqueId) {
-    throw new Error("Unexpected membership color response.");
-  }
+    if (!uniqueId) {
+      throw new Error("Unexpected membership color response.");
+    }
 
-  return {
-    uniqueId,
-    color: color || "",
-    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 3,
-  };
+    return {
+      uniqueId,
+      color: color || "",
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 3,
+    };
+  });
 }
 
 export async function getMembershipBannerInfo(membershipTypeUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/banner`);
-  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  return getCachedWizardResponse(`wizard:banner:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/banner`);
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-  const bannerUrl = readText(responseData?.BannerUrl ?? responseData?.bannerUrl);
-  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const bannerUrl = readText(responseData?.BannerUrl ?? responseData?.bannerUrl);
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
-  if (!uniqueId) {
-    throw new Error("Unexpected membership banner response.");
-  }
+    if (!uniqueId) {
+      throw new Error("Unexpected membership banner response.");
+    }
 
-  return {
-    uniqueId,
-    bannerUrl: bannerUrl || "",
-    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 4,
-  };
+    return {
+      uniqueId,
+      bannerUrl: bannerUrl || "",
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 4,
+    };
+  });
 }
 
 export async function saveMembershipBannerStep(
@@ -286,7 +354,8 @@ export async function saveMembershipBannerStep(
     throw new Error("Unexpected membership banner response.");
   }
 
-  invalidateMembershipWizardProgress(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardBannerCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
     membershipTypeUniqueId: savedMembershipTypeUniqueId,
@@ -324,7 +393,8 @@ export async function saveMembershipColorStep(
     throw new Error("Unexpected membership color response.");
   }
 
-  invalidateMembershipWizardProgress(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardColorCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
     membershipTypeUniqueId: savedMembershipTypeUniqueId,
@@ -333,16 +403,7 @@ export async function saveMembershipColorStep(
 }
 
 export async function getMembershipWizardProgress(membershipTypeUniqueId: string) {
-  const cachedProgress = membershipWizardProgressCache.get(membershipTypeUniqueId);
-  if (typeof cachedProgress === "number") {
-    return cachedProgress;
-  }
-
-  if (cachedProgress) {
-    return cachedProgress;
-  }
-
-  const request = (async () => {
+  return getCachedWizardResponse(`wizard:progress:${membershipTypeUniqueId}`, async () => {
     const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/progress`);
     const responseData = readResponseData(payload);
 
@@ -362,20 +423,9 @@ export async function getMembershipWizardProgress(membershipTypeUniqueId: string
     }
 
     return 0;
-  })();
-
-  membershipWizardProgressCache.set(membershipTypeUniqueId, request);
-
-  try {
-    const progress = await request;
-    membershipWizardProgressCache.set(membershipTypeUniqueId, progress);
-    return progress;
-  } catch (error) {
-    membershipWizardProgressCache.delete(membershipTypeUniqueId);
-    throw error;
-  }
+  });
 }
 
 export function invalidateMembershipWizardProgress(membershipTypeUniqueId: string) {
-  membershipWizardProgressCache.delete(membershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(membershipTypeUniqueId);
 }

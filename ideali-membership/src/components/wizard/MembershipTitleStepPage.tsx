@@ -2,7 +2,11 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
-import { getMembershipTitleInfo, saveMembershipTitleStep } from "../../lib/membershipWizard";
+import {
+  getMembershipTitleInfo,
+  invalidateMembershipWizardTitleCache,
+  saveMembershipTitleStep,
+} from "../../lib/membershipWizard";
 
 const MIN_TITLE_LENGTH = 3;
 const MAX_TITLE_LENGTH = 80;
@@ -189,7 +193,13 @@ export function MembershipTitleStepPage() {
   if (loadError) {
     return (
       <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <MembershipTitleError message={loadError} onRetry={() => setReloadTick((current) => current + 1)} />
+        <MembershipTitleError
+          message={loadError}
+          onRetry={() => {
+            invalidateMembershipWizardTitleCache(currentMembershipTypeUniqueId);
+            setReloadTick((current) => current + 1);
+          }}
+        />
       </section>
     );
   }

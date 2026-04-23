@@ -1,7 +1,11 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
-import { getMembershipBannerInfo, saveMembershipBannerStep } from "../../lib/membershipWizard";
+import {
+  getMembershipBannerInfo,
+  invalidateMembershipWizardBannerCache,
+  saveMembershipBannerStep,
+} from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import {
   MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
@@ -159,6 +163,11 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     error,
     isLoading,
     isSaving,
-    reload: () => setReloadTick((current) => current + 1),
+    reload: () => {
+      if (currentMembershipTypeUniqueId) {
+        invalidateMembershipWizardBannerCache(currentMembershipTypeUniqueId);
+      }
+      setReloadTick((current) => current + 1);
+    },
   };
 }

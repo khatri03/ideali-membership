@@ -8,9 +8,9 @@ function MembershipPricingSkeleton() {
   return (
     <div className="space-y-4">
       <div className="h-4 w-[min(24rem,92%)] animate-pulse rounded-full bg-slate-200" />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-28 animate-pulse rounded-[1.75rem] border border-slate-200 bg-slate-100" />
+          <div key={index} className="h-20 animate-pulse rounded-[1.5rem] border border-slate-200 bg-slate-100" />
         ))}
       </div>
     </div>
@@ -41,6 +41,7 @@ function MembershipPricingError({ message, onRetry }: { message: string; onRetry
 
 export function MembershipPricingStepPage() {
   const { selectedPricing, error, isLoading, isSaving, reload, selectPricing } = useMembershipPricingStep();
+  const selectedOption = MEMBERSHIP_PRICING_OPTIONS.find((option) => option.value === selectedPricing);
 
   if (error) {
     return (
@@ -70,7 +71,7 @@ export function MembershipPricingStepPage() {
             <p className="text-sm text-slate-600">{MEMBERSHIP_PRICING_CONTENT.helper}</p>
 
             <fieldset disabled={isSaving} className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {MEMBERSHIP_PRICING_OPTIONS.map((option) => {
                   const isSelected = selectedPricing === option.value;
 
@@ -80,36 +81,37 @@ export function MembershipPricingStepPage() {
                       type="button"
                       onClick={() => selectPricing(option.value)}
                       className={[
-                        "group rounded-[1.75rem] border p-5 text-left transition",
+                        "group rounded-[1.5rem] border p-4 text-left transition",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2",
                         isSelected
                           ? "border-cyan-300 bg-cyan-50 shadow-sm"
                           : "border-slate-200 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
                       ].join(" ")}
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-2">
-                          <p className="text-lg font-semibold text-slate-900">{option.label}</p>
-                          <p className="text-sm leading-6 text-slate-600">{option.description}</p>
-                        </div>
-
+                      <div className="flex items-center gap-3">
                         <span
                           className={[
-                            "grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] font-semibold transition",
+                            "grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-semibold transition",
                             isSelected
                               ? "border-cyan-500 bg-cyan-500 text-white"
                               : "border-slate-200 bg-white text-transparent group-hover:border-cyan-300",
                           ].join(" ")}
                           aria-hidden="true"
-                        >
-                          âœ“
-                        </span>
+                        />
+
+                        <div className="min-w-0">
+                          <p className="text-base font-semibold text-slate-900">{option.label}</p>
+                        </div>
                       </div>
                     </button>
                   );
                 })}
               </div>
             </fieldset>
+
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+              {selectedOption ? selectedOption.description : "Select a tenure option to see its description here."}
+            </div>
           </>
         )}
       </div>

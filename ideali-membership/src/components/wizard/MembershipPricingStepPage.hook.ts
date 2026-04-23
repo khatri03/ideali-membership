@@ -1,7 +1,11 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
-import { getMembershipPricingInfo, saveMembershipPricingStep } from "../../lib/membershipWizard";
+import {
+  getMembershipPricingInfo,
+  invalidateMembershipWizardPricingCache,
+  saveMembershipPricingStep,
+} from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import {
   MEMBERSHIP_PRICING_NEXT_STEP_NUMBER,
@@ -142,7 +146,12 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
     error,
     isLoading,
     isSaving,
-    reload: () => setReloadTick((current) => current + 1),
+    reload: () => {
+      if (currentMembershipTypeUniqueId) {
+        invalidateMembershipWizardPricingCache(currentMembershipTypeUniqueId);
+      }
+      setReloadTick((current) => current + 1);
+    },
     selectPricing: (value: number) => setSelectedPricing(value),
   };
 }

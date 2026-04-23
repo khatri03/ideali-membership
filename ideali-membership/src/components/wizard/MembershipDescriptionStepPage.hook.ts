@@ -6,6 +6,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
   getMembershipDescriptionInfo,
+  invalidateMembershipWizardDescriptionCache,
   saveMembershipDescriptionStep,
 } from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
@@ -197,6 +198,11 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
     error,
     isLoading,
     isSaving,
-    reload: () => setReloadTick((current) => current + 1),
+    reload: () => {
+      if (currentMembershipTypeUniqueId) {
+        invalidateMembershipWizardDescriptionCache(currentMembershipTypeUniqueId);
+      }
+      setReloadTick((current) => current + 1);
+    },
   };
 }
