@@ -56,3 +56,27 @@ textarea,
 select {
   font: inherit;
 }
+
+@keyframes membership-color-arrow-float {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+    opacity: 0.72;
+  }
+
+  50% {
+    transform: translateX(-7px) translateY(-1px);
+    opacity: 1;
+  }
+}
+
+.membership-color-arrow-motion {
+  animation: membership-color-arrow-float 1.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .membership-color-arrow-motion {
+    animation: none;
+  }
+}

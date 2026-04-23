@@ -149,7 +149,7 @@ function MembershipColorArrowTile() {
       <div className="flex h-full w-full items-center justify-start rounded-2xl pl-1.5 sm:pl-2">
         <svg
           viewBox="0 0 40 16"
-          className="h-4 w-11 text-cyan-700/70"
+          className="membership-color-arrow-motion h-4 w-11 text-cyan-700/70"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
