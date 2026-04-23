@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
 import { getMembershipWizardProgress, getMembershipTypes } from "../lib/membershipWizard";
@@ -26,12 +27,18 @@ function DotsIcon() {
 function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; alignRight: boolean } | null>(null);
   const navigate = useNavigate();
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedButton = buttonRef.current?.contains(target) ?? false;
+      const clickedMenu = menuRef.current?.contains(target) ?? false;
+
+      if (!clickedButton && !clickedMenu) {
         setIsOpen(false);
       }
     }
@@ -69,11 +76,41 @@ function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
     }
   }
 
+  function openMenu() {
+    const buttonRect = buttonRef.current?.getBoundingClientRect();
+    if (!buttonRect) {
+      setIsOpen(true);
+      return;
+    }
+
+    const menuHeight = 72;
+    const menuWidth = 176;
+    const gap = 8;
+    const spaceBelow = window.innerHeight - buttonRect.bottom;
+    const spaceAbove = buttonRect.top;
+    const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
+
+    setMenuPosition({
+      top: openUpward ? Math.max(gap, buttonRect.top - menuHeight - gap) : buttonRect.bottom + gap,
+      left: Math.max(gap, Math.min(buttonRect.left, window.innerWidth - menuWidth - gap)),
+      alignRight: false,
+    });
+    setIsOpen(true);
+  }
+
   return (
     <div ref={menuRef} className="relative inline-flex">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+            return;
+          }
+
+          openMenu();
+        }}
         className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
         aria-haspopup="menu"
         aria-expanded={isOpen}
@@ -82,19 +119,29 @@ function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
         <DotsIcon />
       </button>
 
-      {isOpen ? (
-        <div className="absolute left-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl">
-          <button
-            type="button"
-            onClick={() => void handleEdit()}
-            disabled={isNavigating}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <EditIcon />
-            {isNavigating ? "Opening..." : "Edit"}
-          </button>
-        </div>
-      ) : null}
+      {isOpen && menuPosition
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="fixed z-[1000] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
+              style={{
+                top: `${menuPosition.top}px`,
+                left: `${menuPosition.left}px`,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => void handleEdit()}
+                disabled={isNavigating}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <EditIcon />
+                {isNavigating ? "Opening..." : "Edit"}
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -176,7 +223,7 @@ export function MembershipTypesPage() {
             {error}
           </div>
         ) : types.length > 0 ? (
-          <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50 shadow-sm">
+          <div className="overflow-visible rounded-[1.75rem] border border-slate-200 bg-slate-50 shadow-sm">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-100/80">
