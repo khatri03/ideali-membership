@@ -3,10 +3,18 @@ import { MEMBERSHIP_PAYMENT_ACCOUNT_CONTENT } from "./MembershipPaymentAccountSt
 
 function MembershipPaymentAccountSkeleton() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {[...Array(3)].map((_, index) => (
-        <div key={index} className="h-28 animate-pulse rounded-[1.5rem] border border-slate-200 bg-slate-100" />
-      ))}
+    <div className="space-y-4">
+      <div className="h-12 w-full max-w-xl animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+      <div className="flex flex-wrap gap-2">
+        {[...Array(3)].map((_, index) => (
+          <div key={index} className="h-8 w-28 animate-pulse rounded-full border border-slate-200 bg-slate-100" />
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[...Array(6)].map((_, index) => (
+          <div key={index} className="h-24 animate-pulse rounded-[1.5rem] border border-slate-200 bg-slate-100" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -46,11 +54,15 @@ export function MembershipPaymentAccountStepPage() {
   const {
     paymentAccounts,
     selectedPaymentAccountUniqueId,
+    paymentMethods,
+    selectedPaymentMethods,
     error,
     isLoading,
+    isMethodsLoading,
     isSaving,
     reload,
     selectPaymentAccount,
+    togglePaymentMethod,
   } = useMembershipPaymentAccountStep();
 
   if (error) {
@@ -61,7 +73,8 @@ export function MembershipPaymentAccountStepPage() {
     );
   }
 
-  const selectedAccount = paymentAccounts.find((account) => account.uniqueId === selectedPaymentAccountUniqueId) ?? null;
+  const selectedAccount =
+    paymentAccounts.find((account) => account.uniqueId === selectedPaymentAccountUniqueId) ?? null;
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -73,76 +86,124 @@ export function MembershipPaymentAccountStepPage() {
         <p className="text-sm text-slate-500">{MEMBERSHIP_PAYMENT_ACCOUNT_CONTENT.helper}</p>
       </div>
 
-      <div className="mt-8 max-w-5xl space-y-4">
+      <div className="mt-8 max-w-5xl space-y-6">
         {isLoading ? (
           <MembershipPaymentAccountSkeleton />
         ) : paymentAccounts.length > 0 ? (
           <>
-            <fieldset className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" disabled={isLoading || isSaving}>
-              {paymentAccounts.map((account) => {
-                const isSelected = account.uniqueId === selectedPaymentAccountUniqueId;
-                return (
-                  <button
-                    key={account.uniqueId}
-                    type="button"
-                    onClick={() => selectPaymentAccount(account.uniqueId)}
-                    className={[
-                      "flex min-h-28 flex-col justify-between rounded-[1.5rem] border p-4 text-left transition",
-                      "focus:outline-none focus:ring-4 focus:ring-cyan-100",
-                      isSelected
-                        ? "border-cyan-300 bg-cyan-50/80 shadow-sm"
-                        : "border-slate-200 bg-white hover:border-cyan-200 hover:bg-slate-50",
-                    ].join(" ")}
-                    aria-pressed={isSelected}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-900">{account.name}</p>
-                          <p className="text-xs text-slate-500">
-                            {account.stripeAccountNo ? "Stripe connected" : "Available account"}
-                          </p>
-                        </div>
-                        <span
-                          className={[
-                            "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-                            isSelected
-                              ? "border-cyan-500 bg-cyan-500"
-                              : "border-slate-300 bg-white",
-                          ].join(" ")}
-                          aria-hidden="true"
-                        >
-                          {isSelected ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
-                        </span>
-                      </div>
+            <fieldset className="space-y-6" disabled={isLoading || isSaving || isMethodsLoading}>
+              <label className="flex flex-col gap-3">
+                <span className="text-sm font-semibold text-slate-800">
+                  Payment Account <span className="text-rose-600">*</span>
+                </span>
+                <select
+                  value={selectedPaymentAccountUniqueId}
+                  onChange={(event) => selectPaymentAccount(event.target.value)}
+                  className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                >
+                  <option value="">Select payment account</option>
+                  {paymentAccounts.map((account) => (
+                    <option key={account.uniqueId} value={account.uniqueId}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-                      {account.stripeAccountNo ? (
-                        <p className="break-all text-xs leading-5 text-slate-500">
-                          Account reference: {account.stripeAccountNo}
-                        </p>
-                      ) : null}
+              {selectedAccount ? (
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800">
+                    {selectedAccount.paymentMerchant}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                    {selectedAccount.paymentCurrency}
+                  </span>
+                  {selectedAccount.tapToPayEnabled ? (
+                    <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                      Tap To Pay
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="space-y-3">
+                {!selectedAccount ? (
+                  <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+                    <p className="text-base font-semibold text-slate-900">Select an account to load methods</p>
+                    <p className="mt-2 leading-6">The available methods will appear here once a payment account is chosen.</p>
+                  </div>
+                ) : isMethodsLoading ? (
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">Available Payment Methods</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      {[...Array(6)].map((_, index) => (
+                        <div
+                          key={index}
+                          className="h-24 animate-pulse rounded-[1.5rem] border border-slate-200 bg-slate-100"
+                        />
+                      ))}
                     </div>
+                  </div>
+                ) : paymentMethods.length > 0 ? (
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">Available Payment Methods</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      {paymentMethods.map((method) => {
+                        const isSelected = selectedPaymentMethods.includes(method.value);
 
-                    <p
-                      className={[
-                        "mt-3 text-xs font-semibold uppercase tracking-[0.18em]",
-                        isSelected ? "text-cyan-700" : "text-slate-400",
-                      ].join(" ")}
-                    >
-                      {isSelected ? "Selected" : "Choose"}
-                    </p>
-                  </button>
-                );
-              })}
+                        return (
+                          <button
+                            key={method.value}
+                            type="button"
+                            onClick={() => togglePaymentMethod(method.value)}
+                            className={[
+                              "group flex min-h-20 items-start justify-between rounded-[1.25rem] border px-4 py-3 text-left transition",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2",
+                              isSelected
+                                ? "border-cyan-300 bg-cyan-50 shadow-sm"
+                                : "border-slate-300 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
+                            ].join(" ")}
+                            aria-pressed={isSelected}
+                          >
+                            <div className="space-y-1">
+                              <p className="text-base font-semibold text-slate-900">{method.text}</p>
+                              <p
+                                className={[
+                                  "text-xs font-semibold uppercase tracking-[0.18em]",
+                                  isSelected ? "text-cyan-700" : "text-slate-400",
+                                ].join(" ")}
+                              >
+                                {isSelected ? "Selected" : ""}
+                              </p>
+                            </div>
+
+                            <span
+                              className={[
+                                "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
+                                isSelected ? "border-emerald-600 bg-emerald-600 text-white shadow-sm" : "border-slate-300 bg-white text-transparent",
+                              ].join(" ")}
+                              aria-hidden="true"
+                            >
+                              {isSelected ? "✓" : ""}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+                    <p className="text-base font-semibold text-slate-900">No payment methods available</p>
+                    <p className="mt-2 leading-6">The selected payment account does not expose any supported methods.</p>
+                  </div>
+                )}
+              </div>
             </fieldset>
 
-            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">{MEMBERSHIP_PAYMENT_ACCOUNT_CONTENT.selectedLabel}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {selectedAccount
-                  ? `${selectedAccount.name}${selectedAccount.stripeAccountNo ? ` - ${selectedAccount.stripeAccountNo}` : ""}`
-                  : "Select a payment account to continue."}
-              </p>
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+              {selectedAccount
+                ? `${selectedAccount.name} is selected with ${selectedPaymentMethods.length} payment method${selectedPaymentMethods.length === 1 ? "" : "s"} chosen.`
+                : "Select a payment account to continue."}
             </div>
           </>
         ) : (

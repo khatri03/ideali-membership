@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../../auth/AuthContext";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
+  getOrganizerPaymentAccountSelectionItems,
   getMembershipPaymentAccountInfo,
+  getMembershipPaymentMethods,
   invalidateMembershipWizardPaymentAccountCache,
+  invalidateOrganizerPaymentAccountSelectionCache,
+  invalidateOrganizerPaymentMethodsCache,
   saveMembershipPaymentAccountStep,
 } from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
@@ -20,6 +23,7 @@ import type { MembershipPaymentAccountStepState } from "./MembershipPaymentAccou
 
 async function persistMembershipPaymentAccountStepWithFeedback({
   paymentAccountUniqueId,
+  paymentMethods,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -27,6 +31,7 @@ async function persistMembershipPaymentAccountStepWithFeedback({
   onSuccess,
 }: {
   paymentAccountUniqueId: string | null;
+  paymentMethods: number[];
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -39,12 +44,18 @@ async function persistMembershipPaymentAccountStepWithFeedback({
     return;
   }
 
+  if (!paymentMethods.length) {
+    setError("Please select at least one payment method.");
+    return;
+  }
+
   setError("");
   setIsSaving(true);
 
   try {
     const result = await saveMembershipPaymentAccountStep(
       normalizeMembershipPaymentAccountUniqueId(paymentAccountUniqueId),
+      paymentMethods,
       stepNumber,
       membershipTypeUniqueId,
     );
@@ -58,14 +69,18 @@ async function persistMembershipPaymentAccountStepWithFeedback({
 
 export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepState {
   const navigate = useNavigate();
-  const { session } = useAuth();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
-  const paymentAccounts = session?.organizerDetail.paymentAccounts ?? [];
+  const [paymentAccounts, setPaymentAccounts] = useState<MembershipPaymentAccountStepState["paymentAccounts"]>([]);
   const [selectedPaymentAccountUniqueId, setSelectedPaymentAccountUniqueId] = useState("");
+  const [savedPaymentAccountUniqueId, setSavedPaymentAccountUniqueId] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<MembershipPaymentAccountStepState["paymentMethods"]>([]);
+  const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<number[]>([]);
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState<number[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isMethodsLoading, setIsMethodsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
 
@@ -83,18 +98,30 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
       setError("");
 
       try {
-        const info = await getMembershipPaymentAccountInfo(currentMembershipTypeUniqueId);
+        const [accountOptions, info] = await Promise.all([
+          getOrganizerPaymentAccountSelectionItems(),
+          getMembershipPaymentAccountInfo(currentMembershipTypeUniqueId),
+        ]);
+
         if (!isMounted) {
           return;
         }
 
+        setPaymentAccounts(accountOptions);
         setSelectedPaymentAccountUniqueId(info.paymentAccountUniqueId);
+        setSavedPaymentAccountUniqueId(info.paymentAccountUniqueId);
+        setSavedPaymentMethods(info.paymentMethods ?? []);
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
+        setPaymentAccounts([]);
         setSelectedPaymentAccountUniqueId("");
+        setSavedPaymentAccountUniqueId("");
+        setSavedPaymentMethods([]);
+        setPaymentMethods([]);
+        setSelectedPaymentMethods([]);
         setError(loadError instanceof Error ? loadError.message : "Unable to load payment account.");
       } finally {
         if (isMounted) {
@@ -110,6 +137,56 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
     };
   }, [currentMembershipTypeUniqueId, reloadTick]);
 
+  useEffect(() => {
+    if (!selectedPaymentAccountUniqueId) {
+      setPaymentMethods([]);
+      setSelectedPaymentMethods([]);
+      setIsMethodsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadPaymentMethods() {
+      setIsMethodsLoading(true);
+
+      try {
+        const methods = await getMembershipPaymentMethods(selectedPaymentAccountUniqueId);
+        if (!isMounted) {
+          return;
+        }
+
+        setPaymentMethods(methods);
+
+        const availableMethodIds = methods.map((method) => method.value);
+        const restoredSelections =
+          selectedPaymentAccountUniqueId === savedPaymentAccountUniqueId && savedPaymentMethods.length > 0
+            ? savedPaymentMethods.filter((methodId) => availableMethodIds.includes(methodId))
+            : [];
+
+        setSelectedPaymentMethods(restoredSelections);
+      } catch (loadError) {
+        if (!isMounted) {
+          return;
+        }
+
+        setPaymentMethods([]);
+        setSelectedPaymentMethods([]);
+        setError(loadError instanceof Error ? loadError.message : "Unable to load payment methods.");
+      } finally {
+        if (isMounted) {
+          setIsMethodsLoading(false);
+        }
+      }
+    }
+
+    void loadPaymentMethods();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [savedPaymentAccountUniqueId, savedPaymentMethods, selectedPaymentAccountUniqueId]);
+
   useLayoutEffect(() => {
     setFooterActions({
       showBack: true,
@@ -122,6 +199,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
       onSaveNext: () =>
         void persistMembershipPaymentAccountStepWithFeedback({
           paymentAccountUniqueId: selectedPaymentAccountUniqueId,
+          paymentMethods: selectedPaymentMethods,
           stepNumber: MEMBERSHIP_PAYMENT_ACCOUNT_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -140,6 +218,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
       onSaveExit: () =>
         void persistMembershipPaymentAccountStepWithFeedback({
           paymentAccountUniqueId: selectedPaymentAccountUniqueId,
+          paymentMethods: selectedPaymentMethods,
           stepNumber: MEMBERSHIP_PAYMENT_ACCOUNT_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -149,22 +228,36 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
           },
         }),
     });
-  }, [currentMembershipTypeUniqueId, navigate, selectedPaymentAccountUniqueId, setFooterActions, isSaving]);
+  }, [currentMembershipTypeUniqueId, isSaving, navigate, selectedPaymentAccountUniqueId, selectedPaymentMethods, setFooterActions]);
 
   return {
     paymentAccounts,
     selectedPaymentAccountUniqueId,
+    paymentMethods,
+    selectedPaymentMethods,
     error,
     isLoading,
+    isMethodsLoading,
     isSaving,
     reload: () => {
       if (currentMembershipTypeUniqueId) {
         invalidateMembershipWizardPaymentAccountCache(currentMembershipTypeUniqueId);
+        invalidateOrganizerPaymentAccountSelectionCache();
+        if (selectedPaymentAccountUniqueId) {
+          invalidateOrganizerPaymentMethodsCache(selectedPaymentAccountUniqueId);
+        }
       }
       setReloadTick((current) => current + 1);
     },
     selectPaymentAccount: (paymentAccountUniqueId: string) => {
       setSelectedPaymentAccountUniqueId(paymentAccountUniqueId);
+    },
+    togglePaymentMethod: (paymentMethodId: number) => {
+      setSelectedPaymentMethods((current) =>
+        current.includes(paymentMethodId)
+          ? current.filter((methodId) => methodId !== paymentMethodId)
+          : [...current, paymentMethodId],
+      );
     },
   };
 }

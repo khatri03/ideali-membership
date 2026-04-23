@@ -1,7 +1,7 @@
 export const MEMBERSHIP_PAYMENT_ACCOUNT_CONTENT = {
   title: "Payment Account",
-  description: "Choose the payment account that will collect membership charges.",
-  helper: "Select one organizer payment account to continue.",
+  description: "Choose the payment account and supported methods that will collect membership charges.",
+  helper: "Select one organizer payment account, then pick the methods it can accept.",
   emptyStateTitle: "No payment accounts available",
   emptyStateDescription: "Create a payment account in the organizer area before continuing this step.",
   selectedLabel: "Selected account",

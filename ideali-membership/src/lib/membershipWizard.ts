@@ -1,5 +1,10 @@
 import { getJson, postJson } from "./api";
-import type { MembershipTitleInfo, MembershipTypeListItem } from "../types/membership";
+import type {
+  MembershipPaymentMethodOption,
+  MembershipTitleInfo,
+  MembershipTypeListItem,
+  OrganizerPaymentAccountSelectionItem,
+} from "../types/membership";
 
 function readResponseData(payload: unknown) {
   if (!payload || typeof payload !== "object") {
@@ -84,6 +89,14 @@ export function invalidateMembershipWizardBannerCache(membershipTypeUniqueId: st
 
 export function invalidateMembershipWizardPaymentAccountCache(membershipTypeUniqueId: string) {
   invalidateWizardCache(`wizard:payment-account:${membershipTypeUniqueId}`);
+}
+
+export function invalidateOrganizerPaymentAccountSelectionCache() {
+  invalidateWizardCache("organizer:payment-account-selection-items");
+}
+
+export function invalidateOrganizerPaymentMethodsCache(paymentAccountUniqueId: string) {
+  invalidateWizardCache(`organizer:payment-methods:${paymentAccountUniqueId}`);
 }
 
 export async function saveMembershipTitleStep(
@@ -371,6 +384,11 @@ export async function getMembershipPaymentAccountInfo(membershipTypeUniqueId: st
     const paymentAccountUniqueId = readText(
       responseData?.PaymentAccountUniqueId ?? responseData?.paymentAccountUniqueId,
     );
+    const paymentMethods = Array.isArray(responseData?.PaymentMethods ?? responseData?.paymentMethods)
+      ? ((responseData?.PaymentMethods ?? responseData?.paymentMethods) as unknown[])
+          .map((item) => readNumber(item))
+          .filter((item): item is number => typeof item === "number")
+      : [];
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
@@ -380,13 +398,52 @@ export async function getMembershipPaymentAccountInfo(membershipTypeUniqueId: st
     return {
       uniqueId,
       paymentAccountUniqueId: paymentAccountUniqueId || "",
-      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 6,
+      paymentMethods,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 5,
     };
+  });
+}
+
+export async function getOrganizerPaymentAccountSelectionItems() {
+  return getCachedWizardResponse("organizer:payment-account-selection-items", async () => {
+    const payload = await getJson<unknown>("/api/organizer/payment-account/selection-items");
+    const responseData = readResponseData(payload) as Array<Record<string, unknown>> | null;
+
+    const items = (Array.isArray(responseData) ? responseData : []).map(
+      (item): OrganizerPaymentAccountSelectionItem => ({
+        uniqueId: readText(item.UniqueId ?? item.uniqueId),
+        name: readText(item.Name ?? item.name),
+        paymentMerchant: readText(item.PaymentMerchant ?? item.paymentMerchant),
+        paymentCurrency: readText(item.PaymentCurrency ?? item.paymentCurrency),
+        tapToPayEnabled: Boolean(item.TapToPayEnabled ?? item.tapToPayEnabled),
+      }),
+    );
+
+    return items.filter((item) => item.uniqueId && item.name);
+  });
+}
+
+export async function getMembershipPaymentMethods(paymentAccountUniqueId: string) {
+  return getCachedWizardResponse(`organizer:payment-methods:${paymentAccountUniqueId}`, async () => {
+    const payload = await getJson<unknown>(
+      `/api/organizer/payment-account/${paymentAccountUniqueId}/payment-methods`,
+    );
+    const responseData = readResponseData(payload) as Array<Record<string, unknown>> | null;
+
+    return (Array.isArray(responseData) ? responseData : [])
+      .map(
+        (item): MembershipPaymentMethodOption => ({
+          text: readText(item.Text ?? item.text),
+          value: Number(item.Value ?? item.value),
+        }),
+      )
+      .filter((item) => item.text && Number.isFinite(item.value));
   });
 }
 
 export async function saveMembershipPaymentAccountStep(
   paymentAccountUniqueId: string,
+  paymentMethods: number[],
   stepNumber: number,
   membershipTypeUniqueId?: string,
 ) {
@@ -400,7 +457,7 @@ export async function saveMembershipPaymentAccountStep(
 
   const payload = await postJson<unknown>(
     `/api/membership/type/wizard/${membershipTypeUniqueId}/payment-account?stepNumber=${stepNumber}`,
-    { paymentAccountUniqueId },
+    { paymentAccountUniqueId, paymentMethods },
   );
 
   const responseData = readResponseData(payload);
@@ -420,6 +477,7 @@ export async function saveMembershipPaymentAccountStep(
   }
 
   invalidateMembershipWizardPaymentAccountCache(savedMembershipTypeUniqueId);
+  invalidateOrganizerPaymentMethodsCache(paymentAccountUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
