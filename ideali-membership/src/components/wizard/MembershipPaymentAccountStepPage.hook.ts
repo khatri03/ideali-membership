@@ -196,6 +196,15 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
       saveNextLabel: "Save & Continue",
       saveExitLabel: "Save & Exit",
       isSaving,
+      onBack: () =>
+        navigate(
+          buildMembershipWizardStepPath(
+            APP_ROUTES.membershipWizardBanner,
+            currentMembershipTypeUniqueId,
+            MEMBERSHIP_PAYMENT_ACCOUNT_STEP_NUMBER - 1,
+          ),
+          { replace: true },
+        ),
       onSaveNext: () =>
         void persistMembershipPaymentAccountStepWithFeedback({
           paymentAccountUniqueId: selectedPaymentAccountUniqueId,

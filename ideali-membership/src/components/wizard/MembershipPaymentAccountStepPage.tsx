@@ -200,11 +200,6 @@ export function MembershipPaymentAccountStepPage() {
               </div>
             </fieldset>
 
-            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
-              {selectedAccount
-                ? `${selectedAccount.name} is selected with ${selectedPaymentMethods.length} payment method${selectedPaymentMethods.length === 1 ? "" : "s"} chosen.`
-                : "Select a payment account to continue."}
-            </div>
           </>
         ) : (
           <MembershipPaymentAccountEmpty />
