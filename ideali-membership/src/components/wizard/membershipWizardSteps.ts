@@ -33,6 +33,11 @@ export const MEMBERSHIP_WIZARD_STEPS: MembershipWizardStep[] = [
     to: APP_ROUTES.membershipWizardPricing,
   },
   {
+    label: "Payment Account",
+    description: "Connect the payment account that will collect membership charges.",
+    to: APP_ROUTES.membershipWizardPaymentAccount,
+  },
+  {
     label: "Custom Forms",
     description: "Attach the custom forms that members must complete.",
     to: APP_ROUTES.membershipWizardCustomForms,

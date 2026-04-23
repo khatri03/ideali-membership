@@ -82,6 +82,10 @@ export function invalidateMembershipWizardBannerCache(membershipTypeUniqueId: st
   invalidateWizardCache(`wizard:banner:${membershipTypeUniqueId}`);
 }
 
+export function invalidateMembershipWizardPaymentAccountCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:payment-account:${membershipTypeUniqueId}`);
+}
+
 export async function saveMembershipTitleStep(
   name: string,
   stepNumber: number,
@@ -322,6 +326,72 @@ export async function getMembershipBannerInfo(membershipTypeUniqueId: string) {
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 4,
     };
   });
+}
+
+export async function getMembershipPaymentAccountInfo(membershipTypeUniqueId: string) {
+  return getCachedWizardResponse(`wizard:payment-account:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/payment-account`);
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const paymentAccountUniqueId = readText(
+      responseData?.PaymentAccountUniqueId ?? responseData?.paymentAccountUniqueId,
+    );
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+
+    if (!uniqueId) {
+      throw new Error("Unexpected membership payment account response.");
+    }
+
+    return {
+      uniqueId,
+      paymentAccountUniqueId: paymentAccountUniqueId || "",
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 6,
+    };
+  });
+}
+
+export async function saveMembershipPaymentAccountStep(
+  paymentAccountUniqueId: string,
+  stepNumber: number,
+  membershipTypeUniqueId?: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for membership payment account saving.");
+  }
+
+  if (!paymentAccountUniqueId) {
+    throw new Error("Payment account is required.");
+  }
+
+  const payload = await postJson<unknown>(
+    `/api/membership/type/wizard/${membershipTypeUniqueId}/payment-account?stepNumber=${stepNumber}`,
+    { paymentAccountUniqueId },
+  );
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  if (!savedMembershipTypeUniqueId) {
+    throw new Error("Unexpected membership payment account response.");
+  }
+
+  invalidateMembershipWizardPaymentAccountCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
 }
 
 export async function saveMembershipBannerStep(
