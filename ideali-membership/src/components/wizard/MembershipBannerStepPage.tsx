@@ -48,11 +48,6 @@ export function MembershipBannerStepPage() {
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-      <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-700">
-        <span className="h-2 w-2 rounded-full bg-cyan-500" />
-        Membership wizard step
-      </div>
-
       <div className="mt-5 space-y-3">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">{MEMBERSHIP_BANNER_CONTENT.title}</h1>
         <p className="max-w-3xl text-base leading-7 text-slate-600">{MEMBERSHIP_BANNER_CONTENT.description}</p>

@@ -53,11 +53,6 @@ export function MembershipPricingStepPage() {
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-      <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-700">
-        <span className="h-2 w-2 rounded-full bg-cyan-500" />
-        Membership wizard step
-      </div>
-
       <div className="mt-5 space-y-3">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">{MEMBERSHIP_PRICING_CONTENT.title}</h1>
         <p className="max-w-3xl text-base leading-7 text-slate-600">{MEMBERSHIP_PRICING_CONTENT.description}</p>
@@ -80,21 +75,21 @@ export function MembershipPricingStepPage() {
                       key={option.value}
                       type="button"
                       onClick={() => selectPricing(option.value)}
-                      className={[
-                        "group rounded-[1.5rem] border p-4 text-left transition",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2",
-                        isSelected
-                          ? "border-cyan-300 bg-cyan-50 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
-                      ].join(" ")}
-                    >
+                        className={[
+                          "group rounded-[1.5rem] border p-4 text-left transition",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2",
+                          isSelected
+                            ? "border-cyan-300 bg-cyan-50 shadow-sm"
+                            : "border-slate-300 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
+                        ].join(" ")}
+                      >
                       <div className="flex items-center gap-3">
                         <span
                           className={[
                             "grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-semibold transition",
                             isSelected
                               ? "border-cyan-500 bg-cyan-500 text-white"
-                              : "border-slate-200 bg-white text-transparent group-hover:border-cyan-300",
+                              : "border-slate-400 bg-white text-transparent group-hover:border-cyan-300",
                           ].join(" ")}
                           aria-hidden="true"
                         />
