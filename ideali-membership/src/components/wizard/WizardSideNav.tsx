@@ -7,6 +7,7 @@ interface WizardSideNavProps {
   isNavVisible: boolean;
   currentStepIndex: number;
   completedStepNo: number;
+  isProgressLoading: boolean;
   membershipTypeUniqueId?: string;
   onNavToggle: () => void;
   onNavigate?: () => void;
@@ -16,6 +17,7 @@ export function WizardSideNav({
   isNavVisible,
   currentStepIndex,
   completedStepNo,
+  isProgressLoading,
   membershipTypeUniqueId,
   onNavToggle,
   onNavigate,
@@ -31,6 +33,27 @@ export function WizardSideNav({
       stepPath,
       membershipTypeUniqueId,
       stepIndex >= 0 ? stepIndex + 1 : undefined,
+    );
+  }
+
+  function SidebarSkeleton() {
+    return (
+      <div className="space-y-2">
+        {MEMBERSHIP_WIZARD_STEPS.map((step, index) => (
+          <div
+            key={step.to}
+            className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-transparent shadow-sm">
+                {index + 1}
+              </span>
+              <span className="h-4 w-[min(12rem,65%)] animate-pulse rounded-full bg-slate-200" />
+            </div>
+            <span className="h-6 w-14 animate-pulse rounded-full bg-slate-200" />
+          </div>
+        ))}
+      </div>
     );
   }
 
@@ -117,7 +140,10 @@ export function WizardSideNav({
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-2">
           <p className="px-4 py-3 text-sm font-semibold text-slate-900">Membership setup</p>
           <div className="space-y-2">
-            {MEMBERSHIP_WIZARD_STEPS.map((step, index) => {
+            {isProgressLoading ? (
+              <SidebarSkeleton />
+            ) : (
+              MEMBERSHIP_WIZARD_STEPS.map((step, index) => {
               const badgeNumber = index + 1;
               const stepPath = getStepPath(step.to);
               const isActive = index === currentStepIndex;
@@ -207,7 +233,8 @@ export function WizardSideNav({
                   <span className="min-w-0 truncate">{step.label}</span>
                 </StepRow>
               );
-            })}
+            })
+            )}
           </div>
         </div>
       </nav>

@@ -1,13 +1,13 @@
-export const MEMBERSHIP_TENURE_STEP_NUMBER = 3;
-export const MEMBERSHIP_TENURE_NEXT_STEP_NUMBER = 4;
+export const MEMBERSHIP_PRICING_STEP_NUMBER = 5;
+export const MEMBERSHIP_PRICING_NEXT_STEP_NUMBER = 6;
 
-export const MEMBERSHIP_TENURE_CONTENT = {
-  title: "Tenure",
-  description: "Select how long this membership stays active.",
-  helper: "Choose one option before continuing to the next step.",
+export const MEMBERSHIP_PRICING_CONTENT = {
+  title: "Pricing",
+  description: "Set the billing cycle that defines this membership plan.",
+  helper: "Choose one option before continuing to the next setup step.",
 } as const;
 
-export const MEMBERSHIP_TENURE_OPTIONS = [
+export const MEMBERSHIP_PRICING_OPTIONS = [
   {
     label: "Monthly",
     value: 1,

@@ -1,31 +1,31 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
-import { getMembershipTenureInfo, saveMembershipTenureStep } from "../../lib/membershipWizard";
+import { getMembershipPricingInfo, saveMembershipPricingStep } from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import {
-  MEMBERSHIP_TENURE_NEXT_STEP_NUMBER,
-  MEMBERSHIP_TENURE_STEP_NUMBER,
-} from "./MembershipTenureStepPage.fields";
-import { getMembershipTenureError, normalizeMembershipTenure } from "./MembershipTenureStepPage.schema";
-import type { MembershipTenureStepState } from "./MembershipTenureStepPage.types";
+  MEMBERSHIP_PRICING_NEXT_STEP_NUMBER,
+  MEMBERSHIP_PRICING_STEP_NUMBER,
+} from "./MembershipPricingStepPage.fields";
+import { getMembershipPricingError, normalizeMembershipPricing } from "./MembershipPricingStepPage.schema";
+import type { MembershipPricingStepState } from "./MembershipPricingStepPage.types";
 
-async function persistMembershipTenureStepWithFeedback({
-  tenure,
+async function persistMembershipPricingStepWithFeedback({
+  pricing,
   stepNumber,
   membershipTypeUniqueId,
   setError,
   setIsSaving,
   onSuccess,
 }: {
-  tenure: number | null;
+  pricing: number | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
   setIsSaving: (value: boolean) => void;
   onSuccess: (membershipTypeUniqueId: string) => void | Promise<void>;
 }) {
-  const nextError = getMembershipTenureError(tenure);
+  const nextError = getMembershipPricingError(pricing);
   if (nextError) {
     setError(nextError);
     return;
@@ -35,21 +35,21 @@ async function persistMembershipTenureStepWithFeedback({
   setIsSaving(true);
 
   try {
-    const result = await saveMembershipTenureStep(normalizeMembershipTenure(tenure), stepNumber, membershipTypeUniqueId);
+    const result = await saveMembershipPricingStep(normalizeMembershipPricing(pricing), stepNumber, membershipTypeUniqueId);
     await onSuccess(result.membershipTypeUniqueId);
   } catch (saveError) {
-    setError(saveError instanceof Error ? saveError.message : "Unable to save membership tenure.");
+    setError(saveError instanceof Error ? saveError.message : "Unable to save pricing.");
   } finally {
     setIsSaving(false);
   }
 }
 
-export function useMembershipTenureStep(): MembershipTenureStepState {
+export function useMembershipPricingStep(): MembershipPricingStepState {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
-  const [selectedTenure, setSelectedTenure] = useState<number | null>(null);
+  const [selectedPricing, setSelectedPricing] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,24 +64,24 @@ export function useMembershipTenureStep(): MembershipTenureStepState {
 
     let isMounted = true;
 
-    async function loadMembershipTenure() {
+    async function loadMembershipPricing() {
       setIsLoading(true);
       setError("");
 
       try {
-        const info = await getMembershipTenureInfo(currentMembershipTypeUniqueId);
+        const info = await getMembershipPricingInfo(currentMembershipTypeUniqueId);
         if (!isMounted) {
           return;
         }
 
-        setSelectedTenure(info.tenure);
+        setSelectedPricing(info.pricing);
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
-        setSelectedTenure(null);
-        setError(loadError instanceof Error ? loadError.message : "Unable to load membership tenure.");
+        setSelectedPricing(null);
+        setError(loadError instanceof Error ? loadError.message : "Unable to load pricing.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -89,7 +89,7 @@ export function useMembershipTenureStep(): MembershipTenureStepState {
       }
     }
 
-    void loadMembershipTenure();
+    void loadMembershipPricing();
 
     return () => {
       isMounted = false;
@@ -106,27 +106,27 @@ export function useMembershipTenureStep(): MembershipTenureStepState {
       saveExitLabel: "Save & Exit",
       isSaving,
       onSaveNext: () =>
-        void persistMembershipTenureStepWithFeedback({
-          tenure: selectedTenure,
-          stepNumber: MEMBERSHIP_TENURE_STEP_NUMBER,
+        void persistMembershipPricingStepWithFeedback({
+          pricing: selectedPricing,
+          stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setIsSaving,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardColor,
+                APP_ROUTES.membershipWizardCustomForms,
                 savedMembershipTypeUniqueId,
-                MEMBERSHIP_TENURE_NEXT_STEP_NUMBER,
+                MEMBERSHIP_PRICING_NEXT_STEP_NUMBER,
               ),
               { replace: true },
             );
           },
         }),
       onSaveExit: () =>
-        void persistMembershipTenureStepWithFeedback({
-          tenure: selectedTenure,
-          stepNumber: MEMBERSHIP_TENURE_STEP_NUMBER,
+        void persistMembershipPricingStepWithFeedback({
+          pricing: selectedPricing,
+          stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setIsSaving,
@@ -135,14 +135,14 @@ export function useMembershipTenureStep(): MembershipTenureStepState {
           },
         }),
     });
-  }, [currentMembershipTypeUniqueId, isSaving, navigate, selectedTenure, setFooterActions]);
+  }, [currentMembershipTypeUniqueId, isSaving, navigate, selectedPricing, setFooterActions]);
 
   return {
-    selectedTenure,
+    selectedPricing,
     error,
     isLoading,
     isSaving,
     reload: () => setReloadTick((current) => current + 1),
-    selectTenure: (value: number) => setSelectedTenure(value),
+    selectPricing: (value: number) => setSelectedPricing(value),
   };
 }

@@ -1,10 +1,10 @@
 import {
-  MEMBERSHIP_TENURE_CONTENT,
-  MEMBERSHIP_TENURE_OPTIONS,
-} from "./MembershipTenureStepPage.fields";
-import { useMembershipTenureStep } from "./MembershipTenureStepPage.hook";
+  MEMBERSHIP_PRICING_CONTENT,
+  MEMBERSHIP_PRICING_OPTIONS,
+} from "./MembershipPricingStepPage.fields";
+import { useMembershipPricingStep } from "./MembershipPricingStepPage.hook";
 
-function MembershipTenureSkeleton() {
+function MembershipPricingSkeleton() {
   return (
     <div className="space-y-4">
       <div className="h-4 w-[min(24rem,92%)] animate-pulse rounded-full bg-slate-200" />
@@ -17,7 +17,7 @@ function MembershipTenureSkeleton() {
   );
 }
 
-function MembershipTenureError({ message, onRetry }: { message: string; onRetry: () => void }) {
+function MembershipPricingError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
       <div className="flex items-start gap-3">
@@ -39,13 +39,13 @@ function MembershipTenureError({ message, onRetry }: { message: string; onRetry:
   );
 }
 
-export function MembershipTenureStepPage() {
-  const { selectedTenure, error, isLoading, isSaving, reload, selectTenure } = useMembershipTenureStep();
+export function MembershipPricingStepPage() {
+  const { selectedPricing, error, isLoading, isSaving, reload, selectPricing } = useMembershipPricingStep();
 
   if (error) {
     return (
       <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <MembershipTenureError message={error} onRetry={reload} />
+        <MembershipPricingError message={error} onRetry={reload} />
       </section>
     );
   }
@@ -58,27 +58,27 @@ export function MembershipTenureStepPage() {
       </div>
 
       <div className="mt-5 space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{MEMBERSHIP_TENURE_CONTENT.title}</h1>
-        <p className="max-w-3xl text-base leading-7 text-slate-600">{MEMBERSHIP_TENURE_CONTENT.description}</p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{MEMBERSHIP_PRICING_CONTENT.title}</h1>
+        <p className="max-w-3xl text-base leading-7 text-slate-600">{MEMBERSHIP_PRICING_CONTENT.description}</p>
       </div>
 
       <div className="mt-8 max-w-5xl space-y-4">
         {isLoading ? (
-          <MembershipTenureSkeleton />
+          <MembershipPricingSkeleton />
         ) : (
           <>
-            <p className="text-sm text-slate-600">{MEMBERSHIP_TENURE_CONTENT.helper}</p>
+            <p className="text-sm text-slate-600">{MEMBERSHIP_PRICING_CONTENT.helper}</p>
 
             <fieldset disabled={isSaving} className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
-                {MEMBERSHIP_TENURE_OPTIONS.map((option) => {
-                  const isSelected = selectedTenure === option.value;
+                {MEMBERSHIP_PRICING_OPTIONS.map((option) => {
+                  const isSelected = selectedPricing === option.value;
 
                   return (
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => selectTenure(option.value)}
+                      onClick={() => selectPricing(option.value)}
                       className={[
                         "group rounded-[1.75rem] border p-5 text-left transition",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2",
@@ -102,7 +102,7 @@ export function MembershipTenureStepPage() {
                           ].join(" ")}
                           aria-hidden="true"
                         >
-                          ✓
+                          âœ“
                         </span>
                       </div>
                     </button>

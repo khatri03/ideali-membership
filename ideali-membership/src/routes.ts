@@ -14,7 +14,6 @@ export const APP_ROUTES = {
   membershipWizardTitleWithId: "/membership/type/wizard/:membershipTypeUniqueId/title",
   membershipWizardResume: "/membership/type/wizard/:membershipTypeUniqueId",
   membershipWizardDescription: "/membership/type/wizard/:membershipTypeUniqueId/description",
-  membershipWizardTenure: "/membership/type/wizard/:membershipTypeUniqueId/tenure",
   membershipWizardColor: "/membership/type/wizard/:membershipTypeUniqueId/color",
   membershipWizardBanner: "/membership/type/wizard/:membershipTypeUniqueId/banner",
   membershipWizardPricing: "/membership/type/wizard/:membershipTypeUniqueId/pricing",

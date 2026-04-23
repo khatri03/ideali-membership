@@ -1,6 +1,7 @@
 import { AUTH_STORAGE_KEY } from "../auth/authStorage";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
 
 export function createApiUrl(path: string) {
   return `${apiBaseUrl}${path.startsWith("/") ? path : `/${path}`}`;
@@ -77,10 +78,22 @@ export async function postJson<T>(path: string, body: unknown) {
 }
 
 export async function getJson<T>(path: string) {
-  const response = await fetch(createApiUrl(path), {
+  const requestKey = createApiUrl(path);
+  const existingRequest = inFlightGetRequests.get(requestKey);
+
+  if (existingRequest) {
+    return existingRequest as Promise<T>;
+  }
+
+  const request = fetch(requestKey, {
     method: "GET",
     headers: buildHeaders(),
-  });
+  })
+    .then((response) => readJsonResponse<T>(response))
+    .finally(() => {
+      inFlightGetRequests.delete(requestKey);
+    });
 
-  return readJsonResponse<T>(response);
+  inFlightGetRequests.set(requestKey, request as Promise<unknown>);
+  return request;
 }

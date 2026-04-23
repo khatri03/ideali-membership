@@ -58,6 +58,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [descriptionHtml, setDescriptionHtml] = useState("<p></p>");
   const editorContentRef = useRef<string>("<p></p>");
 
   const editor = useEditor({
@@ -100,8 +101,9 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           return;
         }
 
-        editorContentRef.current = info.description || "<p></p>";
-        editor?.commands.setContent(editorContentRef.current, { emitUpdate: false });
+        const nextDescriptionHtml = info.description || "<p></p>";
+        editorContentRef.current = nextDescriptionHtml;
+        setDescriptionHtml(nextDescriptionHtml);
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -120,7 +122,15 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
     return () => {
       isMounted = false;
     };
-  }, [currentMembershipTypeUniqueId, editor, reloadTick]);
+  }, [currentMembershipTypeUniqueId, reloadTick]);
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    editor.commands.setContent(descriptionHtml, { emitUpdate: false });
+  }, [descriptionHtml, editor]);
 
   useLayoutEffect(() => {
     setFooterActions({
@@ -142,7 +152,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardTenure,
+                APP_ROUTES.membershipWizardColor,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_DESCRIPTION_NEXT_STEP_NUMBER,
               ),
@@ -160,7 +170,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardTenure,
+                APP_ROUTES.membershipWizardColor,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_DESCRIPTION_NEXT_STEP_NUMBER,
               ),

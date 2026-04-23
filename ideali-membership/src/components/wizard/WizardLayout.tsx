@@ -38,6 +38,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
     typeof window === "undefined" ? true : window.innerWidth >= 1024,
   );
   const [completedStepNo, setCompletedStepNo] = useState(0);
+  const [isProgressLoading, setIsProgressLoading] = useState(true);
   const [footerActions, setFooterActions] = useState(defaultWizardFooterActions);
   const isResumeRoute =
     matchPath({ path: APP_ROUTES.membershipWizardResume, end: true }, location.pathname) !== null;
@@ -70,12 +71,15 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
       setCompletedStepNo(0);
+      setIsProgressLoading(false);
       return;
     }
 
     let isMounted = true;
 
     async function loadWizardProgress() {
+      setIsProgressLoading(true);
+
       try {
         const progress = await getMembershipWizardProgress(currentMembershipTypeUniqueId);
         if (isMounted) {
@@ -86,6 +90,10 @@ export function WizardLayout({ children }: WizardLayoutProps) {
           setCompletedStepNo(0);
         }
       }
+
+      if (isMounted) {
+        setIsProgressLoading(false);
+      }
     }
 
     void loadWizardProgress();
@@ -94,6 +102,23 @@ export function WizardLayout({ children }: WizardLayoutProps) {
       isMounted = false;
     };
   }, [currentMembershipTypeUniqueId, location.pathname]);
+
+  useEffect(() => {
+    if (!isResumeRoute || isProgressLoading || !currentMembershipTypeUniqueId) {
+      return;
+    }
+
+    const nextStepNo = Math.min(
+      Math.max(completedStepNo + 1, 1),
+      MEMBERSHIP_WIZARD_STEPS.length,
+    );
+    const step = MEMBERSHIP_WIZARD_STEPS[nextStepNo - 1] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
+
+    navigate(
+      buildMembershipWizardStepPath(step.to, currentMembershipTypeUniqueId, nextStepNo),
+      { replace: true },
+    );
+  }, [completedStepNo, currentMembershipTypeUniqueId, isProgressLoading, isResumeRoute, navigate]);
 
   useEffect(() => {
     const syncNavVisibility = () => {
@@ -160,6 +185,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
               isNavVisible={isNavVisible}
               currentStepIndex={currentStepIndex}
               completedStepNo={completedStepNo}
+              isProgressLoading={isProgressLoading}
               membershipTypeUniqueId={membershipTypeUniqueId}
               onNavToggle={() => setIsNavVisible((current) => !current)}
               onNavigate={() => {
