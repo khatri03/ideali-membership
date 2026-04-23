@@ -62,7 +62,7 @@ export function parseMembershipPricingAmount(value: string) {
   }
 
   const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  if (!Number.isFinite(parsed) || parsed < 0) {
     return null;
   }
 

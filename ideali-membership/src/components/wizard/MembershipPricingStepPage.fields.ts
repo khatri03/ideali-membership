@@ -6,7 +6,7 @@ export const MEMBERSHIP_PRICING_CONTENT = {
   description: "Set the billing cycle that defines this membership plan.",
   helper: "Choose one option before continuing to the next setup step.",
   priceLabel: "Membership Price",
-  priceHelper: "Enter the membership price. Commas appear as you type and up to 2 decimals are allowed.",
+  priceHelper: "Enter the membership price. Commas appear as you type and up to 2 decimals are allowed. Use 0.00 for free membership.",
   annualHelper: "Choose both month and date while Annual is selected.",
   annualRenewalLabel: "Every Year",
   annualCustomLabel: "Custom",

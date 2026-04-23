@@ -157,11 +157,11 @@ export function MembershipPricingStepPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Renewal Due On</p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {isAnnualCustomSelected
-                          ? "Month and date are required for the custom annual expiry."
-                          : "Renewal every year keeps month and date visible but disabled."}
-                      </p>
+                      {isAnnualCustomSelected ? (
+                        <p className="mt-1 text-sm text-slate-500">
+                          Month and date are required for the custom annual expiry.
+                        </p>
+                      ) : null}
                     </div>
                     <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
                       Required
@@ -315,7 +315,7 @@ export function MembershipPricingStepPage() {
                     </span>
                   </div>
 
-                  <p className="mt-3 text-sm text-slate-500">{MEMBERSHIP_PRICING_CONTENT.customHelper} Value must be greater than 0.</p>
+                  <p className="mt-3 text-sm text-slate-500">{MEMBERSHIP_PRICING_CONTENT.customHelper}</p>
                 </div>
               </div>
 
