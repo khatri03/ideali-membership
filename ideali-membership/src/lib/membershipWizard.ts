@@ -97,6 +97,61 @@ export async function getMembershipTitleInfo(membershipTypeUniqueId: string) {
   } satisfies MembershipTitleInfo;
 }
 
+export async function getMembershipDescriptionInfo(membershipTypeUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/description`);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+  const description = readText(responseData?.Description ?? responseData?.description);
+  const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+
+  if (!uniqueId) {
+    throw new Error("Unexpected membership description response.");
+  }
+
+  return {
+    uniqueId,
+    description,
+    stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
+  };
+}
+
+export async function saveMembershipDescriptionStep(
+  description: string | null,
+  stepNumber: number,
+  membershipTypeUniqueId?: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for membership description saving.");
+  }
+
+  const payload = await postJson<unknown>(
+    `/api/membership/type/wizard/${membershipTypeUniqueId}/description?stepNumber=${stepNumber}`,
+    { description },
+  );
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  if (!savedMembershipTypeUniqueId) {
+    throw new Error("Unexpected membership description response.");
+  }
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
+}
+
 export async function getMembershipColorInfo(membershipTypeUniqueId: string) {
   const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/color`);
   const responseData = readResponseData(payload) as Record<string, unknown> | null;

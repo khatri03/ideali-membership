@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { matchPath, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
+import { getMembershipWizardProgress } from "../../lib/membershipWizard";
 import {
   defaultWizardFooterActions,
   WizardFooterActionsProvider,
@@ -25,7 +26,10 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
+  const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const [isNavVisible, setIsNavVisible] = useState(true);
+  const [completedStepNo, setCompletedStepNo] = useState(0);
+  const [hasLoadedWizardProgress, setHasLoadedWizardProgress] = useState(false);
   const [footerActions, setFooterActions] = useState(defaultWizardFooterActions);
 
   const currentStepIndex = useMemo(() => {
@@ -39,6 +43,56 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === MEMBERSHIP_WIZARD_STEPS.length - 1;
   const previousStep = MEMBERSHIP_WIZARD_STEPS[Math.max(currentStepIndex - 1, 0)] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
+
+  useEffect(() => {
+    if (!currentMembershipTypeUniqueId) {
+      setCompletedStepNo(0);
+      setHasLoadedWizardProgress(true);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadWizardProgress() {
+      try {
+        const progress = await getMembershipWizardProgress(currentMembershipTypeUniqueId);
+        if (isMounted) {
+          setCompletedStepNo(progress);
+          setHasLoadedWizardProgress(true);
+        }
+      } catch {
+        if (isMounted) {
+          setCompletedStepNo(0);
+          setHasLoadedWizardProgress(true);
+        }
+      }
+    }
+
+    void loadWizardProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentMembershipTypeUniqueId, location.pathname]);
+
+  useEffect(() => {
+    if (!hasLoadedWizardProgress || !currentMembershipTypeUniqueId || completedStepNo <= 0) {
+      return;
+    }
+
+    const currentStepNumber = currentStepIndex + 1;
+    if (currentStepNumber <= completedStepNo && currentStepIndex < MEMBERSHIP_WIZARD_STEPS.length - 1) {
+      const nextStep = MEMBERSHIP_WIZARD_STEPS[Math.min(completedStepNo, MEMBERSHIP_WIZARD_STEPS.length - 1)]!;
+      navigate(
+        buildMembershipWizardStepPath(
+          nextStep.to,
+          currentMembershipTypeUniqueId,
+          Math.min(completedStepNo + 1, MEMBERSHIP_WIZARD_STEPS.length),
+        ),
+        { replace: true },
+      );
+    }
+  }, [completedStepNo, currentMembershipTypeUniqueId, currentStepIndex, hasLoadedWizardProgress, navigate]);
 
   useEffect(() => {
     setFooterActions((current) => ({
@@ -66,6 +120,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
           {isNavVisible ? (
             <WizardSideNav
               currentStepIndex={currentStepIndex}
+              completedStepNo={completedStepNo}
               membershipTypeUniqueId={membershipTypeUniqueId}
               onNavigate={() => {
                 if (window.innerWidth < 1024) {

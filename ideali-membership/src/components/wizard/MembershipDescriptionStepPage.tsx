@@ -1,10 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import { useNavigate, useParams } from "react-router-dom";
-import { useWizardFooterActions } from "./WizardFooterActionsContext";
-import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
+import type { Editor } from "@tiptap/react";
+import { EditorContent } from "@tiptap/react";
+import { MEMBERSHIP_DESCRIPTION_CONTENT } from "./MembershipDescriptionStepPage.fields";
+import { useMembershipDescriptionStep } from "./MembershipDescriptionStepPage.hook";
 
 function BoldIcon() {
   return (
@@ -86,105 +83,48 @@ function ToolbarButton({
   );
 }
 
-export function MembershipDescriptionStepPage() {
-  const navigate = useNavigate();
-  const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
-  const { setFooterActions } = useWizardFooterActions();
-  const [isSaving, setIsSaving] = useState(false);
-  const storageKey = useMemo(
-    () => (membershipTypeUniqueId ? `membership-type-description:${membershipTypeUniqueId}` : ""),
-    [membershipTypeUniqueId],
+function MembershipDescriptionSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="h-4 w-[min(24rem,92%)] animate-pulse rounded-full bg-slate-200" />
+      <div className="h-12 rounded-[1.5rem] border border-slate-200 bg-slate-100 animate-pulse" />
+      <div className="h-[18rem] rounded-[1.75rem] border border-slate-200 bg-slate-100 animate-pulse" />
+    </div>
   );
+}
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3] },
-      }),
-      Placeholder.configure({
-        placeholder: "Write a rich description for this membership type...",
-      }),
-    ],
-    content: "",
-    onUpdate: ({ editor: currentEditor }) => {
-      if (storageKey) {
-        window.localStorage.setItem(storageKey, currentEditor.getHTML());
-      }
-    },
-    editorProps: {
-      attributes: {
-        class:
-          "min-h-[18rem] rounded-[1.5rem] border border-slate-200 bg-white px-5 py-4 text-sm leading-7 text-slate-900 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
-      },
-    },
-  });
+function MembershipDescriptionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-rose-400/50 text-[10px] font-bold">
+          !
+        </div>
+        <div className="space-y-2">
+          <p>{message}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (!editor || !storageKey) {
-      return;
-    }
+export function MembershipDescriptionStepPage() {
+  const { editor, error, isLoading, isSaving, reload } = useMembershipDescriptionStep();
 
-    const savedValue = window.localStorage.getItem(storageKey);
-    if (savedValue) {
-        editor.commands.setContent(savedValue, { emitUpdate: false });
-    }
-  }, [editor, storageKey]);
-
-  useLayoutEffect(() => {
-    setFooterActions({
-      showBack: true,
-      showSkip: true,
-      showSaveNext: true,
-      showSaveExit: true,
-      skipLabel: "Skip",
-      saveNextLabel: "Save & Continue",
-      saveExitLabel: "Save & Exit",
-      isSaving,
-      onSkip: () => {
-        navigate(
-          buildMembershipWizardStepPath(APP_ROUTES.membershipWizardColor, membershipTypeUniqueId, 3),
-          { replace: true },
-        );
-      },
-      onSaveNext: async () => {
-        if (!editor) {
-          return;
-        }
-
-        setIsSaving(true);
-
-        try {
-          if (storageKey) {
-            window.localStorage.setItem(storageKey, editor.getHTML());
-          }
-
-          navigate(
-            buildMembershipWizardStepPath(APP_ROUTES.membershipWizardColor, membershipTypeUniqueId, 3),
-            { replace: true },
-          );
-        } finally {
-          setIsSaving(false);
-        }
-      },
-      onSaveExit: async () => {
-        if (!editor) {
-          return;
-        }
-
-        setIsSaving(true);
-
-        try {
-          if (storageKey) {
-            window.localStorage.setItem(storageKey, editor.getHTML());
-          }
-
-          navigate(APP_ROUTES.membershipTypes, { replace: true });
-        } finally {
-          setIsSaving(false);
-        }
-      },
-    });
-  }, [editor, isSaving, membershipTypeUniqueId, navigate, setFooterActions, storageKey]);
+  if (error) {
+    return (
+      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+        <MembershipDescriptionError message={error} onRetry={reload} />
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -194,63 +134,66 @@ export function MembershipDescriptionStepPage() {
       </div>
 
       <div className="mt-5 space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Description</h1>
-        <p className="max-w-3xl text-base leading-7 text-slate-600">
-          Compose the membership description with rich text formatting.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{MEMBERSHIP_DESCRIPTION_CONTENT.title}</h1>
+        <p className="max-w-3xl text-base leading-7 text-slate-600">{MEMBERSHIP_DESCRIPTION_CONTENT.description}</p>
       </div>
 
       <div className="mt-8 max-w-4xl space-y-4">
-        <div className="flex flex-wrap items-center gap-2 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
-          <ToolbarButton
-            editor={editor}
-            label="Bold"
-            onClick={() => editor?.chain().focus().toggleBold().run()}
-            isActive={editor?.isActive("bold")}
-            icon={<BoldIcon />}
-          />
-          <ToolbarButton
-            editor={editor}
-            label="Italic"
-            onClick={() => editor?.chain().focus().toggleItalic().run()}
-            isActive={editor?.isActive("italic")}
-            icon={<ItalicIcon />}
-          />
-          <ToolbarButton
-            editor={editor}
-            label="Bullet list"
-            onClick={() => editor?.chain().focus().toggleBulletList().run()}
-            isActive={editor?.isActive("bulletList")}
-            icon={<BulletListIcon />}
-          />
-          <ToolbarButton
-            editor={editor}
-            label="Numbered list"
-            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-            isActive={editor?.isActive("orderedList")}
-            icon={<NumberListIcon />}
-          />
-          <ToolbarButton
-            editor={editor}
-            label="Undo"
-            onClick={() => editor?.chain().focus().undo().run()}
-            icon={<UndoIcon />}
-          />
-          <ToolbarButton
-            editor={editor}
-            label="Redo"
-            onClick={() => editor?.chain().focus().redo().run()}
-            icon={<RedoIcon />}
-          />
-        </div>
+        {isLoading ? (
+          <MembershipDescriptionSkeleton />
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
+              <ToolbarButton
+                editor={editor}
+                label="Bold"
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                isActive={editor?.isActive("bold")}
+                icon={<BoldIcon />}
+              />
+              <ToolbarButton
+                editor={editor}
+                label="Italic"
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                isActive={editor?.isActive("italic")}
+                icon={<ItalicIcon />}
+              />
+              <ToolbarButton
+                editor={editor}
+                label="Bullet list"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                isActive={editor?.isActive("bulletList")}
+                icon={<BulletListIcon />}
+              />
+              <ToolbarButton
+                editor={editor}
+                label="Numbered list"
+                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                isActive={editor?.isActive("orderedList")}
+                icon={<NumberListIcon />}
+              />
+              <ToolbarButton
+                editor={editor}
+                label="Undo"
+                onClick={() => editor?.chain().focus().undo().run()}
+                icon={<UndoIcon />}
+              />
+              <ToolbarButton
+                editor={editor}
+                label="Redo"
+                onClick={() => editor?.chain().focus().redo().run()}
+                icon={<RedoIcon />}
+              />
+            </div>
 
-        <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-          <EditorContent editor={editor} />
-        </div>
+            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
+              <EditorContent editor={editor} />
+            </div>
 
-        <p className="text-sm text-slate-500">
-          Your draft is kept locally for now until the backend description save endpoint is ready.
-        </p>
+            <p className="text-sm text-slate-500">{MEMBERSHIP_DESCRIPTION_CONTENT.helper}</p>
+            {isSaving ? <p className="text-sm font-medium text-cyan-700">Saving description...</p> : null}
+          </>
+        )}
       </div>
     </section>
   );

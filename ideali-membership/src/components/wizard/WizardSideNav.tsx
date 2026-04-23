@@ -4,12 +4,14 @@ import { MEMBERSHIP_WIZARD_STEPS } from "./membershipWizardSteps";
 
 interface WizardSideNavProps {
   currentStepIndex: number;
+  completedStepNo: number;
   membershipTypeUniqueId?: string;
   onNavigate?: () => void;
 }
 
 export function WizardSideNav({
   currentStepIndex,
+  completedStepNo,
   membershipTypeUniqueId,
   onNavigate,
 }: WizardSideNavProps) {
@@ -42,7 +44,7 @@ export function WizardSideNav({
           <p className="px-4 py-3 text-sm font-semibold text-slate-900">Membership setup</p>
           <div className="space-y-2">
             {MEMBERSHIP_WIZARD_STEPS.map((step, index) => (
-              index < currentStepIndex ? (
+              index < completedStepNo ? (
                 <NavLink
                   key={step.to}
                   to={getStepPath(step.to)}
