@@ -12,7 +12,7 @@ function MembershipPaymentAccountSkeleton() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[...Array(6)].map((_, index) => (
-          <div key={index} className="h-24 animate-pulse rounded-[1.5rem] border border-slate-200 bg-slate-100" />
+          <div key={index} className="h-20 animate-pulse rounded-[1.25rem] border border-slate-200 bg-slate-100" />
         ))}
       </div>
     </div>
@@ -57,6 +57,7 @@ export function MembershipPaymentAccountStepPage() {
     paymentMethods,
     selectedPaymentMethods,
     error,
+    validationError,
     isLoading,
     isMethodsLoading,
     isSaving,
@@ -108,6 +109,9 @@ export function MembershipPaymentAccountStepPage() {
                     </option>
                   ))}
                 </select>
+                {validationError && !selectedPaymentAccountUniqueId ? (
+                  <p className="text-sm text-rose-600">{validationError}</p>
+                ) : null}
               </label>
 
               {selectedAccount ? (
@@ -133,13 +137,13 @@ export function MembershipPaymentAccountStepPage() {
                     <p className="mt-2 leading-6">The available methods will appear here once a payment account is chosen.</p>
                   </div>
                 ) : isMethodsLoading ? (
-                  <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+                  <div className="space-y-3">
                     <p className="text-sm font-semibold text-slate-900">Available Payment Methods</p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       {[...Array(6)].map((_, index) => (
                         <div
                           key={index}
-                          className="h-24 animate-pulse rounded-[1.5rem] border border-slate-200 bg-slate-100"
+                          className="h-20 animate-pulse rounded-[1.25rem] border border-slate-200 bg-slate-100"
                         />
                       ))}
                     </div>
@@ -190,6 +194,9 @@ export function MembershipPaymentAccountStepPage() {
                         );
                       })}
                     </div>
+                    {validationError ? (
+                      <p className="text-sm text-rose-600">{validationError}</p>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">

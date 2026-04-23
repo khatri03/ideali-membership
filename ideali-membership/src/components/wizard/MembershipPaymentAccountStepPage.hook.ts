@@ -27,6 +27,7 @@ async function persistMembershipPaymentAccountStepWithFeedback({
   stepNumber,
   membershipTypeUniqueId,
   setError,
+  setValidationError,
   setIsSaving,
   onSuccess,
 }: {
@@ -35,21 +36,23 @@ async function persistMembershipPaymentAccountStepWithFeedback({
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
+  setValidationError: (value: string) => void;
   setIsSaving: (value: boolean) => void;
   onSuccess: (membershipTypeUniqueId: string) => void | Promise<void>;
 }) {
   const nextError = getMembershipPaymentAccountError(paymentAccountUniqueId);
   if (nextError) {
-    setError(nextError);
+    setValidationError(nextError);
     return;
   }
 
   if (!paymentMethods.length) {
-    setError("Please select at least one payment method.");
+    setValidationError("Atleast one payment method is required.");
     return;
   }
 
   setError("");
+  setValidationError("");
   setIsSaving(true);
 
   try {
@@ -79,6 +82,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<number[]>([]);
   const [savedPaymentMethods, setSavedPaymentMethods] = useState<number[]>([]);
   const [error, setError] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isMethodsLoading, setIsMethodsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -96,6 +100,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
     async function loadMembershipPaymentAccount() {
       setIsLoading(true);
       setError("");
+      setValidationError("");
 
       try {
         const [accountOptions, info] = await Promise.all([
@@ -122,6 +127,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
         setSavedPaymentMethods([]);
         setPaymentMethods([]);
         setSelectedPaymentMethods([]);
+        setValidationError("");
         setError(loadError instanceof Error ? loadError.message : "Unable to load payment account.");
       } finally {
         if (isMounted) {
@@ -142,6 +148,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
       setPaymentMethods([]);
       setSelectedPaymentMethods([]);
       setIsMethodsLoading(false);
+      setValidationError("");
       return;
     }
 
@@ -172,6 +179,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
 
         setPaymentMethods([]);
         setSelectedPaymentMethods([]);
+        setValidationError("");
         setError(loadError instanceof Error ? loadError.message : "Unable to load payment methods.");
       } finally {
         if (isMounted) {
@@ -212,6 +220,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
           stepNumber: MEMBERSHIP_PAYMENT_ACCOUNT_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
+          setValidationError,
           setIsSaving,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
@@ -231,6 +240,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
           stepNumber: MEMBERSHIP_PAYMENT_ACCOUNT_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
+          setValidationError,
           setIsSaving,
           onSuccess: async () => {
             navigate(APP_ROUTES.membershipTypes, { replace: true });
@@ -245,6 +255,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
     paymentMethods,
     selectedPaymentMethods,
     error,
+    validationError,
     isLoading,
     isMethodsLoading,
     isSaving,
@@ -256,12 +267,15 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
           invalidateOrganizerPaymentMethodsCache(selectedPaymentAccountUniqueId);
         }
       }
+      setValidationError("");
       setReloadTick((current) => current + 1);
     },
     selectPaymentAccount: (paymentAccountUniqueId: string) => {
       setSelectedPaymentAccountUniqueId(paymentAccountUniqueId);
+      setValidationError("");
     },
     togglePaymentMethod: (paymentMethodId: number) => {
+      setValidationError("");
       setSelectedPaymentMethods((current) =>
         current.includes(paymentMethodId)
           ? current.filter((methodId) => methodId !== paymentMethodId)
