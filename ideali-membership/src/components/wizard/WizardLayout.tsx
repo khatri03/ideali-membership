@@ -16,6 +16,13 @@ interface WizardLayoutProps {
 }
 
 function getCurrentWizardStep(pathname: string): MembershipWizardStep {
+  if (
+    matchPath({ path: APP_ROUTES.membershipWizardTitleWithId, end: true }, pathname) ||
+    matchPath({ path: APP_ROUTES.membershipWizardTitle, end: true }, pathname)
+  ) {
+    return MEMBERSHIP_WIZARD_STEPS[0]!;
+  }
+
   return (
     MEMBERSHIP_WIZARD_STEPS.find((step) => matchPath({ path: step.to, end: true }, pathname)) ??
     MEMBERSHIP_WIZARD_STEPS[0]!
@@ -29,17 +36,31 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [completedStepNo, setCompletedStepNo] = useState(0);
-  const [hasLoadedWizardProgress, setHasLoadedWizardProgress] = useState(false);
   const [footerActions, setFooterActions] = useState(defaultWizardFooterActions);
+  const isResumeRoute =
+    matchPath({ path: APP_ROUTES.membershipWizardResume, end: true }, location.pathname) !== null;
 
   const currentStepIndex = useMemo(() => {
+    if (
+      matchPath({ path: APP_ROUTES.membershipWizardTitleWithId, end: true }, location.pathname) ||
+      matchPath({ path: APP_ROUTES.membershipWizardTitle, end: true }, location.pathname)
+    ) {
+      return 0;
+    }
+
+    if (isResumeRoute) {
+      return Math.min(completedStepNo > 0 ? completedStepNo : 0, MEMBERSHIP_WIZARD_STEPS.length - 1);
+    }
+
     const index = MEMBERSHIP_WIZARD_STEPS.findIndex((step) =>
       matchPath({ path: step.to, end: true }, location.pathname),
     );
     return index >= 0 ? index : 0;
-  }, [location.pathname]);
+  }, [completedStepNo, isResumeRoute, location.pathname]);
 
-  const currentStep = getCurrentWizardStep(location.pathname);
+  const currentStep = isResumeRoute
+    ? MEMBERSHIP_WIZARD_STEPS[currentStepIndex] ?? MEMBERSHIP_WIZARD_STEPS[0]!
+    : getCurrentWizardStep(location.pathname);
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === MEMBERSHIP_WIZARD_STEPS.length - 1;
   const previousStep = MEMBERSHIP_WIZARD_STEPS[Math.max(currentStepIndex - 1, 0)] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
@@ -47,7 +68,6 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
       setCompletedStepNo(0);
-      setHasLoadedWizardProgress(true);
       return;
     }
 
@@ -58,12 +78,10 @@ export function WizardLayout({ children }: WizardLayoutProps) {
         const progress = await getMembershipWizardProgress(currentMembershipTypeUniqueId);
         if (isMounted) {
           setCompletedStepNo(progress);
-          setHasLoadedWizardProgress(true);
         }
       } catch {
         if (isMounted) {
           setCompletedStepNo(0);
-          setHasLoadedWizardProgress(true);
         }
       }
     }
@@ -76,34 +94,26 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   }, [currentMembershipTypeUniqueId, location.pathname]);
 
   useEffect(() => {
-    if (!hasLoadedWizardProgress || !currentMembershipTypeUniqueId || completedStepNo <= 0) {
+    if (isResumeRoute) {
+      setFooterActions({
+        ...defaultWizardFooterActions,
+        showBack: false,
+        showSkip: false,
+        showSaveNext: false,
+        showSaveExit: false,
+        isSaving: false,
+      });
       return;
     }
 
-    const currentStepNumber = currentStepIndex + 1;
-    if (currentStepNumber <= completedStepNo && currentStepIndex < MEMBERSHIP_WIZARD_STEPS.length - 1) {
-      const nextStep = MEMBERSHIP_WIZARD_STEPS[Math.min(completedStepNo, MEMBERSHIP_WIZARD_STEPS.length - 1)]!;
-      navigate(
-        buildMembershipWizardStepPath(
-          nextStep.to,
-          currentMembershipTypeUniqueId,
-          Math.min(completedStepNo + 1, MEMBERSHIP_WIZARD_STEPS.length),
-        ),
-        { replace: true },
-      );
-    }
-  }, [completedStepNo, currentMembershipTypeUniqueId, currentStepIndex, hasLoadedWizardProgress, navigate]);
-
-  useEffect(() => {
-    setFooterActions((current) => ({
+    setFooterActions({
       ...defaultWizardFooterActions,
-      ...current,
       showBack: !isFirstStep,
-      showSkip: current.showSkip ?? false,
+      showSkip: false,
       showSaveNext: !isLastStep,
       showSaveExit: true,
-    }));
-  }, [currentStepIndex, isFirstStep, isLastStep, setFooterActions]);
+    });
+  }, [currentStepIndex, isFirstStep, isLastStep, isResumeRoute, setFooterActions]);
 
   return (
     <WizardFooterActionsProvider footerActions={footerActions} setFooterActions={setFooterActions}>
@@ -116,7 +126,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
           totalSteps={MEMBERSHIP_WIZARD_STEPS.length}
         />
 
-        <div className="flex w-full flex-1 gap-6 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex w-full flex-1 items-start gap-6 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
           {isNavVisible ? (
             <WizardSideNav
               currentStepIndex={currentStepIndex}
@@ -130,7 +140,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
             />
           ) : null}
 
-          <main className="min-w-0 flex-1 space-y-6">
+          <main className="min-w-0 flex-1 self-start space-y-6">
             {children ?? <Outlet />}
 
             <footer className="rounded-[2rem] border border-slate-200 bg-white/90 px-6 py-5 shadow-sm">

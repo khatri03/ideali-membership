@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { buildMembershipWizardStepPath } from "../../routes";
-import { getMembershipTitleInfo, getMembershipWizardProgress } from "../../lib/membershipWizard";
+import { getMembershipWizardProgress } from "../../lib/membershipWizard";
 import { MEMBERSHIP_WIZARD_STEPS, type MembershipWizardStep } from "./membershipWizardSteps";
 
 function getStepByNumber(stepNo: number): MembershipWizardStep {
@@ -25,20 +25,16 @@ export function MembershipWizardResumePage() {
 
     async function loadWizardState() {
       try {
-        const info = await getMembershipTitleInfo(currentMembershipTypeUniqueId);
-        let completedStepNo = 0;
-
-        try {
-          completedStepNo = await getMembershipWizardProgress(currentMembershipTypeUniqueId);
-        } catch {
-          completedStepNo = 0;
-        }
+        const completedStepNo = await getMembershipWizardProgress(currentMembershipTypeUniqueId);
 
         if (!isMounted) {
           return;
         }
 
-        const nextStepNo = Math.max(info.stepNo, completedStepNo > 0 ? completedStepNo + 1 : 1);
+        const nextStepNo = Math.min(
+          Math.max(completedStepNo + 1, 1),
+          MEMBERSHIP_WIZARD_STEPS.length,
+        );
         const step = getStepByNumber(nextStepNo);
         navigate(
           buildMembershipWizardStepPath(step.to, currentMembershipTypeUniqueId, nextStepNo),

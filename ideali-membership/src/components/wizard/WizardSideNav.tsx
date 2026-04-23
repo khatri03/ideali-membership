@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { buildMembershipWizardStepPath } from "../../routes";
 import { MEMBERSHIP_WIZARD_STEPS } from "./membershipWizardSteps";
@@ -15,6 +16,11 @@ export function WizardSideNav({
   membershipTypeUniqueId,
   onNavigate,
 }: WizardSideNavProps) {
+  const stateBadgeClass =
+    "inline-flex h-6 min-w-14 items-center justify-center rounded-full px-2 text-[10px] font-semibold uppercase leading-none";
+  const stateBaseRowClass =
+    "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition";
+
   function getStepPath(stepPath: (typeof MEMBERSHIP_WIZARD_STEPS)[number]["to"]) {
     const stepIndex = MEMBERSHIP_WIZARD_STEPS.findIndex((step) => step.to === stepPath);
     return buildMembershipWizardStepPath(
@@ -24,8 +30,61 @@ export function WizardSideNav({
     );
   }
 
+  function StepRow({
+    children,
+    stateLabel,
+    stateClassName,
+    rowClassName,
+    href,
+    isDisabled,
+  }: {
+    children: ReactNode;
+    stateLabel?: string;
+    stateClassName: string;
+    rowClassName: string;
+    href?: string;
+    isDisabled?: boolean;
+  }) {
+    if (href) {
+      return (
+        <NavLink
+          to={href}
+          onClick={onNavigate}
+          className={`${stateBaseRowClass} ${rowClassName}`}
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            {children}
+          </span>
+          {stateLabel ? (
+            <span className={`${stateBadgeClass} ${stateClassName}`}>
+              {stateLabel}
+            </span>
+          ) : null}
+        </NavLink>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        disabled={isDisabled}
+        title="Complete previous steps first"
+        className={`${stateBaseRowClass} cursor-not-allowed opacity-60 text-slate-400`}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          {children}
+        </span>
+        {stateLabel ? (
+          <span className={`${stateBadgeClass} ${stateClassName}`}>
+            {stateLabel}
+          </span>
+        ) : null}
+      </button>
+    );
+  }
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 w-80 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:sticky lg:top-[73px] lg:h-[calc(100vh-73px)] lg:shadow-none">
+    <aside className="fixed inset-y-0 left-0 z-40 w-80 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:relative lg:inset-y-auto lg:top-auto lg:h-auto lg:shadow-none">
       <div className="flex items-center justify-between lg:hidden">
         <p className="text-sm font-semibold tracking-[0.2em] text-cyan-700 uppercase">
           Wizard steps
@@ -39,65 +98,103 @@ export function WizardSideNav({
         </button>
       </div>
 
-      <nav className="mt-6 space-y-3 lg:mt-0">
+      <nav className="mt-4 space-y-3 lg:mt-0">
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-2">
           <p className="px-4 py-3 text-sm font-semibold text-slate-900">Membership setup</p>
           <div className="space-y-2">
-            {MEMBERSHIP_WIZARD_STEPS.map((step, index) => (
-              index < completedStepNo ? (
-                <NavLink
-                  key={step.to}
-                  to={getStepPath(step.to)}
-                  onClick={onNavigate}
-                  className="group flex w-full items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm font-medium text-emerald-900 transition hover:bg-emerald-100"
-                >
-                  <span className="flex min-w-0 items-center gap-3">
+            {MEMBERSHIP_WIZARD_STEPS.map((step, index) => {
+              const badgeNumber = index + 1;
+              const stepPath = getStepPath(step.to);
+              const isActive = index === currentStepIndex;
+              const isDone = index < completedStepNo && !isActive;
+              const isNext = index === completedStepNo;
+
+              if (isDone) {
+                return (
+                  <StepRow
+                    key={step.to}
+                    href={stepPath}
+                    stateLabel="Done"
+                    stateClassName="bg-emerald-600 text-white"
+                    rowClassName="border border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                  >
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-600 text-xs font-semibold text-white shadow-sm">
                       ✓
                     </span>
-                    <span className="min-w-0 truncate">{step.label}</span>
-                  </span>
-                  <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                    Done
-                  </span>
-                </NavLink>
-              ) : index === currentStepIndex ? (
-                <NavLink
-                  key={step.to}
-                  to={getStepPath(step.to)}
-                  onClick={onNavigate}
-                  className="flex w-full items-center justify-between rounded-2xl border border-cyan-200 bg-cyan-500/10 px-4 py-3 text-left text-sm font-medium text-cyan-800 transition hover:bg-cyan-500/15"
-                >
-                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="min-w-0 truncate text-emerald-900">{step.label}</span>
+                  </StepRow>
+                );
+              }
+
+              if (isActive) {
+                const isRevisitedCompletedStep = index < completedStepNo;
+                return (
+                  <StepRow
+                    key={step.to}
+                    href={stepPath}
+                    stateLabel={isRevisitedCompletedStep ? "Done" : undefined}
+                    stateClassName={
+                      isRevisitedCompletedStep ? "bg-emerald-800 text-white" : "bg-cyan-500 text-white"
+                    }
+                    rowClassName={
+                      isRevisitedCompletedStep
+                        ? "border border-emerald-400 bg-emerald-200 text-emerald-950 hover:bg-emerald-300"
+                        : "border border-cyan-200 bg-cyan-500/10 text-cyan-800 hover:bg-cyan-500/15"
+                    }
+                  >
+                    <span
+                      className={[
+                        "grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold text-white shadow-sm",
+                        isRevisitedCompletedStep ? "bg-emerald-800" : "bg-cyan-600",
+                      ].join(" ")}
+                    >
+                      {badgeNumber}
+                    </span>
+                    <span
+                      className={
+                        isRevisitedCompletedStep
+                          ? "min-w-0 truncate text-emerald-950"
+                          : "min-w-0 truncate text-cyan-800"
+                      }
+                    >
+                      {step.label}
+                    </span>
+                  </StepRow>
+                );
+              }
+
+              if (isNext) {
+                return (
+                  <StepRow
+                    key={step.to}
+                    href={stepPath}
+                    stateLabel="Next"
+                    stateClassName="bg-cyan-600 text-white"
+                    rowClassName="border border-cyan-200 bg-cyan-50 text-cyan-900 hover:bg-cyan-100"
+                  >
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-cyan-600 text-xs font-semibold text-white shadow-sm">
-                      {index + 1}
+                      {badgeNumber}
                     </span>
-                    <span className="min-w-0 truncate">{step.label}</span>
-                  </span>
-                  <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                    Active
-                  </span>
-                </NavLink>
-              ) : (
-                <button
+                    <span className="min-w-0 truncate text-cyan-900">{step.label}</span>
+                  </StepRow>
+                );
+              }
+
+              return (
+                <StepRow
                   key={step.to}
-                  type="button"
-                  disabled
-                  title="Complete previous steps first"
-                  className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium text-slate-400 transition cursor-not-allowed opacity-60"
+                  stateLabel="Locked"
+                  stateClassName="bg-slate-200 text-slate-500"
+                  rowClassName="bg-transparent text-slate-400"
+                  isDisabled
                 >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-xs font-semibold text-slate-300 shadow-sm">
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0 truncate">{step.label}</span>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-xs font-semibold text-slate-300 shadow-sm">
+                    {badgeNumber}
                   </span>
-                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-                    Locked
-                  </span>
-                </button>
-              )
-            ))}
+                  <span className="min-w-0 truncate">{step.label}</span>
+                </StepRow>
+              );
+            })}
           </div>
         </div>
       </nav>

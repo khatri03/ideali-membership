@@ -4,6 +4,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { ProtectedShell } from "./components/ProtectedShell";
 import { AppLayout } from "./components/layout/AppLayout";
 import { MembershipDescriptionStepPage } from "./components/wizard/MembershipDescriptionStepPage";
+import { MembershipBannerStepPage } from "./components/wizard/MembershipBannerStepPage";
 import { MembershipColorStepPage } from "./components/wizard/MembershipColorStepPage";
 import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
 import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage";
@@ -107,7 +108,8 @@ function RouterApp() {
               <Route path="title" element={<MembershipTitleStepPage />} />
               <Route path="description" element={<MembershipDescriptionStepPage />} />
               <Route path="color" element={<MembershipColorStepPage />} />
-              {MEMBERSHIP_WIZARD_STEPS.slice(3).map((step) => (
+              <Route path="banner" element={<MembershipBannerStepPage />} />
+              {MEMBERSHIP_WIZARD_STEPS.slice(4).map((step) => (
                 <Route
                   key={step.to}
                   path={getWizardStepSegment(step.to)}

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
-import { getMembershipTypes } from "../lib/membershipWizard";
+import { getMembershipWizardProgress, getMembershipTypes } from "../lib/membershipWizard";
+import { MEMBERSHIP_WIZARD_STEPS } from "../components/wizard/membershipWizardSteps";
 import type { MembershipTypeListItem } from "../types/membership";
 
 function EditIcon() {
@@ -24,6 +25,8 @@ function DotsIcon() {
 
 function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,6 +51,24 @@ function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
     };
   }, []);
 
+  async function handleEdit() {
+    setIsNavigating(true);
+
+    try {
+      const completedStepNo = await getMembershipWizardProgress(item.value);
+      const nextStepNo = Math.min(
+        Math.max(completedStepNo + 1, 1),
+        MEMBERSHIP_WIZARD_STEPS.length,
+      );
+      const step = MEMBERSHIP_WIZARD_STEPS[nextStepNo - 1] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
+
+      navigate(buildMembershipWizardStepPath(step.to, item.value, nextStepNo));
+      setIsOpen(false);
+    } finally {
+      setIsNavigating(false);
+    }
+  }
+
   return (
     <div ref={menuRef} className="relative inline-flex">
       <button
@@ -63,15 +84,15 @@ function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
 
       {isOpen ? (
         <div className="absolute left-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl">
-          <Link
-            to={buildMembershipWizardStepPath(APP_ROUTES.membershipWizardResume, item.value)}
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-            onClick={() => setIsOpen(false)}
-            role="menuitem"
+          <button
+            type="button"
+            onClick={() => void handleEdit()}
+            disabled={isNavigating}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <EditIcon />
-            Edit
-          </Link>
+            {isNavigating ? "Opening..." : "Edit"}
+          </button>
         </div>
       ) : null}
     </div>
