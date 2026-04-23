@@ -105,15 +105,15 @@ function RouterApp() {
           <Route path="membership/type/wizard">
             <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
             <Route path="title" element={<MembershipTitleStepPage />} />
-            <Route path=":membershipTypeUniqueId">
+              <Route path=":membershipTypeUniqueId">
               <Route index element={<MembershipWizardResumePage />} />
               <Route path="title" element={<MembershipTitleStepPage />} />
               <Route path="description" element={<MembershipDescriptionStepPage />} />
               <Route path="tenure" element={<Navigate to="pricing" replace />} />
               <Route path="color" element={<MembershipColorStepPage />} />
               <Route path="banner" element={<MembershipBannerStepPage />} />
-              <Route path="pricing" element={<MembershipPricingStepPage />} />
               <Route path="payment-account" element={<MembershipPaymentAccountStepPage />} />
+              <Route path="pricing" element={<MembershipPricingStepPage />} />
               {MEMBERSHIP_WIZARD_STEPS.slice(6).map((step) => (
                 <Route
                   key={step.to}

@@ -129,7 +129,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardCustomForms,
+                APP_ROUTES.membershipWizardPricing,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_PAYMENT_ACCOUNT_NEXT_STEP_NUMBER,
               ),
