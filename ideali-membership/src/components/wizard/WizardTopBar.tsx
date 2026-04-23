@@ -22,7 +22,7 @@ export function WizardTopBar({
         <button
           type="button"
           onClick={onNavToggle}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-700 transition hover:bg-slate-100"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-700 transition hover:bg-slate-100 lg:hidden"
           aria-label={isNavVisible ? "Hide wizard sidebar" : "Show wizard sidebar"}
           aria-pressed={isNavVisible}
         >
