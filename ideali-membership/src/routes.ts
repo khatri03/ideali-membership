@@ -6,7 +6,7 @@ export const APP_ROUTES = {
   app: "/",
   membership: "/membership/type",
   membershipDashboard: "/membership/type/dashboard",
-  membershipTypes: "/membership/type/types",
+  membershipTypes: "/membership/type/list",
   membershipMembers: "/membership/type/members",
   membershipPendingApprovals: "/membership/type/pending-approvals",
   membershipWizard: "/membership/type/wizard",

@@ -83,7 +83,8 @@ function RouterApp() {
           <Route path="membership/type">
             <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="types" element={<MembershipTypesPage />} />
+            <Route path="list" element={<MembershipTypesPage />} />
+            <Route path="types" element={<Navigate to={APP_ROUTES.membershipTypes} replace />} />
             <Route path="members" element={<MembersPage />} />
             <Route
               path="pending-approvals"

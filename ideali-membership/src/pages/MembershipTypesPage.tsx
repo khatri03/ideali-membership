@@ -87,9 +87,6 @@ function MembershipTypeRow({ item }: { item: MembershipTypeListItem }) {
       <td className="px-4 py-4 align-middle">
         <p className="text-sm font-semibold text-slate-900">{item.text}</p>
       </td>
-      <td className="px-4 py-4 align-middle">
-        <p className="text-sm text-slate-500">{item.value}</p>
-      </td>
     </tr>
   );
 }
@@ -168,9 +165,6 @@ export function MembershipTypesPage() {
                     </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Membership Type
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Unique Id
                     </th>
                   </tr>
                 </thead>
