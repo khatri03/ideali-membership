@@ -44,6 +44,8 @@ function MembershipPricingError({ message, onRetry }: { message: string; onRetry
 export function MembershipPricingStepPage() {
   const {
     selectedPricing,
+    selectedMembershipCharges,
+    selectedAnnualExpiryMode,
     selectedCustomExpiryMonth,
     selectedCustomExpiryDay,
     selectedCustomExpiryDays,
@@ -52,6 +54,8 @@ export function MembershipPricingStepPage() {
     isSaving,
     reload,
     selectPricing,
+    selectMembershipCharges,
+    selectAnnualExpiryMode,
     selectCustomExpiryMonth,
     selectCustomExpiryDay,
     selectCustomExpiryDays,
@@ -59,10 +63,11 @@ export function MembershipPricingStepPage() {
   const selectedOption = MEMBERSHIP_PRICING_OPTIONS.find((option) => option.value === selectedPricing);
   const isAnnualSelected = selectedPricing === 2;
   const isCustomSelected = selectedPricing === 4;
+  const isAnnualCustomSelected = selectedAnnualExpiryMode === "custom";
   const availableDays = getMembershipPricingDays(selectedCustomExpiryMonth);
   const annualPanelClassName = [
     "overflow-hidden transition-all duration-300 ease-out",
-    isAnnualSelected ? "max-h-[18rem] opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-2",
+    isAnnualSelected ? "max-h-[24rem] opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-2",
   ].join(" ");
   const customPanelClassName = [
     "overflow-hidden transition-all duration-300 ease-out",
@@ -92,6 +97,24 @@ export function MembershipPricingStepPage() {
             <p className="text-sm text-slate-600">{MEMBERSHIP_PRICING_CONTENT.helper}</p>
 
             <fieldset disabled={isSaving} className="space-y-4">
+              <label className="block space-y-2">
+                <span className="flex items-center gap-1 text-sm font-semibold text-slate-800">
+                  <span>{MEMBERSHIP_PRICING_CONTENT.priceLabel}</span>
+                  <span className="text-rose-600" aria-label="Required" title="Required">
+                    *
+                  </span>
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={selectedMembershipCharges}
+                  onChange={(event) => selectMembershipCharges(event.target.value)}
+                  placeholder="0.00"
+                  className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                />
+                <p className="text-sm text-slate-500">{MEMBERSHIP_PRICING_CONTENT.priceHelper}</p>
+              </label>
+
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {MEMBERSHIP_PRICING_OPTIONS.map((option) => {
                   const isSelected = selectedPricing === option.value;
@@ -133,12 +156,82 @@ export function MembershipPricingStepPage() {
                 <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Expires On</p>
-                      <p className="mt-1 text-sm text-slate-500">Both month and date are required for Annual.</p>
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Renewal Due On</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {isAnnualCustomSelected
+                          ? "Month and date are required for the custom annual expiry."
+                          : "Renewal every year keeps month and date visible but disabled."}
+                      </p>
                     </div>
                     <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
                       Required
                     </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 md:grid-cols-2">
+                    <label
+                      className={[
+                        "group flex cursor-pointer items-start gap-3 rounded-[1.5rem] border p-4 text-left transition",
+                        "focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-400 focus-within:ring-offset-2",
+                        !isAnnualCustomSelected
+                          ? "border-cyan-300 bg-cyan-50 shadow-sm"
+                          : "border-slate-300 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
+                      ].join(" ")}
+                    >
+                      <input
+                        type="radio"
+                        name="annual-expiry-mode"
+                        checked={!isAnnualCustomSelected}
+                        onChange={() => selectAnnualExpiryMode("renewal")}
+                        className="sr-only"
+                      />
+                      <span
+                        className={[
+                          "grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-semibold transition",
+                          !isAnnualCustomSelected
+                            ? "border-cyan-500 bg-cyan-500 text-white"
+                            : "border-slate-400 bg-white text-transparent group-hover:border-cyan-300",
+                        ].join(" ")}
+                        aria-hidden="true"
+                      />
+                      <span className="space-y-1">
+                        <span className="block text-base font-semibold text-slate-900">
+                          {MEMBERSHIP_PRICING_CONTENT.annualRenewalLabel}
+                        </span>
+                      </span>
+                    </label>
+
+                    <label
+                      className={[
+                        "group flex cursor-pointer items-start gap-3 rounded-[1.5rem] border p-4 text-left transition",
+                        "focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-400 focus-within:ring-offset-2",
+                        isAnnualCustomSelected
+                          ? "border-cyan-300 bg-cyan-50 shadow-sm"
+                          : "border-slate-300 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
+                      ].join(" ")}
+                    >
+                      <input
+                        type="radio"
+                        name="annual-expiry-mode"
+                        checked={isAnnualCustomSelected}
+                        onChange={() => selectAnnualExpiryMode("custom")}
+                        className="sr-only"
+                      />
+                      <span
+                        className={[
+                          "grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-semibold transition",
+                          isAnnualCustomSelected
+                            ? "border-cyan-500 bg-cyan-500 text-white"
+                            : "border-slate-400 bg-white text-transparent group-hover:border-cyan-300",
+                        ].join(" ")}
+                        aria-hidden="true"
+                      />
+                      <span className="space-y-1">
+                        <span className="block text-base font-semibold text-slate-900">
+                          {MEMBERSHIP_PRICING_CONTENT.annualCustomLabel}
+                        </span>
+                      </span>
+                    </label>
                   </div>
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -154,9 +247,9 @@ export function MembershipPricingStepPage() {
                         onChange={(event) =>
                           selectCustomExpiryMonth(event.target.value ? Number(event.target.value) : null)
                         }
-                        disabled={!isAnnualSelected}
-                        required={isAnnualSelected}
-                        aria-required={isAnnualSelected}
+                        disabled={!isAnnualCustomSelected}
+                        required={isAnnualCustomSelected}
+                        aria-required={isAnnualCustomSelected}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                       >
                         <option value="">Select month</option>
@@ -180,9 +273,9 @@ export function MembershipPricingStepPage() {
                         onChange={(event) =>
                           selectCustomExpiryDay(event.target.value ? Number(event.target.value) : null)
                         }
-                        disabled={!isAnnualSelected}
-                        required={isAnnualSelected}
-                        aria-required={isAnnualSelected}
+                        disabled={!isAnnualCustomSelected}
+                        required={isAnnualCustomSelected}
+                        aria-required={isAnnualCustomSelected}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                       >
                         <option value="">
@@ -226,13 +319,6 @@ export function MembershipPricingStepPage() {
                 </div>
               </div>
 
-              <p className="text-sm text-slate-500">
-                {isAnnualSelected
-                  ? MEMBERSHIP_PRICING_CONTENT.annualHelper
-                  : isCustomSelected
-                    ? MEMBERSHIP_PRICING_CONTENT.customHelper
-                    : "Select Annual or Custom to reveal the required expiry controls."}
-              </p>
             </fieldset>
 
             <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">

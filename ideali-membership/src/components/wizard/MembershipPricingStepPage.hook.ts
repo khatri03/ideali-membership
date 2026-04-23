@@ -17,11 +17,16 @@ import {
   normalizeMembershipPricing,
   normalizeMembershipPricingDay,
   normalizeMembershipPricingMonth,
+  formatMembershipPricingAmount,
+  parseMembershipPricingAmount,
+  sanitizeMembershipPricingAmountInput,
 } from "./MembershipPricingStepPage.schema";
 import type { MembershipPricingStepState } from "./MembershipPricingStepPage.types";
 
 async function persistMembershipPricingStepWithFeedback({
   pricing,
+  membershipCharges,
+  annualExpiryMode,
   annualExpiryMonth,
   annualExpiryDay,
   customExpiryDays,
@@ -32,6 +37,8 @@ async function persistMembershipPricingStepWithFeedback({
   onSuccess,
 }: {
   pricing: number | null;
+  membershipCharges: string;
+  annualExpiryMode: "renewal" | "custom";
   annualExpiryMonth: number | null;
   annualExpiryDay: number | null;
   customExpiryDays: number | null;
@@ -48,18 +55,24 @@ async function persistMembershipPricingStepWithFeedback({
   }
 
   const normalizedPricing = normalizeMembershipPricing(pricing);
+  const normalizedCharges = parseMembershipPricingAmount(membershipCharges);
   const normalizedMonth = normalizeMembershipPricingMonth(annualExpiryMonth);
   const normalizedDay = normalizeMembershipPricingDay(annualExpiryDay, normalizedMonth);
   const normalizedDays = normalizeMembershipPricingDays(customExpiryDays);
 
+  if (!normalizedCharges) {
+    setError("Please enter a valid membership price greater than 0.");
+    return;
+  }
+
   if (normalizedPricing === 2) {
-    if (!normalizedMonth) {
-      setError("Please select a month for the annual pricing option.");
+    if (annualExpiryMode === "custom" && (!normalizedMonth || !normalizedDay)) {
+      setError("Please select both month and date for annual custom expiry.");
       return;
     }
 
-    if (!normalizedDay) {
-      setError("Please select a date for the annual pricing option.");
+    if ((normalizedMonth && !normalizedDay) || (!normalizedMonth && normalizedDay)) {
+      setError("Please select both month and date for annual custom expiry.");
       return;
     }
   }
@@ -75,8 +88,9 @@ async function persistMembershipPricingStepWithFeedback({
   try {
     const result = await saveMembershipPricingStep(
       normalizedPricing,
-      normalizedPricing === 2 ? normalizedMonth : null,
-      normalizedPricing === 2 ? normalizedDay : null,
+      normalizedCharges,
+      normalizedPricing === 2 && annualExpiryMode === "custom" ? normalizedMonth : null,
+      normalizedPricing === 2 && annualExpiryMode === "custom" ? normalizedDay : null,
       normalizedPricing === 4 ? normalizedDays : null,
       stepNumber,
       membershipTypeUniqueId,
@@ -95,6 +109,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
   const [selectedPricing, setSelectedPricing] = useState<number | null>(null);
+  const [selectedMembershipCharges, setSelectedMembershipCharges] = useState("");
+  const [selectedAnnualExpiryMode, setSelectedAnnualExpiryMode] = useState<"renewal" | "custom">("renewal");
   const [selectedCustomExpiryMonth, setSelectedCustomExpiryMonth] = useState<number | null>(null);
   const [selectedCustomExpiryDay, setSelectedCustomExpiryDay] = useState<number | null>(null);
   const [selectedCustomExpiryDays, setSelectedCustomExpiryDays] = useState<number | null>(null);
@@ -123,6 +139,9 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
         }
 
         setSelectedPricing(info.pricing);
+        setSelectedMembershipCharges(formatMembershipPricingAmount(info.membershipCharges));
+        const hasAnnualCustomExpiry = info.pricing === 2 && (info.annualExpiryMonth ?? info.annualExpiryDay);
+        setSelectedAnnualExpiryMode(hasAnnualCustomExpiry ? "custom" : "renewal");
         setSelectedCustomExpiryMonth(info.pricing === 2 ? info.annualExpiryMonth : null);
         setSelectedCustomExpiryDay(info.pricing === 2 ? info.annualExpiryDay : null);
         setSelectedCustomExpiryDays(info.pricing === 4 ? info.customExpiryDays ?? 14 : null);
@@ -132,6 +151,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
         }
 
         setSelectedPricing(null);
+        setSelectedMembershipCharges("");
+        setSelectedAnnualExpiryMode("renewal");
         setSelectedCustomExpiryMonth(null);
         setSelectedCustomExpiryDay(null);
         setSelectedCustomExpiryDays(null);
@@ -162,8 +183,10 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
       onSaveNext: () =>
         void persistMembershipPricingStepWithFeedback({
           pricing: selectedPricing,
-          annualExpiryMonth: selectedCustomExpiryMonth,
-          annualExpiryDay: selectedCustomExpiryDay,
+          membershipCharges: selectedMembershipCharges,
+          annualExpiryMode: selectedAnnualExpiryMode,
+          annualExpiryMonth: selectedAnnualExpiryMode === "custom" ? selectedCustomExpiryMonth : null,
+          annualExpiryDay: selectedAnnualExpiryMode === "custom" ? selectedCustomExpiryDay : null,
           customExpiryDays: selectedCustomExpiryDays,
           stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
@@ -183,8 +206,10 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
       onSaveExit: () =>
         void persistMembershipPricingStepWithFeedback({
           pricing: selectedPricing,
-          annualExpiryMonth: selectedCustomExpiryMonth,
-          annualExpiryDay: selectedCustomExpiryDay,
+          membershipCharges: selectedMembershipCharges,
+          annualExpiryMode: selectedAnnualExpiryMode,
+          annualExpiryMonth: selectedAnnualExpiryMode === "custom" ? selectedCustomExpiryMonth : null,
+          annualExpiryDay: selectedAnnualExpiryMode === "custom" ? selectedCustomExpiryDay : null,
           customExpiryDays: selectedCustomExpiryDays,
           stepNumber: MEMBERSHIP_PRICING_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
@@ -199,6 +224,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
     currentMembershipTypeUniqueId,
     isSaving,
     navigate,
+    selectedMembershipCharges,
+    selectedAnnualExpiryMode,
     selectedCustomExpiryDay,
     selectedCustomExpiryMonth,
     selectedCustomExpiryDays,
@@ -208,6 +235,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
 
   return {
     selectedPricing,
+    selectedMembershipCharges,
+    selectedAnnualExpiryMode,
     selectedCustomExpiryMonth,
     selectedCustomExpiryDay,
     selectedCustomExpiryDays,
@@ -222,6 +251,9 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
     },
     selectPricing: (value: number) => {
       setSelectedPricing(value);
+      if (value === 2) {
+        setSelectedAnnualExpiryMode("renewal");
+      }
       if (value !== 2) {
         setSelectedCustomExpiryMonth(null);
         setSelectedCustomExpiryDay(null);
@@ -232,6 +264,8 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
         setSelectedCustomExpiryDays(14);
       }
     },
+    selectMembershipCharges: (value: string) => setSelectedMembershipCharges(sanitizeMembershipPricingAmountInput(value)),
+    selectAnnualExpiryMode: (value: "renewal" | "custom") => setSelectedAnnualExpiryMode(value),
     selectCustomExpiryMonth: (value: number | null) => {
       setSelectedCustomExpiryMonth(value);
       setSelectedCustomExpiryDay(null);

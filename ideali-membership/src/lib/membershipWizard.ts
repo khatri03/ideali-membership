@@ -191,6 +191,9 @@ export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
     const tenureValue = readNumber(responseData?.Tenure ?? responseData?.tenure);
+    const membershipChargesValue = readNumber(
+      responseData?.MembershipCharges ?? responseData?.membershipCharges,
+    );
     const annualExpiryMonthValue = readNumber(
       responseData?.AnnualExpiryMonth ?? responseData?.annualExpiryMonth,
     );
@@ -204,6 +207,10 @@ export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
 
     return {
       uniqueId,
+      membershipCharges:
+        typeof membershipChargesValue === "number" && Number.isFinite(membershipChargesValue)
+          ? membershipChargesValue
+          : null,
       pricing:
         typeof tenureValue === "number" && Number.isFinite(tenureValue)
           ? tenureValue
@@ -227,6 +234,7 @@ export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
 
 export async function saveMembershipPricingStep(
   pricing: number | null,
+  membershipCharges: number | null,
   customExpiryMonth: number | null,
   customExpiryDay: number | null,
   customExpiryDays: number | null,
@@ -241,6 +249,7 @@ export async function saveMembershipPricingStep(
     `/api/membership/type/wizard/${membershipTypeUniqueId}/pricing?stepNumber=${stepNumber}`,
     {
       tenure: pricing,
+      membershipCharges,
       annualExpiryMonth: customExpiryMonth,
       annualExpiryDay: customExpiryDay,
       customExpiryDays,

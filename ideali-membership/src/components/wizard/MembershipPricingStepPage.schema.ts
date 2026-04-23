@@ -24,3 +24,47 @@ export function normalizeMembershipPricingDay(value: number | null, month: numbe
 export function normalizeMembershipPricingDays(value: number | null) {
   return typeof value === "number" && Number.isFinite(value) && value >= 1 ? Math.floor(value) : null;
 }
+
+export function formatMembershipPricingAmount(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function sanitizeMembershipPricingAmountInput(value: string) {
+  const cleaned = value.replace(/[^0-9.,]/g, "").replace(/,/g, "");
+  const [integerPartRaw = "", decimalPartRaw = ""] = cleaned.split(".");
+  const integerDigits = integerPartRaw.replace(/\D/g, "");
+  const decimalDigits = decimalPartRaw.replace(/\D/g, "").slice(0, 2);
+  const formattedInteger = integerDigits ? Number(integerDigits).toLocaleString("en-US") : "";
+  const hadDecimalSeparator = cleaned.includes(".");
+
+  if (!formattedInteger && !decimalDigits && !hadDecimalSeparator) {
+    return "";
+  }
+
+  if (!hadDecimalSeparator) {
+    return formattedInteger;
+  }
+
+  return `${formattedInteger}${formattedInteger ? "." : ""}${decimalDigits}`;
+}
+
+export function parseMembershipPricingAmount(value: string) {
+  const normalized = value.replace(/,/g, "").trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return Math.round(parsed * 100) / 100;
+}

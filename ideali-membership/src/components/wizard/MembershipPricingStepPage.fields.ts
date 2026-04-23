@@ -5,7 +5,11 @@ export const MEMBERSHIP_PRICING_CONTENT = {
   title: "Pricing",
   description: "Set the billing cycle that defines this membership plan.",
   helper: "Choose one option before continuing to the next setup step.",
+  priceLabel: "Membership Price",
+  priceHelper: "Enter the membership price. Commas appear as you type and up to 2 decimals are allowed.",
   annualHelper: "Choose both month and date while Annual is selected.",
+  annualRenewalLabel: "Every Year",
+  annualCustomLabel: "Custom",
   customHelper: "Enter how many days after subscription this membership should expire.",
 } as const;
 
