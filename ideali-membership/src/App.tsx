@@ -114,6 +114,7 @@ function RouterApp() {
               <Route path="banner" element={<MembershipBannerStepPage />} />
               <Route path="payment-account" element={<MembershipPaymentAccountStepPage />} />
               <Route path="pricing" element={<MembershipPricingStepPage />} />
+              <Route path="custom-forms" element={<Navigate to="questions" replace />} />
               {MEMBERSHIP_WIZARD_STEPS.slice(6).map((step) => (
                 <Route
                   key={step.to}

@@ -9,6 +9,7 @@ export interface MembershipPaymentAccountStepState {
   paymentMethods: MembershipPaymentMethodOption[];
   selectedPaymentMethods: number[];
   error: string;
+  validationError: string;
   isLoading: boolean;
   isMethodsLoading: boolean;
   isSaving: boolean;

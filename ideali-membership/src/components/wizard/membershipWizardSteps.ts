@@ -38,9 +38,9 @@ export const MEMBERSHIP_WIZARD_STEPS: MembershipWizardStep[] = [
     to: APP_ROUTES.membershipWizardPricing,
   },
   {
-    label: "Custom Forms",
-    description: "Attach the custom forms that members must complete.",
-    to: APP_ROUTES.membershipWizardCustomForms,
+    label: "Questions",
+    description: "Attach the questions that members must complete.",
+    to: APP_ROUTES.membershipWizardQuestions,
   },
   {
     label: "Thank you Email",

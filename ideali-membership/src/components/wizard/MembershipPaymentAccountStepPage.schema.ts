@@ -5,5 +5,5 @@ export function normalizeMembershipPaymentAccountUniqueId(value: string | null |
 export function getMembershipPaymentAccountError(value: string | null | undefined) {
   return normalizeMembershipPaymentAccountUniqueId(value)
     ? ""
-    : "Please select a payment account first.";
+    : "Payment account is required.";
 }
