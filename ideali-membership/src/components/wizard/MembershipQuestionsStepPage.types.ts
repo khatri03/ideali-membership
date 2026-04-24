@@ -9,6 +9,7 @@ export interface MembershipQuestionsStepState {
   isCustomFormDropdownOpen: boolean;
   isCustomQuestionModalOpen: boolean;
   customQuestionDraft: MembershipCustomQuestionDraft | null;
+  editingCustomQuestionId: string | null;
   previewCustomFormUniqueId: string;
   previewCustomFormName: string;
   previewCustomFormLoading: boolean;
@@ -52,7 +53,7 @@ export interface MembershipQuestionsStepState {
   confirmSelectedCustomFormRemoval: () => void;
   cancelSelectedCustomFormRemoval: () => void;
   reorderCustomQuestions: (activeCustomQuestionId: string, overCustomQuestionId: string) => void;
-  openCustomQuestionModal: () => void;
+  openCustomQuestionModal: (customQuestionId?: string) => void;
   closeCustomQuestionModal: () => void;
   addCustomQuestionAndContinue: (draft: MembershipCustomQuestionDraft) => void;
   updateCustomQuestionDraft: (updater: (draft: MembershipCustomQuestionDraft) => MembershipCustomQuestionDraft) => void;

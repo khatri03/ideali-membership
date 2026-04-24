@@ -54,6 +54,7 @@ function MembershipQuestionsEmpty() {
 function MembershipCustomQuestionModal({
   controls,
   draft,
+  isEditing,
   onClose,
   onSubmit,
   onSubmitAndContinue,
@@ -62,6 +63,7 @@ function MembershipCustomQuestionModal({
 }: {
   controls: CustomFormControl[];
   draft: MembershipCustomQuestionDraft | null;
+  isEditing: boolean;
   onClose: () => void;
   onSubmit: (draft: MembershipCustomQuestionDraft) => void;
   onSubmitAndContinue: (draft: MembershipCustomQuestionDraft) => void;
@@ -89,8 +91,12 @@ function MembershipCustomQuestionModal({
       <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Add Custom Question</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Question builder</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
+              {isEditing ? "Edit Custom Question" : "Add Custom Question"}
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+              {isEditing ? "Update question" : "Question builder"}
+            </h3>
           </div>
         </div>
 
@@ -377,14 +383,14 @@ function MembershipCustomQuestionModal({
             onClick={() => onSubmit(draft)}
             className="rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
           >
-            Add & Close
+            {isEditing ? "Save & Close" : "Add & Close"}
           </button>
           <button
             type="button"
             onClick={() => onSubmitAndContinue(draft)}
             className="rounded-full border border-cyan-200 bg-white px-5 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
           >
-            Add & Continue
+            {isEditing ? "Save & Continue" : "Add & Continue"}
           </button>
           <button
             type="button"
@@ -438,6 +444,15 @@ function PlusIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5 fill-none stroke-current stroke-[1.8]">
       <path d="M12 5v14" />
       <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5 fill-none stroke-current stroke-[1.8]">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5l4 4L8 20l-5 1 1-5 12.5-12.5Z" />
     </svg>
   );
 }
@@ -533,10 +548,12 @@ function SortableSelectedCustomFormCard({
 
 function SortableCustomQuestionCard({
   question,
+  onEdit,
   onDelete,
   showSortIndicator,
 }: {
   question: MembershipCustomQuestionDraft;
+  onEdit: (customQuestionId: string) => void;
   onDelete: (customQuestionId: string) => void;
   showSortIndicator: boolean;
 }) {
@@ -563,6 +580,15 @@ function SortableCustomQuestionCard({
         <p className="truncate text-xs text-slate-500">{question.controlName}</p>
       </div>
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onEdit(question.id)}
+          title="Edit"
+          aria-label={`Edit ${question.label}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-200 bg-white text-sky-700 transition hover:bg-sky-50"
+        >
+          <PencilIcon />
+        </button>
         <button
           type="button"
           onClick={() => onDelete(question.id)}
@@ -928,6 +954,7 @@ export function MembershipQuestionsStepPage() {
     isCustomFormDropdownOpen,
     isCustomQuestionModalOpen,
     customQuestionDraft,
+    editingCustomQuestionId,
     previewCustomFormUniqueId,
     previewCustomFormName,
     previewCustomFormLoading,
@@ -942,6 +969,7 @@ export function MembershipQuestionsStepPage() {
     reorderSelectedCustomFormUniqueIds,
     addCustomQuestion,
     addCustomQuestionAndContinue,
+    openCustomQuestionModal,
     requestCustomQuestionRemoval,
     confirmCustomQuestionRemoval,
     cancelCustomQuestionRemoval,
@@ -951,7 +979,6 @@ export function MembershipQuestionsStepPage() {
     cancelSelectedCustomFormRemoval,
     pendingSelectedCustomFormRemoval,
     reorderCustomQuestions,
-    openCustomQuestionModal,
     closeCustomQuestionModal,
     updateCustomQuestionDraft,
     selectCustomQuestionControl,
@@ -965,6 +992,7 @@ export function MembershipQuestionsStepPage() {
     .filter((form): form is CustomFormListItem => Boolean(form));
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const customFormDropdownRef = useRef<HTMLFieldSetElement | null>(null);
+  const isEditingCustomQuestion = Boolean(editingCustomQuestionId);
 
   useEffect(() => {
     if (!isCustomFormDropdownOpen) {
@@ -1034,7 +1062,7 @@ export function MembershipQuestionsStepPage() {
               </div>
               <button
                 type="button"
-                onClick={openCustomQuestionModal}
+                onClick={() => openCustomQuestionModal()}
                 disabled={isSaving || customFormControls.length === 0}
                 className="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -1062,14 +1090,15 @@ export function MembershipQuestionsStepPage() {
                 >
                   <SortableContext items={customQuestions.map((question) => question.id)} strategy={verticalListSortingStrategy}>
                     <div className="mt-4 space-y-3">
-                      {customQuestions.map((question) => (
-                        <SortableCustomQuestionCard
-                          key={question.id}
-                          question={question}
-                          showSortIndicator={customQuestions.length > 1}
-                          onDelete={requestCustomQuestionRemoval}
-                        />
-                      ))}
+                        {customQuestions.map((question) => (
+                          <SortableCustomQuestionCard
+                            key={question.id}
+                            question={question}
+                            onEdit={openCustomQuestionModal}
+                            showSortIndicator={customQuestions.length > 1}
+                            onDelete={requestCustomQuestionRemoval}
+                          />
+                        ))}
                     </div>
                   </SortableContext>
                 </DndContext>
@@ -1171,6 +1200,7 @@ export function MembershipQuestionsStepPage() {
         <MembershipCustomQuestionModal
           controls={customFormControls}
           draft={customQuestionDraft}
+          isEditing={isEditingCustomQuestion}
           onClose={closeCustomQuestionModal}
           onSubmit={addCustomQuestion}
           onSubmitAndContinue={addCustomQuestionAndContinue}

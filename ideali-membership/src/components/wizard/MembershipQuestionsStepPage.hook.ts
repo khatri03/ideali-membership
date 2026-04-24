@@ -52,6 +52,13 @@ function createCustomQuestionDraft(control: CustomFormControl): MembershipCustom
   };
 }
 
+function cloneCustomQuestionDraft(question: MembershipCustomQuestionDraft): MembershipCustomQuestionDraft {
+  return {
+    ...question,
+    options: question.options.map((option) => ({ ...option })),
+  };
+}
+
 function sanitizeCustomQuestionDraft(draft: MembershipCustomQuestionDraft): MembershipCustomQuestionDraft {
   const options = draft.options.map((option, index) => ({
     ...option,
@@ -139,6 +146,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [editingCustomQuestionId, setEditingCustomQuestionId] = useState<string | null>(null);
   const [pendingCustomQuestionRemoval, setPendingCustomQuestionRemoval] = useState<{
     id: string;
     label: string;
@@ -337,8 +345,22 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     setPreviewCustomFormLayoutColumn(2);
   };
 
-  const openCustomQuestionModal = () => {
+  const openCustomQuestionModal = (customQuestionId?: string) => {
+    if (customQuestionId) {
+      const existingQuestion = customQuestions.find((question) => question.id === customQuestionId);
+
+      if (!existingQuestion) {
+        return;
+      }
+
+      setEditingCustomQuestionId(customQuestionId);
+      setCustomQuestionDraft(cloneCustomQuestionDraft(existingQuestion));
+      setIsCustomQuestionModalOpen(true);
+      return;
+    }
+
     const initialControl = customFormControls[0];
+    setEditingCustomQuestionId(null);
     setCustomQuestionDraft(initialControl ? createCustomQuestionDraft(initialControl) : null);
     setIsCustomQuestionModalOpen(true);
   };
@@ -346,6 +368,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
   const closeCustomQuestionModal = () => {
     setIsCustomQuestionModalOpen(false);
     setCustomQuestionDraft(null);
+    setEditingCustomQuestionId(null);
   };
 
   const selectCustomQuestionControl = (controlId: number) => {
@@ -357,36 +380,52 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     setCustomQuestionDraft((current) => (current ? updater(current) : current));
   };
 
-  const addCustomQuestion = (draft: MembershipCustomQuestionDraft) => {
+  const persistCustomQuestionDraft = (draft: MembershipCustomQuestionDraft, keepModalOpen: boolean) => {
     const nextDraft = sanitizeCustomQuestionDraft(draft);
-    setCustomQuestions((current) => [
-      ...current,
-      {
-        ...nextDraft,
-        displayOrder: current.length + 1,
-      },
-    ]);
-    setIsCustomQuestionModalOpen(false);
-    setCustomQuestionDraft(null);
+
+    setCustomQuestions((current) => {
+      if (editingCustomQuestionId) {
+        return current.map((question) =>
+          question.id === editingCustomQuestionId
+            ? {
+                ...nextDraft,
+                id: editingCustomQuestionId,
+                displayOrder: question.displayOrder,
+              }
+            : question,
+        );
+      }
+
+      return [
+        ...current,
+        {
+          ...nextDraft,
+          displayOrder: current.length + 1,
+        },
+      ];
+    });
+
+    if (keepModalOpen) {
+      setEditingCustomQuestionId(null);
+      const selectedControl = customFormControls.find((control) => control.id === nextDraft.controlId);
+      const nextControl = selectedControl ?? customFormControls[0];
+      setCustomQuestionDraft(nextControl ? createCustomQuestionDraft(nextControl) : null);
+      setIsCustomQuestionModalOpen(true);
+    } else {
+      setIsCustomQuestionModalOpen(false);
+      setCustomQuestionDraft(null);
+      setEditingCustomQuestionId(null);
+    }
+
     setError("");
   };
 
+  const addCustomQuestion = (draft: MembershipCustomQuestionDraft) => {
+    persistCustomQuestionDraft(draft, false);
+  };
+
   const addCustomQuestionAndContinue = (draft: MembershipCustomQuestionDraft) => {
-    const nextDraft = sanitizeCustomQuestionDraft(draft);
-    setCustomQuestions((current) => [
-      ...current,
-      {
-        ...nextDraft,
-        displayOrder: current.length + 1,
-      },
-    ]);
-
-    const selectedControl = customFormControls.find((control) => control.id === nextDraft.controlId);
-    const nextControl = selectedControl ?? customFormControls[0];
-
-    setCustomQuestionDraft(nextControl ? createCustomQuestionDraft(nextControl) : null);
-    setIsCustomQuestionModalOpen(true);
-    setError("");
+    persistCustomQuestionDraft(draft, true);
   };
 
   const requestCustomQuestionRemoval = (customQuestionId: string) => {
@@ -481,6 +520,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     isCustomFormDropdownOpen,
     isCustomQuestionModalOpen,
     customQuestionDraft,
+    editingCustomQuestionId,
     previewCustomFormUniqueId,
     previewCustomFormName,
     previewCustomFormLoading,
