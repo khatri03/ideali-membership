@@ -1,0 +1,514 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Membership Type Questions Schema</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --surface: #ffffff;
+      --line: #dbe4f0;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28%),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+    }
+
+    .hero .badge {
+      background: rgba(255, 255, 255, 0.14) !important;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+    }
+
+    .table thead th {
+      background: #f8fafc;
+      color: #334155;
+      border-bottom-color: var(--line);
+    }
+
+    .code-block {
+      background: #0b1120;
+      color: #e2e8f0;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      overflow-x: auto;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .code-block code {
+      color: inherit;
+      white-space: pre;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .35rem .75rem;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: .85rem;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .flow-step {
+      border-left: 3px solid var(--accent);
+      padding-left: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="container py-5">
+    <section class="hero rounded-4 p-4 p-md-5 mb-4">
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="badge rounded-pill">Membership Wizard</span>
+        <span class="badge rounded-pill">Questions Step</span>
+        <span class="badge rounded-pill">Proposed Schema</span>
+      </div>
+      <h1 class="display-6 fw-semibold mb-3">Mapping selected custom forms and custom questions to a membership type</h1>
+      <p class="lead mb-0">
+        This document proposes a clean persistence model for the <strong>Questions</strong> step:
+        one membership type can select many reusable custom forms, and can also define many ad-hoc custom questions
+        that are stored as a stable snapshot for later rendering.
+      </p>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5 mb-4">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div>
+          <span class="pill mb-2">1. Design Goal</span>
+          <h2 class="h3 mb-2">Keep reusable forms separate from membership-specific questions</h2>
+          <p class="mb-0 muted">
+            Reusable custom forms remain a catalog owned by the organizer. Membership types only store references to selected
+            forms plus their own custom question definitions and ordering metadata.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-lg-4">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">Reusable form catalog</h3>
+            <p class="small muted mb-0">
+              Organizer-created custom forms and their fields stay reusable across multiple membership types.
+            </p>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">Membership-selected forms</h3>
+            <p class="small muted mb-0">
+              A junction collection stores which reusable forms were picked for one membership type, with display order.
+            </p>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">Membership custom questions</h3>
+            <p class="small muted mb-0">
+              Ad-hoc questions are persisted as snapshot rows so they do not change if the source catalog changes later.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5 mb-4">
+      <span class="pill mb-3">2. Proposed Entity Model</span>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th style="min-width: 220px;">Entity</th>
+              <th style="min-width: 220px;">Purpose</th>
+              <th style="min-width: 240px;">Key fields</th>
+              <th style="min-width: 180px;">Relationship</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>MembershipType</strong></td>
+              <td>Root membership aggregate with shared audit/identity behavior.</td>
+              <td>Id, UniqueId, CreatedAt, CreatedBy, ModifiedAt, ModifiedBy, Name, Charges, Tenure</td>
+              <td>Parent</td>
+            </tr>
+            <tr>
+              <td><strong>MembershipForm</strong></td>
+              <td>Selected reusable custom forms.</td>
+              <td>Id, UniqueId, MembershipTypeId, CustomFormId, DisplayOrder, IsDeleted</td>
+              <td>Many per membership type</td>
+            </tr>
+            <tr>
+              <td><strong>MembershipQuestion</strong></td>
+              <td>Membership-specific custom question snapshot.</td>
+              <td>Id, UniqueId, MembershipTypeId, ControlTypeId, ControlLabel, PlaceHolder, Tooltip, IsMandatory, MinLength, MaxLength, DefaultValue, DisplayOrder, IsDeleted</td>
+              <td>Many per membership type</td>
+            </tr>
+            <tr>
+              <td><strong>MembershipQuestionOption</strong></td>
+              <td>Options for select / radio style questions.</td>
+              <td>Id, UniqueId, MembershipQuestionId, Value, DisplayText, IsDefault, DisplayOrder, IsDeleted</td>
+              <td>Many per question</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5 mb-4">
+      <span class="pill mb-3">3. Relationship Summary</span>
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="flow-step">
+            <h3 class="h5 fw-semibold">Selected custom forms</h3>
+            <p class="muted mb-2">
+              These should be stored as an ordered collection of references to organizer custom forms.
+            </p>
+            <ul class="mb-0">
+              <li>Many-to-one from membership type to selected custom form rows.</li>
+              <li>Each row stores the selected <code>CustomFormId</code>.</li>
+              <li><code>DisplayOrder</code> preserves drag-and-drop order from the UI.</li>
+              <li>Forms remain reusable and are not duplicated.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="flow-step">
+            <h3 class="h5 fw-semibold">Custom questions</h3>
+            <p class="muted mb-2">
+              These should be stored as membership-owned rows with their own option child rows.
+            </p>
+            <ul class="mb-0">
+              <li>Many-to-one from membership type to question rows.</li>
+              <li>Question rows are snapshot copies of the control definition.</li>
+              <li>Options are stored separately for radio/select style controls.</li>
+              <li><code>DisplayOrder</code> preserves the order shown in the wizard.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5 mb-4">
+      <span class="pill mb-3">4. Suggested Class Structure</span>
+
+      <div class="mb-4">
+        <h3 class="h5 fw-semibold mb-3">MembershipType</h3>
+        <div class="code-block"><code>namespace Ideali.Shared.Domain.Entities;
+
+public class MembershipType : BaseAuditEntity, IUniqueId
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal MembershipCharges { get; set; }
+    public string Tenure { get; set; } = string.Empty;
+
+    public ICollection<MembershipForm> SelectedForms { get; set; } = new List&lt;MembershipForm&gt;();
+    public ICollection<MembershipQuestion> Questions { get; set; } = new List&lt;MembershipQuestion&gt;();
+}</code></div>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="h5 fw-semibold mb-3">MembershipForm</h3>
+        <div class="code-block"><code>namespace Ideali.Shared.Domain.Entities;
+
+public class MembershipForm : BaseAuditEntity, IUniqueId, ISoftDelete
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public bool IsDeleted { get; set; }
+    public int MembershipTypeId { get; set; }
+    public int CustomFormId { get; set; }
+    public int DisplayOrder { get; set; }
+
+    public MembershipType MembershipType { get; set; } = default!;
+    public CustomForm CustomForm { get; set; } = default!;
+}</code></div>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="h5 fw-semibold mb-3">MembershipQuestion</h3>
+        <div class="code-block"><code>namespace Ideali.Shared.Domain.Entities;
+
+public class MembershipQuestion : BaseAuditEntity, IUniqueId, ISoftDelete
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public bool IsDeleted { get; set; }
+    public int MembershipTypeId { get; set; }
+    public int ControlTypeId { get; set; }
+    public int DisplayOrder { get; set; }
+    public string ControlLabel { get; set; } = string.Empty;
+    public string? PlaceHolder { get; set; }
+    public string? Tooltip { get; set; }
+    public bool IsMandatory { get; set; }
+    public int MinLength { get; set; }
+    public int MaxLength { get; set; }
+    public string? DefaultValue { get; set; }
+
+    public MembershipType MembershipType { get; set; } = default!;
+    public ICollection<MembershipQuestionOption> Options { get; set; } = new List&lt;MembershipQuestionOption&gt;();
+}</code></div>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="h5 fw-semibold mb-3">MembershipQuestionOption</h3>
+        <div class="code-block"><code>namespace Ideali.Shared.Domain.Entities;
+
+public class MembershipQuestionOption : BaseAuditEntity, IUniqueId, ISoftDelete
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public bool IsDeleted { get; set; }
+    public int MembershipQuestionId { get; set; }
+    public int DisplayOrder { get; set; }
+    public string Value { get; set; } = string.Empty;
+    public string DisplayText { get; set; } = string.Empty;
+    public bool IsDefault { get; set; }
+
+    public MembershipQuestion MembershipQuestion { get; set; } = default!;
+}</code></div>
+      </div>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5 mb-4">
+      <span class="pill mb-3">5. Save Flow</span>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="border rounded-4 p-3 h-100">
+            <div class="fw-semibold mb-2">1. Load</div>
+            <p class="small muted mb-0">Fetch membership type plus any selected forms and custom questions.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border rounded-4 p-3 h-100">
+            <div class="fw-semibold mb-2">2. Persist</div>
+            <p class="small muted mb-0">Save membership-selected forms as ordered junction rows and custom questions as owned snapshot rows.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border rounded-4 p-3 h-100">
+            <div class="fw-semibold mb-2">3. Render</div>
+            <p class="small muted mb-0">Rehydrate in the wizard and member-facing preview using the stored order values.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5">
+      <span class="pill mb-3">6. Recommended Rule Set</span>
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <ul class="mb-0">
+            <li>Do not duplicate reusable custom forms inside membership records.</li>
+            <li>Store selected custom forms as a reference list with order only.</li>
+            <li>Store custom questions as membership-owned snapshots so edits do not break historical setup.</li>
+          </ul>
+        </div>
+        <div class="col-lg-6">
+          <ul class="mb-0">
+            <li>Keep question options in a child table to support select/radio controls cleanly.</li>
+            <li>Persist order in both selected forms and custom questions.</li>
+            <li>Keep controller and service logic thin; let the service own the save rules.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5 mt-4">
+      <span class="pill mb-3">7. Index Recommendations</span>
+      <p class="muted mb-4">
+        These indexes are aimed at the most common fetch paths: load membership setup by membership type, load selected
+        forms and questions in order, and load runtime submissions with their child answers quickly.
+      </p>
+
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">MembershipType</h3>
+            <ul class="mb-0">
+              <li>Index on <code>UniqueId</code> for direct lookup.</li>
+              <li>Index on <code>OrganizerId</code> for organizer-scoped filtering.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">MembershipForm</h3>
+            <ul class="mb-0">
+              <li>Composite index on <code>MembershipTypeId, DisplayOrder</code>.</li>
+              <li>Index on <code>CustomFormId</code> for reverse lookup.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">MembershipQuestion</h3>
+            <ul class="mb-0">
+              <li>Composite index on <code>MembershipTypeId, DisplayOrder</code>.</li>
+              <li>Index on <code>ControlTypeId</code> only if control-driven filtering is needed.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">MembershipQuestionOption</h3>
+            <ul class="mb-0">
+              <li>Composite index on <code>MembershipQuestionId, DisplayOrder</code>.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">MembershipSubmission</h3>
+            <ul class="mb-0">
+              <li>Index on <code>UniqueId</code>.</li>
+              <li>Composite index on <code>MembershipTypeId, SubmittedAt</code>.</li>
+              <li>Index on <code>OrganizerId</code> if organizer-wide reporting is common.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="border rounded-4 p-3 h-100">
+            <h3 class="h6 fw-semibold">Response tables</h3>
+            <ul class="mb-0">
+              <li><code>MembershipFormResponse</code>: index on <code>MembershipSubmissionId, DisplayOrder</code>.</li>
+              <li><code>MembershipQuestionResponse</code>: index on <code>MembershipSubmissionId, DisplayOrder</code>.</li>
+              <li><code>MembershipQuestionResponseOption</code>: composite index on <code>MembershipQuestionResponseId, DisplayOrder</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card rounded-4 p-4 p-md-5 mt-4">
+      <span class="pill mb-3">8. Runtime Submission Schema</span>
+      <p class="muted mb-4">
+        The setup tables above should not store user-entered answers. For member submissions, use a separate runtime model
+        so answers remain stable even if the source custom form or question definitions change later.
+      </p>
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="flow-step">
+            <h3 class="h5 fw-semibold">MembershipSubmission</h3>
+            <p class="muted mb-2">Parent record for a submitted membership application or enrollment.</p>
+        <div class="code-block"><code>public class MembershipSubmission : BaseAuditEntity, IUniqueId, IOrganizerId
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public int OrganizerId { get; set; }
+    public int MembershipTypeId { get; set; }
+    public int? MemberId { get; set; }
+    public DateTime SubmittedAt { get; set; }
+
+    public ICollection<MembershipFormResponse> FormResponses { get; set; } = new List&lt;MembershipFormResponse&gt;();
+    public ICollection<MembershipQuestionResponse> QuestionResponses { get; set; } = new List&lt;MembershipQuestionResponse&gt;();
+}</code></div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="flow-step">
+            <h3 class="h5 fw-semibold">MembershipFormResponse</h3>
+            <p class="muted mb-2">Stores the answer set for one selected custom form.</p>
+        <div class="code-block"><code>public class MembershipFormResponse : BaseAuditEntity, IUniqueId, ISoftDelete
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public bool IsDeleted { get; set; }
+    public int MembershipSubmissionId { get; set; }
+    public int MembershipFormId { get; set; }
+    public int CustomFormId { get; set; }
+    public int DisplayOrder { get; set; }
+    public string? FieldValuesJson { get; set; }
+
+    public MembershipSubmission MembershipSubmission { get; set; } = default!;
+}</code></div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="flow-step">
+            <h3 class="h5 fw-semibold">MembershipQuestionResponse</h3>
+            <p class="muted mb-2">Stores one custom question answer as a snapshot row.</p>
+        <div class="code-block"><code>public class MembershipQuestionResponse : BaseAuditEntity, IUniqueId, ISoftDelete
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public bool IsDeleted { get; set; }
+    public int MembershipSubmissionId { get; set; }
+    public int MembershipQuestionId { get; set; }
+    public int ControlTypeId { get; set; }
+    public int DisplayOrder { get; set; }
+    public string ControlLabelSnapshot { get; set; } = string.Empty;
+    public string? AnswerValue { get; set; }
+
+    public MembershipSubmission MembershipSubmission { get; set; } = default!;
+    public ICollection<MembershipQuestionResponseOption> Options { get; set; } = new List&lt;MembershipQuestionResponseOption&gt;();
+}</code></div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="flow-step">
+            <h3 class="h5 fw-semibold">MembershipQuestionResponseOption</h3>
+            <p class="muted mb-2">Stores selected values for radio, select, and checkbox-style answers.</p>
+        <div class="code-block"><code>public class MembershipQuestionResponseOption : BaseAuditEntity, IUniqueId, ISoftDelete
+{
+    public int Id { get; set; }
+    public Guid UniqueId { get; set; }
+    public bool IsDeleted { get; set; }
+    public int MembershipQuestionResponseId { get; set; }
+    public int DisplayOrder { get; set; }
+    public string Value { get; set; } = string.Empty;
+    public string DisplayText { get; set; } = string.Empty;
+    public bool IsSelected { get; set; }
+
+    public MembershipQuestionResponse MembershipQuestionResponse { get; set; } = default!;
+}</code></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h3 class="h5 fw-semibold mb-3">Runtime storage rules</h3>
+        <ul class="mb-0">
+          <li>Keep answer storage separate from setup storage.</li>
+          <li>Snapshot labels and control metadata at submission time.</li>
+          <li>Store one child row per selected option when the field type supports multiple choices.</li>
+          <li>Preserve display order so answers render in the same order the user saw them.</li>
+          <li>Keep organizer ownership only on the aggregate roots; derive ownership for child tables through the parent relationship.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
