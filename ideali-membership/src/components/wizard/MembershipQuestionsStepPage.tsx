@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -398,6 +399,27 @@ function DragGripIcon() {
   );
 }
 
+function PreviewIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5 fill-none stroke-current stroke-[1.8]">
+      <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5 fill-none stroke-current stroke-[1.8]">
+      <path d="M4 7h16" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
+      <path d="M6.5 7l1 12.5A1.5 1.5 0 0 0 9 21h6a1.5 1.5 0 0 0 1.5-1.5l1-12.5" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
 const constrainSelectedFormDragToParent: Modifier = ({
   activeNodeRect,
   containerNodeRect,
@@ -422,10 +444,12 @@ const constrainSelectedFormDragToParent: Modifier = ({
 function SortableSelectedCustomFormCard({
   form,
   onView,
+  onDelete,
   showSortIndicator,
 }: {
   form: CustomFormListItem;
   onView: (customFormUniqueId: string) => void;
+  onDelete: (customFormUniqueId: string) => void;
   showSortIndicator: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -451,9 +475,20 @@ function SortableSelectedCustomFormCard({
         <button
           type="button"
           onClick={() => onView(form.value)}
-          className="rounded-full border border-cyan-200 bg-white px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+          title="Preview"
+          aria-label={`Preview ${form.text}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200 bg-white text-cyan-700 transition hover:bg-cyan-100"
         >
-          Preview
+          <PreviewIcon />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(form.value)}
+          title="Delete"
+          aria-label={`Delete ${form.text}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-700 transition hover:bg-rose-50"
+        >
+          <TrashIcon />
         </button>
         {showSortIndicator ? (
           <button
@@ -646,6 +681,104 @@ function CustomFormPreviewModal({
   );
 }
 
+function DeleteCustomQuestionModal({
+  label,
+  onCancel,
+  onConfirm,
+}: {
+  label: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+      data-wizard-enter-block="true"
+    >
+      <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">Remove custom question</p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Are you sure?</h3>
+        </div>
+
+        <div className="space-y-3 px-6 py-5">
+          <p className="text-sm leading-6 text-slate-600">
+            This will remove <span className="font-semibold text-slate-900">{label}</span> from the configured custom
+            questions list.
+          </p>
+          <p className="text-sm leading-6 text-slate-600">This action cannot be undone.</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full border border-rose-200 bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteSelectedCustomFormModal({
+  label,
+  onCancel,
+  onConfirm,
+}: {
+  label: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+      data-wizard-enter-block="true"
+    >
+      <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">Remove selected form</p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Are you sure?</h3>
+        </div>
+
+        <div className="space-y-3 px-6 py-5">
+          <p className="text-sm leading-6 text-slate-600">
+            This will remove <span className="font-semibold text-slate-900">{label}</span> from the selected custom
+            forms list.
+          </p>
+          <p className="text-sm leading-6 text-slate-600">You can add it back again from the dropdown.</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full border border-rose-200 bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MembershipQuestionsStepPage() {
   const {
     customFormControls,
@@ -668,7 +801,14 @@ export function MembershipQuestionsStepPage() {
     toggleCustomForm,
     reorderSelectedCustomFormUniqueIds,
     addCustomQuestion,
-    removeCustomQuestion,
+    requestCustomQuestionRemoval,
+    confirmCustomQuestionRemoval,
+    cancelCustomQuestionRemoval,
+    pendingCustomQuestionRemoval,
+    requestSelectedCustomFormRemoval,
+    confirmSelectedCustomFormRemoval,
+    cancelSelectedCustomFormRemoval,
+    pendingSelectedCustomFormRemoval,
     openCustomQuestionModal,
     closeCustomQuestionModal,
     updateCustomQuestionDraft,
@@ -682,6 +822,25 @@ export function MembershipQuestionsStepPage() {
     .map((uniqueId) => customForms.find((form) => form.value === uniqueId))
     .filter((form): form is CustomFormListItem => Boolean(form));
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const customFormDropdownRef = useRef<HTMLFieldSetElement | null>(null);
+
+  useEffect(() => {
+    if (!isCustomFormDropdownOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (customFormDropdownRef.current && !customFormDropdownRef.current.contains(event.target as Node)) {
+        setCustomFormDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isCustomFormDropdownOpen, setCustomFormDropdownOpen]);
 
   function onSelectedFormsDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -755,7 +914,7 @@ export function MembershipQuestionsStepPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeCustomQuestion(question.id)}
+                        onClick={() => requestCustomQuestionRemoval(question.id)}
                         className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
                       >
                         Remove
@@ -766,7 +925,7 @@ export function MembershipQuestionsStepPage() {
               </div>
             ) : null}
 
-            <fieldset className="space-y-2" disabled={isSaving}>
+            <fieldset ref={customFormDropdownRef} className="space-y-2" disabled={isSaving}>
               <legend className="text-sm font-semibold text-slate-800">Custom Forms</legend>
               <button
                 type="button"
@@ -838,6 +997,7 @@ export function MembershipQuestionsStepPage() {
                           <SortableSelectedCustomFormCard
                             key={form.value}
                             form={form}
+                            onDelete={(customFormUniqueId) => requestSelectedCustomFormRemoval(customFormUniqueId)}
                             showSortIndicator={selectedCustomForms.length > 1}
                             onView={(customFormUniqueId) => void openCustomFormPreview(customFormUniqueId)}
                           />
@@ -864,6 +1024,22 @@ export function MembershipQuestionsStepPage() {
           onSubmit={addCustomQuestion}
           onSelectControl={selectCustomQuestionControl}
           onUpdateDraft={updateCustomQuestionDraft}
+        />
+      ) : null}
+
+      {pendingCustomQuestionRemoval ? (
+        <DeleteCustomQuestionModal
+          label={pendingCustomQuestionRemoval.label}
+          onCancel={cancelCustomQuestionRemoval}
+          onConfirm={confirmCustomQuestionRemoval}
+        />
+      ) : null}
+
+      {pendingSelectedCustomFormRemoval ? (
+        <DeleteSelectedCustomFormModal
+          label={pendingSelectedCustomFormRemoval.label}
+          onCancel={cancelSelectedCustomFormRemoval}
+          onConfirm={confirmSelectedCustomFormRemoval}
         />
       ) : null}
 

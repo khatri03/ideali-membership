@@ -139,6 +139,14 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [pendingCustomQuestionRemoval, setPendingCustomQuestionRemoval] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  const [pendingSelectedCustomFormRemoval, setPendingSelectedCustomFormRemoval] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -363,15 +371,71 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     setError("");
   };
 
-  const removeCustomQuestion = (customQuestionId: string) => {
+  const requestCustomQuestionRemoval = (customQuestionId: string) => {
+    const targetQuestion = customQuestions.find((question) => question.id === customQuestionId);
+
+    if (!targetQuestion) {
+      return;
+    }
+
+    setPendingCustomQuestionRemoval({
+      id: customQuestionId,
+      label: targetQuestion.label || targetQuestion.controlName,
+    });
+  };
+
+  const confirmCustomQuestionRemoval = () => {
+    if (!pendingCustomQuestionRemoval) {
+      return;
+    }
+
     setCustomQuestions((current) =>
       current
-        .filter((question) => question.id !== customQuestionId)
+        .filter((question) => question.id !== pendingCustomQuestionRemoval.id)
         .map((question, index) => ({
           ...question,
           displayOrder: index + 1,
         })),
     );
+    setPendingCustomQuestionRemoval(null);
+  };
+
+  const cancelCustomQuestionRemoval = () => {
+    setPendingCustomQuestionRemoval(null);
+  };
+
+  const requestSelectedCustomFormRemoval = (customFormUniqueId: string) => {
+    const targetForm = customForms.find((form) => form.value === customFormUniqueId);
+
+    if (!targetForm) {
+      return;
+    }
+
+    setPendingSelectedCustomFormRemoval({
+      id: customFormUniqueId,
+      label: targetForm.text,
+    });
+  };
+
+  const confirmSelectedCustomFormRemoval = () => {
+    if (!pendingSelectedCustomFormRemoval) {
+      return;
+    }
+
+    setSelectedCustomFormUniqueIds((current) =>
+      current.filter((uniqueId) => uniqueId !== pendingSelectedCustomFormRemoval.id),
+    );
+
+    if (previewCustomFormUniqueId === pendingSelectedCustomFormRemoval.id) {
+      closeCustomFormPreview();
+    }
+
+    setPendingSelectedCustomFormRemoval(null);
+    setError("");
+  };
+
+  const cancelSelectedCustomFormRemoval = () => {
+    setPendingSelectedCustomFormRemoval(null);
   };
 
   return {
@@ -391,6 +455,8 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     error,
     isLoading,
     isSaving,
+    pendingCustomQuestionRemoval,
+    pendingSelectedCustomFormRemoval,
     reload: () => {
       if (currentMembershipTypeUniqueId) {
         invalidateMembershipWizardQuestionsCache(currentMembershipTypeUniqueId);
@@ -420,7 +486,12 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       setError("");
     },
     addCustomQuestion,
-    removeCustomQuestion,
+    requestCustomQuestionRemoval,
+    confirmCustomQuestionRemoval,
+    cancelCustomQuestionRemoval,
+    requestSelectedCustomFormRemoval,
+    confirmSelectedCustomFormRemoval,
+    cancelSelectedCustomFormRemoval,
     openCustomQuestionModal,
     closeCustomQuestionModal,
     updateCustomQuestionDraft,

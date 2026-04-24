@@ -33,11 +33,24 @@ export interface MembershipQuestionsStepState {
   error: string;
   isLoading: boolean;
   isSaving: boolean;
+  pendingCustomQuestionRemoval: {
+    id: string;
+    label: string;
+  } | null;
+  pendingSelectedCustomFormRemoval: {
+    id: string;
+    label: string;
+  } | null;
   reload: () => void;
   toggleCustomForm: (customFormUniqueId: string) => void;
   reorderSelectedCustomFormUniqueIds: (activeCustomFormUniqueId: string, overCustomFormUniqueId: string) => void;
   addCustomQuestion: (draft: MembershipCustomQuestionDraft) => void;
-  removeCustomQuestion: (customQuestionId: string) => void;
+  requestCustomQuestionRemoval: (customQuestionId: string) => void;
+  confirmCustomQuestionRemoval: () => void;
+  cancelCustomQuestionRemoval: () => void;
+  requestSelectedCustomFormRemoval: (customFormUniqueId: string) => void;
+  confirmSelectedCustomFormRemoval: () => void;
+  cancelSelectedCustomFormRemoval: () => void;
   openCustomQuestionModal: () => void;
   closeCustomQuestionModal: () => void;
   updateCustomQuestionDraft: (updater: (draft: MembershipCustomQuestionDraft) => MembershipCustomQuestionDraft) => void;
