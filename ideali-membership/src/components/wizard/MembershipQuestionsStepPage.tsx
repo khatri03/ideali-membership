@@ -89,13 +89,6 @@ function MembershipCustomQuestionModal({
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Add Custom Question</p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Question builder</h3>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-          >
-            Cancel
-          </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
@@ -371,7 +364,7 @@ function MembershipCustomQuestionModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-4">
           <button
             type="button"
             onClick={onClose}
