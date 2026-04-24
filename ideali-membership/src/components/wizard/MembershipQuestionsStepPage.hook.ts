@@ -371,6 +371,24 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     setError("");
   };
 
+  const addCustomQuestionAndContinue = (draft: MembershipCustomQuestionDraft) => {
+    const nextDraft = sanitizeCustomQuestionDraft(draft);
+    setCustomQuestions((current) => [
+      ...current,
+      {
+        ...nextDraft,
+        displayOrder: current.length + 1,
+      },
+    ]);
+
+    const selectedControl = customFormControls.find((control) => control.id === nextDraft.controlId);
+    const nextControl = selectedControl ?? customFormControls[0];
+
+    setCustomQuestionDraft(nextControl ? createCustomQuestionDraft(nextControl) : null);
+    setIsCustomQuestionModalOpen(true);
+    setError("");
+  };
+
   const requestCustomQuestionRemoval = (customQuestionId: string) => {
     const targetQuestion = customQuestions.find((question) => question.id === customQuestionId);
 
@@ -438,6 +456,23 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     setPendingSelectedCustomFormRemoval(null);
   };
 
+  const reorderCustomQuestions = (activeCustomQuestionId: string, overCustomQuestionId: string) => {
+    setCustomQuestions((current) => {
+      const oldIndex = current.findIndex((question) => question.id === activeCustomQuestionId);
+      const newIndex = current.findIndex((question) => question.id === overCustomQuestionId);
+
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+        return current;
+      }
+
+      return arrayMove(current, oldIndex, newIndex).map((question, index) => ({
+        ...question,
+        displayOrder: index + 1,
+      }));
+    });
+    setError("");
+  };
+
   return {
     customFormControls,
     customForms,
@@ -486,12 +521,14 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       setError("");
     },
     addCustomQuestion,
+    addCustomQuestionAndContinue,
     requestCustomQuestionRemoval,
     confirmCustomQuestionRemoval,
     cancelCustomQuestionRemoval,
     requestSelectedCustomFormRemoval,
     confirmSelectedCustomFormRemoval,
     cancelSelectedCustomFormRemoval,
+    reorderCustomQuestions,
     openCustomQuestionModal,
     closeCustomQuestionModal,
     updateCustomQuestionDraft,

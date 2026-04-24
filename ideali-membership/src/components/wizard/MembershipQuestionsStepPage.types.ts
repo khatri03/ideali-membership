@@ -51,8 +51,10 @@ export interface MembershipQuestionsStepState {
   requestSelectedCustomFormRemoval: (customFormUniqueId: string) => void;
   confirmSelectedCustomFormRemoval: () => void;
   cancelSelectedCustomFormRemoval: () => void;
+  reorderCustomQuestions: (activeCustomQuestionId: string, overCustomQuestionId: string) => void;
   openCustomQuestionModal: () => void;
   closeCustomQuestionModal: () => void;
+  addCustomQuestionAndContinue: (draft: MembershipCustomQuestionDraft) => void;
   updateCustomQuestionDraft: (updater: (draft: MembershipCustomQuestionDraft) => MembershipCustomQuestionDraft) => void;
   selectCustomQuestionControl: (controlId: number) => void;
   setCustomFormDropdownOpen: (isOpen: boolean) => void;

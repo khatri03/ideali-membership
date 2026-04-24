@@ -56,6 +56,7 @@ function MembershipCustomQuestionModal({
   draft,
   onClose,
   onSubmit,
+  onSubmitAndContinue,
   onSelectControl,
   onUpdateDraft,
 }: {
@@ -63,6 +64,7 @@ function MembershipCustomQuestionModal({
   draft: MembershipCustomQuestionDraft | null;
   onClose: () => void;
   onSubmit: (draft: MembershipCustomQuestionDraft) => void;
+  onSubmitAndContinue: (draft: MembershipCustomQuestionDraft) => void;
   onSelectControl: (controlId: number) => void;
   onUpdateDraft: (updater: (current: MembershipCustomQuestionDraft) => MembershipCustomQuestionDraft) => void;
 }) {
@@ -278,9 +280,11 @@ function MembershipCustomQuestionModal({
                             ],
                           }))
                         }
-                        className="rounded-full border border-cyan-200 bg-white px-3 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
+                        title="Add option"
+                        aria-label="Add option"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200 bg-white text-cyan-700 transition hover:bg-cyan-50"
                       >
-                        Add option
+                        <PlusIcon />
                       </button>
                     </div>
 
@@ -350,9 +354,11 @@ function MembershipCustomQuestionModal({
                                   };
                                 })
                               }
-                              className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                              title="Remove option"
+                              aria-label={`Remove option ${index + 1}`}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-700 transition hover:bg-rose-50"
                             >
-                              Remove
+                              <TrashIcon />
                             </button>
                           </div>
                         </div>
@@ -365,20 +371,27 @@ function MembershipCustomQuestionModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-          >
-            Cancel
-          </button>
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
           <button
             type="button"
             onClick={() => onSubmit(draft)}
             className="rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
           >
-            Ok
+            Add & Close
+          </button>
+          <button
+            type="button"
+            onClick={() => onSubmitAndContinue(draft)}
+            className="rounded-full border border-cyan-200 bg-white px-5 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
+          >
+            Add & Continue
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+          >
+            Close
           </button>
         </div>
       </div>
@@ -416,6 +429,15 @@ function TrashIcon() {
       <path d="M6.5 7l1 12.5A1.5 1.5 0 0 0 9 21h6a1.5 1.5 0 0 0 1.5-1.5l1-12.5" />
       <path d="M10 11v6" />
       <path d="M14 11v6" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5 fill-none stroke-current stroke-[1.8]">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
     </svg>
   );
 }
@@ -495,6 +517,66 @@ function SortableSelectedCustomFormCard({
             type="button"
             title="Drag to reorder"
             aria-label={`Drag ${form.text} to reorder`}
+            style={{ cursor: isDragging ? "grabbing" : "grab" }}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 transition hover:bg-cyan-100"
+            {...attributes}
+            {...listeners}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <DragGripIcon />
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function SortableCustomQuestionCard({
+  question,
+  onDelete,
+  showSortIndicator,
+}: {
+  question: MembershipCustomQuestionDraft;
+  onDelete: (customQuestionId: string) => void;
+  showSortIndicator: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: question.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={[
+        "flex items-center justify-between gap-3 rounded-[1.25rem] border border-cyan-200 bg-white px-4 py-3 shadow-sm",
+        isDragging ? "opacity-70 shadow-md" : "",
+      ].join(" ")}
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-slate-900">{question.label}</p>
+        <p className="truncate text-xs text-slate-500">{question.controlName}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onDelete(question.id)}
+          title="Delete"
+          aria-label={`Delete ${question.label}`}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-700 transition hover:bg-rose-50"
+        >
+          <TrashIcon />
+        </button>
+        {showSortIndicator ? (
+          <button
+            type="button"
+            title="Drag to reorder"
+            aria-label={`Drag ${question.label} to reorder`}
             style={{ cursor: isDragging ? "grabbing" : "grab" }}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 transition hover:bg-cyan-100"
             {...attributes}
@@ -801,6 +883,7 @@ export function MembershipQuestionsStepPage() {
     toggleCustomForm,
     reorderSelectedCustomFormUniqueIds,
     addCustomQuestion,
+    addCustomQuestionAndContinue,
     requestCustomQuestionRemoval,
     confirmCustomQuestionRemoval,
     cancelCustomQuestionRemoval,
@@ -809,6 +892,7 @@ export function MembershipQuestionsStepPage() {
     confirmSelectedCustomFormRemoval,
     cancelSelectedCustomFormRemoval,
     pendingSelectedCustomFormRemoval,
+    reorderCustomQuestions,
     openCustomQuestionModal,
     closeCustomQuestionModal,
     updateCustomQuestionDraft,
@@ -850,6 +934,16 @@ export function MembershipQuestionsStepPage() {
     }
 
     reorderSelectedCustomFormUniqueIds(String(active.id), String(over.id));
+  }
+
+  function onCustomQuestionsDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    reorderCustomQuestions(String(active.id), String(over.id));
   }
 
   if (error) {
@@ -895,33 +989,32 @@ export function MembershipQuestionsStepPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-cyan-900">Added custom questions</p>
-                    <p className="mt-1 text-xs text-cyan-700">These will be saved with the questions step.</p>
+                    <p className="mt-1 text-xs text-cyan-700">Drag the cards to change their order.</p>
                   </div>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-cyan-700">
                     {customQuestions.length}
                   </span>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  {customQuestions.map((question) => (
-                    <div
-                      key={question.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{question.label}</p>
-                        <p className="truncate text-xs text-slate-500">{question.controlName}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => requestCustomQuestionRemoval(question.id)}
-                        className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
-                      >
-                        Remove
-                      </button>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[constrainSelectedFormDragToParent]}
+                  onDragEnd={onCustomQuestionsDragEnd}
+                >
+                  <SortableContext items={customQuestions.map((question) => question.id)} strategy={verticalListSortingStrategy}>
+                    <div className="mt-4 space-y-3">
+                      {customQuestions.map((question) => (
+                        <SortableCustomQuestionCard
+                          key={question.id}
+                          question={question}
+                          showSortIndicator={customQuestions.length > 1}
+                          onDelete={requestCustomQuestionRemoval}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               </div>
             ) : null}
 
@@ -1022,6 +1115,7 @@ export function MembershipQuestionsStepPage() {
           draft={customQuestionDraft}
           onClose={closeCustomQuestionModal}
           onSubmit={addCustomQuestion}
+          onSubmitAndContinue={addCustomQuestionAndContinue}
           onSelectControl={selectCustomQuestionControl}
           onUpdateDraft={updateCustomQuestionDraft}
         />
