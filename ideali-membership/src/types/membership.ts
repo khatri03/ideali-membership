@@ -25,5 +25,30 @@ export interface MembershipPaymentMethodOption {
 export interface MembershipQuestionsInfo {
   uniqueId: string;
   customFormUniqueIds: string[];
+  customQuestions: MembershipCustomQuestionDraft[];
   stepNo: number;
+}
+
+export interface MembershipCustomQuestionOptionDraft {
+  id: string;
+  displayText: string;
+  value: string;
+  isDefault: boolean;
+}
+
+export interface MembershipCustomQuestionDraft {
+  id: string;
+  controlId: number;
+  controlName: string;
+  controlType: string;
+  iconClass: string;
+  label: string;
+  placeHolder: string | null;
+  tooltip: string | null;
+  required: boolean;
+  minLength: string | null;
+  maxLength: string | null;
+  defaultValue: string | null;
+  displayOrder: number;
+  options: MembershipCustomQuestionOptionDraft[];
 }

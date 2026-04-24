@@ -3,7 +3,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { MEMBERSHIP_QUESTIONS_CONTENT } from "./MembershipQuestionsStepPage.fields";
 import { useMembershipQuestionsStep } from "./MembershipQuestionsStepPage.hook";
-import type { CustomFormListItem } from "../../types/customForms";
+import type { CustomFormControl, CustomFormListItem } from "../../types/customForms";
+import type { MembershipCustomQuestionDraft } from "../../types/membership";
 
 function MembershipQuestionsSkeleton() {
   return (
@@ -45,6 +46,348 @@ function MembershipQuestionsEmpty() {
     <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
       <p className="text-base font-semibold text-slate-900">{MEMBERSHIP_QUESTIONS_CONTENT.emptyStateTitle}</p>
       <p className="mt-2 leading-6">{MEMBERSHIP_QUESTIONS_CONTENT.emptyStateDescription}</p>
+    </div>
+  );
+}
+
+function MembershipCustomQuestionModal({
+  controls,
+  draft,
+  onClose,
+  onSubmit,
+  onSelectControl,
+  onUpdateDraft,
+}: {
+  controls: CustomFormControl[];
+  draft: MembershipCustomQuestionDraft | null;
+  onClose: () => void;
+  onSubmit: (draft: MembershipCustomQuestionDraft) => void;
+  onSelectControl: (controlId: number) => void;
+  onUpdateDraft: (updater: (current: MembershipCustomQuestionDraft) => MembershipCustomQuestionDraft) => void;
+}) {
+  if (!draft) {
+    return null;
+  }
+
+  const selectedControl = controls.find((control) => control.id === draft.controlId) ?? controls[0];
+
+  const updateOption = (optionId: string, updater: (option: MembershipCustomQuestionDraft["options"][number]) => MembershipCustomQuestionDraft["options"][number]) => {
+    onUpdateDraft((current) => ({
+      ...current,
+      options: current.options.map((option) => (option.id === optionId ? updater(option) : option)),
+    }));
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+      data-wizard-enter-block="true"
+    >
+      <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Add Custom Question</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Question builder</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">Control type</span>
+                <select
+                  value={draft.controlId}
+                  onChange={(event) => onSelectControl(Number(event.target.value))}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                >
+                  {controls.map((control) => (
+                    <option key={control.id} value={control.id}>
+                      {control.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    Question label
+                    <span className="text-rose-600" aria-label="Required" title="Required">
+                      *
+                    </span>
+                  </span>
+                  <input
+                    type="text"
+                    value={draft.label}
+                    onChange={(event) =>
+                      onUpdateDraft((current) => ({
+                        ...current,
+                        label: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                    placeholder={selectedControl?.defaultLabel || "Question label"}
+                  />
+                </label>
+
+                {selectedControl?.canHavePlaceHolder ? (
+                  <label className="block">
+                    <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">Placeholder</span>
+                    <input
+                      type="text"
+                      value={draft.placeHolder || ""}
+                      onChange={(event) =>
+                        onUpdateDraft((current) => ({
+                          ...current,
+                          placeHolder: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                      placeholder="Shown inside the question"
+                    />
+                  </label>
+                ) : null}
+
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">Tooltip</span>
+                  <input
+                    type="text"
+                    value={draft.tooltip || ""}
+                    onChange={(event) =>
+                      onUpdateDraft((current) => ({
+                        ...current,
+                        tooltip: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                    placeholder="Optional helper text"
+                  />
+                </label>
+
+                {selectedControl?.canBeRequired ? (
+                  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div>
+                      <span className="text-sm font-semibold text-slate-800">Required</span>
+                      <p className="text-xs text-slate-500">Make this question mandatory.</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={draft.required}
+                      onClick={() =>
+                        onUpdateDraft((current) => ({
+                          ...current,
+                          required: !current.required,
+                        }))
+                      }
+                      className={[
+                        "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                        draft.required
+                          ? "border-cyan-500 bg-cyan-500"
+                          : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                      ].join(" ")}
+                    >
+                      <span
+                        className={[
+                          "inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition",
+                          draft.required ? "translate-x-7" : "translate-x-1",
+                        ].join(" ")}
+                      />
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {selectedControl?.canHaveMinLength ? (
+                    <label className="block">
+                      <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">Min length</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={draft.minLength || ""}
+                        onChange={(event) =>
+                          onUpdateDraft((current) => ({
+                            ...current,
+                            minLength: event.target.value,
+                          }))
+                        }
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                        placeholder="0"
+                      />
+                    </label>
+                  ) : null}
+
+                  {selectedControl?.canHaveMaxLength ? (
+                    <label className="block">
+                      <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">Max length</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={draft.maxLength || ""}
+                        onChange={(event) =>
+                          onUpdateDraft((current) => ({
+                            ...current,
+                            maxLength: event.target.value,
+                          }))
+                        }
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                        placeholder="0"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">Default value</span>
+                  <input
+                    type="text"
+                    value={draft.defaultValue || ""}
+                    onChange={(event) =>
+                      onUpdateDraft((current) => ({
+                        ...current,
+                        defaultValue: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                    placeholder="Optional default value"
+                  />
+                </label>
+
+                {selectedControl?.hasOptions ? (
+                  <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Options</p>
+                        <p className="text-xs text-slate-500">Define the choices for this question.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onUpdateDraft((current) => ({
+                            ...current,
+                            options: [
+                              ...current.options,
+                              {
+                                id: globalThis.crypto?.randomUUID?.() ?? `question-option-${Date.now()}`,
+                                displayText: `Option ${current.options.length + 1}`,
+                                value: `option-${current.options.length + 1}`,
+                                isDefault: current.options.length === 0,
+                              },
+                            ],
+                          }))
+                        }
+                        className="rounded-full border border-cyan-200 bg-white px-3 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
+                      >
+                        Add option
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {draft.options.map((option, index) => (
+                        <div key={option.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+                            <input
+                              type="text"
+                              value={option.displayText}
+                              onChange={(event) =>
+                                updateOption(option.id, (currentOption) => ({
+                                  ...currentOption,
+                                  displayText: event.target.value,
+                                }))
+                              }
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                              placeholder={`Option ${index + 1}`}
+                            />
+                            <input
+                              type="text"
+                              value={option.value}
+                              onChange={(event) =>
+                                updateOption(option.id, (currentOption) => ({
+                                  ...currentOption,
+                                  value: event.target.value,
+                                }))
+                              }
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                              placeholder={`value-${index + 1}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onUpdateDraft((current) => ({
+                                  ...current,
+                                  defaultValue: option.value,
+                                  options: current.options.map((item) => ({
+                                    ...item,
+                                    isDefault: item.id === option.id,
+                                  })),
+                                }))
+                              }
+                              className={[
+                                "rounded-full px-3 py-2 text-xs font-semibold transition",
+                                option.isDefault || draft.defaultValue === option.value
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "border border-amber-200 bg-white text-amber-600 hover:bg-amber-50",
+                              ].join(" ")}
+                            >
+                              {option.isDefault || draft.defaultValue === option.value ? "Default" : "Set default"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onUpdateDraft((current) => {
+                                  const nextOptions = current.options.filter((item) => item.id !== option.id);
+                                  const nextDefault = nextOptions.find((item) => item.isDefault) ?? nextOptions[0];
+
+                                  return {
+                                    ...current,
+                                    options: nextOptions.map((item, nextIndex) => ({
+                                      ...item,
+                                      isDefault: item.id === nextDefault?.id || (nextIndex === 0 && nextOptions.length === 1),
+                                    })),
+                                    defaultValue: nextDefault?.value || null,
+                                  };
+                                })
+                              }
+                              className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSubmit(draft)}
+            className="rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+          >
+            Ok
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -312,9 +655,13 @@ function CustomFormPreviewModal({
 
 export function MembershipQuestionsStepPage() {
   const {
+    customFormControls,
     customForms,
     selectedCustomFormUniqueIds,
+    customQuestions,
     isCustomFormDropdownOpen,
+    isCustomQuestionModalOpen,
+    customQuestionDraft,
     previewCustomFormUniqueId,
     previewCustomFormName,
     previewCustomFormLoading,
@@ -327,6 +674,12 @@ export function MembershipQuestionsStepPage() {
     reload,
     toggleCustomForm,
     reorderSelectedCustomFormUniqueIds,
+    addCustomQuestion,
+    removeCustomQuestion,
+    openCustomQuestionModal,
+    closeCustomQuestionModal,
+    updateCustomQuestionDraft,
+    selectCustomQuestionControl,
     setCustomFormDropdownOpen,
     openCustomFormPreview,
     closeCustomFormPreview,
@@ -370,6 +723,56 @@ export function MembershipQuestionsStepPage() {
           <MembershipQuestionsSkeleton />
         ) : (
           <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Custom Questions</p>
+                <p className="text-xs text-slate-500">Add standalone questions directly on the membership type.</p>
+              </div>
+              <button
+                type="button"
+                onClick={openCustomQuestionModal}
+                disabled={isSaving || customFormControls.length === 0}
+                className="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Add Custom Question
+              </button>
+            </div>
+
+            {customQuestions.length > 0 ? (
+              <div className="rounded-[1.5rem] border border-cyan-200 bg-cyan-50 p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-cyan-900">Added custom questions</p>
+                    <p className="mt-1 text-xs text-cyan-700">These will be saved with the questions step.</p>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-cyan-700">
+                    {customQuestions.length}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {customQuestions.map((question) => (
+                    <div
+                      key={question.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{question.label}</p>
+                        <p className="truncate text-xs text-slate-500">{question.controlName}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeCustomQuestion(question.id)}
+                        className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <fieldset className="space-y-2" disabled={isSaving}>
               <legend className="text-sm font-semibold text-slate-800">Custom Forms</legend>
               <button
@@ -459,6 +862,17 @@ export function MembershipQuestionsStepPage() {
           </>
         )}
       </div>
+
+      {isCustomQuestionModalOpen ? (
+        <MembershipCustomQuestionModal
+          controls={customFormControls}
+          draft={customQuestionDraft}
+          onClose={closeCustomQuestionModal}
+          onSubmit={addCustomQuestion}
+          onSelectControl={selectCustomQuestionControl}
+          onUpdateDraft={updateCustomQuestionDraft}
+        />
+      ) : null}
 
       {previewCustomFormUniqueId ? (
         <CustomFormPreviewModal

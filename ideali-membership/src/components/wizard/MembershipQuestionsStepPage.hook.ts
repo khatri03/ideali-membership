@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
-import { fetchCustomFormListItems, fetchCustomFormPreview } from "../../lib/customForms";
+import { fetchCustomFormControls, fetchCustomFormListItems, fetchCustomFormPreview } from "../../lib/customForms";
 import {
   getMembershipQuestionsInfo,
   invalidateMembershipWizardQuestionsCache,
@@ -14,10 +14,72 @@ import {
   MEMBERSHIP_QUESTIONS_STEP_NUMBER,
 } from "./MembershipQuestionsStepPage.fields";
 import { normalizeMembershipQuestionsCustomFormUniqueIds } from "./MembershipQuestionsStepPage.schema";
+import type { CustomFormControl } from "../../types/customForms";
+import type {
+  MembershipCustomQuestionDraft,
+  MembershipCustomQuestionOptionDraft,
+} from "../../types/membership";
 import type { MembershipQuestionsStepState } from "./MembershipQuestionsStepPage.types";
+
+function createCustomQuestionOptionDraft(index: number): MembershipCustomQuestionOptionDraft {
+  return {
+    id: globalThis.crypto?.randomUUID?.() ?? `question-option-${Date.now()}-${index}`,
+    displayText: `Option ${index + 1}`,
+    value: `option-${index + 1}`,
+    isDefault: index === 0,
+  };
+}
+
+function createCustomQuestionDraft(control: CustomFormControl): MembershipCustomQuestionDraft {
+  const hasOptions = control.hasOptions;
+  const options = hasOptions ? [createCustomQuestionOptionDraft(0)] : [];
+
+  return {
+    id: globalThis.crypto?.randomUUID?.() ?? `custom-question-${Date.now()}`,
+    controlId: control.id,
+    controlName: control.name,
+    controlType: control.controlType,
+    iconClass: control.iconClass,
+    label: control.defaultLabel,
+    placeHolder: control.canHavePlaceHolder ? control.defaultLabel : null,
+    tooltip: null,
+    required: false,
+    minLength: control.canHaveMinLength ? "0" : null,
+    maxLength: control.canHaveMaxLength ? "0" : null,
+    defaultValue: control.hasOptions ? (options[0]?.value ?? null) : null,
+    displayOrder: 0,
+    options,
+  };
+}
+
+function sanitizeCustomQuestionDraft(draft: MembershipCustomQuestionDraft): MembershipCustomQuestionDraft {
+  const options = draft.options.map((option, index) => ({
+    ...option,
+    id: option.id || globalThis.crypto?.randomUUID?.() || `question-option-${Date.now()}-${index}`,
+    displayText: option.displayText.trim(),
+    value: option.value.trim(),
+    isDefault: option.isDefault,
+  }));
+
+  return {
+    ...draft,
+    id: draft.id || globalThis.crypto?.randomUUID?.() || `custom-question-${Date.now()}`,
+    controlName: draft.controlName.trim(),
+    controlType: draft.controlType.trim(),
+    iconClass: draft.iconClass.trim(),
+    label: draft.label.trim(),
+    placeHolder: draft.placeHolder?.trim() || null,
+    tooltip: draft.tooltip?.trim() || null,
+    minLength: draft.minLength?.trim() || null,
+    maxLength: draft.maxLength?.trim() || null,
+    defaultValue: draft.defaultValue?.trim() || null,
+    options,
+  };
+}
 
 async function persistMembershipQuestionsStepWithFeedback({
   customFormUniqueIds,
+  customQuestions,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -26,6 +88,7 @@ async function persistMembershipQuestionsStepWithFeedback({
   onSuccess,
 }: {
   customFormUniqueIds: string[] | null;
+  customQuestions: MembershipCustomQuestionDraft[] | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -39,6 +102,7 @@ async function persistMembershipQuestionsStepWithFeedback({
   try {
     const result = await saveMembershipQuestionsStep(
       customFormUniqueIds ? normalizeMembershipQuestionsCustomFormUniqueIds(customFormUniqueIds) : null,
+      customQuestions ? customQuestions.map(sanitizeCustomQuestionDraft) : null,
       stepNumber,
       membershipTypeUniqueId,
     );
@@ -56,9 +120,13 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
+  const [customFormControls, setCustomFormControls] = useState<CustomFormControl[]>([]);
   const [customForms, setCustomForms] = useState<MembershipQuestionsStepState["customForms"]>([]);
   const [selectedCustomFormUniqueIds, setSelectedCustomFormUniqueIds] = useState<string[]>([]);
+  const [customQuestions, setCustomQuestions] = useState<MembershipCustomQuestionDraft[]>([]);
   const [isCustomFormDropdownOpen, setCustomFormDropdownOpen] = useState(false);
+  const [isCustomQuestionModalOpen, setIsCustomQuestionModalOpen] = useState(false);
+  const [customQuestionDraft, setCustomQuestionDraft] = useState<MembershipCustomQuestionDraft | null>(null);
   const [previewCustomFormUniqueId, setPreviewCustomFormUniqueId] = useState("");
   const [previewCustomFormName, setPreviewCustomFormName] = useState("");
   const [previewCustomFormLoading, setPreviewCustomFormLoading] = useState(false);
@@ -86,24 +154,40 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       setError("");
 
       try {
-        const [formList, info] = await Promise.all([
+        const [formList, info, formControls] = await Promise.all([
           fetchCustomFormListItems(),
           getMembershipQuestionsInfo(currentMembershipTypeUniqueId),
+          fetchCustomFormControls(),
         ]);
 
         if (!isMounted) {
           return;
         }
 
+        setCustomFormControls(formControls);
         setCustomForms(formList);
         setSelectedCustomFormUniqueIds(normalizeMembershipQuestionsCustomFormUniqueIds(info.customFormUniqueIds));
+        setCustomQuestions((info.customQuestions || []).map((question) => ({
+          ...question,
+          placeHolder: question.placeHolder ?? null,
+          tooltip: question.tooltip ?? null,
+          minLength: question.minLength ?? null,
+          maxLength: question.maxLength ?? null,
+          defaultValue: question.defaultValue ?? null,
+          options: (question.options || []).map((option) => ({
+            ...option,
+            id: option.id || globalThis.crypto?.randomUUID?.() || `question-option-${Date.now()}`,
+          })),
+        })));
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
+        setCustomFormControls([]);
         setCustomForms([]);
         setSelectedCustomFormUniqueIds([]);
+        setCustomQuestions([]);
         setError(loadError instanceof Error ? loadError.message : "Unable to load membership questions.");
       } finally {
         if (isMounted) {
@@ -141,6 +225,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       onSkip: () =>
         void persistMembershipQuestionsStepWithFeedback({
           customFormUniqueIds: null,
+          customQuestions: null,
           stepNumber: MEMBERSHIP_QUESTIONS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -160,6 +245,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       onSaveNext: () =>
         void persistMembershipQuestionsStepWithFeedback({
           customFormUniqueIds: selectedCustomFormUniqueIds,
+          customQuestions,
           stepNumber: MEMBERSHIP_QUESTIONS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -179,6 +265,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       onSaveExit: () =>
         void persistMembershipQuestionsStepWithFeedback({
           customFormUniqueIds: selectedCustomFormUniqueIds,
+          customQuestions,
           stepNumber: MEMBERSHIP_QUESTIONS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -189,7 +276,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
           },
         }),
     });
-  }, [currentMembershipTypeUniqueId, isSaving, navigate, selectedCustomFormUniqueIds, setFooterActions]);
+  }, [currentMembershipTypeUniqueId, customQuestions, isSaving, navigate, selectedCustomFormUniqueIds, setFooterActions]);
 
   const openCustomFormPreview = async (customFormUniqueId: string) => {
     const formItem = customForms.find((form) => form.value === customFormUniqueId);
@@ -242,10 +329,59 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     setPreviewCustomFormLayoutColumn(2);
   };
 
+  const openCustomQuestionModal = () => {
+    const initialControl = customFormControls[0];
+    setCustomQuestionDraft(initialControl ? createCustomQuestionDraft(initialControl) : null);
+    setIsCustomQuestionModalOpen(true);
+  };
+
+  const closeCustomQuestionModal = () => {
+    setIsCustomQuestionModalOpen(false);
+    setCustomQuestionDraft(null);
+  };
+
+  const selectCustomQuestionControl = (controlId: number) => {
+    const selectedControl = customFormControls.find((control) => control.id === controlId);
+    setCustomQuestionDraft(selectedControl ? createCustomQuestionDraft(selectedControl) : null);
+  };
+
+  const updateCustomQuestionDraft = (updater: (draft: MembershipCustomQuestionDraft) => MembershipCustomQuestionDraft) => {
+    setCustomQuestionDraft((current) => (current ? updater(current) : current));
+  };
+
+  const addCustomQuestion = (draft: MembershipCustomQuestionDraft) => {
+    const nextDraft = sanitizeCustomQuestionDraft(draft);
+    setCustomQuestions((current) => [
+      ...current,
+      {
+        ...nextDraft,
+        displayOrder: current.length + 1,
+      },
+    ]);
+    setIsCustomQuestionModalOpen(false);
+    setCustomQuestionDraft(null);
+    setError("");
+  };
+
+  const removeCustomQuestion = (customQuestionId: string) => {
+    setCustomQuestions((current) =>
+      current
+        .filter((question) => question.id !== customQuestionId)
+        .map((question, index) => ({
+          ...question,
+          displayOrder: index + 1,
+        })),
+    );
+  };
+
   return {
+    customFormControls,
     customForms,
     selectedCustomFormUniqueIds,
+    customQuestions,
     isCustomFormDropdownOpen,
+    isCustomQuestionModalOpen,
+    customQuestionDraft,
     previewCustomFormUniqueId,
     previewCustomFormName,
     previewCustomFormLoading,
@@ -283,6 +419,12 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       });
       setError("");
     },
+    addCustomQuestion,
+    removeCustomQuestion,
+    openCustomQuestionModal,
+    closeCustomQuestionModal,
+    updateCustomQuestionDraft,
+    selectCustomQuestionControl,
     setCustomFormDropdownOpen,
     openCustomFormPreview,
     closeCustomFormPreview,

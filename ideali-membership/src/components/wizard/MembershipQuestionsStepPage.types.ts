@@ -1,9 +1,14 @@
-import type { CustomFormListItem } from "../../types/customForms";
+import type { CustomFormControl, CustomFormListItem } from "../../types/customForms";
+import type { MembershipCustomQuestionDraft } from "../../types/membership";
 
 export interface MembershipQuestionsStepState {
+  customFormControls: CustomFormControl[];
   customForms: CustomFormListItem[];
   selectedCustomFormUniqueIds: string[];
+  customQuestions: MembershipCustomQuestionDraft[];
   isCustomFormDropdownOpen: boolean;
+  isCustomQuestionModalOpen: boolean;
+  customQuestionDraft: MembershipCustomQuestionDraft | null;
   previewCustomFormUniqueId: string;
   previewCustomFormName: string;
   previewCustomFormLoading: boolean;
@@ -31,6 +36,12 @@ export interface MembershipQuestionsStepState {
   reload: () => void;
   toggleCustomForm: (customFormUniqueId: string) => void;
   reorderSelectedCustomFormUniqueIds: (activeCustomFormUniqueId: string, overCustomFormUniqueId: string) => void;
+  addCustomQuestion: (draft: MembershipCustomQuestionDraft) => void;
+  removeCustomQuestion: (customQuestionId: string) => void;
+  openCustomQuestionModal: () => void;
+  closeCustomQuestionModal: () => void;
+  updateCustomQuestionDraft: (updater: (draft: MembershipCustomQuestionDraft) => MembershipCustomQuestionDraft) => void;
+  selectCustomQuestionControl: (controlId: number) => void;
   setCustomFormDropdownOpen: (isOpen: boolean) => void;
   openCustomFormPreview: (customFormUniqueId: string) => void;
   closeCustomFormPreview: () => void;

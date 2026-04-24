@@ -1,6 +1,8 @@
 import { getJson, postJson } from "./api";
 import type {
   MembershipPaymentMethodOption,
+  MembershipCustomQuestionDraft,
+  MembershipCustomQuestionOptionDraft,
   MembershipQuestionsInfo,
   MembershipTitleInfo,
   MembershipTypeListItem,
@@ -419,8 +421,53 @@ export async function getMembershipQuestionsInfo(membershipTypeUniqueId: string)
       responseData?.CustomFormUniqueIds ?? responseData?.customFormUniqueIds,
     )
       ? ((responseData?.CustomFormUniqueIds ?? responseData?.customFormUniqueIds) as unknown[])
-          .map((item) => readText(item))
-          .filter((item) => item.length > 0)
+      .map((item) => readText(item))
+      .filter((item) => item.length > 0)
+      : [];
+    const customQuestions = Array.isArray(responseData?.CustomQuestions ?? responseData?.customQuestions)
+      ? ((responseData?.CustomQuestions ?? responseData?.customQuestions) as unknown[])
+          .map((item): MembershipCustomQuestionDraft | null => {
+            const candidate = item as Record<string, unknown>;
+            const options = Array.isArray(candidate.Options ?? candidate.options)
+              ? ((candidate.Options ?? candidate.options) as unknown[])
+                  .map((option): MembershipCustomQuestionOptionDraft => {
+                    const optionCandidate = option as Record<string, unknown>;
+                    return {
+                      id: readText(optionCandidate.UniqueId ?? optionCandidate.uniqueId),
+                      displayText: readText(optionCandidate.DisplayText ?? optionCandidate.displayText),
+                      value: readText(optionCandidate.Value ?? optionCandidate.value),
+                      isDefault: Boolean(optionCandidate.IsDefault ?? optionCandidate.isDefault),
+                    };
+                  })
+                  .filter((option) => option.id)
+              : [];
+
+            const id = readText(candidate.UniqueId ?? candidate.uniqueId);
+            const controlName = readText(candidate.ControlName ?? candidate.controlName);
+            const controlType = readText(candidate.ControlType ?? candidate.controlType);
+
+            if (!id || !controlName || !controlType) {
+              return null;
+            }
+
+            return {
+              id,
+              controlId: Number(candidate.ControlId ?? candidate.controlId ?? 0),
+              controlName,
+              controlType,
+              iconClass: readText(candidate.IconClass ?? candidate.iconClass),
+              label: readText(candidate.Label ?? candidate.label),
+              placeHolder: readText(candidate.PlaceHolder ?? candidate.placeHolder) || null,
+              tooltip: readText(candidate.Tooltip ?? candidate.tooltip) || null,
+              required: Boolean(candidate.Required ?? candidate.required),
+              minLength: readText(candidate.MinLength ?? candidate.minLength) || null,
+              maxLength: readText(candidate.MaxLength ?? candidate.maxLength) || null,
+              defaultValue: readText(candidate.DefaultValue ?? candidate.defaultValue) || null,
+              displayOrder: Number(candidate.DisplayOrder ?? candidate.displayOrder ?? 0),
+              options,
+            };
+          })
+          .filter((item): item is MembershipCustomQuestionDraft => item !== null)
       : [];
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
@@ -431,6 +478,7 @@ export async function getMembershipQuestionsInfo(membershipTypeUniqueId: string)
     return {
       uniqueId,
       customFormUniqueIds,
+      customQuestions,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 7,
     } satisfies MembershipQuestionsInfo;
   });
@@ -520,6 +568,7 @@ export async function saveMembershipPaymentAccountStep(
 
 export async function saveMembershipQuestionsStep(
   customFormUniqueIds: string[] | null,
+  customQuestions: MembershipCustomQuestionDraft[] | null,
   stepNumber: number,
   membershipTypeUniqueId?: string,
 ) {
@@ -531,6 +580,30 @@ export async function saveMembershipQuestionsStep(
     `/api/membership/type/wizard/${membershipTypeUniqueId}/questions?stepNumber=${stepNumber}`,
     {
       customFormUniqueIds: customFormUniqueIds && customFormUniqueIds.length > 0 ? customFormUniqueIds : null,
+      customQuestions:
+        customQuestions && customQuestions.length > 0
+          ? customQuestions.map((question) => ({
+              uniqueId: question.id,
+              controlId: question.controlId,
+              controlName: question.controlName,
+              controlType: question.controlType,
+              iconClass: question.iconClass,
+              label: question.label,
+              placeHolder: question.placeHolder,
+              tooltip: question.tooltip,
+              required: question.required,
+              minLength: question.minLength,
+              maxLength: question.maxLength,
+              defaultValue: question.defaultValue,
+              displayOrder: question.displayOrder,
+              options: question.options.map((option) => ({
+                uniqueId: option.id,
+                displayText: option.displayText,
+                value: option.value,
+                isDefault: option.isDefault,
+              })),
+            }))
+          : null,
     },
   );
 
