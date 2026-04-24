@@ -161,7 +161,7 @@ export function MembershipPaymentAccountStepPage() {
                             type="button"
                             onClick={() => togglePaymentMethod(method.value)}
                             className={[
-                              "group flex min-h-20 items-start justify-between rounded-[1.25rem] border px-4 py-3 text-left transition",
+                              "group flex min-h-20 items-center gap-3 rounded-[1.25rem] border px-4 py-3 text-left transition",
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2",
                               isSelected
                                 ? "border-cyan-300 bg-cyan-50 shadow-sm"
@@ -169,29 +169,25 @@ export function MembershipPaymentAccountStepPage() {
                             ].join(" ")}
                             aria-pressed={isSelected}
                           >
-                            <div className="space-y-1">
-                              <p className="text-base font-semibold text-slate-900">{method.text}</p>
-                              <p
-                                className={[
-                                  "text-xs font-semibold uppercase tracking-[0.18em]",
-                                  isSelected ? "text-cyan-700" : "text-slate-400",
-                                ].join(" ")}
-                              >
-                                {isSelected ? "Selected" : ""}
-                              </p>
-                            </div>
-
                             <span
                               className={[
-                                "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
+                                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border",
                                 isSelected ? "border-emerald-600 bg-emerald-600 text-white shadow-sm" : "border-slate-300 bg-white text-transparent",
                               ].join(" ")}
                               aria-hidden="true"
                             >
-                              {isSelected ? "✓" : ""}
+                              {isSelected ? (
+                                <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[2.4]">
+                                  <path d="M3.5 8.5 6.5 11.5 12.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              ) : null}
                             </span>
-                          </button>
-                        );
+
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-base font-semibold text-slate-900">{method.text}</p>
+                              </div>
+                            </button>
+                          );
                       })}
                     </div>
                     {validationError ? (
@@ -215,3 +211,4 @@ export function MembershipPaymentAccountStepPage() {
     </section>
   );
 }
+

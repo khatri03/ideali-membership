@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { buildMembershipWizardStepPath } from "../../routes";
+import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import { MEMBERSHIP_WIZARD_STEPS } from "./membershipWizardSteps";
 
 interface WizardSideNavProps {
@@ -28,6 +28,10 @@ export function WizardSideNav({
     "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition";
 
   function getStepPath(stepPath: (typeof MEMBERSHIP_WIZARD_STEPS)[number]["to"]) {
+    if (!membershipTypeUniqueId) {
+      return stepPath === APP_ROUTES.membershipWizardTitle ? APP_ROUTES.membershipWizardTitle : undefined;
+    }
+
     const stepIndex = MEMBERSHIP_WIZARD_STEPS.findIndex((step) => step.to === stepPath);
     return buildMembershipWizardStepPath(
       stepPath,
@@ -112,12 +116,6 @@ export function WizardSideNav({
 
   return (
     <aside className="relative fixed inset-y-0 left-0 z-40 w-80 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:relative lg:inset-y-auto lg:top-auto lg:h-auto lg:shadow-none">
-      <div className="flex items-center justify-between gap-3 pr-12">
-        <p className="text-sm font-semibold tracking-[0.2em] text-cyan-700 uppercase">
-          Wizard steps
-        </p>
-      </div>
-
       <button
         type="button"
         onClick={onNavToggle}
@@ -138,7 +136,6 @@ export function WizardSideNav({
 
       <nav className="mt-4 space-y-3">
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-2">
-          <p className="px-4 py-3 text-sm font-semibold text-slate-900">Membership setup</p>
           <div className="space-y-2">
             {isProgressLoading ? (
               <SidebarSkeleton />

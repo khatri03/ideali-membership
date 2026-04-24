@@ -4,6 +4,8 @@ import { APP_ROUTES } from "../../routes";
 interface WizardTopBarProps {
   isNavVisible: boolean;
   onNavToggle: () => void;
+  membershipTitle: string;
+  isMembershipTitleLoading: boolean;
   currentStepLabel: string;
   currentStepIndex: number;
   totalSteps: number;
@@ -12,6 +14,8 @@ interface WizardTopBarProps {
 export function WizardTopBar({
   isNavVisible,
   onNavToggle,
+  membershipTitle,
+  isMembershipTitleLoading,
   currentStepLabel,
   currentStepIndex,
   totalSteps,
@@ -38,8 +42,12 @@ export function WizardTopBar({
             <span className="text-sm font-bold">W</span>
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-[0.2em] text-cyan-700 uppercase">
-              Membership Wizard
+            <p className="truncate text-base font-semibold text-slate-900">
+              {isMembershipTitleLoading ? (
+                <span className="inline-block h-4 w-[min(18rem,62vw)] animate-pulse rounded-full bg-slate-200 align-middle" />
+              ) : (
+                membershipTitle.trim() || "Untitled membership"
+              )}
             </p>
             <p className="truncate text-sm text-slate-500">
               {currentStepIndex + 1} of {totalSteps} - {currentStepLabel}

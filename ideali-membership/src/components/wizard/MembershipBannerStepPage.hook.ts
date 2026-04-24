@@ -118,7 +118,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardPricing,
+                APP_ROUTES.membershipWizardPaymentAccount,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
               ),
@@ -136,7 +136,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardPricing,
+                APP_ROUTES.membershipWizardPaymentAccount,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
               ),

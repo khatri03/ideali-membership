@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
+import { useWizardMembershipTitle } from "./WizardMembershipTitleContext";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
   getMembershipTitleInfo,
@@ -103,6 +104,7 @@ export function MembershipTitleStepPage() {
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
+  const { setMembershipTitle } = useWizardMembershipTitle();
   const [title, setTitle] = useState("");
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -111,8 +113,13 @@ export function MembershipTitleStepPage() {
   const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
+    setMembershipTitle(title);
+  }, [setMembershipTitle, title]);
+
+  useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
-      setLoadError("Membership type unique id is missing.");
+      setTitle("");
+      setLoadError("");
       setIsLoading(false);
       return;
     }

@@ -135,7 +135,7 @@ function RouterApp() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true }}>
       <RouterApp />
     </BrowserRouter>
   );
