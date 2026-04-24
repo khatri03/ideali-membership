@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -595,6 +595,46 @@ function getPreviewDefaultOptionValue(options: Array<{ value: string }>, default
   return defaultValue || options[0]?.value || "";
 }
 
+function formatPhonePreviewValue(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+
+  if (digits.length === 0) {
+    return "";
+  }
+
+  if (digits.length <= 3) {
+    return `(${digits}`;
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function PhonePreviewInput({
+  value,
+  placeholder,
+}: {
+  value: string;
+  placeholder: string;
+}) {
+  const [phoneValue, setPhoneValue] = useState(() => formatPhonePreviewValue(value));
+
+  return (
+    <input
+      type="tel"
+      inputMode="tel"
+      pattern="[0-9()\\-\\s]*"
+      value={phoneValue}
+      onChange={(event) => setPhoneValue(formatPhonePreviewValue(event.target.value))}
+      placeholder={placeholder || "(555) 123-4567"}
+      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+    />
+  );
+}
+
 function CustomFormPreviewField({
   field,
 }: {
@@ -620,7 +660,7 @@ function CustomFormPreviewField({
     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
       <div className="mb-2 flex items-center gap-2">
         <span className="text-sm font-semibold text-slate-800">{field.controlLabel}</span>
-        {field.isMandatory ? <span className="text-sm font-bold leading-none text-rose-600">*</span> : null}
+        {field.isMandatory ? <span className="text-base font-bold leading-none text-rose-600">*</span> : null}
       </div>
 
       {controlType === "textarea" ? (
@@ -663,6 +703,24 @@ function CustomFormPreviewField({
         </label>
       ) : controlType === "file" ? (
         <input type="file" className="block w-full text-sm text-slate-500" />
+      ) : controlType === "number" ? (
+        <input
+          type="number"
+          inputMode="numeric"
+          defaultValue={field.defaultValue || ""}
+          placeholder={label}
+          min={0}
+          step="1"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      ) : controlType === "date" ? (
+        <input
+          type="date"
+          defaultValue={field.defaultValue || ""}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      ) : controlType === "phone" ? (
+        <PhonePreviewInput value={field.defaultValue || ""} placeholder={label} />
       ) : (
         <input
           type="text"
