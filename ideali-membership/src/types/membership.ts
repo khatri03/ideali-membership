@@ -44,6 +44,11 @@ export interface MembershipTypePlaceholderItem {
   placeHolderText: string;
 }
 
+export interface MembershipTypePlaceholderGroup {
+  label: string;
+  items: MembershipTypePlaceholderItem[];
+}
+
 export interface MembershipCustomQuestionOptionDraft {
   id: string;
   displayText: string;

@@ -20,7 +20,11 @@ import {
   MEMBERSHIP_THANK_YOU_EMAIL_NEXT_STEP_NUMBER,
   MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
 } from "./MembershipThankYouEmailStepPage.fields";
-import { FontSizeExtension, LineHeightExtension } from "./tiptapEmailComposerExtensions";
+import {
+  FontSizeExtension,
+  LineHeightExtension,
+  MembershipPlaceholderTokenExtension,
+} from "./tiptapEmailComposerExtensions";
 import type { MembershipThankYouEmailStepState } from "./MembershipThankYouEmailStepPage.types";
 
 async function persistThankYouEmailStepWithFeedback({
@@ -63,6 +67,26 @@ async function persistThankYouEmailStepWithFeedback({
   }
 }
 
+function hasMeaningfulEditorContent(editor: ReturnType<typeof useEditor> | null) {
+  if (!editor) {
+    return false;
+  }
+
+  return !editor.isEmpty && editor.getText().trim().length > 0;
+}
+
+function validateThankYouEmailStep(emailSubject: string, editor: ReturnType<typeof useEditor> | null) {
+  if (emailSubject.trim().length === 0) {
+    return "Email subject is required.";
+  }
+
+  if (!hasMeaningfulEditorContent(editor)) {
+    return "Email body is required.";
+  }
+
+  return "";
+}
+
 export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepState {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
@@ -87,6 +111,7 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
       Color.configure({ types: ["textStyle"] }),
       FontSizeExtension,
       LineHeightExtension,
+      MembershipPlaceholderTokenExtension,
       Link.configure({
         autolink: true,
         defaultProtocol: "https",
@@ -169,6 +194,25 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
   }, [editor, emailTemplateHtml]);
 
   useLayoutEffect(() => {
+    const persistWithValidation = (onSuccess: (savedMembershipTypeUniqueId: string) => void | Promise<void>) => {
+      const validationError = validateThankYouEmailStep(emailSubject, editor);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+
+      void persistThankYouEmailStepWithFeedback({
+        description: descriptionRef.current,
+        emailSubject: emailSubject.trim(),
+        emailTemplate: emailTemplateRef.current,
+        stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
+        membershipTypeUniqueId: currentMembershipTypeUniqueId,
+        setError,
+        setIsSaving,
+        onSuccess,
+      });
+    };
+
     setFooterActions({
       showBack: true,
       showSkip: true,
@@ -208,40 +252,22 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
           },
         }),
       onSaveNext: () =>
-        void persistThankYouEmailStepWithFeedback({
-          description: descriptionRef.current,
-          emailSubject: emailSubject.trim().length > 0 ? emailSubject : null,
-          emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
-          stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
-          membershipTypeUniqueId: currentMembershipTypeUniqueId,
-          setError,
-          setIsSaving,
-          onSuccess: async (savedMembershipTypeUniqueId) => {
-            navigate(
-              buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardAdvanceSettings,
-                savedMembershipTypeUniqueId,
-                MEMBERSHIP_THANK_YOU_EMAIL_NEXT_STEP_NUMBER,
-              ),
-              { replace: true },
-            );
-          },
+        persistWithValidation(async (savedMembershipTypeUniqueId) => {
+          navigate(
+            buildMembershipWizardStepPath(
+              APP_ROUTES.membershipWizardAdvanceSettings,
+              savedMembershipTypeUniqueId,
+              MEMBERSHIP_THANK_YOU_EMAIL_NEXT_STEP_NUMBER,
+            ),
+            { replace: true },
+          );
         }),
       onSaveExit: () =>
-        void persistThankYouEmailStepWithFeedback({
-          description: descriptionRef.current,
-          emailSubject: emailSubject.trim().length > 0 ? emailSubject : null,
-          emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
-          stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
-          membershipTypeUniqueId: currentMembershipTypeUniqueId,
-          setError,
-          setIsSaving,
-          onSuccess: async () => {
-            navigate(APP_ROUTES.membershipTypes, { replace: true });
-          },
+        persistWithValidation(async () => {
+          navigate(APP_ROUTES.membershipTypes, { replace: true });
         }),
     });
-  }, [currentMembershipTypeUniqueId, emailSubject, isSaving, navigate, setFooterActions]);
+  }, [currentMembershipTypeUniqueId, editor, emailSubject, isSaving, navigate, setFooterActions]);
 
   return {
     emailSubject,

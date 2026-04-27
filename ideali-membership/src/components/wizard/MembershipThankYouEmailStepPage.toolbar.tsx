@@ -1,7 +1,8 @@
 import type { Editor } from "@tiptap/react";
+import { NodeSelection } from "@tiptap/pm/state";
 import type { ReactNode } from "react";
 import { useRef } from "react";
-import type { MembershipTypePlaceholderItem } from "../../types/membership";
+import type { MembershipTypePlaceholderGroup } from "../../types/membership";
 
 function ToolbarButton({
   editor,
@@ -38,15 +39,77 @@ function ToolbarButton({
   );
 }
 
+type PlaceholderTokenSelectionAttrs = {
+  label?: string;
+  fontSize?: string | null;
+  color?: string | null;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+};
+
+function getSelectedPlaceholderTokenAttrs(editor: Editor | null) {
+  const selection = editor?.state.selection;
+  if (!editor || !(selection instanceof NodeSelection)) {
+    return null;
+  }
+
+  if (selection.node.type.name !== "membershipPlaceholderToken") {
+    return null;
+  }
+
+  return selection.node.attrs as PlaceholderTokenSelectionAttrs;
+}
+
+function updateSelectedPlaceholderToken(editor: Editor | null, nextAttrs: Partial<PlaceholderTokenSelectionAttrs>) {
+  if (!editor) {
+    return false;
+  }
+
+  const attrs = getSelectedPlaceholderTokenAttrs(editor);
+  if (!attrs) {
+    return false;
+  }
+
+  editor.chain().focus().updateAttributes("membershipPlaceholderToken", { ...attrs, ...nextAttrs }).run();
+  return true;
+}
+
+function toggleSelectedPlaceholderTokenAttr(
+  editor: Editor | null,
+  attrName: keyof Pick<PlaceholderTokenSelectionAttrs, "bold" | "italic" | "underline" | "strike">,
+) {
+  const attrs = getSelectedPlaceholderTokenAttrs(editor);
+  if (!attrs) {
+    return false;
+  }
+
+  updateSelectedPlaceholderToken(editor, { [attrName]: !attrs[attrName] } as Partial<PlaceholderTokenSelectionAttrs>);
+  return true;
+}
+
+function isSelectedPlaceholderFormatted(
+  editor: Editor | null,
+  attrName: keyof Pick<PlaceholderTokenSelectionAttrs, "bold" | "italic" | "underline" | "strike">,
+) {
+  return Boolean(getSelectedPlaceholderTokenAttrs(editor)?.[attrName]);
+}
+
 function SelectField({
   label,
   onChange,
   options,
+  groups,
   className = "",
 }: {
   label: string;
   onChange: (value: string) => void;
-  options: Array<{ label: string; value: string }>;
+  options?: Array<{ label: string; value: string; disabled?: boolean }>;
+  groups?: Array<{
+    label: string;
+    options: Array<{ label: string; value: string; disabled?: boolean }>;
+  }>;
   className?: string;
 }) {
   return (
@@ -61,11 +124,21 @@ function SelectField({
         className="w-full bg-transparent text-sm outline-none"
       >
         <option value="">{label}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        {groups && groups.length > 0
+          ? groups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((option) => (
+                  <option key={option.value} value={option.value} disabled={option.disabled}>
+                    {option.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))
+          : options?.map((option) => (
+              <option key={option.value} value={option.value} disabled={option.disabled}>
+                {option.label}
+              </option>
+            ))}
       </select>
     </label>
   );
@@ -79,7 +152,7 @@ function ColorButton({
   onApplyColor: (value: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const currentColor = editor?.getAttributes("textStyle")?.color || "#111827";
+  const currentColor = getSelectedPlaceholderTokenAttrs(editor)?.color || editor?.getAttributes("textStyle")?.color || "#111827";
 
   return (
     <button
@@ -233,11 +306,14 @@ export function MembershipThankYouEmailToolbar({
 }: {
   editor: Editor | null;
   onInsertVariable: (value: string) => void;
-  placeholders: MembershipTypePlaceholderItem[];
+  placeholders: MembershipTypePlaceholderGroup[];
 }) {
-  const variableOptions = placeholders.map((item) => ({
-    label: item.displayText || item.placeHolderText,
-    value: item.placeHolderText,
+  const variableGroups = placeholders.map((group) => ({
+    label: group.label,
+    options: group.items.map((item) => ({
+      label: item.displayText || item.placeHolderText,
+      value: item.displayText || item.placeHolderText,
+    })),
   }));
 
   return (
@@ -256,7 +332,10 @@ export function MembershipThankYouEmailToolbar({
               if (!value || !editor) {
                 return;
               }
-              editor.chain().focus().setMark("textStyle", { fontSize: value }).run();
+
+              if (!updateSelectedPlaceholderToken(editor, { fontSize: value })) {
+                editor.chain().focus().setMark("textStyle", { fontSize: value }).run();
+              }
             }}
             options={[
               { label: "12px", value: "12px" },
@@ -296,7 +375,10 @@ export function MembershipThankYouEmailToolbar({
               if (!editor) {
                 return;
               }
-              editor.chain().focus().setColor(value).run();
+
+              if (!updateSelectedPlaceholderToken(editor, { color: value })) {
+                editor.chain().focus().setColor(value).run();
+              }
             }}
           />
           <SelectField
@@ -309,7 +391,8 @@ export function MembershipThankYouEmailToolbar({
 
               onInsertVariable(value);
             }}
-            options={variableOptions.length > 0 ? variableOptions : [{ label: "No variables available", value: "" }]}
+            groups={variableGroups.length > 0 ? variableGroups : undefined}
+            options={variableGroups.length > 0 ? undefined : [{ label: "No variables available", value: "", disabled: true }]}
           />
           <SelectField
             label="Button"
@@ -351,10 +434,50 @@ export function MembershipThankYouEmailToolbar({
         </Section>
 
         <Section>
-          <ToolbarButton editor={editor} label="Bold" onClick={() => editor?.chain().focus().toggleBold().run()} isActive={editor?.isActive("bold")} icon={<span className="text-sm font-bold">B</span>} />
-          <ToolbarButton editor={editor} label="Italic" onClick={() => editor?.chain().focus().toggleItalic().run()} isActive={editor?.isActive("italic")} icon={<span className="text-sm italic">I</span>} />
-          <ToolbarButton editor={editor} label="Underline" onClick={() => editor?.chain().focus().toggleUnderline().run()} isActive={editor?.isActive("underline")} icon={<span className="text-sm underline">U</span>} />
-          <ToolbarButton editor={editor} label="Strike" onClick={() => editor?.chain().focus().toggleStrike().run()} isActive={editor?.isActive("strike")} icon={<span className="text-sm line-through">S</span>} />
+          <ToolbarButton
+            editor={editor}
+            label="Bold"
+            onClick={() => {
+              if (!toggleSelectedPlaceholderTokenAttr(editor, "bold")) {
+                editor?.chain().focus().toggleBold().run();
+              }
+            }}
+            isActive={isSelectedPlaceholderFormatted(editor, "bold") || editor?.isActive("bold")}
+            icon={<span className="text-sm font-bold">B</span>}
+          />
+          <ToolbarButton
+            editor={editor}
+            label="Italic"
+            onClick={() => {
+              if (!toggleSelectedPlaceholderTokenAttr(editor, "italic")) {
+                editor?.chain().focus().toggleItalic().run();
+              }
+            }}
+            isActive={isSelectedPlaceholderFormatted(editor, "italic") || editor?.isActive("italic")}
+            icon={<span className="text-sm italic">I</span>}
+          />
+          <ToolbarButton
+            editor={editor}
+            label="Underline"
+            onClick={() => {
+              if (!toggleSelectedPlaceholderTokenAttr(editor, "underline")) {
+                editor?.chain().focus().toggleUnderline().run();
+              }
+            }}
+            isActive={isSelectedPlaceholderFormatted(editor, "underline") || editor?.isActive("underline")}
+            icon={<span className="text-sm underline">U</span>}
+          />
+          <ToolbarButton
+            editor={editor}
+            label="Strike"
+            onClick={() => {
+              if (!toggleSelectedPlaceholderTokenAttr(editor, "strike")) {
+                editor?.chain().focus().toggleStrike().run();
+              }
+            }}
+            isActive={isSelectedPlaceholderFormatted(editor, "strike") || editor?.isActive("strike")}
+            icon={<span className="text-sm line-through">S</span>}
+          />
           <Divider />
           <ToolbarButton editor={editor} label="Align left" onClick={() => editor?.chain().focus().setTextAlign("left").run()} isActive={editor?.isActive({ textAlign: "left" })} icon={<TextLinesIcon align="left" />} />
           <ToolbarButton editor={editor} label="Align center" onClick={() => editor?.chain().focus().setTextAlign("center").run()} isActive={editor?.isActive({ textAlign: "center" })} icon={<TextLinesIcon align="center" />} />

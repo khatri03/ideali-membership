@@ -1,5 +1,5 @@
 import type { Editor } from "@tiptap/react";
-import type { MembershipTypePlaceholderItem } from "../../types/membership";
+import type { MembershipTypePlaceholderGroup } from "../../types/membership";
 
 export interface MembershipThankYouEmailStepState {
   emailSubject: string;
@@ -9,5 +9,5 @@ export interface MembershipThankYouEmailStepState {
   isSaving: boolean;
   reload: () => void;
   setEmailSubject: (value: string) => void;
-  placeholders: MembershipTypePlaceholderItem[];
+  placeholders: MembershipTypePlaceholderGroup[];
 }

@@ -61,7 +61,7 @@ export function MembershipThankYouEmailStepPage() {
           <>
             <div className="space-y-2">
               <label htmlFor="membership-thank-you-email-subject" className="text-sm font-semibold text-slate-800">
-                Email Subject
+                Email Subject <span className="text-rose-600">*</span>
               </label>
               <input
                 id="membership-thank-you-email-subject"
@@ -73,11 +73,28 @@ export function MembershipThankYouEmailStepPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-slate-800">
+                Email Body <span className="text-rose-600">*</span>
+              </p>
+              <p className="text-xs text-slate-500">Compose the thank you email body using the editor below.</p>
+            </div>
+
             <MembershipThankYouEmailToolbar
               editor={editor}
               placeholders={placeholders}
               onInsertVariable={(value) => {
-                editor?.chain().focus().insertContent(value).run();
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertContent([
+                    {
+                      type: "membershipPlaceholderToken",
+                      attrs: { label: value },
+                    },
+                    { type: "text", text: " " },
+                  ])
+                  .run();
               }}
             />
 

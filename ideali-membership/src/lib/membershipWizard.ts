@@ -5,6 +5,7 @@ import type {
   MembershipCustomQuestionOptionDraft,
   MembershipDescriptionInfo,
   MembershipQuestionsInfo,
+  MembershipTypePlaceholderGroup,
   MembershipTypePlaceholderItem,
   MembershipTitleInfo,
   MembershipTypeListItem,
@@ -74,6 +75,22 @@ function flattenMembershipTypePlaceholderRecords(value: unknown): Array<Record<s
 
   visit(value);
   return items;
+}
+
+function formatMembershipTypePlaceholderGroupLabel(value: string) {
+  const normalizedValue = value
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .trim();
+
+  if (!normalizedValue) {
+    return "Variables";
+  }
+
+  return normalizedValue
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
 }
 
 const wizardResponseCache = new Map<string, unknown>();
@@ -254,18 +271,49 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
 export async function getMembershipTypePlaceholders() {
   const payload = await getJson<unknown>("/api/membership/type/email-template/place-holders");
   const responseData = readResponseData(payload);
-  const items = flattenMembershipTypePlaceholderRecords(responseData);
+  const groups: MembershipTypePlaceholderGroup[] = [];
 
-  return items
-    .map(
-      (item): MembershipTypePlaceholderItem => ({
-        id: readNumber(item.Id ?? item.id),
-        uniqueId: readText(item.UniqueId ?? item.uniqueId),
-        displayText: readText(item.DisplayText ?? item.displayText),
-        placeHolderText: readText(item.PlaceHolderText ?? item.placeHolderText),
-      }),
-    )
-    .filter((item) => item.uniqueId && item.placeHolderText);
+  if (Array.isArray(responseData)) {
+    const items = flattenMembershipTypePlaceholderRecords(responseData)
+      .map(
+        (item): MembershipTypePlaceholderItem => ({
+          id: readNumber(item.Id ?? item.id),
+          uniqueId: readText(item.UniqueId ?? item.uniqueId),
+          displayText: readText(item.DisplayText ?? item.displayText),
+          placeHolderText: readText(item.PlaceHolderText ?? item.placeHolderText),
+        }),
+      )
+      .filter((item) => item.uniqueId && item.placeHolderText);
+
+    if (items.length > 0) {
+      groups.push({
+        label: "Variables",
+        items,
+      });
+    }
+  } else if (responseData && typeof responseData === "object") {
+    for (const [groupKey, groupValue] of Object.entries(responseData as Record<string, unknown>)) {
+      const items = flattenMembershipTypePlaceholderRecords(groupValue)
+        .map(
+          (item): MembershipTypePlaceholderItem => ({
+            id: readNumber(item.Id ?? item.id),
+            uniqueId: readText(item.UniqueId ?? item.uniqueId),
+            displayText: readText(item.DisplayText ?? item.displayText),
+            placeHolderText: readText(item.PlaceHolderText ?? item.placeHolderText),
+          }),
+        )
+        .filter((item) => item.uniqueId && item.placeHolderText);
+
+      if (items.length > 0) {
+        groups.push({
+          label: formatMembershipTypePlaceholderGroupLabel(groupKey),
+          items,
+        });
+      }
+    }
+  }
+
+  return groups;
 }
 
 export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
