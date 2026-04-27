@@ -566,6 +566,18 @@ function SortableCustomQuestionCard({
     transition,
   };
 
+  const controlType = question.controlType.trim().toLowerCase();
+  const supportsOptions = controlType === "select" || controlType === "radio";
+  const chips = [
+    question.required ? "Mandatory" : "Optional",
+    supportsOptions && question.options.length > 0
+      ? `${question.options.length} option${question.options.length === 1 ? "" : "s"}`
+      : null,
+    question.minLength || question.maxLength
+      ? `${question.minLength || "0"}-${question.maxLength || "any"} chars`
+      : null,
+  ].filter((chip): chip is string => Boolean(chip));
+
   return (
     <article
       ref={setNodeRef}
@@ -578,6 +590,25 @@ function SortableCustomQuestionCard({
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-slate-900">{question.label}</p>
         <p className="truncate text-xs text-slate-500">{question.controlName}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <span
+              key={chip}
+              className={[
+                "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                chip === "Mandatory"
+                  ? "bg-rose-100 text-rose-700"
+                  : chip === "Optional"
+                    ? "bg-slate-100 text-slate-600"
+                    : chip === "Default set"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-cyan-100 text-cyan-700",
+              ].join(" ")}
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -1055,56 +1086,6 @@ export function MembershipQuestionsStepPage() {
           <MembershipQuestionsSkeleton />
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">Custom Questions</p>
-                <p className="text-xs text-slate-500">Add standalone questions directly on the membership type.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => openCustomQuestionModal()}
-                disabled={isSaving || customFormControls.length === 0}
-                className="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Add Custom Question
-              </button>
-            </div>
-
-            {customQuestions.length > 0 ? (
-              <div className="rounded-[1.5rem] border border-cyan-200 bg-cyan-50 p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-cyan-900">Added custom questions</p>
-                    <p className="mt-1 text-xs text-cyan-700">Drag the cards to change their order.</p>
-                  </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-cyan-700">
-                    {customQuestions.length}
-                  </span>
-                </div>
-
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  modifiers={[constrainSelectedFormDragToParent]}
-                  onDragEnd={onCustomQuestionsDragEnd}
-                >
-                  <SortableContext items={customQuestions.map((question) => question.id)} strategy={verticalListSortingStrategy}>
-                    <div className="mt-4 space-y-3">
-                        {customQuestions.map((question) => (
-                          <SortableCustomQuestionCard
-                            key={question.id}
-                            question={question}
-                            onEdit={openCustomQuestionModal}
-                            showSortIndicator={customQuestions.length > 1}
-                            onDelete={requestCustomQuestionRemoval}
-                          />
-                        ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              </div>
-            ) : null}
-
             <fieldset ref={customFormDropdownRef} className="space-y-2" disabled={isSaving}>
               <legend className="text-sm font-semibold text-slate-800">Custom Forms</legend>
               <button
@@ -1190,6 +1171,59 @@ export function MembershipQuestionsStepPage() {
             </fieldset>
 
             {customForms.length === 0 ? <MembershipQuestionsEmpty /> : null}
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Custom Questions</p>
+                <p className="text-xs text-slate-500">Add standalone questions directly on the membership type.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => openCustomQuestionModal()}
+                disabled={isSaving || customFormControls.length === 0}
+                className="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Add Custom Question
+              </button>
+            </div>
+
+            {customQuestions.length > 0 ? (
+              <div className="rounded-[1.5rem] border border-cyan-200 bg-cyan-50 p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-cyan-900">Added custom questions</p>
+                    <p className="mt-1 text-xs text-cyan-700">Drag the cards to change their order.</p>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-cyan-700">
+                    {customQuestions.length}
+                  </span>
+                </div>
+
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[constrainSelectedFormDragToParent]}
+                  onDragEnd={onCustomQuestionsDragEnd}
+                >
+                  <SortableContext
+                    items={customQuestions.map((question) => question.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="mt-4 space-y-3">
+                      {customQuestions.map((question) => (
+                        <SortableCustomQuestionCard
+                          key={question.id}
+                          question={question}
+                          onEdit={openCustomQuestionModal}
+                          showSortIndicator={customQuestions.length > 1}
+                          onDelete={requestCustomQuestionRemoval}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            ) : null}
 
             {isSaving ? <p className="text-sm font-medium text-cyan-700">Saving questions...</p> : null}
           </>
