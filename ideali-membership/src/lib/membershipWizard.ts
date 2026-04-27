@@ -576,35 +576,37 @@ export async function saveMembershipQuestionsStep(
     throw new Error("membershipTypeUniqueId is required for membership questions saving.");
   }
 
+  const requestBody = {
+    customFormUniqueIds: customFormUniqueIds && customFormUniqueIds.length > 0 ? customFormUniqueIds : null,
+    customQuestions:
+      customQuestions && customQuestions.length > 0
+        ? customQuestions.map((question) => ({
+            uniqueId: question.id,
+            controlId: question.controlId,
+            controlName: question.controlName,
+            controlType: question.controlType,
+            iconClass: question.iconClass,
+            label: question.label,
+            placeHolder: question.placeHolder,
+            tooltip: question.tooltip,
+            required: question.required,
+            minLength: question.minLength,
+            maxLength: question.maxLength,
+            defaultValue: question.defaultValue,
+            displayOrder: question.displayOrder,
+            options: question.options.map((option) => ({
+              uniqueId: option.id,
+              displayText: option.displayText,
+              value: option.value,
+              isDefault: option.isDefault,
+            })),
+          }))
+        : null,
+  };
+
   const payload = await postJson<unknown>(
     `/api/membership/type/wizard/${membershipTypeUniqueId}/questions?stepNumber=${stepNumber}`,
-    {
-      customFormUniqueIds: customFormUniqueIds && customFormUniqueIds.length > 0 ? customFormUniqueIds : null,
-      customQuestions:
-        customQuestions && customQuestions.length > 0
-          ? customQuestions.map((question) => ({
-              uniqueId: question.id,
-              controlId: question.controlId,
-              controlName: question.controlName,
-              controlType: question.controlType,
-              iconClass: question.iconClass,
-              label: question.label,
-              placeHolder: question.placeHolder,
-              tooltip: question.tooltip,
-              required: question.required,
-              minLength: question.minLength,
-              maxLength: question.maxLength,
-              defaultValue: question.defaultValue,
-              displayOrder: question.displayOrder,
-              options: question.options.map((option) => ({
-                uniqueId: option.id,
-                displayText: option.displayText,
-                value: option.value,
-                isDefault: option.isDefault,
-              })),
-            }))
-          : null,
-    },
+    requestBody,
   );
 
   const responseData = readResponseData(payload);

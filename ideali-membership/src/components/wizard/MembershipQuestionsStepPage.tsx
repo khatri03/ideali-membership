@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { MEMBERSHIP_QUESTIONS_CONTENT } from "./MembershipQuestionsStepPage.fields";
 import { useMembershipQuestionsStep } from "./MembershipQuestionsStepPage.hook";
 import type { CustomFormControl, CustomFormListItem } from "../../types/customForms";
@@ -1049,6 +1049,16 @@ export function MembershipQuestionsStepPage() {
     if (!over || active.id === over.id) {
       return;
     }
+
+    const oldIndex = selectedCustomFormUniqueIds.indexOf(String(active.id));
+    const newIndex = selectedCustomFormUniqueIds.indexOf(String(over.id));
+
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+      return;
+    }
+
+    const nextOrder = arrayMove(selectedCustomFormUniqueIds, oldIndex, newIndex);
+    console.log(nextOrder);
 
     reorderSelectedCustomFormUniqueIds(String(active.id), String(over.id));
   }

@@ -294,6 +294,10 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     });
   }, [currentMembershipTypeUniqueId, customQuestions, isSaving, navigate, selectedCustomFormUniqueIds, setFooterActions]);
 
+  useEffect(() => {
+    console.log("[MembershipQuestions] custom form order state", selectedCustomFormUniqueIds);
+  }, [selectedCustomFormUniqueIds]);
+
   const openCustomFormPreview = async (customFormUniqueId: string) => {
     const formItem = customForms.find((form) => form.value === customFormUniqueId);
     if (!formItem) {
@@ -556,7 +560,8 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
           return current;
         }
 
-        return arrayMove(current, oldIndex, newIndex);
+        const nextOrder = arrayMove(current, oldIndex, newIndex);
+        return nextOrder;
       });
       setError("");
     },
