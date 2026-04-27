@@ -8,6 +8,7 @@ import { MembershipBannerStepPage } from "./components/wizard/MembershipBannerSt
 import { MembershipColorStepPage } from "./components/wizard/MembershipColorStepPage";
 import { MembershipPaymentAccountStepPage } from "./components/wizard/MembershipPaymentAccountStepPage";
 import { MembershipPricingStepPage } from "./components/wizard/MembershipPricingStepPage";
+import { MembershipDiscountCouponsStepPage } from "./components/wizard/MembershipDiscountCouponsStepPage";
 import { MembershipQuestionsStepPage } from "./components/wizard/MembershipQuestionsStepPage";
 import { MembershipThankYouEmailStepPage } from "./components/wizard/MembershipThankYouEmailStepPage";
 import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
@@ -106,7 +107,7 @@ function RouterApp() {
         <Route element={<WizardLayout />}>
           <Route path="membership/type/wizard">
             <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
-            <Route path="title" element={<MembershipTitleStepPage />} />
+              <Route path="title" element={<MembershipTitleStepPage />} />
               <Route path=":membershipTypeUniqueId">
               <Route index element={<MembershipWizardResumePage />} />
               <Route path="title" element={<MembershipTitleStepPage />} />
@@ -116,10 +117,11 @@ function RouterApp() {
               <Route path="banner" element={<MembershipBannerStepPage />} />
               <Route path="payment-account" element={<MembershipPaymentAccountStepPage />} />
               <Route path="pricing" element={<MembershipPricingStepPage />} />
+              <Route path="discount-coupons" element={<MembershipDiscountCouponsStepPage />} />
               <Route path="questions" element={<MembershipQuestionsStepPage />} />
               <Route path="custom-forms" element={<Navigate to="questions" replace />} />
               <Route path="thank-you-email" element={<MembershipThankYouEmailStepPage />} />
-              {MEMBERSHIP_WIZARD_STEPS.slice(8).map((step) => (
+              {MEMBERSHIP_WIZARD_STEPS.slice(9).map((step) => (
                 <Route
                   key={step.to}
                   path={getWizardStepSegment(step.to)}

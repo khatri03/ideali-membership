@@ -6,5 +6,5 @@ export const MEMBERSHIP_QUESTIONS_CONTENT = {
   emptyStateDescription: "Create a custom form in the organizer area first, then come back here to attach it.",
 };
 
-export const MEMBERSHIP_QUESTIONS_STEP_NUMBER = 7;
-export const MEMBERSHIP_QUESTIONS_NEXT_STEP_NUMBER = 8;
+export const MEMBERSHIP_QUESTIONS_STEP_NUMBER = 8;
+export const MEMBERSHIP_QUESTIONS_NEXT_STEP_NUMBER = 9;

@@ -38,6 +38,11 @@ export const MEMBERSHIP_WIZARD_STEPS: MembershipWizardStep[] = [
     to: APP_ROUTES.membershipWizardPricing,
   },
   {
+    label: "Discount Coupons",
+    description: "Introduce discount codes for this membership plan.",
+    to: APP_ROUTES.membershipWizardDiscountCoupons,
+  },
+  {
     label: "Questions",
     description: "Attach the questions that members must complete.",
     to: APP_ROUTES.membershipWizardQuestions,

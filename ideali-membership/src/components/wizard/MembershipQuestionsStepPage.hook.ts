@@ -232,7 +232,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
       onBack: () =>
         navigate(
           buildMembershipWizardStepPath(
-            APP_ROUTES.membershipWizardPricing,
+            APP_ROUTES.membershipWizardDiscountCoupons,
             currentMembershipTypeUniqueId,
             MEMBERSHIP_QUESTIONS_STEP_NUMBER - 1,
           ),

@@ -195,7 +195,7 @@ export function useMembershipPricingStep(): MembershipPricingStepState {
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardQuestions,
+                APP_ROUTES.membershipWizardDiscountCoupons,
                 savedMembershipTypeUniqueId,
                 MEMBERSHIP_PRICING_NEXT_STEP_NUMBER,
               ),

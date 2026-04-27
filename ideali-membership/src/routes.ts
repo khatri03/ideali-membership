@@ -17,6 +17,7 @@ export const APP_ROUTES = {
   membershipWizardColor: "/membership/type/wizard/:membershipTypeUniqueId/color",
   membershipWizardBanner: "/membership/type/wizard/:membershipTypeUniqueId/banner",
   membershipWizardPricing: "/membership/type/wizard/:membershipTypeUniqueId/pricing",
+  membershipWizardDiscountCoupons: "/membership/type/wizard/:membershipTypeUniqueId/discount-coupons",
   membershipWizardPaymentAccount: "/membership/type/wizard/:membershipTypeUniqueId/payment-account",
   membershipWizardQuestions: "/membership/type/wizard/:membershipTypeUniqueId/questions",
   membershipWizardCustomForms: "/membership/type/wizard/:membershipTypeUniqueId/custom-forms",
