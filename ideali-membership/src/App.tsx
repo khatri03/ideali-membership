@@ -9,6 +9,7 @@ import { MembershipColorStepPage } from "./components/wizard/MembershipColorStep
 import { MembershipPaymentAccountStepPage } from "./components/wizard/MembershipPaymentAccountStepPage";
 import { MembershipPricingStepPage } from "./components/wizard/MembershipPricingStepPage";
 import { MembershipQuestionsStepPage } from "./components/wizard/MembershipQuestionsStepPage";
+import { MembershipThankYouEmailStepPage } from "./components/wizard/MembershipThankYouEmailStepPage";
 import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
 import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage";
 import { WizardLayout } from "./components/wizard/WizardLayout";
@@ -117,7 +118,8 @@ function RouterApp() {
               <Route path="pricing" element={<MembershipPricingStepPage />} />
               <Route path="questions" element={<MembershipQuestionsStepPage />} />
               <Route path="custom-forms" element={<Navigate to="questions" replace />} />
-              {MEMBERSHIP_WIZARD_STEPS.slice(7).map((step) => (
+              <Route path="thank-you-email" element={<MembershipThankYouEmailStepPage />} />
+              {MEMBERSHIP_WIZARD_STEPS.slice(8).map((step) => (
                 <Route
                   key={step.to}
                   path={getWizardStepSegment(step.to)}

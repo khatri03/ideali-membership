@@ -29,6 +29,21 @@ export interface MembershipQuestionsInfo {
   stepNo: number;
 }
 
+export interface MembershipDescriptionInfo {
+  uniqueId: string;
+  description: string;
+  emailSubject: string;
+  emailTemplate: string;
+  stepNo: number;
+}
+
+export interface MembershipTypePlaceholderItem {
+  id?: number;
+  uniqueId: string;
+  displayText: string;
+  placeHolderText: string;
+}
+
 export interface MembershipCustomQuestionOptionDraft {
   id: string;
   displayText: string;

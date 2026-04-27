@@ -3,7 +3,9 @@ import type {
   MembershipPaymentMethodOption,
   MembershipCustomQuestionDraft,
   MembershipCustomQuestionOptionDraft,
+  MembershipDescriptionInfo,
   MembershipQuestionsInfo,
+  MembershipTypePlaceholderItem,
   MembershipTitleInfo,
   MembershipTypeListItem,
   OrganizerPaymentAccountSelectionItem,
@@ -31,6 +33,47 @@ function readText(value: unknown) {
 
 function readNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function isMembershipTypePlaceholderRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    "UniqueId" in record ||
+    "uniqueId" in record ||
+    "PlaceHolderText" in record ||
+    "placeHolderText" in record
+  );
+}
+
+function flattenMembershipTypePlaceholderRecords(value: unknown): Array<Record<string, unknown>> {
+  const items: Array<Record<string, unknown>> = [];
+
+  function visit(node: unknown) {
+    if (!node) {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+
+    if (isMembershipTypePlaceholderRecord(node)) {
+      items.push(node);
+      return;
+    }
+
+    if (typeof node === "object") {
+      Object.values(node as Record<string, unknown>).forEach(visit);
+    }
+  }
+
+  visit(value);
+  return items;
 }
 
 const wizardResponseCache = new Map<string, unknown>();
@@ -190,6 +233,8 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
     const description = readText(responseData?.Description ?? responseData?.description);
+    const emailSubject = readText(responseData?.EmailSubject ?? responseData?.emailSubject);
+    const emailTemplate = readText(responseData?.EmailTemplate ?? responseData?.emailTemplate);
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
@@ -199,9 +244,28 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
     return {
       uniqueId,
       description,
+      emailSubject,
+      emailTemplate,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
-    };
+    } satisfies MembershipDescriptionInfo;
   });
+}
+
+export async function getMembershipTypePlaceholders() {
+  const payload = await getJson<unknown>("/api/membership/type/email-template/place-holders");
+  const responseData = readResponseData(payload);
+  const items = flattenMembershipTypePlaceholderRecords(responseData);
+
+  return items
+    .map(
+      (item): MembershipTypePlaceholderItem => ({
+        id: readNumber(item.Id ?? item.id),
+        uniqueId: readText(item.UniqueId ?? item.uniqueId),
+        displayText: readText(item.DisplayText ?? item.displayText),
+        placeHolderText: readText(item.PlaceHolderText ?? item.placeHolderText),
+      }),
+    )
+    .filter((item) => item.uniqueId && item.placeHolderText);
 }
 
 export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
@@ -302,7 +366,11 @@ export async function saveMembershipPricingStep(
 }
 
 export async function saveMembershipDescriptionStep(
-  description: string | null,
+  request: {
+    description: string | null;
+    emailSubject: string | null;
+    emailTemplate: string | null;
+  },
   stepNumber: number,
   membershipTypeUniqueId?: string,
 ) {
@@ -312,7 +380,7 @@ export async function saveMembershipDescriptionStep(
 
   const payload = await postJson<unknown>(
     `/api/membership/type/wizard/${membershipTypeUniqueId}/description?stepNumber=${stepNumber}`,
-    { description },
+    request,
   );
 
   const responseData = readResponseData(payload);

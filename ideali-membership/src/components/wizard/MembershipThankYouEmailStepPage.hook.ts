@@ -3,22 +3,27 @@ import { useEditor } from "@tiptap/react";
 import { useNavigate, useParams } from "react-router-dom";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { TextStyle, Color } from "@tiptap/extension-text-style";
+import Link from "@tiptap/extension-link";
+import TextAlign from "@tiptap/extension-text-align";
+import Underline from "@tiptap/extension-underline";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
   getMembershipDescriptionInfo,
+  getMembershipTypePlaceholders,
   invalidateMembershipWizardDescriptionCache,
   saveMembershipDescriptionStep,
 } from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import {
-  MEMBERSHIP_DESCRIPTION_CONTENT,
-  MEMBERSHIP_DESCRIPTION_NEXT_STEP_NUMBER,
-  MEMBERSHIP_DESCRIPTION_STEP_NUMBER,
-} from "./MembershipDescriptionStepPage.fields";
-import { normalizeMembershipDescription } from "./MembershipDescriptionStepPage.schema";
-import type { MembershipDescriptionStepState } from "./MembershipDescriptionStepPage.types";
+  MEMBERSHIP_THANK_YOU_EMAIL_CONTENT,
+  MEMBERSHIP_THANK_YOU_EMAIL_NEXT_STEP_NUMBER,
+  MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
+} from "./MembershipThankYouEmailStepPage.fields";
+import { FontSizeExtension, LineHeightExtension } from "./tiptapEmailComposerExtensions";
+import type { MembershipThankYouEmailStepState } from "./MembershipThankYouEmailStepPage.types";
 
-async function persistMembershipDescriptionStepWithFeedback({
+async function persistThankYouEmailStepWithFeedback({
   description,
   emailSubject,
   emailTemplate,
@@ -43,7 +48,7 @@ async function persistMembershipDescriptionStepWithFeedback({
   try {
     const result = await saveMembershipDescriptionStep(
       {
-        description: normalizeMembershipDescription(description),
+        description,
         emailSubject,
         emailTemplate,
       },
@@ -52,13 +57,13 @@ async function persistMembershipDescriptionStepWithFeedback({
     );
     await onSuccess(result.membershipTypeUniqueId);
   } catch (saveError) {
-    setError(saveError instanceof Error ? saveError.message : "Unable to save membership description.");
+    setError(saveError instanceof Error ? saveError.message : "Unable to save thank you email.");
   } finally {
     setIsSaving(false);
   }
 }
 
-export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
+export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepState {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
@@ -67,23 +72,38 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
-  const [descriptionHtml, setDescriptionHtml] = useState("<p></p>");
-  const editorContentRef = useRef<string>("<p></p>");
-  const emailSubjectRef = useRef<string>("");
-  const emailTemplateRef = useRef<string>("<p></p>");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailTemplateHtml, setEmailTemplateHtml] = useState("<p></p>");
+  const [placeholders, setPlaceholders] = useState<MembershipThankYouEmailStepState["placeholders"]>([]);
+  const descriptionRef = useRef("<p></p>");
+  const emailTemplateRef = useRef("<p></p>");
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
       }),
+      TextStyle,
+      Color.configure({ types: ["textStyle"] }),
+      FontSizeExtension,
+      LineHeightExtension,
+      Link.configure({
+        autolink: true,
+        defaultProtocol: "https",
+        linkOnPaste: true,
+        openOnClick: false,
+      }),
+      Underline,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
       Placeholder.configure({
-        placeholder: MEMBERSHIP_DESCRIPTION_CONTENT.placeholder,
+        placeholder: MEMBERSHIP_THANK_YOU_EMAIL_CONTENT.placeholder,
       }),
     ],
-    content: editorContentRef.current,
+    content: emailTemplateRef.current,
     onUpdate: ({ editor: currentEditor }) => {
-      editorContentRef.current = currentEditor.getHTML();
+      emailTemplateRef.current = currentEditor.getHTML();
     },
     editorProps: {
       attributes: {
@@ -102,27 +122,30 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
 
     let isMounted = true;
 
-    async function loadMembershipDescription() {
+    async function loadThankYouEmail() {
       setIsLoading(true);
       setError("");
 
       try {
-        const info = await getMembershipDescriptionInfo(currentMembershipTypeUniqueId);
+        const [info, placeholderItems] = await Promise.all([
+          getMembershipDescriptionInfo(currentMembershipTypeUniqueId),
+          getMembershipTypePlaceholders(),
+        ]);
         if (!isMounted) {
           return;
         }
 
-        const nextDescriptionHtml = info.description || "<p></p>";
-        editorContentRef.current = nextDescriptionHtml;
-        emailSubjectRef.current = info.emailSubject || "";
+        descriptionRef.current = info.description || "<p></p>";
+        setEmailSubject(info.emailSubject || "");
         emailTemplateRef.current = info.emailTemplate || "<p></p>";
-        setDescriptionHtml(nextDescriptionHtml);
+        setEmailTemplateHtml(info.emailTemplate || "<p></p>");
+        setPlaceholders(placeholderItems);
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
-        setError(loadError instanceof Error ? loadError.message : "Unable to load membership description.");
+        setError(loadError instanceof Error ? loadError.message : "Unable to load thank you email.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -130,7 +153,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
       }
     }
 
-    void loadMembershipDescription();
+    void loadThankYouEmail();
 
     return () => {
       isMounted = false;
@@ -142,8 +165,8 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
       return;
     }
 
-    editor.commands.setContent(descriptionHtml, { emitUpdate: false });
-  }, [descriptionHtml, editor]);
+    editor.commands.setContent(emailTemplateHtml, { emitUpdate: false });
+  }, [editor, emailTemplateHtml]);
 
   useLayoutEffect(() => {
     setFooterActions({
@@ -155,52 +178,61 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
       saveNextLabel: "Save & Continue",
       saveExitLabel: "Save & Exit",
       isSaving,
+      onBack: () =>
+        navigate(
+          buildMembershipWizardStepPath(
+            APP_ROUTES.membershipWizardQuestions,
+            currentMembershipTypeUniqueId,
+            MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER - 1,
+          ),
+          { replace: true },
+        ),
       onSkip: () =>
-        void persistMembershipDescriptionStepWithFeedback({
-          description: null,
-          emailSubject: emailSubjectRef.current.trim().length > 0 ? emailSubjectRef.current : null,
-          emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
-          stepNumber: MEMBERSHIP_DESCRIPTION_STEP_NUMBER,
+        void persistThankYouEmailStepWithFeedback({
+          description: descriptionRef.current,
+          emailSubject: null,
+          emailTemplate: null,
+          stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setIsSaving,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardColor,
+                APP_ROUTES.membershipWizardAdvanceSettings,
                 savedMembershipTypeUniqueId,
-                MEMBERSHIP_DESCRIPTION_NEXT_STEP_NUMBER,
+                MEMBERSHIP_THANK_YOU_EMAIL_NEXT_STEP_NUMBER,
               ),
               { replace: true },
             );
           },
         }),
       onSaveNext: () =>
-        void persistMembershipDescriptionStepWithFeedback({
-          description: editorContentRef.current,
-          emailSubject: emailSubjectRef.current.trim().length > 0 ? emailSubjectRef.current : null,
+        void persistThankYouEmailStepWithFeedback({
+          description: descriptionRef.current,
+          emailSubject: emailSubject.trim().length > 0 ? emailSubject : null,
           emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
-          stepNumber: MEMBERSHIP_DESCRIPTION_STEP_NUMBER,
+          stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setIsSaving,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardColor,
+                APP_ROUTES.membershipWizardAdvanceSettings,
                 savedMembershipTypeUniqueId,
-                MEMBERSHIP_DESCRIPTION_NEXT_STEP_NUMBER,
+                MEMBERSHIP_THANK_YOU_EMAIL_NEXT_STEP_NUMBER,
               ),
               { replace: true },
             );
           },
         }),
       onSaveExit: () =>
-        void persistMembershipDescriptionStepWithFeedback({
-          description: editorContentRef.current,
-          emailSubject: emailSubjectRef.current.trim().length > 0 ? emailSubjectRef.current : null,
+        void persistThankYouEmailStepWithFeedback({
+          description: descriptionRef.current,
+          emailSubject: emailSubject.trim().length > 0 ? emailSubject : null,
           emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
-          stepNumber: MEMBERSHIP_DESCRIPTION_STEP_NUMBER,
+          stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setIsSaving,
@@ -209,18 +241,21 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           },
         }),
     });
-  }, [currentMembershipTypeUniqueId, editor, isSaving, navigate, setFooterActions]);
+  }, [currentMembershipTypeUniqueId, emailSubject, isSaving, navigate, setFooterActions]);
 
   return {
+    emailSubject,
     editor,
     error,
     isLoading,
     isSaving,
+    placeholders,
     reload: () => {
       if (currentMembershipTypeUniqueId) {
         invalidateMembershipWizardDescriptionCache(currentMembershipTypeUniqueId);
       }
       setReloadTick((current) => current + 1);
     },
+    setEmailSubject,
   };
 }
