@@ -332,8 +332,8 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                       {footerActions.showSaveNext ? (
                         <button
                           type="button"
-                          onClick={footerActions.onSaveNext}
-                          disabled={footerActions.isSaving || !footerActions.onSaveNext}
+                          onClick={footerActions.onSaveNext ?? (() => {})}
+                          disabled={footerActions.isSaving}
                           className="rounded-full border border-cyan-200 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {footerActions.isSaving ? (

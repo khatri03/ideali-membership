@@ -34,6 +34,7 @@ async function persistThankYouEmailStepWithFeedback({
   stepNumber,
   membershipTypeUniqueId,
   setError,
+  setValidationErrors,
   setIsSaving,
   onSuccess,
 }: {
@@ -43,10 +44,12 @@ async function persistThankYouEmailStepWithFeedback({
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
+  setValidationErrors: (value: { emailBody?: string; emailSubject?: string }) => void;
   setIsSaving: (value: boolean) => void;
   onSuccess: (membershipTypeUniqueId: string) => void | Promise<void>;
 }) {
   setError("");
+  setValidationErrors({});
   setIsSaving(true);
 
   try {
@@ -75,16 +78,14 @@ function hasMeaningfulEditorContent(editor: ReturnType<typeof useEditor> | null)
   return !editor.isEmpty && editor.getText().trim().length > 0;
 }
 
-function validateThankYouEmailStep(emailSubject: string, editor: ReturnType<typeof useEditor> | null) {
-  if (emailSubject.trim().length === 0) {
-    return "Email subject is required.";
-  }
-
-  if (!hasMeaningfulEditorContent(editor)) {
-    return "Email body is required.";
-  }
-
-  return "";
+function validateThankYouEmailStep(
+  subjectEditor: ReturnType<typeof useEditor> | null,
+  editor: ReturnType<typeof useEditor> | null,
+) {
+  return {
+    emailSubject: hasMeaningfulEditorContent(subjectEditor) ? "" : "Email subject is required.",
+    emailBody: hasMeaningfulEditorContent(editor) ? "" : "Email body is required.",
+  };
 }
 
 export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepState {
@@ -96,11 +97,51 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
-  const [emailSubject, setEmailSubject] = useState("");
+  const [emailSubjectHtml, setEmailSubjectHtml] = useState("<p></p>");
+  const [validationErrors, setValidationErrors] = useState<{
+    emailBody?: string;
+    emailSubject?: string;
+  }>({});
   const [emailTemplateHtml, setEmailTemplateHtml] = useState("<p></p>");
   const [placeholders, setPlaceholders] = useState<MembershipThankYouEmailStepState["placeholders"]>([]);
   const descriptionRef = useRef("<p></p>");
+  const emailSubjectRef = useRef("<p></p>");
   const emailTemplateRef = useRef("<p></p>");
+
+  const subjectEditor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [2, 3] },
+      }),
+      TextStyle,
+      Color.configure({ types: ["textStyle"] }),
+      FontSizeExtension,
+      MembershipPlaceholderTokenExtension,
+      Link.configure({
+        autolink: true,
+        defaultProtocol: "https",
+        linkOnPaste: true,
+        openOnClick: false,
+      }),
+      Underline,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Placeholder.configure({
+        placeholder: "Write the thank you email subject here...",
+      }),
+    ],
+    content: emailSubjectHtml,
+    onUpdate: ({ editor: currentEditor }) => {
+      emailSubjectRef.current = currentEditor.getHTML();
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "min-h-[1.75rem] text-sm leading-6 text-slate-900 outline-none",
+      },
+    },
+  });
 
   const editor = useEditor({
     extensions: [
@@ -161,7 +202,8 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
         }
 
         descriptionRef.current = info.description || "<p></p>";
-        setEmailSubject(info.emailSubject || "");
+        emailSubjectRef.current = info.emailSubject || "<p></p>";
+        setEmailSubjectHtml(info.emailSubject || "<p></p>");
         emailTemplateRef.current = info.emailTemplate || "<p></p>";
         setEmailTemplateHtml(info.emailTemplate || "<p></p>");
         setPlaceholders(placeholderItems);
@@ -186,6 +228,14 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
   }, [currentMembershipTypeUniqueId, reloadTick]);
 
   useEffect(() => {
+    if (!subjectEditor) {
+      return;
+    }
+
+    subjectEditor.commands.setContent(emailSubjectHtml, { emitUpdate: false });
+  }, [subjectEditor, emailSubjectHtml]);
+
+  useEffect(() => {
     if (!editor) {
       return;
     }
@@ -195,19 +245,21 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
 
   useLayoutEffect(() => {
     const persistWithValidation = (onSuccess: (savedMembershipTypeUniqueId: string) => void | Promise<void>) => {
-      const validationError = validateThankYouEmailStep(emailSubject, editor);
-      if (validationError) {
-        setError(validationError);
+      const nextValidationErrors = validateThankYouEmailStep(subjectEditor, editor);
+      setValidationErrors(nextValidationErrors);
+
+      if (nextValidationErrors.emailSubject || nextValidationErrors.emailBody) {
         return;
       }
 
       void persistThankYouEmailStepWithFeedback({
         description: descriptionRef.current,
-        emailSubject: emailSubject.trim(),
+        emailSubject: emailSubjectRef.current,
         emailTemplate: emailTemplateRef.current,
         stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
         membershipTypeUniqueId: currentMembershipTypeUniqueId,
         setError,
+        setValidationErrors,
         setIsSaving,
         onSuccess,
       });
@@ -239,6 +291,7 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
           stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
+          setValidationErrors: () => setValidationErrors({}),
           setIsSaving,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
@@ -267,21 +320,21 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
           navigate(APP_ROUTES.membershipTypes, { replace: true });
         }),
     });
-  }, [currentMembershipTypeUniqueId, editor, emailSubject, isSaving, navigate, setFooterActions]);
+  }, [currentMembershipTypeUniqueId, editor, isSaving, navigate, setFooterActions, subjectEditor]);
 
   return {
-    emailSubject,
     editor,
     error,
     isLoading,
     isSaving,
+    validationErrors,
     placeholders,
+    subjectEditor,
     reload: () => {
       if (currentMembershipTypeUniqueId) {
         invalidateMembershipWizardDescriptionCache(currentMembershipTypeUniqueId);
       }
       setReloadTick((current) => current + 1);
     },
-    setEmailSubject,
   };
 }
