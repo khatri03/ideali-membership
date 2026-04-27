@@ -75,6 +75,12 @@ select {
   will-change: transform, opacity;
 }
 
+.membership-placeholder-token.ProseMirror-selectednode {
+  background: rgba(207, 250, 254, 0.95);
+  border-color: rgba(103, 232, 249, 0.95);
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.18);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .membership-color-arrow-motion {
     animation: none;
