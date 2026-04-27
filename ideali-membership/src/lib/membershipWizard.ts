@@ -580,7 +580,9 @@ export async function saveMembershipQuestionsStep(
     customFormUniqueIds: customFormUniqueIds && customFormUniqueIds.length > 0 ? customFormUniqueIds : null,
     customQuestions:
       customQuestions && customQuestions.length > 0
-        ? customQuestions.map((question) => ({
+        ? [...customQuestions]
+            .sort((left, right) => left.displayOrder - right.displayOrder)
+            .map((question) => ({
             uniqueId: question.id,
             controlId: question.controlId,
             controlName: question.controlName,
