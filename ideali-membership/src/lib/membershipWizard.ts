@@ -178,8 +178,8 @@ export async function saveMembershipTitleStep(
   membershipTypeUniqueId?: string,
 ) {
   const basePath = membershipTypeUniqueId
-    ? `/api/membership/type/wizard/${membershipTypeUniqueId}/title`
-    : "/api/membership/type/wizard/title";
+    ? `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/title`
+    : "/api/organizer/membership/type/wizard/title";
 
   const payload = await postJson<unknown>(
     `${basePath}?stepNumber=${stepNumber}`,
@@ -212,7 +212,7 @@ export async function saveMembershipTitleStep(
 }
 
 export async function getMembershipTypes() {
-  const payload = await getJson<unknown>("/api/membership/type/list");
+  const payload = await getJson<unknown>("/api/organizer/membership/type/list");
   const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null;
   const items = (Array.isArray(responseData?.PageData)
     ? responseData?.PageData
@@ -231,7 +231,7 @@ export async function getMembershipTypes() {
 }
 
 export async function getMembershipTypeDiscountsEnabled(membershipTypeUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/membership/type/${membershipTypeUniqueId}/discounts`);
+  const payload = await getJson<unknown>(`/api/organizer/membership/type/${membershipTypeUniqueId}/discounts`);
   const responseData = readResponseData(payload);
   const discountsEnabled =
     typeof responseData === "boolean"
@@ -254,7 +254,7 @@ export async function updateMembershipTypeDiscountsEnabled(
   membershipTypeUniqueId: string,
   discountsEnabled: boolean,
 ) {
-  return postJson(`/api/membership/type/${membershipTypeUniqueId}/discounts`, {
+  return postJson(`/api/organizer/membership/type/${membershipTypeUniqueId}/discounts`, {
     discountsEnabled,
   });
 }
@@ -317,7 +317,7 @@ export async function createMembershipDiscountCoupon(
 
 export async function getMembershipTitleInfo(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:title:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/title`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/title`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
@@ -338,7 +338,7 @@ export async function getMembershipTitleInfo(membershipTypeUniqueId: string) {
 
 export async function getMembershipDescriptionInfo(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:description:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/description`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/description`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
@@ -362,7 +362,7 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
 }
 
 export async function getMembershipTypePlaceholders() {
-  const payload = await getJson<unknown>("/api/membership/type/email-template/place-holders");
+  const payload = await getJson<unknown>("/api/organizer/membership/type/email-template/place-holders");
   const responseData = readResponseData(payload);
   const groups: MembershipTypePlaceholderGroup[] = [];
 
@@ -411,7 +411,7 @@ export async function getMembershipTypePlaceholders() {
 
 export async function getMembershipPricingInfo(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:pricing:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/pricing`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/pricing`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
@@ -471,7 +471,7 @@ export async function saveMembershipPricingStep(
   }
 
   const payload = await postJson<unknown>(
-    `/api/membership/type/wizard/${membershipTypeUniqueId}/pricing?stepNumber=${stepNumber}`,
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/pricing?stepNumber=${stepNumber}`,
     {
       tenure: pricing,
       membershipCharges,
@@ -520,7 +520,7 @@ export async function saveMembershipDescriptionStep(
   }
 
   const payload = await postJson<unknown>(
-    `/api/membership/type/wizard/${membershipTypeUniqueId}/description?stepNumber=${stepNumber}`,
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/description?stepNumber=${stepNumber}`,
     request,
   );
 
@@ -551,7 +551,7 @@ export async function saveMembershipDescriptionStep(
 
 export async function getMembershipColorInfo(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:color:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/color`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/color`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
@@ -572,7 +572,7 @@ export async function getMembershipColorInfo(membershipTypeUniqueId: string) {
 
 export async function getMembershipBannerInfo(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:banner:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/banner`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/banner`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
@@ -593,7 +593,7 @@ export async function getMembershipBannerInfo(membershipTypeUniqueId: string) {
 
 export async function getMembershipPaymentAccountInfo(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:payment-account:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/payment-account`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/payment-account`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
@@ -622,7 +622,7 @@ export async function getMembershipPaymentAccountInfo(membershipTypeUniqueId: st
 
 export async function getMembershipQuestionsInfo(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:questions:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/questions`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/questions`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
     const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
@@ -745,7 +745,7 @@ export async function saveMembershipPaymentAccountStep(
   }
 
   const payload = await postJson<unknown>(
-    `/api/membership/type/wizard/${membershipTypeUniqueId}/payment-account?stepNumber=${stepNumber}`,
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/payment-account?stepNumber=${stepNumber}`,
     { paymentAccountUniqueId, paymentMethods },
   );
 
@@ -816,7 +816,7 @@ export async function saveMembershipQuestionsStep(
   };
 
   const payload = await postJson<unknown>(
-    `/api/membership/type/wizard/${membershipTypeUniqueId}/questions?stepNumber=${stepNumber}`,
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/questions?stepNumber=${stepNumber}`,
     requestBody,
   );
 
@@ -855,7 +855,7 @@ export async function saveMembershipBannerStep(
   }
 
   const payload = await postJson<unknown>(
-    `/api/membership/type/wizard/${membershipTypeUniqueId}/banner?stepNumber=${stepNumber}`,
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/banner?stepNumber=${stepNumber}`,
     { bannerUrl },
   );
 
@@ -894,7 +894,7 @@ export async function saveMembershipColorStep(
   }
 
   const payload = await postJson<unknown>(
-    `/api/membership/type/wizard/${membershipTypeUniqueId}/color?stepNumber=${stepNumber}`,
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/color?stepNumber=${stepNumber}`,
     { color },
   );
 
@@ -925,7 +925,7 @@ export async function saveMembershipColorStep(
 
 export async function getMembershipWizardProgress(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:progress:${membershipTypeUniqueId}`, async () => {
-    const payload = await getJson<unknown>(`/api/membership/type/wizard/${membershipTypeUniqueId}/progress`);
+    const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/progress`);
     const responseData = readResponseData(payload);
 
     if (typeof responseData === "number") {
