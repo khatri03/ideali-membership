@@ -197,6 +197,7 @@ function MembershipDiscountCouponModal({
   const [errors, setErrors] = useState<DiscountCouponDraftErrors>({});
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const codeInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -208,6 +209,16 @@ function MembershipDiscountCouponModal({
     setFormError("");
     setIsSaving(false);
   }, [initialDraft, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      codeInputRef.current?.focus();
+    }, 0);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
@@ -298,6 +309,7 @@ function MembershipDiscountCouponModal({
                 </div>
                 <div className="relative">
                   <input
+                    ref={codeInputRef}
                     value={draft.code}
                     onChange={(event) => updateDraft("code", sanitizeCouponCode(event.target.value))}
                     type="text"
@@ -621,12 +633,21 @@ export function MembershipDiscountCouponsStepPage() {
     };
   }, [currentMembershipTypeUniqueId]);
 
-  async function handleToggleDiscounts() {
+  function handleToggleDiscounts() {
     if (isLoading || isSaving) {
       return;
     }
 
-    setDiscountsEnabled((currentValue) => !currentValue);
+    setDiscountsEnabled((currentValue) => {
+      const nextValue = !currentValue;
+
+      if (nextValue && coupons.length === 0) {
+        setEditingCouponId(null);
+        setIsCouponModalOpen(true);
+      }
+
+      return nextValue;
+    });
   }
 
   async function saveDiscountsState(nextPath: string) {
@@ -886,12 +907,21 @@ export function MembershipDiscountCouponsStepPage() {
             <span>{toastMessage}</span>
           </div>
         ) : null}
-        {!discountsEnabled ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-            Enable discount coupons to start adding coupon rules.
-            </div>
-          ) : coupons.length > 0 ? (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+
+        {coupons.length > 0 ? (
+          <>
+            {!discountsEnabled ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+                Coupons are disabled until discount enabled.
+              </div>
+            ) : null}
+
+            <div
+              className={[
+                "overflow-hidden rounded-2xl border bg-white",
+                discountsEnabled ? "border-slate-200" : "border-slate-200 opacity-60 grayscale-[0.08]",
+              ].join(" ")}
+            >
               <table className="min-w-full table-fixed divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -913,11 +943,15 @@ export function MembershipDiscountCouponsStepPage() {
                             onClick={() => void handleCopyCouponCode(coupon)}
                             aria-label="Copy discount coupon code"
                             title={copiedCouponUniqueId === coupon.uniqueId ? "Copied" : "Copy"}
+                            disabled={!discountsEnabled}
                             className={[
                               "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition",
                               copiedCouponUniqueId === coupon.uniqueId
                                 ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                                : "border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700",
+                                : discountsEnabled
+                                  ? "border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                                  : "border-slate-200 bg-white text-slate-300",
+                              "disabled:cursor-not-allowed disabled:opacity-70",
                             ].join(" ")}
                           >
                             {copiedCouponUniqueId === coupon.uniqueId ? <CheckIcon /> : <CopyIcon />}
@@ -941,11 +975,15 @@ export function MembershipDiscountCouponsStepPage() {
                               aria-checked={coupon.isActive}
                               aria-label={`Toggle ${coupon.code} active state`}
                               onClick={() => handleToggleCouponActive(coupon.uniqueId)}
+                              disabled={!discountsEnabled}
                               className={[
                                 "relative inline-flex h-7 w-12 items-center rounded-full border transition",
                                 coupon.isActive
                                   ? "border-cyan-500 bg-cyan-500"
-                                  : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                                  : discountsEnabled
+                                    ? "border-slate-300 bg-slate-200 hover:bg-slate-300"
+                                    : "border-slate-300 bg-slate-200",
+                                "disabled:cursor-not-allowed disabled:opacity-70",
                               ].join(" ")}
                             >
                               <span
@@ -967,7 +1005,14 @@ export function MembershipDiscountCouponsStepPage() {
                             onClick={() => handleEditCoupon(coupon)}
                             aria-label="Edit discount coupon"
                             title="Edit"
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                            disabled={!discountsEnabled}
+                            className={[
+                              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-white transition",
+                              discountsEnabled
+                                ? "border-slate-200 text-slate-600 hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                                : "border-slate-200 text-slate-300",
+                              "disabled:cursor-not-allowed disabled:opacity-70",
+                            ].join(" ")}
                           >
                             <PencilIcon />
                           </button>
@@ -976,7 +1021,14 @@ export function MembershipDiscountCouponsStepPage() {
                             onClick={() => handleDeleteCoupon(coupon.uniqueId)}
                             aria-label="Delete discount coupon"
                             title="Delete"
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
+                            disabled={!discountsEnabled}
+                            className={[
+                              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-white transition",
+                              discountsEnabled
+                                ? "border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50"
+                                : "border-slate-200 text-slate-300",
+                              "disabled:cursor-not-allowed disabled:opacity-70",
+                            ].join(" ")}
                           >
                             <TrashIcon />
                           </button>
@@ -987,18 +1039,19 @@ export function MembershipDiscountCouponsStepPage() {
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              No discount coupons have been created yet.
-            </div>
-          )}
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+            No discount coupons have been created yet.
+          </div>
+        )}
 
-          {couponLoadError ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {couponLoadError}
-            </div>
-          ) : null}
-        </div>
+        {couponLoadError ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {couponLoadError}
+          </div>
+        ) : null}
+      </div>
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
