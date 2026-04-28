@@ -115,6 +115,10 @@ function buildGeneratedCouponCode(draft: DiscountCouponDraft) {
   return [prefix, normalizedValue, suffix, randomToken].filter(Boolean).join("").slice(0, 16);
 }
 
+function sanitizeCouponCode(value: string) {
+  return value.replace(/\s+/g, "").toUpperCase().slice(0, 16);
+}
+
 function validateCouponDraft(draft: DiscountCouponDraft) {
   const errors: DiscountCouponDraftErrors = {};
   const code = draft.code.trim();
@@ -124,6 +128,8 @@ function validateCouponDraft(draft: DiscountCouponDraft) {
 
   if (!code) {
     errors.code = "Code is required.";
+  } else if (/\s/.test(code)) {
+    errors.code = "Code cannot contain spaces.";
   } else if (code.length > 16) {
     errors.code = "Code cannot exceed 16 characters.";
   }
@@ -284,7 +290,7 @@ function MembershipDiscountCouponModal({
                 <div className="relative">
                   <input
                     value={draft.code}
-                    onChange={(event) => updateDraft("code", event.target.value.toUpperCase().slice(0, 16))}
+                    onChange={(event) => updateDraft("code", sanitizeCouponCode(event.target.value))}
                     type="text"
                     autoComplete="off"
                     maxLength={16}
@@ -775,7 +781,7 @@ export function MembershipDiscountCouponsStepPage() {
       <div className="mt-8 max-w-3xl rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <span className="text-sm font-semibold text-slate-800">Discount coupons</span>
+            <span className="text-sm font-semibold text-slate-800">Want To Enable Discounts?</span>
             <p className="text-xs leading-5 text-slate-500">Make membership discounts available for this plan.</p>
           </div>
 
@@ -810,7 +816,7 @@ export function MembershipDiscountCouponsStepPage() {
       <div className="mt-5 max-w-3xl rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-sm font-semibold text-slate-800">Coupon actions</span>
+            <span className="text-sm font-semibold text-slate-800">Available Coupons</span>
             <p className="text-xs leading-5 text-slate-500">
               Add coupons only after discounts are enabled.
             </p>
@@ -840,9 +846,9 @@ export function MembershipDiscountCouponsStepPage() {
             </div>
           ) : coupons.length > 0 ? (
             coupons.map((coupon) => (
-              <div key={coupon.uniqueId} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-start">
-                  <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+              <div key={coupon.uniqueId} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                     <div className="min-w-0">
                       <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Code</span>
                       <span className="mt-1 block truncate font-semibold text-slate-900">{coupon.code}</span>
@@ -861,51 +867,53 @@ export function MembershipDiscountCouponsStepPage() {
                     </div>
                   </div>
                   {isLocalCoupon(coupon) ? (
-                    <div className="flex items-center justify-between gap-4 md:min-w-[200px] md:justify-end">
-                      <div className="space-y-1">
-                        <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                          Is Active
-                        </span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={coupon.isActive}
-                          aria-label={`Toggle ${coupon.code} active state`}
-                          onClick={() => handleToggleCouponActive(coupon.uniqueId)}
-                          className={[
-                            "relative inline-flex h-7 w-12 items-center rounded-full border transition",
-                            coupon.isActive
-                              ? "border-cyan-500 bg-cyan-500"
-                              : "border-slate-300 bg-slate-200 hover:bg-slate-300",
-                          ].join(" ")}
-                        >
-                          <span
+                    <div className="flex flex-col items-start gap-3 md:items-end">
+                      <div className="flex items-center justify-end gap-3">
+                        <div className="space-y-1">
+                          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                            Is Active
+                          </span>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={coupon.isActive}
+                            aria-label={`Toggle ${coupon.code} active state`}
+                            onClick={() => handleToggleCouponActive(coupon.uniqueId)}
                             className={[
-                              "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition",
-                              coupon.isActive ? "translate-x-6" : "translate-x-1",
+                              "relative inline-flex h-7 w-12 items-center rounded-full border transition",
+                              coupon.isActive
+                                ? "border-cyan-500 bg-cyan-500"
+                                : "border-slate-300 bg-slate-200 hover:bg-slate-300",
                             ].join(" ")}
-                          />
-                        </button>
-                      </div>
-                      <div className="flex flex-nowrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEditCoupon(coupon)}
-                          aria-label="Edit discount coupon"
-                          title="Edit"
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
-                        >
-                          <PencilIcon />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCoupon(coupon.uniqueId)}
-                          aria-label="Delete discount coupon"
-                          title="Delete"
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
-                        >
-                          <TrashIcon />
-                        </button>
+                          >
+                            <span
+                              className={[
+                                "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition",
+                                coupon.isActive ? "translate-x-6" : "translate-x-1",
+                              ].join(" ")}
+                            />
+                          </button>
+                        </div>
+                        <div className="flex flex-nowrap items-center justify-end gap-2 self-end">
+                          <button
+                            type="button"
+                            onClick={() => handleEditCoupon(coupon)}
+                            aria-label="Edit discount coupon"
+                            title="Edit"
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                          >
+                            <PencilIcon />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCoupon(coupon.uniqueId)}
+                            aria-label="Delete discount coupon"
+                            title="Delete"
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : null}
