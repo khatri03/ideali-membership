@@ -34,9 +34,45 @@ function PlusIcon() {
   );
 }
 
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M14.69 2.86a1.5 1.5 0 0 1 2.12 2.12l-8.2 8.2-3.4.85.85-3.4 8.63-8.77ZM5.1 11.61l-.38 1.52 1.52-.38 7.87-7.87-1.14-1.14-7.87 7.87Z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M7.5 2.5h5l.5 1.5H16V6H4V4h3l.5-1.5Zm-1 5h2v7h-2v-7Zm5 0h2v7h-2v-7ZM5 7h10l-.6 9.1A2 2 0 0 1 12.4 18H7.6a2 2 0 0 1-1.99-1.9L5 7Z" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M5.72 5.72a.75.75 0 0 1 1.06 0L10 8.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L11.06 10l3.22 3.22a.75.75 0 0 1-1.06 1.06L10 11.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L8.94 10 5.72 6.78a.75.75 0 0 1 0-1.06Z" />
+    </svg>
+  );
+}
+
 function formatDiscountAmount(coupon: DiscountCouponListItem) {
   const amount = coupon.discountValue.toFixed(2);
   return coupon.discountType === "Percentage" ? `${amount}%` : `$${amount}`;
+}
+
+function formatDiscountTypeLabel(discountType: DiscountCouponTypeValue) {
+  return discountType === "Percentage" ? "%" : "$";
+}
+
+function getDiscountTypeHelperText(discountType: DiscountCouponTypeValue) {
+  if (discountType === "Percentage") {
+    return "Discount by percentage";
+  }
+
+  return "Discount by amount";
 }
 
 function getDefaultCouponDraft(): DiscountCouponDraft {
@@ -50,16 +86,33 @@ function getDefaultCouponDraft(): DiscountCouponDraft {
   };
 }
 
+function isLocalCoupon(coupon: DiscountCouponListItem) {
+  return coupon.uniqueId.startsWith("local-");
+}
+
+function convertCouponToDraft(coupon: DiscountCouponListItem): DiscountCouponDraft {
+  return {
+    code: coupon.code,
+    discountType: coupon.discountType,
+    discountValue: coupon.discountValue.toString(),
+    maxDiscountAmount: coupon.maxDiscountAmount?.toString() ?? "",
+    totalCoupons: (coupon.totalCoupons ?? "").toString(),
+    isActive: coupon.isActive,
+  };
+}
+
 function buildGeneratedCouponCode(draft: DiscountCouponDraft) {
+  const prefixes = ["SAVE", "DEAL", "PROMO", "BONUS", "FLASH", "PERK", "VIP", "OFFER"];
   const discountValue = Number(draft.discountValue);
   const normalizedValue =
     Number.isFinite(discountValue) && discountValue > 0
       ? String(discountValue).replace(/[^0-9]/g, "")
       : "";
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)] ?? "SAVE";
   const suffix = draft.discountType === "Percentage" ? "PCT" : "OFF";
   const randomToken = Math.random().toString(36).slice(2, 6).toUpperCase();
 
-  return [`SAVE`, normalizedValue, suffix, randomToken].filter(Boolean).join("");
+  return [prefix, normalizedValue, suffix, randomToken].filter(Boolean).join("").slice(0, 16);
 }
 
 function validateCouponDraft(draft: DiscountCouponDraft) {
@@ -105,16 +158,18 @@ function validateCouponDraft(draft: DiscountCouponDraft) {
 
 function MembershipDiscountCouponModal({
   isOpen,
-  loading,
+  initialDraft,
+  mode,
   onClose,
   onSaveClose,
   onSaveContinue,
 }: {
   isOpen: boolean;
-  loading: boolean;
+  initialDraft?: DiscountCouponDraft | null;
+  mode: "create" | "edit";
   onClose: () => void;
-  onSaveClose: (draft: DiscountCouponDraft) => Promise<void>;
-  onSaveContinue: (draft: DiscountCouponDraft) => Promise<void>;
+  onSaveClose: (draft: DiscountCouponDraft) => void;
+  onSaveContinue: (draft: DiscountCouponDraft) => void;
 }) {
   const [draft, setDraft] = useState<DiscountCouponDraft>(getDefaultCouponDraft());
   const [errors, setErrors] = useState<DiscountCouponDraftErrors>({});
@@ -126,11 +181,11 @@ function MembershipDiscountCouponModal({
       return;
     }
 
-    setDraft(getDefaultCouponDraft());
+    setDraft(initialDraft ?? getDefaultCouponDraft());
     setErrors({});
     setFormError("");
     setIsSaving(false);
-  }, [isOpen]);
+  }, [initialDraft, isOpen]);
 
   if (!isOpen) {
     return null;
@@ -161,7 +216,7 @@ function MembershipDiscountCouponModal({
   };
 
   const submit = async (mode: "close" | "continue") => {
-    if (loading || isSaving) {
+    if (isSaving) {
       return;
     }
 
@@ -176,12 +231,12 @@ function MembershipDiscountCouponModal({
     setIsSaving(true);
     try {
       if (mode === "close") {
-        await onSaveClose(draft);
+        onSaveClose(draft);
         onClose();
         return;
       }
 
-      await onSaveContinue(draft);
+      onSaveContinue(draft);
       setDraft(getDefaultCouponDraft());
       setErrors({});
     } catch (error) {
@@ -196,18 +251,20 @@ function MembershipDiscountCouponModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
       data-wizard-enter-block="true"
     >
-      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
-        <div className="border-b border-slate-200 px-6 py-5">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20 sm:rounded-[2rem]">
+        <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
           <div className="space-y-2">
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">Add Discount Coupon</h2>
             <p className="text-sm leading-6 text-slate-600">
-              Create a coupon code for this membership type. Mandatory fields are marked with *.
+              {mode === "edit"
+                ? "Update the coupon details for this membership type. Mandatory fields are marked with *."
+                : "Create a coupon code for this membership type. Mandatory fields are marked with *."}
             </p>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">
+          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <label className="space-y-2 md:col-span-3">
                 <div className="flex flex-col gap-2 pb-1 sm:flex-row sm:items-start sm:justify-between">
@@ -224,30 +281,52 @@ function MembershipDiscountCouponModal({
                     </button>
                   </div>
                 </div>
-                <input
-                  value={draft.code}
-                  onChange={(event) => updateDraft("code", event.target.value.toUpperCase().slice(0, 16))}
-                  type="text"
-                  autoComplete="off"
-                  maxLength={16}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                  placeholder="WELCOME10"
-                />
+                <div className="relative">
+                  <input
+                    value={draft.code}
+                    onChange={(event) => updateDraft("code", event.target.value.toUpperCase().slice(0, 16))}
+                    type="text"
+                    autoComplete="off"
+                    maxLength={16}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                    placeholder="WELCOME10"
+                  />
+                  {draft.code ? (
+                    <button
+                      type="button"
+                      onClick={() => updateDraft("code", "")}
+                      aria-label="Clear coupon code"
+                      title="Clear"
+                      className="absolute right-3 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                    >
+                      <CloseIcon />
+                    </button>
+                  ) : null}
+                </div>
                 {errors.code ? <p className="text-xs text-rose-600">{errors.code}</p> : null}
               </label>
 
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-slate-800">
-                  Discount Type <span className="text-rose-600" aria-label="Required" title="Required">*</span>
+                  Type <span className="text-rose-600" aria-label="Required" title="Required">*</span>
                 </span>
                 <select
                   value={draft.discountType}
                   onChange={(event) => updateDraft("discountType", event.target.value as DiscountCouponTypeValue)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                 >
-                  <option value="FixedAmount">Discount By Amount ($)</option>
-                  <option value="Percentage">Discount By Percentage (%)</option>
+                  <option value="FixedAmount">$</option>
+                  <option value="Percentage">%</option>
                 </select>
+                <p className="text-xs text-slate-500">
+                  {getDiscountTypeHelperText(draft.discountType).startsWith("Discount by") ? (
+                    <>
+                      Discount by <strong className="font-semibold text-slate-700">{draft.discountType === "Percentage" ? "percentage" : "amount"}</strong>
+                    </>
+                  ) : (
+                    getDiscountTypeHelperText(draft.discountType)
+                  )}
+                </p>
                 {errors.discountType ? <p className="text-xs text-rose-600">{errors.discountType}</p> : null}
               </label>
 
@@ -281,7 +360,7 @@ function MembershipDiscountCouponModal({
 
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-slate-800">
-                  Discount Value <span className="text-rose-600" aria-label="Required" title="Required">*</span>
+                  Value <span className="text-rose-600" aria-label="Required" title="Required">*</span>
                 </span>
                 <input
                   value={draft.discountValue}
@@ -361,33 +440,81 @@ function MembershipDiscountCouponModal({
           </div>
         </div>
 
-        <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:items-center">
+        <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:w-auto"
           >
             Close
           </button>
 
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
               onClick={() => void submit("continue")}
-              disabled={loading || isSaving}
+              disabled={isSaving}
               className="rounded-full border border-cyan-200 bg-white px-5 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Save & Continue
+              {mode === "edit" ? "Update & Continue" : "Add & Continue"}
             </button>
             <button
               type="button"
               onClick={() => void submit("close")}
-              disabled={loading || isSaving}
+              disabled={isSaving}
               className="rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Save & Close
+              {mode === "edit" ? "Update & Close" : "Add & Close"}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteDiscountCouponModal({
+  code,
+  onCancel,
+  onConfirm,
+}: {
+  code: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+      data-wizard-enter-block="true"
+    >
+      <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">Delete discount coupon</p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Are you sure?</h3>
+        </div>
+
+        <div className="space-y-3 px-6 py-5">
+          <p className="text-sm leading-6 text-slate-600">
+            This will remove <span className="font-semibold text-slate-900">{code}</span> from the coupon list.
+          </p>
+          <p className="text-sm leading-6 text-slate-600">This action cannot be undone.</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full border border-rose-200 bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -404,8 +531,17 @@ export function MembershipDiscountCouponsStepPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [coupons, setCoupons] = useState<DiscountCouponListItem[]>([]);
+  const [pendingCoupons, setPendingCoupons] = useState<DiscountCouponListItem[]>([]);
   const [couponLoadError, setCouponLoadError] = useState("");
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [editingCouponId, setEditingCouponId] = useState<string | null>(null);
+  const [pendingDeleteCouponId, setPendingDeleteCouponId] = useState<string | null>(null);
+  const editingCoupon = editingCouponId
+    ? coupons.find((coupon) => coupon.uniqueId === editingCouponId) ?? null
+    : null;
+  const pendingDeleteCoupon = pendingDeleteCouponId
+    ? coupons.find((coupon) => coupon.uniqueId === pendingDeleteCouponId) ?? null
+    : null;
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -494,6 +630,16 @@ export function MembershipDiscountCouponsStepPage() {
 
     try {
       await updateMembershipTypeDiscountsEnabled(currentMembershipTypeUniqueId, discountsEnabled);
+      for (const coupon of pendingCoupons) {
+        await createMembershipDiscountCoupon(currentMembershipTypeUniqueId, {
+          code: coupon.code,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          maxDiscountAmount: coupon.discountType === "Percentage" ? coupon.maxDiscountAmount : null,
+          totalCoupons: coupon.totalCoupons ?? 0,
+          isActive: coupon.isActive,
+        });
+      }
       navigate(nextPath, { replace: true });
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to save discount state.");
@@ -502,26 +648,77 @@ export function MembershipDiscountCouponsStepPage() {
     }
   }
 
-  async function handleCreateDiscountCoupon(draft: DiscountCouponDraft) {
-    if (!currentMembershipTypeUniqueId) {
-      throw new Error("Membership type unique id is missing.");
-    }
-
+  function handleCreateDiscountCoupon(draft: DiscountCouponDraft) {
     const discountValue = Number(draft.discountValue);
     const maxDiscountAmount = draft.maxDiscountAmount.trim() ? Number(draft.maxDiscountAmount) : null;
     const totalCoupons = Number(draft.totalCoupons);
 
-    await createMembershipDiscountCoupon(currentMembershipTypeUniqueId, {
+    const localCoupon: DiscountCouponListItem = {
+      uniqueId: editingCouponId ?? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       code: draft.code.trim(),
+      moduleType: "Membership",
+      moduleEntityId: null,
       discountType: draft.discountType,
       discountValue,
       maxDiscountAmount: draft.discountType === "Percentage" ? maxDiscountAmount : null,
       totalCoupons,
       isActive: draft.isActive,
-    });
+      usageCount: 0,
+    };
 
-    const items = await getMembershipDiscountCoupons(currentMembershipTypeUniqueId);
-    setCoupons(items);
+    if (editingCouponId) {
+      setPendingCoupons((current) =>
+        current.map((coupon) => (coupon.uniqueId === editingCouponId ? localCoupon : coupon)),
+      );
+      setCoupons((current) =>
+        current.map((coupon) => (coupon.uniqueId === editingCouponId ? localCoupon : coupon)),
+      );
+      return;
+    }
+
+    setPendingCoupons((current) => [...current, localCoupon]);
+    setCoupons((current) => [...current, localCoupon]);
+  }
+
+  function handleOpenCreateModal() {
+    setEditingCouponId(null);
+    setIsCouponModalOpen(true);
+  }
+
+  function handleEditCoupon(coupon: DiscountCouponListItem) {
+    setEditingCouponId(coupon.uniqueId);
+    setIsCouponModalOpen(true);
+  }
+
+  function handleDeleteCoupon(couponId: string) {
+    setPendingDeleteCouponId(couponId);
+  }
+
+  function handleToggleCouponActive(couponId: string) {
+    setPendingCoupons((current) =>
+      current.map((coupon) =>
+        coupon.uniqueId === couponId ? { ...coupon, isActive: !coupon.isActive } : coupon,
+      ),
+    );
+    setCoupons((current) =>
+      current.map((coupon) =>
+        coupon.uniqueId === couponId ? { ...coupon, isActive: !coupon.isActive } : coupon,
+      ),
+    );
+  }
+
+  function confirmDeleteCoupon() {
+    if (!pendingDeleteCouponId) {
+      return;
+    }
+
+    setPendingCoupons((current) => current.filter((coupon) => coupon.uniqueId !== pendingDeleteCouponId));
+    setCoupons((current) => current.filter((coupon) => coupon.uniqueId !== pendingDeleteCouponId));
+    if (editingCouponId === pendingDeleteCouponId) {
+      setEditingCouponId(null);
+      setIsCouponModalOpen(false);
+    }
+    setPendingDeleteCouponId(null);
   }
 
   useLayoutEffect(() => {
@@ -562,7 +759,7 @@ export function MembershipDiscountCouponsStepPage() {
         ),
       onSaveExit: () => void saveDiscountsState(APP_ROUTES.membershipTypes),
     });
-  }, [currentMembershipTypeUniqueId, discountsEnabled, isSaving, navigate, setFooterActions]);
+  }, [currentMembershipTypeUniqueId, discountsEnabled, isLoading, isSaving, navigate, setFooterActions]);
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -576,34 +773,37 @@ export function MembershipDiscountCouponsStepPage() {
       </div>
 
       <div className="mt-8 max-w-3xl rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <span className="text-sm font-semibold text-slate-800">Discount coupons</span>
             <p className="text-xs leading-5 text-slate-500">Make membership discounts available for this plan.</p>
           </div>
 
-          <button
-            type="button"
-            role="switch"
-            aria-checked={discountsEnabled}
-            aria-label="Toggle membership discounts"
-            onClick={() => void handleToggleDiscounts()}
-            disabled={isLoading || isSaving}
-            className={[
-              "relative inline-flex h-8 w-14 items-center rounded-full border transition",
-              discountsEnabled
-                ? "border-cyan-500 bg-cyan-500"
-                : "border-slate-300 bg-slate-200 hover:bg-slate-300",
-              "disabled:cursor-not-allowed disabled:opacity-60",
-            ].join(" ")}
-          >
-            <span
+          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:min-w-[220px] sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
+            <span className="pr-4 text-sm font-medium text-slate-600 sm:hidden">Enable coupons</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={discountsEnabled}
+              aria-label="Toggle membership discounts"
+              onClick={() => void handleToggleDiscounts()}
+              disabled={isLoading || isSaving}
               className={[
-                "inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition",
-                discountsEnabled ? "translate-x-7" : "translate-x-1",
+                "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition",
+                discountsEnabled
+                  ? "border-cyan-500 bg-cyan-500"
+                  : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                "disabled:cursor-not-allowed disabled:opacity-60",
               ].join(" ")}
-            />
-          </button>
+            >
+              <span
+                className={[
+                  "inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition",
+                  discountsEnabled ? "translate-x-7" : "translate-x-1",
+                ].join(" ")}
+              />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -619,7 +819,7 @@ export function MembershipDiscountCouponsStepPage() {
           <button
             type="button"
             aria-label="Add discount coupon"
-            onClick={() => setIsCouponModalOpen(true)}
+            onClick={handleOpenCreateModal}
             disabled={!discountsEnabled || isLoading || isSaving}
             className={[
               "inline-flex h-9 w-9 items-center justify-center rounded-full border transition",
@@ -641,37 +841,75 @@ export function MembershipDiscountCouponsStepPage() {
           ) : coupons.length > 0 ? (
             coupons.map((coupon) => (
               <div key={coupon.uniqueId} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{coupon.code}</span>
-                      <span
-                        className={[
-                          "inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
-                          coupon.isActive
-                            ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border border-slate-200 bg-slate-100 text-slate-500",
-                        ].join(" ")}
-                      >
-                        {coupon.isActive ? "Active" : "Inactive"}
-                      </span>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-start">
+                  <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                    <div className="min-w-0">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Code</span>
+                      <span className="mt-1 block truncate font-semibold text-slate-900">{coupon.code}</span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {coupon.discountType === "Percentage"
-                        ? `Discount By Percentage (${formatDiscountAmount(coupon)})`
-                        : `Discount By Amount (${formatDiscountAmount(coupon)})`}
-                    </p>
+                    <div className="min-w-0">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        Type
+                      </span>
+                      <span className="mt-1 block truncate">{formatDiscountTypeLabel(coupon.discountType)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        Value
+                      </span>
+                      <span className="mt-1 block truncate">{formatDiscountAmount(coupon)}</span>
+                    </div>
                   </div>
-
-                  <div className="text-right text-xs text-slate-500">
-                    <div>Total coupons: {coupon.totalCoupons ?? 0}</div>
-                    <div>Used: {coupon.usageCount}</div>
-                  </div>
+                  {isLocalCoupon(coupon) ? (
+                    <div className="flex items-center justify-between gap-4 md:min-w-[200px] md:justify-end">
+                      <div className="space-y-1">
+                        <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                          Is Active
+                        </span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={coupon.isActive}
+                          aria-label={`Toggle ${coupon.code} active state`}
+                          onClick={() => handleToggleCouponActive(coupon.uniqueId)}
+                          className={[
+                            "relative inline-flex h-7 w-12 items-center rounded-full border transition",
+                            coupon.isActive
+                              ? "border-cyan-500 bg-cyan-500"
+                              : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                          ].join(" ")}
+                        >
+                          <span
+                            className={[
+                              "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition",
+                              coupon.isActive ? "translate-x-6" : "translate-x-1",
+                            ].join(" ")}
+                          />
+                        </button>
+                      </div>
+                      <div className="flex flex-nowrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEditCoupon(coupon)}
+                          aria-label="Edit discount coupon"
+                          title="Edit"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                        >
+                          <PencilIcon />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCoupon(coupon.uniqueId)}
+                          aria-label="Delete discount coupon"
+                          title="Delete"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-
-                {coupon.discountType === "Percentage" && coupon.maxDiscountAmount !== null ? (
-                  <p className="mt-2 text-xs text-slate-500">Max discount: ${coupon.maxDiscountAmount.toFixed(2)}</p>
-                ) : null}
               </div>
             ))
           ) : (
@@ -696,11 +934,23 @@ export function MembershipDiscountCouponsStepPage() {
 
       <MembershipDiscountCouponModal
         isOpen={isCouponModalOpen}
-        loading={isLoading}
-        onClose={() => setIsCouponModalOpen(false)}
+        initialDraft={editingCoupon ? convertCouponToDraft(editingCoupon) : null}
+        mode={editingCouponId ? "edit" : "create"}
+        onClose={() => {
+          setEditingCouponId(null);
+          setIsCouponModalOpen(false);
+        }}
         onSaveClose={handleCreateDiscountCoupon}
         onSaveContinue={handleCreateDiscountCoupon}
       />
+
+      {pendingDeleteCoupon ? (
+        <DeleteDiscountCouponModal
+          code={pendingDeleteCoupon.code}
+          onCancel={() => setPendingDeleteCouponId(null)}
+          onConfirm={confirmDeleteCoupon}
+        />
+      ) : null}
     </section>
   );
 }
