@@ -687,7 +687,6 @@ export function MembershipDiscountCouponsStepPage() {
       uniqueId: editingCouponId ?? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       code: draft.code.trim(),
       moduleType: "Membership",
-      moduleEntityId: null,
       discountType: draft.discountType,
       discountValue,
       maxDiscountAmount: draft.discountType === "Percentage" ? maxDiscountAmount : null,

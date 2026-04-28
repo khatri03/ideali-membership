@@ -281,7 +281,6 @@ function readDiscountCouponList(payload: unknown) {
       uniqueId: readText(item.UniqueId ?? item.uniqueId),
       code: readText(item.Code ?? item.code),
       moduleType: readText(item.ModuleType ?? item.moduleType),
-      moduleEntityId: readNumber(item.ModuleEntityId ?? item.moduleEntityId) ?? null,
       discountType: readText(item.DiscountType ?? item.discountType) as DiscountCouponTypeValue,
       discountValue: readNumber(item.DiscountValue ?? item.discountValue) ?? 0,
       maxDiscountAmount: readNumber(item.MaxDiscountAmount ?? item.maxDiscountAmount) ?? null,

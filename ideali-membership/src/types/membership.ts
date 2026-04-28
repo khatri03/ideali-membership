@@ -37,7 +37,6 @@ export interface DiscountCouponListItem {
   uniqueId: string;
   code: string;
   moduleType: string;
-  moduleEntityId: number | null;
   discountType: DiscountCouponTypeValue;
   discountValue: number;
   maxDiscountAmount: number | null;
