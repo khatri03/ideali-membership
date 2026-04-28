@@ -293,7 +293,7 @@ function readDiscountCouponList(payload: unknown) {
 
 export async function getMembershipDiscountCoupons(membershipTypeUniqueId: string) {
   const payload = await getJson<unknown>(
-    `/api/discount/coupon/list?pageNo=1&pageSize=100&moduleType=Membership&moduleEntityUniqueId=${membershipTypeUniqueId}`,
+    `/api/organizer/discount/coupon/list?pageNo=1&pageSize=100&moduleType=Membership&moduleEntityUniqueId=${membershipTypeUniqueId}`,
   );
 
   return readDiscountCouponList(payload);
@@ -303,7 +303,7 @@ export async function createMembershipDiscountCoupon(
   membershipTypeUniqueId: string,
   request: MembershipDiscountCouponCreateRequest,
 ) {
-  return postJson("/api/discount/coupon/create", {
+  return postJson("/api/organizer/discount/coupon/create", {
     code: request.code,
     moduleType: "Membership",
     moduleEntityUniqueId: membershipTypeUniqueId,
