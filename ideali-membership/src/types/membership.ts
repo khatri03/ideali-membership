@@ -1,6 +1,8 @@
 export interface MembershipTypeListItem {
   text: string;
   value: string;
+  hasDiscountCoupons: boolean;
+  discountsEnabled: boolean;
 }
 
 export interface MembershipTitleInfo {
@@ -72,3 +74,4 @@ export interface MembershipCustomQuestionDraft {
   displayOrder: number;
   options: MembershipCustomQuestionOptionDraft[];
 }
+

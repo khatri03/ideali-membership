@@ -36,6 +36,10 @@ function readNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function readBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : undefined;
+}
+
 function isMembershipTypePlaceholderRecord(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -218,8 +222,30 @@ export async function getMembershipTypes() {
     .map((item): MembershipTypeListItem => ({
       text: readText(item.Text ?? item.text ?? item.Name ?? item.name),
       value: readText(item.Value ?? item.value ?? item.UniqueId ?? item.uniqueId),
+      hasDiscountCoupons: readBoolean(item.HasDiscountCoupons ?? item.hasDiscountCoupons) ?? false,
+      discountsEnabled: readBoolean(item.DiscountsEnabled ?? item.discountsEnabled) ?? false,
     }))
     .filter((item) => item.text && item.value);
+}
+
+export async function getMembershipTypeDiscountsEnabled(membershipTypeUniqueId: string) {
+  const items = await getMembershipTypes();
+  const match = items.find((item) => item.value === membershipTypeUniqueId);
+
+  if (!match) {
+    throw new Error("Unable to load membership discount state.");
+  }
+
+  return match.discountsEnabled;
+}
+
+export async function updateMembershipTypeDiscountsEnabled(
+  membershipTypeUniqueId: string,
+  discountsEnabled: boolean,
+) {
+  return postJson(`/api/membership/type/${membershipTypeUniqueId}/discounts`, {
+    discountsEnabled,
+  });
 }
 
 export async function getMembershipTitleInfo(membershipTypeUniqueId: string) {
@@ -857,3 +883,4 @@ export async function getMembershipWizardProgress(membershipTypeUniqueId: string
 export function invalidateMembershipWizardProgress(membershipTypeUniqueId: string) {
   invalidateMembershipWizardProgressCache(membershipTypeUniqueId);
 }
+

@@ -24,10 +24,14 @@ function DotsIcon() {
   );
 }
 
-function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
+function MembershipTypeActionsMenu({
+  item,
+}: {
+  item: MembershipTypeListItem;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; alignRight: boolean } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -83,7 +87,7 @@ function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
       return;
     }
 
-    const menuHeight = 72;
+    const menuHeight = 128;
     const menuWidth = 176;
     const gap = 8;
     const spaceBelow = window.innerHeight - buttonRect.bottom;
@@ -93,7 +97,6 @@ function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
     setMenuPosition({
       top: openUpward ? Math.max(gap, buttonRect.top - menuHeight - gap) : buttonRect.bottom + gap,
       left: Math.max(gap, Math.min(buttonRect.left, window.innerWidth - menuWidth - gap)),
-      alignRight: false,
     });
     setIsOpen(true);
   }
@@ -146,14 +149,34 @@ function MembershipTypeActionsMenu({ item }: { item: MembershipTypeListItem }) {
   );
 }
 
-function MembershipTypeRow({ item }: { item: MembershipTypeListItem }) {
+function MembershipTypeRow({
+  item,
+}: {
+  item: MembershipTypeListItem;
+}) {
   return (
     <tr className="border-b border-slate-200 last:border-b-0">
       <td className="w-16 px-4 py-4 align-middle">
         <MembershipTypeActionsMenu item={item} />
       </td>
       <td className="px-4 py-4 align-middle">
-        <p className="text-sm font-semibold text-slate-900">{item.text}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-slate-900">{item.text}</p>
+          <span
+            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+              item.discountsEnabled
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-rose-200 bg-rose-50 text-rose-700"
+            }`}
+          >
+            {item.discountsEnabled ? "Discounts On" : "Discounts Off"}
+          </span>
+          {item.hasDiscountCoupons ? (
+            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Coupons
+            </span>
+          ) : null}
+        </div>
       </td>
     </tr>
   );

@@ -1,6 +1,10 @@
-import { useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
+import {
+  getMembershipTypeDiscountsEnabled,
+  updateMembershipTypeDiscountsEnabled,
+} from "../../lib/membershipWizard";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
 import {
   MEMBERSHIP_DISCOUNT_COUPONS_CONTENT,
@@ -13,6 +17,66 @@ export function MembershipDiscountCouponsStepPage() {
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
+  const [discountsEnabled, setDiscountsEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!currentMembershipTypeUniqueId) {
+      setError("Membership type unique id is missing.");
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadDiscountsState() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const enabled = await getMembershipTypeDiscountsEnabled(currentMembershipTypeUniqueId);
+        if (!isMounted) {
+          return;
+        }
+
+        setDiscountsEnabled(enabled);
+      } catch (loadError) {
+        if (!isMounted) {
+          return;
+        }
+
+        setError(loadError instanceof Error ? loadError.message : "Unable to load discount state.");
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadDiscountsState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentMembershipTypeUniqueId]);
+
+  async function handleToggleDiscounts() {
+    if (!currentMembershipTypeUniqueId || isLoading || isUpdating) {
+      return;
+    }
+
+    setIsUpdating(true);
+
+    try {
+      const nextValue = !discountsEnabled;
+      await updateMembershipTypeDiscountsEnabled(currentMembershipTypeUniqueId, nextValue);
+      setDiscountsEnabled(nextValue);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
 
   useLayoutEffect(() => {
     setFooterActions({
@@ -56,11 +120,44 @@ export function MembershipDiscountCouponsStepPage() {
         </p>
       </div>
 
-      <div className="mt-8 rounded-3xl border border-dashed border-cyan-200 bg-cyan-50/70 p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-700">Coming next</p>
-        <p className="mt-3 text-base leading-7 text-slate-700">
-          {MEMBERSHIP_DISCOUNT_COUPONS_CONTENT.helper}
-        </p>
+      <div className="mt-8 max-w-3xl rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <span className="text-sm font-semibold text-slate-800">Discount coupons</span>
+            <p className="text-xs text-slate-500">Make membership discounts available for this plan.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={discountsEnabled}
+              aria-label="Toggle membership discounts"
+              onClick={() => void handleToggleDiscounts()}
+              disabled={isLoading || isUpdating}
+              className={[
+                "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                discountsEnabled
+                  ? "border-cyan-500 bg-cyan-500"
+                  : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition",
+                  discountsEnabled ? "translate-x-7" : "translate-x-1",
+                ].join(" ")}
+              />
+            </button>
+          </div>
+        </div>
+
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {error}
+          </div>
+        ) : null}
       </div>
     </section>
   );
