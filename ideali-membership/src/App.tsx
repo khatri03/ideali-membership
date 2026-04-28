@@ -87,7 +87,7 @@ function RouterApp() {
       >
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-          <Route path="membership/type">
+          <Route path="organizer/membership/type">
             <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="list" element={<MembershipTypesPage />} />
@@ -105,7 +105,7 @@ function RouterApp() {
         </Route>
 
         <Route element={<WizardLayout />}>
-          <Route path="membership/type/wizard">
+          <Route path="organizer/membership/type/wizard">
             <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
               <Route path="title" element={<MembershipTitleStepPage />} />
               <Route path=":membershipTypeUniqueId">
