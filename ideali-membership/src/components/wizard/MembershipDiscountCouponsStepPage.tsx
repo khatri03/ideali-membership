@@ -2,10 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
-  createMembershipDiscountCoupon,
   getMembershipDiscountCoupons,
   getMembershipTypeDiscountsEnabled,
-  updateMembershipTypeDiscountsEnabled,
+  saveMembershipDiscountCoupons,
 } from "../../lib/membershipWizard";
 import type { DiscountCouponListItem, DiscountCouponTypeValue } from "../../types/membership";
 import { useWizardFooterActions } from "./WizardFooterActionsContext";
@@ -548,7 +547,7 @@ export function MembershipDiscountCouponsStepPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [coupons, setCoupons] = useState<DiscountCouponListItem[]>([]);
-  const [pendingCoupons, setPendingCoupons] = useState<DiscountCouponListItem[]>([]);
+  const [deletedCouponIds, setDeletedCouponIds] = useState<string[]>([]);
   const [couponLoadError, setCouponLoadError] = useState("");
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [editingCouponId, setEditingCouponId] = useState<string | null>(null);
@@ -659,17 +658,19 @@ export function MembershipDiscountCouponsStepPage() {
     setError("");
 
     try {
-      await updateMembershipTypeDiscountsEnabled(currentMembershipTypeUniqueId, discountsEnabled);
-      for (const coupon of pendingCoupons) {
-        await createMembershipDiscountCoupon(currentMembershipTypeUniqueId, {
+      await saveMembershipDiscountCoupons(currentMembershipTypeUniqueId, {
+        discountsEnabled,
+        coupons: coupons.map((coupon) => ({
+          uniqueId: isLocalCoupon(coupon) ? undefined : coupon.uniqueId,
           code: coupon.code,
           discountType: coupon.discountType,
           discountValue: coupon.discountValue,
           maxDiscountAmount: coupon.discountType === "Percentage" ? coupon.maxDiscountAmount : null,
           totalCoupons: coupon.totalCoupons ?? 0,
           isActive: coupon.isActive,
-        });
-      }
+        })),
+        deletedCouponIds,
+      });
       navigate(nextPath, { replace: true });
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to save discount state.");
@@ -696,16 +697,12 @@ export function MembershipDiscountCouponsStepPage() {
     };
 
     if (editingCouponId) {
-      setPendingCoupons((current) =>
-        current.map((coupon) => (coupon.uniqueId === editingCouponId ? localCoupon : coupon)),
-      );
       setCoupons((current) =>
         current.map((coupon) => (coupon.uniqueId === editingCouponId ? localCoupon : coupon)),
       );
       return;
     }
 
-    setPendingCoupons((current) => [...current, localCoupon]);
     setCoupons((current) => [...current, localCoupon]);
   }
 
@@ -724,11 +721,6 @@ export function MembershipDiscountCouponsStepPage() {
   }
 
   function handleToggleCouponActive(couponId: string) {
-    setPendingCoupons((current) =>
-      current.map((coupon) =>
-        coupon.uniqueId === couponId ? { ...coupon, isActive: !coupon.isActive } : coupon,
-      ),
-    );
     setCoupons((current) =>
       current.map((coupon) =>
         coupon.uniqueId === couponId ? { ...coupon, isActive: !coupon.isActive } : coupon,
@@ -774,7 +766,12 @@ export function MembershipDiscountCouponsStepPage() {
       return;
     }
 
-    setPendingCoupons((current) => current.filter((coupon) => coupon.uniqueId !== pendingDeleteCouponId));
+    if (pendingDeleteCoupon && !isLocalCoupon(pendingDeleteCoupon)) {
+      setDeletedCouponIds((current) =>
+        current.includes(pendingDeleteCouponId) ? current : [...current, pendingDeleteCouponId],
+      );
+    }
+
     setCoupons((current) => current.filter((coupon) => coupon.uniqueId !== pendingDeleteCouponId));
     if (editingCouponId === pendingDeleteCouponId) {
       setEditingCouponId(null);
@@ -821,7 +818,16 @@ export function MembershipDiscountCouponsStepPage() {
         ),
       onSaveExit: () => void saveDiscountsState(APP_ROUTES.membershipTypes),
     });
-  }, [currentMembershipTypeUniqueId, discountsEnabled, isLoading, isSaving, navigate, setFooterActions]);
+  }, [
+    coupons,
+    currentMembershipTypeUniqueId,
+    deletedCouponIds,
+    discountsEnabled,
+    isLoading,
+    isSaving,
+    navigate,
+    setFooterActions,
+  ]);
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">

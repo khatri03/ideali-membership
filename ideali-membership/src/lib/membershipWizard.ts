@@ -250,22 +250,20 @@ export async function getMembershipTypeDiscountsEnabled(membershipTypeUniqueId: 
   return discountsEnabled;
 }
 
-export async function updateMembershipTypeDiscountsEnabled(
-  membershipTypeUniqueId: string,
-  discountsEnabled: boolean,
-) {
-  return postJson(`/api/organizer/membership/type/${membershipTypeUniqueId}/discounts`, {
-    discountsEnabled,
-  });
-}
-
-export interface MembershipDiscountCouponCreateRequest {
+export interface MembershipDiscountCouponBatchSaveItem {
+  uniqueId?: string;
   code: string;
   discountType: DiscountCouponTypeValue;
   discountValue: number;
   maxDiscountAmount: number | null;
   totalCoupons: number;
   isActive: boolean;
+}
+
+export interface MembershipDiscountCouponBatchSaveRequest {
+  discountsEnabled: boolean;
+  coupons: MembershipDiscountCouponBatchSaveItem[];
+  deletedCouponIds: string[];
 }
 
 function readDiscountCouponList(payload: unknown) {
@@ -299,19 +297,16 @@ export async function getMembershipDiscountCoupons(membershipTypeUniqueId: strin
   return readDiscountCouponList(payload);
 }
 
-export async function createMembershipDiscountCoupon(
+export async function saveMembershipDiscountCoupons(
   membershipTypeUniqueId: string,
-  request: MembershipDiscountCouponCreateRequest,
+  request: MembershipDiscountCouponBatchSaveRequest,
 ) {
-  return postJson("/api/organizer/discount/coupon/create", {
-    code: request.code,
+  return postJson("/api/organizer/discount/coupon/batch-save", {
     moduleType: "Membership",
     moduleEntityUniqueId: membershipTypeUniqueId,
-    discountType: request.discountType,
-    discountValue: request.discountValue,
-    maxDiscountAmount: request.maxDiscountAmount,
-    totalCoupons: request.totalCoupons,
-    isActive: request.isActive,
+    discountsEnabled: request.discountsEnabled,
+    coupons: request.coupons,
+    deletedCouponIds: request.deletedCouponIds,
   });
 }
 
