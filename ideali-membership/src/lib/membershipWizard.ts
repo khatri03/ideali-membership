@@ -1,5 +1,7 @@
 import { getJson, postJson } from "./api";
 import type {
+  DiscountCouponListItem,
+  DiscountCouponTypeValue,
   MembershipPaymentMethodOption,
   MembershipCustomQuestionDraft,
   MembershipCustomQuestionOptionDraft,
@@ -229,14 +231,23 @@ export async function getMembershipTypes() {
 }
 
 export async function getMembershipTypeDiscountsEnabled(membershipTypeUniqueId: string) {
-  const items = await getMembershipTypes();
-  const match = items.find((item) => item.value === membershipTypeUniqueId);
+  const payload = await getJson<unknown>(`/api/membership/type/${membershipTypeUniqueId}/discounts`);
+  const responseData = readResponseData(payload);
+  const discountsEnabled =
+    typeof responseData === "boolean"
+      ? responseData
+      : readBoolean(
+          (responseData as Record<string, unknown> | null)?.Data ??
+            (responseData as Record<string, unknown> | null)?.data ??
+            (responseData as Record<string, unknown> | null)?.Value ??
+            (responseData as Record<string, unknown> | null)?.value,
+        );
 
-  if (!match) {
+  if (typeof discountsEnabled !== "boolean") {
     throw new Error("Unable to load membership discount state.");
   }
 
-  return match.discountsEnabled;
+  return discountsEnabled;
 }
 
 export async function updateMembershipTypeDiscountsEnabled(
@@ -245,6 +256,63 @@ export async function updateMembershipTypeDiscountsEnabled(
 ) {
   return postJson(`/api/membership/type/${membershipTypeUniqueId}/discounts`, {
     discountsEnabled,
+  });
+}
+
+export interface MembershipDiscountCouponCreateRequest {
+  code: string;
+  discountType: DiscountCouponTypeValue;
+  discountValue: number;
+  maxDiscountAmount: number | null;
+  totalCoupons: number;
+  isActive: boolean;
+}
+
+function readDiscountCouponList(payload: unknown) {
+  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null;
+  const items = Array.isArray(responseData?.PageData)
+    ? responseData.PageData
+    : Array.isArray(responseData?.Data)
+      ? responseData.Data
+      : [];
+
+  return items
+    .map((item): DiscountCouponListItem => ({
+      uniqueId: readText(item.UniqueId ?? item.uniqueId),
+      code: readText(item.Code ?? item.code),
+      moduleType: readText(item.ModuleType ?? item.moduleType),
+      moduleEntityId: readNumber(item.ModuleEntityId ?? item.moduleEntityId) ?? null,
+      discountType: readText(item.DiscountType ?? item.discountType) as DiscountCouponTypeValue,
+      discountValue: readNumber(item.DiscountValue ?? item.discountValue) ?? 0,
+      maxDiscountAmount: readNumber(item.MaxDiscountAmount ?? item.maxDiscountAmount) ?? null,
+      totalCoupons: readNumber(item.TotalCoupons ?? item.totalCoupons) ?? null,
+      usageCount: readNumber(item.UsageCount ?? item.usageCount) ?? 0,
+      isActive: readBoolean(item.IsActive ?? item.isActive) ?? false,
+    }))
+    .filter((item) => item.uniqueId && item.code);
+}
+
+export async function getMembershipDiscountCoupons(membershipTypeUniqueId: string) {
+  const payload = await getJson<unknown>(
+    `/api/discount/coupon/list?pageNo=1&pageSize=100&moduleType=Membership&moduleEntityUniqueId=${membershipTypeUniqueId}`,
+  );
+
+  return readDiscountCouponList(payload);
+}
+
+export async function createMembershipDiscountCoupon(
+  membershipTypeUniqueId: string,
+  request: MembershipDiscountCouponCreateRequest,
+) {
+  return postJson("/api/discount/coupon/create", {
+    code: request.code,
+    moduleType: "Membership",
+    moduleEntityUniqueId: membershipTypeUniqueId,
+    discountType: request.discountType,
+    discountValue: request.discountValue,
+    maxDiscountAmount: request.maxDiscountAmount,
+    totalCoupons: request.totalCoupons,
+    isActive: request.isActive,
   });
 }
 

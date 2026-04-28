@@ -162,15 +162,6 @@ function MembershipTypeRow({
       <td className="px-4 py-4 align-middle">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold text-slate-900">{item.text}</p>
-          <span
-            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-              item.discountsEnabled
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-rose-200 bg-rose-50 text-rose-700"
-            }`}
-          >
-            {item.discountsEnabled ? "Discounts On" : "Discounts Off"}
-          </span>
           {item.hasDiscountCoupons ? (
             <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
               Coupons

@@ -31,6 +31,21 @@ export interface MembershipQuestionsInfo {
   stepNo: number;
 }
 
+export type DiscountCouponTypeValue = "FixedAmount" | "Percentage";
+
+export interface DiscountCouponListItem {
+  uniqueId: string;
+  code: string;
+  moduleType: string;
+  moduleEntityId: number | null;
+  discountType: DiscountCouponTypeValue;
+  discountValue: number;
+  maxDiscountAmount: number | null;
+  totalCoupons: number | null;
+  usageCount: number;
+  isActive: boolean;
+}
+
 export interface MembershipDescriptionInfo {
   uniqueId: string;
   description: string;
