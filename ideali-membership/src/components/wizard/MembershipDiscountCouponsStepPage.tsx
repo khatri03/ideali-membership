@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
@@ -46,6 +46,22 @@ function TrashIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
       <path d="M7.5 2.5h5l.5 1.5H16V6H4V4h3l.5-1.5Zm-1 5h2v7h-2v-7Zm5 0h2v7h-2v-7ZM5 7h10l-.6 9.1A2 2 0 0 1 12.4 18H7.6a2 2 0 0 1-1.99-1.9L5 7Z" />
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M6 3.5A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h1V14H6A1 1 0 0 1 5 13V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1.5h1V6A2.5 2.5 0 0 0 12.5 3.5H6Zm3 4A2.5 2.5 0 0 0 6.5 10v3A2.5 2.5 0 0 0 9 15.5h4A2.5 2.5 0 0 0 15.5 13v-3A2.5 2.5 0 0 0 13 7.5H9Zm0 1h4A1.5 1.5 0 0 1 14.5 10v3A1.5 1.5 0 0 1 13 14.5H9A1.5 1.5 0 0 1 7.5 13v-3A1.5 1.5 0 0 1 9 8.5Z" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M7.9 13.6 4.7 10.4l1.4-1.4 1.8 1.8 5.9-5.9 1.4 1.4-7.3 7.3Z" />
     </svg>
   );
 }
@@ -207,13 +223,6 @@ function MembershipDiscountCouponModal({
         next.maxDiscountAmount = "";
       }
 
-      if (key === "discountValue" && next.discountType === "Percentage") {
-        const parsedValue = Number(String(value));
-        if (Number.isFinite(parsedValue) && parsedValue > 100) {
-          next.discountValue = "100";
-        }
-      }
-
       return next;
     });
 
@@ -371,20 +380,10 @@ function MembershipDiscountCouponModal({
                 <input
                   value={draft.discountValue}
                   onChange={(event) => {
-                    const nextValue = event.target.value;
-                    if (draft.discountType === "Percentage") {
-                      const numericValue = Number(nextValue);
-                      if (nextValue && Number.isFinite(numericValue) && numericValue > 100) {
-                        updateDraft("discountValue", "100");
-                        return;
-                      }
-                    }
-
-                    updateDraft("discountValue", nextValue);
+                    updateDraft("discountValue", event.target.value);
                   }}
                   type="number"
                   min="0"
-                  max={isPercentage ? "100" : undefined}
                   step="0.01"
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                   placeholder="10"
@@ -542,12 +541,16 @@ export function MembershipDiscountCouponsStepPage() {
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [editingCouponId, setEditingCouponId] = useState<string | null>(null);
   const [pendingDeleteCouponId, setPendingDeleteCouponId] = useState<string | null>(null);
+  const [copiedCouponUniqueId, setCopiedCouponUniqueId] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+  const copyTimerRef = useRef<number | null>(null);
   const editingCoupon = editingCouponId
     ? coupons.find((coupon) => coupon.uniqueId === editingCouponId) ?? null
     : null;
   const pendingDeleteCoupon = pendingDeleteCouponId
     ? coupons.find((coupon) => coupon.uniqueId === pendingDeleteCouponId) ?? null
     : null;
+  const toastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -713,6 +716,39 @@ export function MembershipDiscountCouponsStepPage() {
     );
   }
 
+  async function handleCopyCouponCode(coupon: DiscountCouponListItem) {
+    try {
+      await navigator.clipboard.writeText(coupon.code);
+      setCopiedCouponUniqueId(coupon.uniqueId);
+      setToastMessage(`Copied ${coupon.code} to clipboard.`);
+      if (copyTimerRef.current) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopiedCouponUniqueId((current) => (current === coupon.uniqueId ? "" : current));
+      }, 3000);
+      toastTimerRef.current = window.setTimeout(() => {
+        setToastMessage("");
+      }, 3000);
+    } catch {
+      setError("Unable to copy the coupon code.");
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
   function confirmDeleteCoupon() {
     if (!pendingDeleteCouponId) {
       return;
@@ -839,62 +875,93 @@ export function MembershipDiscountCouponsStepPage() {
           </button>
         </div>
 
-        <div className="mt-5 space-y-3">
-          {!discountsEnabled ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-              Enable discount coupons to start adding coupon rules.
+      <div className="mt-5 space-y-3">
+        {toastMessage ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed right-4 top-4 z-50 flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-lg shadow-emerald-900/10"
+          >
+            <CheckIcon />
+            <span>{toastMessage}</span>
+          </div>
+        ) : null}
+        {!discountsEnabled ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+            Enable discount coupons to start adding coupon rules.
             </div>
           ) : coupons.length > 0 ? (
-            coupons.map((coupon) => (
-              <div key={coupon.uniqueId} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-                    <div className="min-w-0">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Code</span>
-                      <span className="mt-1 block truncate font-semibold text-slate-900">{coupon.code}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                        Type
-                      </span>
-                      <span className="mt-1 block truncate">{formatDiscountTypeLabel(coupon.discountType)}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                        Value
-                      </span>
-                      <span className="mt-1 block truncate">{formatDiscountAmount(coupon)}</span>
-                    </div>
-                  </div>
-                  {isLocalCoupon(coupon) ? (
-                    <div className="flex flex-col items-start gap-3 md:items-end">
-                      <div className="flex items-center justify-end gap-3">
-                        <div className="space-y-1">
-                          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                            Is Active
-                          </span>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <table className="min-w-full table-fixed divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr className="text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="w-[34%] px-4 py-3">Code</th>
+                    <th className="w-[12%] px-4 py-3">Type</th>
+                    <th className="w-[18%] px-4 py-3">Value</th>
+                    <th className="w-[16%] px-4 py-3 text-center">Active</th>
+                    <th className="w-[20%] px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {coupons.map((coupon) => (
+                    <tr key={coupon.uniqueId} className="align-middle text-sm text-slate-700">
+                      <td className="px-4 py-4 align-middle">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="min-w-0 truncate font-semibold text-slate-900">{coupon.code}</span>
                           <button
                             type="button"
-                            role="switch"
-                            aria-checked={coupon.isActive}
-                            aria-label={`Toggle ${coupon.code} active state`}
-                            onClick={() => handleToggleCouponActive(coupon.uniqueId)}
+                            onClick={() => void handleCopyCouponCode(coupon)}
+                            aria-label="Copy discount coupon code"
+                            title={copiedCouponUniqueId === coupon.uniqueId ? "Copied" : "Copy"}
                             className={[
-                              "relative inline-flex h-7 w-12 items-center rounded-full border transition",
-                              coupon.isActive
-                                ? "border-cyan-500 bg-cyan-500"
-                                : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition",
+                              copiedCouponUniqueId === coupon.uniqueId
+                                ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700",
                             ].join(" ")}
                           >
-                            <span
-                              className={[
-                                "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition",
-                                coupon.isActive ? "translate-x-6" : "translate-x-1",
-                              ].join(" ")}
-                            />
+                            {copiedCouponUniqueId === coupon.uniqueId ? <CheckIcon /> : <CopyIcon />}
                           </button>
                         </div>
-                        <div className="flex flex-nowrap items-center justify-end gap-2 self-end">
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          {formatDiscountTypeLabel(coupon.discountType)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <span className="font-medium text-slate-900">{formatDiscountAmount(coupon)}</span>
+                      </td>
+                      <td className="px-4 py-4 align-middle text-center">
+                        {isLocalCoupon(coupon) ? (
+                          <div className="inline-flex justify-center">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={coupon.isActive}
+                              aria-label={`Toggle ${coupon.code} active state`}
+                              onClick={() => handleToggleCouponActive(coupon.uniqueId)}
+                              className={[
+                                "relative inline-flex h-7 w-12 items-center rounded-full border transition",
+                                coupon.isActive
+                                  ? "border-cyan-500 bg-cyan-500"
+                                  : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                              ].join(" ")}
+                            >
+                              <span
+                                className={[
+                                  "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition",
+                                  coupon.isActive ? "translate-x-6" : "translate-x-1",
+                                ].join(" ")}
+                              />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">Locked</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <div className="flex flex-nowrap items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => handleEditCoupon(coupon)}
@@ -914,12 +981,12 @@ export function MembershipDiscountCouponsStepPage() {
                             <TrashIcon />
                           </button>
                         </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            ))
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
               No discount coupons have been created yet.
