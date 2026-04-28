@@ -71,6 +71,8 @@ function validateCouponDraft(draft: DiscountCouponDraft) {
 
   if (!code) {
     errors.code = "Code is required.";
+  } else if (code.length > 16) {
+    errors.code = "Code cannot exceed 16 characters.";
   }
 
   if (!draft.discountType) {
@@ -224,9 +226,10 @@ function MembershipDiscountCouponModal({
                 </div>
                 <input
                   value={draft.code}
-                  onChange={(event) => updateDraft("code", event.target.value.toUpperCase())}
+                  onChange={(event) => updateDraft("code", event.target.value.toUpperCase().slice(0, 16))}
                   type="text"
                   autoComplete="off"
+                  maxLength={16}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                   placeholder="WELCOME10"
                 />
@@ -246,6 +249,34 @@ function MembershipDiscountCouponModal({
                   <option value="Percentage">Discount By Percentage (%)</option>
                 </select>
                 {errors.discountType ? <p className="text-xs text-rose-600">{errors.discountType}</p> : null}
+              </label>
+
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-slate-800">
+                  Max Discount
+                </span>
+                <input
+                  value={draft.maxDiscountAmount}
+                  onChange={(event) => updateDraft("maxDiscountAmount", event.target.value)}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  disabled={!isPercentage}
+                  className={[
+                    "w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition",
+                    isPercentage
+                      ? "border-slate-200 bg-white text-slate-900 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                      : "border-slate-200 bg-slate-100 text-slate-400",
+                    "disabled:cursor-not-allowed",
+                  ].join(" ")}
+                  placeholder="25"
+                />
+                <p className="text-xs text-slate-500">
+                  {isPercentage ? "Optional cap for percentage discounts." : "Available only for percentage discounts."}
+                </p>
+                {errors.maxDiscountAmount ? (
+                  <p className="text-xs text-rose-600">{errors.maxDiscountAmount}</p>
+                ) : null}
               </label>
 
               <label className="space-y-2">
@@ -277,32 +308,6 @@ function MembershipDiscountCouponModal({
               </label>
 
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-slate-800">Max Discount</span>
-                <input
-                  value={draft.maxDiscountAmount}
-                  onChange={(event) => updateDraft("maxDiscountAmount", event.target.value)}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  disabled={!isPercentage}
-                  className={[
-                    "w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition",
-                    isPercentage
-                      ? "border-slate-200 bg-white text-slate-900 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                      : "border-slate-200 bg-slate-100 text-slate-400",
-                    "disabled:cursor-not-allowed",
-                  ].join(" ")}
-                  placeholder="25"
-                />
-                <p className="text-xs text-slate-500">
-                  {isPercentage ? "Optional cap for percentage discounts." : "Available only for percentage discounts."}
-                </p>
-                {errors.maxDiscountAmount ? (
-                  <p className="text-xs text-rose-600">{errors.maxDiscountAmount}</p>
-                ) : null}
-              </label>
-
-              <label className="space-y-2">
                 <span className="text-sm font-semibold text-slate-800">
                   Total Coupons <span className="text-rose-600" aria-label="Required" title="Required">*</span>
                 </span>
@@ -322,7 +327,7 @@ function MembershipDiscountCouponModal({
                 <span className="text-sm font-semibold text-slate-800">Is Active</span>
                 <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <span className="text-sm text-slate-600">
-                    {draft.isActive ? "Coupon will be available" : "Coupon will be inactive"}
+                    {draft.isActive ? "Available to use?" : "Inactive?"}
                   </span>
                   <button
                     type="button"
