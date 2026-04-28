@@ -207,10 +207,21 @@ function MembershipDiscountCouponModal({
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <label className="space-y-2">
-                <span className="text-sm font-semibold text-slate-800">
-                  Code <span className="text-rose-600" aria-label="Required" title="Required">*</span>
-                </span>
+              <label className="space-y-2 md:col-span-3">
+                <div className="flex flex-col gap-2 pb-1 sm:flex-row sm:items-start sm:justify-between">
+                  <span className="text-sm font-semibold text-slate-800">
+                    Code <span className="text-rose-600" aria-label="Required" title="Required">*</span>
+                  </span>
+                  <div className="flex justify-start sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => updateDraft("code", buildGeneratedCouponCode(draft))}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                    >
+                      Generate Random Code
+                    </button>
+                  </div>
+                </div>
                 <input
                   value={draft.code}
                   onChange={(event) => updateDraft("code", event.target.value.toUpperCase())}
@@ -219,15 +230,6 @@ function MembershipDiscountCouponModal({
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                   placeholder="WELCOME10"
                 />
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => updateDraft("code", buildGeneratedCouponCode(draft))}
-                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
-                  >
-                    Generate
-                  </button>
-                </div>
                 {errors.code ? <p className="text-xs text-rose-600">{errors.code}</p> : null}
               </label>
 
