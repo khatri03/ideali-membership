@@ -97,7 +97,7 @@ export function MembershipAdvanceSettingsStepPage() {
         ) : (
           <>
             <div className="inline-flex w-full flex-col items-stretch gap-4 md:w-fit">
-              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
                   {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.approvalLabel}
@@ -124,11 +124,14 @@ export function MembershipAdvanceSettingsStepPage() {
               </div>
             </div>
 
-              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
                     Registration Window
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    If provided, subscriptions will only be available within this date range.
                   </p>
                 </div>
                 <button
@@ -159,7 +162,7 @@ export function MembershipAdvanceSettingsStepPage() {
                   !registrationWindowEnabled ? "opacity-60" : "",
                 ].join(" ")}
               >
-                <label className="block w-full space-y-2 md:w-[18rem] lg:w-[20rem]">
+                <label className="block w-full space-y-2 md:w-[15.5rem] lg:w-[17rem]">
                   <span className="block text-sm font-semibold text-slate-800">
                     {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.startLabel}
                   </span>
@@ -179,7 +182,7 @@ export function MembershipAdvanceSettingsStepPage() {
                   />
                 </label>
 
-                <label className="block w-full space-y-2 md:w-[18rem] lg:w-[20rem]">
+                <label className="block w-full space-y-2 md:w-[15.5rem] lg:w-[17rem]">
                   <span className="block text-sm font-semibold text-slate-800">
                     {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.endLabel}
                   </span>
