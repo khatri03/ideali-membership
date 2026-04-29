@@ -215,6 +215,7 @@ export async function saveMembershipTitleStep(
   }
 
   invalidateMembershipWizardTitleCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
@@ -433,13 +434,17 @@ export async function saveMembershipDiscountCoupons(
   membershipTypeUniqueId: string,
   request: MembershipDiscountCouponBatchSaveRequest,
 ) {
-  return postJson("/api/organizer/discount/coupon/batch-save", {
+  const payload = await postJson<unknown>("/api/organizer/discount/coupon/batch-save", {
     moduleType: "Membership",
     moduleEntityUniqueId: membershipTypeUniqueId,
     discountsEnabled: request.discountsEnabled,
     coupons: request.coupons,
     deletedCouponIds: request.deletedCouponIds,
   });
+
+  invalidateMembershipWizardReviewCache(membershipTypeUniqueId);
+
+  return payload;
 }
 
 export async function saveMembershipAdvanceSettingsStep(
@@ -479,6 +484,7 @@ export async function saveMembershipAdvanceSettingsStep(
   const resolvedMembershipTypeUniqueId = savedMembershipTypeUniqueId || membershipTypeUniqueId;
 
   invalidateMembershipWizardAdvanceSettingsCache(resolvedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(resolvedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(resolvedMembershipTypeUniqueId);
 
   return {
@@ -717,6 +723,7 @@ export async function saveMembershipPricingStep(
   }
 
   invalidateMembershipWizardPricingCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
@@ -762,6 +769,7 @@ export async function saveMembershipDescriptionStep(
   }
 
   invalidateMembershipWizardDescriptionCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
@@ -987,6 +995,7 @@ export async function saveMembershipPaymentAccountStep(
   }
 
   invalidateMembershipWizardPaymentAccountCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateOrganizerPaymentMethodsCache(paymentAccountUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
@@ -1058,6 +1067,7 @@ export async function saveMembershipQuestionsStep(
   }
 
   invalidateMembershipWizardQuestionsCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
@@ -1097,6 +1107,7 @@ export async function saveMembershipBannerStep(
   }
 
   invalidateMembershipWizardBannerCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {
@@ -1136,6 +1147,7 @@ export async function saveMembershipColorStep(
   }
 
   invalidateMembershipWizardColorCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
   return {

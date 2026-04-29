@@ -64,20 +64,18 @@ function ReviewLoadingSkeleton() {
       <div className="border-b border-slate-200 px-5 py-4">
         <div className="h-4 w-44 animate-pulse rounded-full bg-slate-200" />
       </div>
-      <table className="w-full table-fixed border-collapse">
-        <tbody className="divide-y divide-slate-200">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <tr key={index}>
-              <td className="w-52 bg-slate-50 px-5 py-4">
-                <div className="h-4 w-28 animate-pulse rounded-full bg-slate-200" />
-              </td>
-              <td className="px-5 py-4">
-                <div className="h-5 w-[min(22rem,92%)] animate-pulse rounded-full bg-slate-200" />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div>
+        {Array.from({ length: 9 }).map((_, index) => (
+          <div key={index} className="grid grid-cols-1 border-b border-slate-200 last:border-b-0 lg:grid-cols-[13rem_minmax(0,1fr)]">
+            <div className="bg-slate-50 px-5 py-3 lg:px-5 lg:py-4">
+              <div className="h-4 w-28 animate-pulse rounded-full bg-slate-200" />
+            </div>
+            <div className="px-5 pb-4 pt-2 lg:px-5 lg:py-4">
+              <div className="h-5 w-[min(22rem,92%)] animate-pulse rounded-full bg-slate-200" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -364,6 +362,21 @@ function ReviewTableValue({
   return <div className="flex flex-wrap items-center gap-2">{children}</div>;
 }
 
+function ReviewGridRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-1 border-b border-slate-200 last:border-b-0 lg:grid-cols-[13rem_minmax(0,1fr)]">
+      <div className="bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:px-5 lg:py-4">{label}</div>
+      <div className="px-5 pb-4 pt-2 lg:px-5 lg:py-4">{children}</div>
+    </div>
+  );
+}
+
 export function MembershipReviewStepPage() {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
@@ -493,95 +506,74 @@ export function MembershipReviewStepPage() {
         ) : reviewInfo ? (
           <SummaryCard title="Review Membership Setup">
             <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm lg:w-1/2">
-              <table className="w-full border-collapse lg:table-fixed">
-                <tbody className="divide-y divide-slate-200">
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Are we live?
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-900">Available for subscription</p>
-                          <p className="text-xs text-slate-500">Toggle the membership live state.</p>
-                        </div>
-                        <ToggleSwitch
-                          checked={availableForSignUp}
-                          onChange={() => setAvailableForSignUp((current) => !current)}
-                          disabled={isSaving}
-                        />
-                      </div>
-                      <div className="mt-3">
-                        {availableForSignUp ? (
-                          <span className="inline-flex items-center gap-2 font-semibold text-emerald-700">
-                            <CircleCheckIcon />
-                            Live for subscription
-                          </span>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Membership Title
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 text-sm text-slate-900 lg:table-cell lg:px-5 lg:py-4">
-                      {reviewInfo.name}
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Color
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="inline-flex h-8 w-8 shrink-0 rounded-full border border-slate-200 shadow-sm"
-                          style={{ backgroundColor: reviewInfo.color || "#e2e8f0" }}
-                          aria-hidden="true"
-                        />
-                        {reviewInfo.color ? null : <span className="text-sm font-medium text-slate-600">No</span>}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Payment Account
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      {reviewInfo.paymentAccount ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-900">
-                            {reviewInfo.paymentAccount.name}
-                          </span>
-                          <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
-                            {reviewInfo.paymentAccount.merchant || "No merchant"}
-                          </span>
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                            {reviewInfo.paymentAccount.currency || "No currency"}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm font-semibold text-slate-500">No</span>
-                      )}
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Pricing
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      {(() => {
-                        const hasCustomPricing = reviewInfo.customExpiryDays !== null || reviewInfo.tenure === 4;
-                        const hasAnnualPricing = reviewInfo.tenure === 2 && !hasCustomPricing;
-                        const pricingLabel = hasCustomPricing ? "Custom" : formatTenureLabel(reviewInfo);
-                        const pricingRenewalLabel = hasAnnualPricing
-                          ? formatRenewalDueLabel(reviewInfo)
-                          : hasCustomPricing && reviewInfo.customExpiryDays !== null
-                            ? `${reviewInfo.customExpiryDays} Days`
-                            : null;
+              <div>
+                <ReviewGridRow label="Are we live?">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">Available for subscription</p>
+                      <p className="text-xs text-slate-500">Toggle the membership live state.</p>
+                    </div>
+                    <ToggleSwitch
+                      checked={availableForSignUp}
+                      onChange={() => setAvailableForSignUp((current) => !current)}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <div className="mt-3">
+                    {availableForSignUp ? (
+                      <span className="inline-flex items-center gap-2 font-semibold text-emerald-700">
+                        <CircleCheckIcon />
+                        Live for subscription
+                      </span>
+                    ) : null}
+                  </div>
+                </ReviewGridRow>
 
-                        return (
+                <ReviewGridRow label="Membership Title">
+                  <div className="text-sm text-slate-900">{reviewInfo.name}</div>
+                </ReviewGridRow>
+
+                <ReviewGridRow label="Color">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 rounded-full border border-slate-200 shadow-sm"
+                      style={{ backgroundColor: reviewInfo.color || "#e2e8f0" }}
+                      aria-hidden="true"
+                    />
+                    {reviewInfo.color ? null : <span className="text-sm font-medium text-slate-600">No</span>}
+                  </div>
+                </ReviewGridRow>
+
+                <ReviewGridRow label="Payment Account">
+                  {reviewInfo.paymentAccount ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {reviewInfo.paymentAccount.name}
+                      </span>
+                      <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                        {reviewInfo.paymentAccount.merchant || "No merchant"}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                        {reviewInfo.paymentAccount.currency || "No currency"}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-semibold text-slate-500">No</span>
+                  )}
+                </ReviewGridRow>
+
+                <ReviewGridRow label="Pricing">
+                  {(() => {
+                    const hasCustomPricing = reviewInfo.customExpiryDays !== null || reviewInfo.tenure === 4;
+                    const hasAnnualPricing = reviewInfo.tenure === 2 && !hasCustomPricing;
+                    const pricingLabel = hasCustomPricing ? "Custom" : formatTenureLabel(reviewInfo);
+                    const pricingRenewalLabel = hasAnnualPricing
+                      ? formatRenewalDueLabel(reviewInfo)
+                      : hasCustomPricing && reviewInfo.customExpiryDays !== null
+                        ? `${reviewInfo.customExpiryDays} Days`
+                        : null;
+
+                    return (
                       <div className="flex flex-wrap items-center gap-2 text-sm text-slate-900">
                         <span className="font-semibold">
                           {formatCurrencySymbol(reviewInfo.paymentAccount?.currency)}
@@ -614,52 +606,26 @@ export function MembershipReviewStepPage() {
                           </>
                         ) : null}
                       </div>
-                        );
-                      })()}
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Discount Coupons
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      {reviewInfo.discountsEnabled ? <CheckPill /> : <NoPill />}
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Questions
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      {reviewInfo.hasQuestions ? <CheckPill /> : <NoPill />}
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Requires Approval
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      {reviewInfo.requiresApproval ? (
-                        <CheckPill />
-                      ) : (
-                        <NoPill />
-                      )}
-                    </td>
-                  </tr>
-                  <tr className="block lg:table-row">
-                    <td className="w-full bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-900 lg:table-cell lg:w-52 lg:px-5 lg:py-4">
-                      Registration Window
-                    </td>
-                    <td className="block px-5 pb-4 pt-2 lg:table-cell lg:px-5 lg:py-4">
-                      {reviewInfo.registrationStartDateUtc || reviewInfo.registrationEndDateUtc ? (
-                        <CheckPill />
-                      ) : (
-                        <NoPill />
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    );
+                  })()}
+                </ReviewGridRow>
+
+                <ReviewGridRow label="Discount Coupons">
+                  {reviewInfo.discountsEnabled ? <CheckPill /> : <NoPill />}
+                </ReviewGridRow>
+
+                <ReviewGridRow label="Questions">
+                  {reviewInfo.hasQuestions ? <CheckPill /> : <NoPill />}
+                </ReviewGridRow>
+
+                <ReviewGridRow label="Requires Approval">
+                  {reviewInfo.requiresApproval ? <CheckPill /> : <NoPill />}
+                </ReviewGridRow>
+
+                <ReviewGridRow label="Registration Window">
+                  {reviewInfo.registrationStartDateUtc || reviewInfo.registrationEndDateUtc ? <CheckPill /> : <NoPill />}
+                </ReviewGridRow>
+              </div>
             </div>
           </SummaryCard>
         ) : null}
