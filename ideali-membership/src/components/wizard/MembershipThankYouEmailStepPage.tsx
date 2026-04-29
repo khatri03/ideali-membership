@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { EditorContent } from "@tiptap/react";
 import { MEMBERSHIP_THANK_YOU_EMAIL_CONTENT } from "./MembershipThankYouEmailStepPage.fields";
 import { useMembershipThankYouEmailStep } from "./MembershipThankYouEmailStepPage.hook";
@@ -52,6 +53,107 @@ function buildPlaceholderGroups(placeholders: MembershipTypePlaceholderGroup[]) 
       value: item.displayText || item.placeHolderText,
     })),
   }));
+}
+
+function splitNotificationEmails(value: string) {
+  return value
+    .split(/[,\n]/g)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function NotificationEmailTagsField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (nextValue: string) => void;
+}) {
+  const [draftValue, setDraftValue] = useState("");
+  const tags = useMemo(() => splitNotificationEmails(value), [value]);
+
+  useEffect(() => {
+    setDraftValue("");
+  }, [value]);
+
+  function commitTags(nextTags: string[]) {
+    onChange(nextTags.join(", "));
+  }
+
+  function addDraftValue(rawValue: string) {
+    const nextItems = splitNotificationEmails(rawValue);
+    if (nextItems.length === 0) {
+      return;
+    }
+
+    const nextTags = [...tags];
+    nextItems.forEach((item) => {
+      if (!nextTags.includes(item)) {
+        nextTags.push(item);
+      }
+    });
+
+    commitTags(nextTags);
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-cyan-400 focus-within:ring-4 focus-within:ring-cyan-100">
+      <div className="flex flex-wrap items-center gap-2">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800"
+          >
+            <span className="max-w-[16rem] truncate">{tag}</span>
+            <button
+              type="button"
+              onClick={() => commitTags(tags.filter((item) => item !== tag))}
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-cyan-700 transition hover:bg-cyan-100"
+              aria-label={`Remove ${tag}`}
+              title={`Remove ${tag}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+
+        <input
+          type="text"
+          value={draftValue}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+
+            if (nextValue.includes(",") || nextValue.includes("\n")) {
+              addDraftValue(nextValue);
+              setDraftValue("");
+              return;
+            }
+
+            setDraftValue(nextValue);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              addDraftValue(draftValue);
+              setDraftValue("");
+              return;
+            }
+
+            if (event.key === "Backspace" && draftValue.length === 0 && tags.length > 0) {
+              event.preventDefault();
+              commitTags(tags.slice(0, -1));
+            }
+          }}
+          onBlur={() => {
+            addDraftValue(draftValue);
+            setDraftValue("");
+          }}
+          className="min-w-[14rem] flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+          placeholder={tags.length > 0 ? "Add another email" : "email1@example.com"}
+        />
+      </div>
+    </div>
+  );
 }
 
 function MembershipThankYouEmailSkeleton() {
@@ -159,13 +261,7 @@ export function MembershipThankYouEmailStepPage() {
                 <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
                   Other Notification Emails
                 </span>
-                <input
-                  type="text"
-                  value={otherNotificationEmails}
-                  onChange={(event) => setOtherNotificationEmails(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                  placeholder="email1@example.com, email2@example.com"
-                />
+                <NotificationEmailTagsField value={otherNotificationEmails} onChange={setOtherNotificationEmails} />
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                   Enter comma-separated email addresses for additional recipients.
                 </p>
