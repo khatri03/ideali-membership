@@ -68,6 +68,32 @@ export interface MembershipAdvanceSettingsInfo {
   stepNo: number;
 }
 
+export interface MembershipReviewPaymentAccountInfo {
+  name: string;
+  merchant: string;
+  currency: string;
+}
+
+export interface MembershipReviewInfo {
+  uniqueId: string;
+  name: string;
+  color: string | null;
+  paymentAccount: MembershipReviewPaymentAccountInfo | null;
+  isFree: boolean;
+  membershipCharges: number;
+  tenure: number | null;
+  annualExpiryMonth: number | null;
+  annualExpiryDay: number | null;
+  customExpiryDays: number | null;
+  discountsEnabled: boolean;
+  hasQuestions: boolean;
+  requiresApproval: boolean;
+  registrationStartDateUtc: string | null;
+  registrationEndDateUtc: string | null;
+  availableForSignUp: boolean;
+  stepNo: number;
+}
+
 export interface MembershipTypePlaceholderItem {
   id?: number;
   uniqueId: string;

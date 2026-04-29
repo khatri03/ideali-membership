@@ -12,11 +12,10 @@ import { MembershipDiscountCouponsStepPage } from "./components/wizard/Membershi
 import { MembershipAdvanceSettingsStepPage } from "./components/wizard/MembershipAdvanceSettingsStepPage";
 import { MembershipQuestionsStepPage } from "./components/wizard/MembershipQuestionsStepPage";
 import { MembershipThankYouEmailStepPage } from "./components/wizard/MembershipThankYouEmailStepPage";
+import { MembershipReviewStepPage } from "./components/wizard/MembershipReviewStepPage";
 import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
 import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage";
 import { WizardLayout } from "./components/wizard/WizardLayout";
-import { WizardStepPage } from "./components/wizard/WizardStepPage";
-import { MEMBERSHIP_WIZARD_STEPS } from "./components/wizard/membershipWizardSteps";
 import { CustomFormCreatePage } from "./pages/CustomFormCreatePage";
 import { CustomFormsPage } from "./pages/CustomFormsPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -69,10 +68,6 @@ function AppHome() {
   return <Navigate to={APP_ROUTES.membershipDashboard} replace />;
 }
 
-function getWizardStepSegment(stepPath: string) {
-  return stepPath.slice(stepPath.lastIndexOf("/") + 1);
-}
-
 function RouterApp() {
   return (
     <Routes>
@@ -123,13 +118,7 @@ function RouterApp() {
               <Route path="custom-forms" element={<Navigate to="questions" replace />} />
               <Route path="thank-you-email" element={<MembershipThankYouEmailStepPage />} />
               <Route path="advance-settings" element={<MembershipAdvanceSettingsStepPage />} />
-              {MEMBERSHIP_WIZARD_STEPS.slice(10).map((step) => (
-                <Route
-                  key={step.to}
-                  path={getWizardStepSegment(step.to)}
-                  element={<WizardStepPage title={step.label} description={step.description} />}
-                />
-              ))}
+              <Route path="review" element={<MembershipReviewStepPage />} />
             </Route>
           </Route>
         </Route>
