@@ -519,14 +519,6 @@ export function MembershipReviewStepPage() {
                       disabled={isSaving}
                     />
                   </div>
-                  <div className="mt-3">
-                    {availableForSignUp ? (
-                      <span className="inline-flex items-center gap-2 font-semibold text-emerald-700">
-                        <CircleCheckIcon />
-                        Live for subscription
-                      </span>
-                    ) : null}
-                  </div>
                 </ReviewGridRow>
 
                 <ReviewGridRow label="Membership Title">
