@@ -91,7 +91,13 @@ function RouterApp() {
             <Route path="members" element={<MembersPage />} />
             <Route
               path="pending-approvals"
-              element={<SimplePage title="Pending Approvals" description="Review and approve membership requests here." />}
+              element={
+                <SimplePage
+                  title="Pending Approvals"
+                  badgeLabel="Soon"
+                  description="Pending approvals are coming soon. This area will handle review and approval workflows."
+                />
+              }
             />
           </Route>
           <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />

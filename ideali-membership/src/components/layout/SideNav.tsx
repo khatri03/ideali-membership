@@ -6,12 +6,18 @@ interface SideNavProps {
   onNavigate: () => void;
 }
 
-const membershipItems = [
+interface MembershipNavItem {
+  label: string;
+  to: string;
+  comingSoon?: boolean;
+}
+
+const membershipItems: MembershipNavItem[] = [
   { label: "Dashboard", to: APP_ROUTES.membershipDashboard },
   { label: "Types", to: APP_ROUTES.membershipTypes },
-  { label: "Members", to: APP_ROUTES.membershipMembers },
-  { label: "Pending Approvals", to: APP_ROUTES.membershipPendingApprovals },
-] as const;
+  { label: "Members", to: APP_ROUTES.membershipMembers, comingSoon: true },
+  { label: "Pending Approvals", to: APP_ROUTES.membershipPendingApprovals, comingSoon: true },
+];
 
 export function SideNav({ onNavigate }: SideNavProps) {
   const location = useLocation();
@@ -83,6 +89,11 @@ export function SideNav({ onNavigate }: SideNavProps) {
                   {({ isActive }) => (
                     <>
                       <span>{item.label}</span>
+                      {item.comingSoon ? (
+                        <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                          Soon
+                        </span>
+                      ) : null}
                       {isActive ? (
                         <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
                           Active
