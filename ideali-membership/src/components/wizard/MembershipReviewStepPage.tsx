@@ -377,6 +377,60 @@ function ReviewGridRow({
   );
 }
 
+function ReviewLiveStatusConfirmModal({
+  isLive,
+  onCancel,
+  onConfirm,
+}: {
+  isLive: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+      data-wizard-enter-block="true"
+    >
+      <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Review membership</p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Confirm live status</h3>
+        </div>
+
+        <div className="space-y-3 px-6 py-5">
+          <p className="text-sm leading-6 text-slate-600">
+            You are about to save the review and {isLive ? "make this membership live for subscription." : "keep this membership offline for subscription."}
+          </p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Live status</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              {isLive ? "Live for subscription" : "Offline for subscription"}
+            </p>
+          </div>
+          <p className="text-sm leading-6 text-slate-600">Please confirm this before saving the membership review.</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full border border-cyan-200 bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+          >
+            Save &amp; Exit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MembershipReviewStepPage() {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
@@ -388,6 +442,30 @@ export function MembershipReviewStepPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  async function saveReviewAndExit() {
+    if (!currentMembershipTypeUniqueId) {
+      return;
+    }
+
+    setError("");
+    setIsSaving(true);
+
+    try {
+      await saveMembershipReviewStep(
+        { availableForSignUp },
+        MEMBERSHIP_REVIEW_STEP_NUMBER,
+        currentMembershipTypeUniqueId,
+      );
+      navigate(APP_ROUTES.membershipTypes, { replace: true });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save review settings.");
+    } finally {
+      setIsSaving(false);
+      setIsConfirmOpen(false);
+    }
+  }
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -450,30 +528,12 @@ export function MembershipReviewStepPage() {
           ),
           { replace: true },
         ),
-      onSaveExit: () =>
-        void (async () => {
-          if (!currentMembershipTypeUniqueId) {
-            return;
-          }
-
-          setError("");
-          setIsSaving(true);
-
-          try {
-            await saveMembershipReviewStep(
-              { availableForSignUp },
-              MEMBERSHIP_REVIEW_STEP_NUMBER,
-              currentMembershipTypeUniqueId,
-            );
-            navigate(APP_ROUTES.membershipTypes, { replace: true });
-          } catch (saveError) {
-            setError(saveError instanceof Error ? saveError.message : "Unable to save review settings.");
-          } finally {
-            setIsSaving(false);
-          }
-        })(),
+      onSaveExit: () => {
+        setError("");
+        setIsConfirmOpen(true);
+      },
     });
-  }, [availableForSignUp, currentMembershipTypeUniqueId, isSaving, navigate, setFooterActions]);
+  }, [availableForSignUp, currentMembershipTypeUniqueId, isSaving, setFooterActions]);
 
   if (error) {
     return (
@@ -622,6 +682,14 @@ export function MembershipReviewStepPage() {
           </SummaryCard>
         ) : null}
       </div>
+
+      {isConfirmOpen ? (
+        <ReviewLiveStatusConfirmModal
+          isLive={availableForSignUp}
+          onCancel={() => setIsConfirmOpen(false)}
+          onConfirm={() => void saveReviewAndExit()}
+        />
+      ) : null}
 
       {isSaving ? <p className="mt-4 text-sm font-medium text-cyan-700">Saving review...</p> : null}
     </section>
