@@ -692,6 +692,10 @@ export function MembershipDiscountCouponsStepPage() {
     setPendingDeleteCouponId(couponId);
   }
 
+  function canDeleteCoupon(coupon: DiscountCouponListItem) {
+    return coupon.usageCount <= 0;
+  }
+
   function handleToggleCouponActive(couponId: string) {
     setCoupons((current) =>
       current.map((coupon) =>
@@ -944,36 +948,32 @@ export function MembershipDiscountCouponsStepPage() {
                         <span className="font-medium text-slate-900">{formatDiscountAmount(coupon)}</span>
                       </td>
                       <td className="px-4 py-4 align-middle text-center">
-                        {isLocalCoupon(coupon) ? (
-                          <div className="inline-flex justify-center">
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={coupon.isActive}
-                              aria-label={`Toggle ${coupon.code} active state`}
-                              onClick={() => handleToggleCouponActive(coupon.uniqueId)}
-                              disabled={!discountsEnabled}
+                        <div className="inline-flex justify-center">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={coupon.isActive}
+                            aria-label={`Toggle ${coupon.code} active state`}
+                            onClick={() => handleToggleCouponActive(coupon.uniqueId)}
+                            disabled={!discountsEnabled}
+                            className={[
+                              "relative inline-flex h-7 w-12 items-center rounded-full border transition",
+                              coupon.isActive
+                                ? "border-cyan-500 bg-cyan-500"
+                                : discountsEnabled
+                                  ? "border-slate-300 bg-slate-200 hover:bg-slate-300"
+                                  : "border-slate-300 bg-slate-200",
+                              "disabled:cursor-not-allowed disabled:opacity-70",
+                            ].join(" ")}
+                          >
+                            <span
                               className={[
-                                "relative inline-flex h-7 w-12 items-center rounded-full border transition",
-                                coupon.isActive
-                                  ? "border-cyan-500 bg-cyan-500"
-                                  : discountsEnabled
-                                    ? "border-slate-300 bg-slate-200 hover:bg-slate-300"
-                                    : "border-slate-300 bg-slate-200",
-                                "disabled:cursor-not-allowed disabled:opacity-70",
+                                "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition",
+                                coupon.isActive ? "translate-x-6" : "translate-x-1",
                               ].join(" ")}
-                            >
-                              <span
-                                className={[
-                                  "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition",
-                                  coupon.isActive ? "translate-x-6" : "translate-x-1",
-                                ].join(" ")}
-                              />
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">Locked</span>
-                        )}
+                            />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-4 align-middle">
                         <div className="flex flex-nowrap items-center justify-end gap-2">
@@ -997,11 +997,17 @@ export function MembershipDiscountCouponsStepPage() {
                             type="button"
                             onClick={() => handleDeleteCoupon(coupon.uniqueId)}
                             aria-label="Delete discount coupon"
-                            title="Delete"
-                            disabled={!discountsEnabled}
+                            title={
+                              !discountsEnabled
+                                ? "Delete is disabled until discount coupons are enabled."
+                                : canDeleteCoupon(coupon)
+                                  ? "Delete"
+                                  : "This coupon has already been used and cannot be deleted."
+                            }
+                            disabled={!discountsEnabled || !canDeleteCoupon(coupon)}
                             className={[
                               "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-white transition",
-                              discountsEnabled
+                              discountsEnabled && canDeleteCoupon(coupon)
                                 ? "border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50"
                                 : "border-slate-200 text-slate-300",
                               "disabled:cursor-not-allowed disabled:opacity-70",
