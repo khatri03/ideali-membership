@@ -344,11 +344,15 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
     const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/description`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-    const description = readText(responseData?.Description ?? responseData?.description);
-    const emailSubject = readText(responseData?.EmailSubject ?? responseData?.emailSubject);
-    const emailTemplate = readText(responseData?.EmailTemplate ?? responseData?.emailTemplate);
-    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+      const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+      const description = readText(responseData?.Description ?? responseData?.description);
+      const emailSubject = readText(responseData?.EmailSubject ?? responseData?.emailSubject);
+      const emailTemplate = readText(responseData?.EmailTemplate ?? responseData?.emailTemplate);
+      const notifyOrganizer = readBoolean(responseData?.NotifyOrganizer ?? responseData?.notifyOrganizer) ?? false;
+      const otherNotificationEmails = readText(
+        responseData?.OtherNotificationEmails ?? responseData?.otherNotificationEmails,
+      );
+      const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
       throw new Error("Unexpected membership description response.");
@@ -356,11 +360,13 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
 
     return {
       uniqueId,
-      description,
-      emailSubject,
-      emailTemplate,
-      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
-    } satisfies MembershipDescriptionInfo;
+        description,
+        emailSubject,
+        emailTemplate,
+        notifyOrganizer,
+        otherNotificationEmails,
+        stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
+      } satisfies MembershipDescriptionInfo;
   });
 }
 
@@ -514,6 +520,8 @@ export async function saveMembershipDescriptionStep(
     description: string | null;
     emailSubject: string | null;
     emailTemplate: string | null;
+    notifyOrganizer: boolean;
+    otherNotificationEmails: string | null;
   },
   stepNumber: number,
   membershipTypeUniqueId?: string,

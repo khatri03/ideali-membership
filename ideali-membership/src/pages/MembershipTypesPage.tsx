@@ -159,16 +159,9 @@ function MembershipTypeRow({
       <td className="w-16 px-4 py-4 align-middle">
         <MembershipTypeActionsMenu item={item} />
       </td>
-      <td className="px-4 py-4 align-middle">
-        <div className="flex flex-wrap items-center gap-2">
+        <td className="px-4 py-4 align-middle">
           <p className="text-sm font-semibold text-slate-900">{item.text}</p>
-          {item.hasDiscountCoupons ? (
-            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-              Coupons
-            </span>
-          ) : null}
-        </div>
-      </td>
+        </td>
     </tr>
   );
 }

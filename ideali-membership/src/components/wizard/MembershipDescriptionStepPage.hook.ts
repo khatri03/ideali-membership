@@ -22,6 +22,8 @@ async function persistMembershipDescriptionStepWithFeedback({
   description,
   emailSubject,
   emailTemplate,
+  notifyOrganizer,
+  otherNotificationEmails,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -31,6 +33,8 @@ async function persistMembershipDescriptionStepWithFeedback({
   description: string | null;
   emailSubject: string | null;
   emailTemplate: string | null;
+  notifyOrganizer: boolean;
+  otherNotificationEmails: string | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -46,6 +50,8 @@ async function persistMembershipDescriptionStepWithFeedback({
         description: normalizeMembershipDescription(description),
         emailSubject,
         emailTemplate,
+        notifyOrganizer,
+        otherNotificationEmails,
       },
       stepNumber,
       membershipTypeUniqueId,
@@ -71,6 +77,8 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
   const editorContentRef = useRef<string>("<p></p>");
   const emailSubjectRef = useRef<string>("");
   const emailTemplateRef = useRef<string>("<p></p>");
+  const notifyOrganizerRef = useRef(false);
+  const otherNotificationEmailsRef = useRef<string>("");
 
   const editor = useEditor({
     extensions: [
@@ -116,6 +124,8 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
         editorContentRef.current = nextDescriptionHtml;
         emailSubjectRef.current = info.emailSubject || "";
         emailTemplateRef.current = info.emailTemplate || "<p></p>";
+        notifyOrganizerRef.current = info.notifyOrganizer ?? false;
+        otherNotificationEmailsRef.current = info.otherNotificationEmails || "";
         setDescriptionHtml(nextDescriptionHtml);
       } catch (loadError) {
         if (!isMounted) {
@@ -160,6 +170,8 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           description: null,
           emailSubject: emailSubjectRef.current.trim().length > 0 ? emailSubjectRef.current : null,
           emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
+          notifyOrganizer: notifyOrganizerRef.current,
+          otherNotificationEmails: otherNotificationEmailsRef.current.trim().length > 0 ? otherNotificationEmailsRef.current : null,
           stepNumber: MEMBERSHIP_DESCRIPTION_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -180,6 +192,8 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           description: editorContentRef.current,
           emailSubject: emailSubjectRef.current.trim().length > 0 ? emailSubjectRef.current : null,
           emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
+          notifyOrganizer: notifyOrganizerRef.current,
+          otherNotificationEmails: otherNotificationEmailsRef.current.trim().length > 0 ? otherNotificationEmailsRef.current : null,
           stepNumber: MEMBERSHIP_DESCRIPTION_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -200,6 +214,8 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
           description: editorContentRef.current,
           emailSubject: emailSubjectRef.current.trim().length > 0 ? emailSubjectRef.current : null,
           emailTemplate: emailTemplateRef.current.trim().length > 0 ? emailTemplateRef.current : null,
+          notifyOrganizer: notifyOrganizerRef.current,
+          otherNotificationEmails: otherNotificationEmailsRef.current.trim().length > 0 ? otherNotificationEmailsRef.current : null,
           stepNumber: MEMBERSHIP_DESCRIPTION_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,

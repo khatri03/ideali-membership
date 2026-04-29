@@ -55,6 +55,8 @@ export interface MembershipDescriptionInfo {
   description: string;
   emailSubject: string;
   emailTemplate: string;
+  notifyOrganizer: boolean;
+  otherNotificationEmails: string;
   stepNo: number;
 }
 

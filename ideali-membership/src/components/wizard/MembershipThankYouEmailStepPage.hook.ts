@@ -31,6 +31,8 @@ async function persistThankYouEmailStepWithFeedback({
   description,
   emailSubject,
   emailTemplate,
+  notifyOrganizer,
+  otherNotificationEmails,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -41,6 +43,8 @@ async function persistThankYouEmailStepWithFeedback({
   description: string | null;
   emailSubject: string | null;
   emailTemplate: string | null;
+  notifyOrganizer: boolean;
+  otherNotificationEmails: string | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -58,6 +62,8 @@ async function persistThankYouEmailStepWithFeedback({
         description,
         emailSubject,
         emailTemplate,
+        notifyOrganizer,
+        otherNotificationEmails,
       },
       stepNumber,
       membershipTypeUniqueId,
@@ -103,6 +109,8 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
     emailSubject?: string;
   }>({});
   const [emailTemplateHtml, setEmailTemplateHtml] = useState("<p></p>");
+  const [notifyOrganizer, setNotifyOrganizer] = useState(false);
+  const [otherNotificationEmails, setOtherNotificationEmails] = useState("");
   const [placeholders, setPlaceholders] = useState<MembershipThankYouEmailStepState["placeholders"]>([]);
   const descriptionRef = useRef("<p></p>");
   const emailSubjectRef = useRef("<p></p>");
@@ -206,6 +214,8 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
         setEmailSubjectHtml(info.emailSubject || "<p></p>");
         emailTemplateRef.current = info.emailTemplate || "<p></p>";
         setEmailTemplateHtml(info.emailTemplate || "<p></p>");
+        setNotifyOrganizer(info.notifyOrganizer ?? false);
+        setOtherNotificationEmails(info.otherNotificationEmails || "");
         setPlaceholders(placeholderItems);
       } catch (loadError) {
         if (!isMounted) {
@@ -256,6 +266,8 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
         description: descriptionRef.current,
         emailSubject: emailSubjectRef.current,
         emailTemplate: emailTemplateRef.current,
+        notifyOrganizer,
+        otherNotificationEmails,
         stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
         membershipTypeUniqueId: currentMembershipTypeUniqueId,
         setError,
@@ -288,6 +300,8 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
           description: descriptionRef.current,
           emailSubject: null,
           emailTemplate: null,
+          notifyOrganizer,
+          otherNotificationEmails,
           stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -320,7 +334,16 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
           navigate(APP_ROUTES.membershipTypes, { replace: true });
         }),
     });
-  }, [currentMembershipTypeUniqueId, editor, isSaving, navigate, setFooterActions, subjectEditor]);
+  }, [
+    currentMembershipTypeUniqueId,
+    editor,
+    isSaving,
+    navigate,
+    notifyOrganizer,
+    otherNotificationEmails,
+    setFooterActions,
+    subjectEditor,
+  ]);
 
   return {
     editor,
@@ -328,6 +351,10 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
     isLoading,
     isSaving,
     validationErrors,
+    notifyOrganizer,
+    otherNotificationEmails,
+    setNotifyOrganizer,
+    setOtherNotificationEmails,
     placeholders,
     subjectEditor,
     reload: () => {

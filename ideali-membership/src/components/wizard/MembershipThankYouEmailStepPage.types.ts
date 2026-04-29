@@ -11,6 +11,10 @@ export interface MembershipThankYouEmailStepState {
     emailBody?: string;
     emailSubject?: string;
   };
+  notifyOrganizer: boolean;
+  otherNotificationEmails: string;
+  setNotifyOrganizer: (value: boolean) => void;
+  setOtherNotificationEmails: (value: string) => void;
   reload: () => void;
   placeholders: MembershipTypePlaceholderGroup[];
 }
