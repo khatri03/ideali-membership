@@ -120,6 +120,58 @@ export function MembershipThankYouEmailStepPage() {
           <MembershipThankYouEmailSkeleton />
         ) : (
           <>
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
+                </div>
+                <div className="ml-auto flex w-full flex-col gap-3 sm:w-auto sm:min-w-[18rem]">
+                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Notify Organizer</p>
+                      <p className="text-xs text-slate-500">Send a copy to the organizer.</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={notifyOrganizer}
+                      aria-label="Toggle notify organizer"
+                      onClick={() => setNotifyOrganizer(!notifyOrganizer)}
+                      className={[
+                        "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition",
+                        notifyOrganizer
+                          ? "border-cyan-500 bg-cyan-500"
+                          : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+                      ].join(" ")}
+                    >
+                      <span
+                        className={[
+                          "inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition",
+                          notifyOrganizer ? "translate-x-7" : "translate-x-1",
+                        ].join(" ")}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  Other Notification Emails
+                </span>
+                <input
+                  type="text"
+                  value={otherNotificationEmails}
+                  onChange={(event) => setOtherNotificationEmails(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                  placeholder="email1@example.com, email2@example.com"
+                />
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Enter comma-separated email addresses for additional recipients.
+                </p>
+              </label>
+            </div>
+
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <label className="text-sm font-semibold text-slate-800">
@@ -187,62 +239,6 @@ export function MembershipThankYouEmailStepPage() {
             {validationErrors.emailBody ? (
               <p className="text-sm font-medium text-rose-600">{validationErrors.emailBody}</p>
             ) : null}
-
-            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
-                  <p className="text-sm leading-6 text-slate-500">
-                    Control whether the organizer receives this email and add any extra notification recipients.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:min-w-[18rem]">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">Notify Organizer</p>
-                      <p className="text-xs text-slate-500">Send a copy to the organizer.</p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={notifyOrganizer}
-                      aria-label="Toggle notify organizer"
-                      onClick={() => setNotifyOrganizer(!notifyOrganizer)}
-                      className={[
-                        "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition",
-                        notifyOrganizer
-                          ? "border-cyan-500 bg-cyan-500"
-                          : "border-slate-300 bg-slate-200 hover:bg-slate-300",
-                      ].join(" ")}
-                    >
-                      <span
-                        className={[
-                          "inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition",
-                          notifyOrganizer ? "translate-x-7" : "translate-x-1",
-                        ].join(" ")}
-                      />
-                    </button>
-                  </div>
-
-                  <label className="flex-1">
-                    <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                      Other Notification Emails
-                    </span>
-                    <input
-                      type="text"
-                      value={otherNotificationEmails}
-                      onChange={(event) => setOtherNotificationEmails(event.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                      placeholder="email1@example.com, email2@example.com"
-                    />
-                    <p className="mt-2 text-xs leading-5 text-slate-500">
-                      Enter comma-separated email addresses for additional recipients.
-                    </p>
-                  </label>
-                </div>
-              </div>
-            </div>
 
             <p className="text-sm text-slate-500">{MEMBERSHIP_THANK_YOU_EMAIL_CONTENT.helper}</p>
             {isSaving ? <p className="text-sm font-medium text-cyan-700">Saving thank you email...</p> : null}
