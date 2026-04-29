@@ -324,6 +324,8 @@ export async function getMembershipAdvanceSettingsInfo(membershipTypeUniqueId: s
     const registrationEndDateUtc = readText(
       responseData?.RegistrationEndDateUtc ?? responseData?.registrationEndDateUtc,
     );
+    const requiresApproval =
+      readBoolean(responseData?.RequiresApproval ?? responseData?.requiresApproval) ?? false;
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
@@ -334,6 +336,7 @@ export async function getMembershipAdvanceSettingsInfo(membershipTypeUniqueId: s
       uniqueId,
       registrationStartDateUtc: registrationStartDateUtc || null,
       registrationEndDateUtc: registrationEndDateUtc || null,
+      requiresApproval,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 10,
     } satisfies MembershipAdvanceSettingsInfo;
   });
@@ -356,6 +359,7 @@ export async function saveMembershipAdvanceSettingsStep(
   request: {
     registrationStartDateUtc: string | null;
     registrationEndDateUtc: string | null;
+    requiresApproval: boolean;
   },
   stepNumber: number,
   membershipTypeUniqueId?: string,

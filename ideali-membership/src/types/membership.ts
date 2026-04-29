@@ -64,6 +64,7 @@ export interface MembershipAdvanceSettingsInfo {
   uniqueId: string;
   registrationStartDateUtc: string | null;
   registrationEndDateUtc: string | null;
+  requiresApproval: boolean;
   stepNo: number;
 }
 

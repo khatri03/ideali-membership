@@ -22,6 +22,7 @@ import type { MembershipAdvanceSettingsStepState } from "./MembershipAdvanceSett
 async function persistMembershipAdvanceSettingsStepWithFeedback({
   registrationStartDateUtc,
   registrationEndDateUtc,
+  requiresApproval,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -31,6 +32,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
 }: {
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
+  requiresApproval: boolean;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -56,6 +58,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
       {
         registrationStartDateUtc: formatUtcDate(registrationStartDateUtc),
         registrationEndDateUtc: formatUtcDate(registrationEndDateUtc),
+        requiresApproval,
       },
       stepNumber,
       membershipTypeUniqueId,
@@ -71,6 +74,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
 async function persistMembershipAdvanceSettingsStepWithoutValidation({
   registrationStartDateUtc,
   registrationEndDateUtc,
+  requiresApproval,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -79,6 +83,7 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
 }: {
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
+  requiresApproval: boolean;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -93,6 +98,7 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
       {
         registrationStartDateUtc: formatUtcDate(registrationStartDateUtc),
         registrationEndDateUtc: formatUtcDate(registrationEndDateUtc),
+        requiresApproval,
       },
       stepNumber,
       membershipTypeUniqueId,
@@ -113,6 +119,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
   const [registrationWindowEnabled, setRegistrationWindowEnabled] = useState(false);
   const [registrationStartDateUtc, setRegistrationStartDateUtc] = useState<Date | null>(null);
   const [registrationEndDateUtc, setRegistrationEndDateUtc] = useState<Date | null>(null);
+  const [requiresApproval, setRequiresApproval] = useState(false);
   const [error, setError] = useState("");
   const [validationError, setValidationError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -145,6 +152,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         setRegistrationStartDateUtc(loadedStartDateUtc);
         setRegistrationEndDateUtc(loadedEndDateUtc);
         setRegistrationWindowEnabled(Boolean(loadedStartDateUtc || loadedEndDateUtc));
+        setRequiresApproval(info.requiresApproval);
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -153,6 +161,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         setRegistrationWindowEnabled(false);
         setRegistrationStartDateUtc(null);
         setRegistrationEndDateUtc(null);
+        setRequiresApproval(false);
         setError(loadError instanceof Error ? loadError.message : "Unable to load advance settings.");
       } finally {
         if (isMounted) {
@@ -195,6 +204,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         void persistMembershipAdvanceSettingsStepWithoutValidation({
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
+          requiresApproval,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -214,6 +224,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         void persistMembershipAdvanceSettingsStepWithFeedback({
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
+          requiresApproval,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -234,6 +245,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         void persistMembershipAdvanceSettingsStepWithFeedback({
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
+          requiresApproval,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -258,6 +270,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
     registrationWindowEnabled,
     registrationStartDateUtc,
     registrationEndDateUtc,
+    requiresApproval,
     error,
     validationError,
     isLoading,
@@ -277,5 +290,6 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
     },
     setRegistrationStartDateUtc,
     setRegistrationEndDateUtc,
+    setRequiresApproval,
   };
 }

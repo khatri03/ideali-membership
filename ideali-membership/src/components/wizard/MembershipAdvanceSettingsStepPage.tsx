@@ -62,6 +62,7 @@ export function MembershipAdvanceSettingsStepPage() {
     registrationWindowEnabled,
     registrationStartDateUtc,
     registrationEndDateUtc,
+    requiresApproval,
     error,
     validationError,
     isLoading,
@@ -70,6 +71,7 @@ export function MembershipAdvanceSettingsStepPage() {
     setRegistrationWindowEnabled,
     setRegistrationStartDateUtc,
     setRegistrationEndDateUtc,
+    setRequiresApproval,
   } = useMembershipAdvanceSettingsStep();
 
   if (error) {
@@ -94,7 +96,8 @@ export function MembershipAdvanceSettingsStepPage() {
           <MembershipAdvanceSettingsSkeleton />
         ) : (
           <>
-            <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-fit">
+            <div className="inline-flex w-full flex-col items-stretch gap-4 md:w-fit">
+              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
@@ -170,6 +173,34 @@ export function MembershipAdvanceSettingsStepPage() {
                   />
                 </label>
               </fieldset>
+            </div>
+
+              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                  {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.approvalLabel}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setRequiresApproval(!requiresApproval)}
+                  className={[
+                    "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                    requiresApproval
+                      ? "border-cyan-500 bg-cyan-500"
+                      : "border-slate-300 bg-slate-200",
+                  ].join(" ")}
+                  aria-pressed={requiresApproval}
+                  aria-label={requiresApproval ? "Disable approval requirement" : "Enable approval requirement"}
+                >
+                  <span
+                    className={[
+                      "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                      requiresApproval ? "translate-x-7" : "translate-x-1",
+                    ].join(" ")}
+                  />
+                </button>
+              </div>
+            </div>
             </div>
 
             {validationError ? (

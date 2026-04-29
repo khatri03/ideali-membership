@@ -6,4 +6,5 @@ export const MEMBERSHIP_ADVANCE_SETTINGS_CONTENT = {
   description: "Set the optional registration window for this membership plan.",
   startLabel: "Registration Start",
   endLabel: "Registration End",
+  approvalLabel: "Requires Approval?",
 } as const;
