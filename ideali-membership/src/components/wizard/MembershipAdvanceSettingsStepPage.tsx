@@ -59,6 +59,7 @@ function MembershipAdvanceSettingsError({ message, onRetry }: { message: string;
 
 export function MembershipAdvanceSettingsStepPage() {
   const {
+    registrationWindowEnabled,
     registrationStartDateUtc,
     registrationEndDateUtc,
     error,
@@ -66,6 +67,7 @@ export function MembershipAdvanceSettingsStepPage() {
     isLoading,
     isSaving,
     reload,
+    setRegistrationWindowEnabled,
     setRegistrationStartDateUtc,
     setRegistrationEndDateUtc,
   } = useMembershipAdvanceSettingsStep();
@@ -99,9 +101,34 @@ export function MembershipAdvanceSettingsStepPage() {
                     Registration Window
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setRegistrationWindowEnabled(!registrationWindowEnabled)}
+                  className={[
+                    "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                    registrationWindowEnabled
+                      ? "border-cyan-500 bg-cyan-500"
+                      : "border-slate-300 bg-slate-200",
+                  ].join(" ")}
+                  aria-pressed={registrationWindowEnabled}
+                  aria-label={registrationWindowEnabled ? "Disable registration window" : "Enable registration window"}
+                >
+                  <span
+                    className={[
+                      "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                      registrationWindowEnabled ? "translate-x-7" : "translate-x-1",
+                    ].join(" ")}
+                  />
+                </button>
               </div>
 
-              <fieldset disabled={isSaving} className="mt-4 flex flex-col gap-3 md:flex-row md:justify-start md:gap-4">
+              <fieldset
+                disabled={isSaving || !registrationWindowEnabled}
+                className={[
+                  "mt-4 flex flex-col gap-3 md:flex-row md:justify-start md:gap-4",
+                  !registrationWindowEnabled ? "opacity-60" : "",
+                ].join(" ")}
+              >
                 <label className="block w-full space-y-2 md:w-[18rem] lg:w-[20rem]">
                   <span className="block text-sm font-semibold text-slate-800">
                     {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.startLabel}

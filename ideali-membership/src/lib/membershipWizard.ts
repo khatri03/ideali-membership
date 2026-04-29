@@ -381,15 +381,17 @@ export async function saveMembershipAdvanceSettingsStep(
         : "",
     );
 
-  if (!savedMembershipTypeUniqueId) {
+  if (!savedMembershipTypeUniqueId && !membershipTypeUniqueId) {
     throw new Error("Unexpected membership advance settings response.");
   }
 
-  invalidateMembershipWizardAdvanceSettingsCache(savedMembershipTypeUniqueId);
-  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
+  const resolvedMembershipTypeUniqueId = savedMembershipTypeUniqueId || membershipTypeUniqueId;
+
+  invalidateMembershipWizardAdvanceSettingsCache(resolvedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(resolvedMembershipTypeUniqueId);
 
   return {
-    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    membershipTypeUniqueId: resolvedMembershipTypeUniqueId,
     responseData,
   };
 }

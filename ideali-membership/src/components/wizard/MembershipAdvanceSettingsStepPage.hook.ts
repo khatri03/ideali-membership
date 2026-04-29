@@ -110,6 +110,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
+  const [registrationWindowEnabled, setRegistrationWindowEnabled] = useState(false);
   const [registrationStartDateUtc, setRegistrationStartDateUtc] = useState<Date | null>(null);
   const [registrationEndDateUtc, setRegistrationEndDateUtc] = useState<Date | null>(null);
   const [error, setError] = useState("");
@@ -138,13 +139,18 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           return;
         }
 
-        setRegistrationStartDateUtc(parseUtcDate(info.registrationStartDateUtc));
-        setRegistrationEndDateUtc(parseUtcDate(info.registrationEndDateUtc));
+        const loadedStartDateUtc = parseUtcDate(info.registrationStartDateUtc);
+        const loadedEndDateUtc = parseUtcDate(info.registrationEndDateUtc);
+
+        setRegistrationStartDateUtc(loadedStartDateUtc);
+        setRegistrationEndDateUtc(loadedEndDateUtc);
+        setRegistrationWindowEnabled(Boolean(loadedStartDateUtc || loadedEndDateUtc));
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
+        setRegistrationWindowEnabled(false);
         setRegistrationStartDateUtc(null);
         setRegistrationEndDateUtc(null);
         setError(loadError instanceof Error ? loadError.message : "Unable to load advance settings.");
@@ -187,8 +193,8 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         ),
       onSkip: () =>
         void persistMembershipAdvanceSettingsStepWithoutValidation({
-          registrationStartDateUtc,
-          registrationEndDateUtc,
+          registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
+          registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -206,8 +212,8 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         }),
       onSaveNext: () =>
         void persistMembershipAdvanceSettingsStepWithFeedback({
-          registrationStartDateUtc,
-          registrationEndDateUtc,
+          registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
+          registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -226,8 +232,8 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         }),
       onSaveExit: () =>
         void persistMembershipAdvanceSettingsStepWithFeedback({
-          registrationStartDateUtc,
-          registrationEndDateUtc,
+          registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
+          registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -242,12 +248,14 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
     currentMembershipTypeUniqueId,
     isSaving,
     navigate,
+    registrationWindowEnabled,
     registrationEndDateUtc,
     registrationStartDateUtc,
     setFooterActions,
   ]);
 
   return {
+    registrationWindowEnabled,
     registrationStartDateUtc,
     registrationEndDateUtc,
     error,
@@ -259,6 +267,13 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         invalidateMembershipWizardAdvanceSettingsCache(currentMembershipTypeUniqueId);
       }
       setReloadTick((current) => current + 1);
+    },
+    setRegistrationWindowEnabled: (value: boolean) => {
+      setRegistrationWindowEnabled(value);
+      if (!value) {
+        setRegistrationStartDateUtc(null);
+        setRegistrationEndDateUtc(null);
+      }
     },
     setRegistrationStartDateUtc,
     setRegistrationEndDateUtc,
