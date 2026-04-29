@@ -60,6 +60,13 @@ export interface MembershipDescriptionInfo {
   stepNo: number;
 }
 
+export interface MembershipAdvanceSettingsInfo {
+  uniqueId: string;
+  registrationStartDateUtc: string | null;
+  registrationEndDateUtc: string | null;
+  stepNo: number;
+}
+
 export interface MembershipTypePlaceholderItem {
   id?: number;
   uniqueId: string;

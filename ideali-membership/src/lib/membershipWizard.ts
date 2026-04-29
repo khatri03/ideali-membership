@@ -8,6 +8,7 @@ import type {
   MembershipDescriptionInfo,
   MembershipQuestionsInfo,
   MembershipDiscountCouponsInfo,
+  MembershipAdvanceSettingsInfo,
   MembershipTypePlaceholderGroup,
   MembershipTypePlaceholderItem,
   MembershipTitleInfo,
@@ -165,6 +166,10 @@ export function invalidateMembershipWizardQuestionsCache(membershipTypeUniqueId:
   invalidateWizardCache(`wizard:questions:${membershipTypeUniqueId}`);
 }
 
+export function invalidateMembershipWizardAdvanceSettingsCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:advance-settings:${membershipTypeUniqueId}`);
+}
+
 export function invalidateOrganizerPaymentAccountSelectionCache() {
   invalidateWizardCache("organizer:payment-account-selection-items");
 }
@@ -305,6 +310,35 @@ export async function getMembershipDiscountCouponsInfo(membershipTypeUniqueId: s
   } satisfies MembershipDiscountCouponsInfo;
 }
 
+export async function getMembershipAdvanceSettingsInfo(membershipTypeUniqueId: string) {
+  return getCachedWizardResponse(`wizard:advance-settings:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(
+      `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/advance-settings`,
+    );
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const registrationStartDateUtc = readText(
+      responseData?.RegistrationStartDateUtc ?? responseData?.registrationStartDateUtc,
+    );
+    const registrationEndDateUtc = readText(
+      responseData?.RegistrationEndDateUtc ?? responseData?.registrationEndDateUtc,
+    );
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+
+    if (!uniqueId) {
+      throw new Error("Unexpected membership advance settings response.");
+    }
+
+    return {
+      uniqueId,
+      registrationStartDateUtc: registrationStartDateUtc || null,
+      registrationEndDateUtc: registrationEndDateUtc || null,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 10,
+    } satisfies MembershipAdvanceSettingsInfo;
+  });
+}
+
 export async function saveMembershipDiscountCoupons(
   membershipTypeUniqueId: string,
   request: MembershipDiscountCouponBatchSaveRequest,
@@ -316,6 +350,48 @@ export async function saveMembershipDiscountCoupons(
     coupons: request.coupons,
     deletedCouponIds: request.deletedCouponIds,
   });
+}
+
+export async function saveMembershipAdvanceSettingsStep(
+  request: {
+    registrationStartDateUtc: string | null;
+    registrationEndDateUtc: string | null;
+  },
+  stepNumber: number,
+  membershipTypeUniqueId?: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for membership advance settings saving.");
+  }
+
+  const payload = await postJson<unknown>(
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/advance-settings?stepNumber=${stepNumber}`,
+    request,
+  );
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  if (!savedMembershipTypeUniqueId) {
+    throw new Error("Unexpected membership advance settings response.");
+  }
+
+  invalidateMembershipWizardAdvanceSettingsCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
 }
 
 export async function getMembershipTitleInfo(membershipTypeUniqueId: string) {
