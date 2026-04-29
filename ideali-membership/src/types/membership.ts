@@ -45,6 +45,11 @@ export interface DiscountCouponListItem {
   isActive: boolean;
 }
 
+export interface MembershipDiscountCouponsInfo {
+  discountsEnabled: boolean;
+  coupons: DiscountCouponListItem[];
+}
+
 export interface MembershipDescriptionInfo {
   uniqueId: string;
   description: string;

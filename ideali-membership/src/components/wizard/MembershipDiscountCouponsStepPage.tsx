@@ -2,8 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../routes";
 import {
-  getMembershipDiscountCoupons,
-  getMembershipTypeDiscountsEnabled,
+  getMembershipDiscountCouponsInfo,
   saveMembershipDiscountCoupons,
 } from "../../lib/membershipWizard";
 import type { DiscountCouponListItem, DiscountCouponTypeValue } from "../../types/membership";
@@ -548,7 +547,6 @@ export function MembershipDiscountCouponsStepPage() {
   const [error, setError] = useState("");
   const [coupons, setCoupons] = useState<DiscountCouponListItem[]>([]);
   const [deletedCouponIds, setDeletedCouponIds] = useState<string[]>([]);
-  const [couponLoadError, setCouponLoadError] = useState("");
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [editingCouponId, setEditingCouponId] = useState<string | null>(null);
   const [pendingDeleteCouponId, setPendingDeleteCouponId] = useState<string | null>(null);
@@ -572,17 +570,20 @@ export function MembershipDiscountCouponsStepPage() {
 
     let isMounted = true;
 
-    async function loadDiscountsState() {
+    async function loadDiscountCoupons() {
       setIsLoading(true);
       setError("");
 
       try {
-        const enabled = await getMembershipTypeDiscountsEnabled(currentMembershipTypeUniqueId);
+        const { discountsEnabled: enabled, coupons: items } = await getMembershipDiscountCouponsInfo(
+          currentMembershipTypeUniqueId,
+        );
         if (!isMounted) {
           return;
         }
 
         setDiscountsEnabled(enabled);
+        setCoupons(items);
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -596,36 +597,7 @@ export function MembershipDiscountCouponsStepPage() {
       }
     }
 
-    void loadDiscountsState();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentMembershipTypeUniqueId]);
-
-  useEffect(() => {
-    if (!currentMembershipTypeUniqueId) {
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadCoupons() {
-      setCouponLoadError("");
-
-      try {
-        const items = await getMembershipDiscountCoupons(currentMembershipTypeUniqueId);
-        if (isMounted) {
-          setCoupons(items);
-        }
-      } catch (loadError) {
-        if (isMounted) {
-          setCouponLoadError(loadError instanceof Error ? loadError.message : "Unable to load discount coupons.");
-        }
-      }
-    }
-
-    void loadCoupons();
+    void loadDiscountCoupons();
 
     return () => {
       isMounted = false;
@@ -1051,11 +1023,6 @@ export function MembershipDiscountCouponsStepPage() {
           </div>
         )}
 
-        {couponLoadError ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {couponLoadError}
-          </div>
-        ) : null}
       </div>
 
         {error ? (

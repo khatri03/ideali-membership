@@ -7,6 +7,7 @@ import type {
   MembershipCustomQuestionOptionDraft,
   MembershipDescriptionInfo,
   MembershipQuestionsInfo,
+  MembershipDiscountCouponsInfo,
   MembershipTypePlaceholderGroup,
   MembershipTypePlaceholderItem,
   MembershipTitleInfo,
@@ -230,26 +231,6 @@ export async function getMembershipTypes() {
     .filter((item) => item.text && item.value);
 }
 
-export async function getMembershipTypeDiscountsEnabled(membershipTypeUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/organizer/membership/type/${membershipTypeUniqueId}/discounts`);
-  const responseData = readResponseData(payload);
-  const discountsEnabled =
-    typeof responseData === "boolean"
-      ? responseData
-      : readBoolean(
-          (responseData as Record<string, unknown> | null)?.Data ??
-            (responseData as Record<string, unknown> | null)?.data ??
-            (responseData as Record<string, unknown> | null)?.Value ??
-            (responseData as Record<string, unknown> | null)?.value,
-        );
-
-  if (typeof discountsEnabled !== "boolean") {
-    throw new Error("Unable to load membership discount state.");
-  }
-
-  return discountsEnabled;
-}
-
 export interface MembershipDiscountCouponBatchSaveItem {
   uniqueId?: string;
   code: string;
@@ -267,8 +248,10 @@ export interface MembershipDiscountCouponBatchSaveRequest {
 }
 
 function readDiscountCouponList(payload: unknown) {
-  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null;
-  const items = Array.isArray(responseData?.PageData)
+  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null | Array<unknown>;
+  const items = Array.isArray(responseData)
+    ? responseData
+    : Array.isArray(responseData?.PageData)
     ? responseData.PageData
     : Array.isArray(responseData?.Data)
       ? responseData.Data
@@ -295,6 +278,31 @@ export async function getMembershipDiscountCoupons(membershipTypeUniqueId: strin
   );
 
   return readDiscountCouponList(payload);
+}
+
+export async function getMembershipDiscountCouponsInfo(membershipTypeUniqueId: string) {
+  const payload = await getJson<unknown>(
+    `/api/organizer/membership/type/${membershipTypeUniqueId}/discount-coupons`,
+  );
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  const discountsEnabled =
+    typeof responseData?.DiscountsEnabled === "boolean"
+      ? responseData.DiscountsEnabled
+      : typeof responseData?.discountsEnabled === "boolean"
+        ? responseData.discountsEnabled
+        : undefined;
+
+  if (typeof discountsEnabled !== "boolean") {
+    throw new Error("Unable to load membership discount state.");
+  }
+
+  const coupons = readDiscountCouponList(responseData?.Coupons ?? responseData?.coupons ?? []);
+
+  return {
+    discountsEnabled,
+    coupons,
+  } satisfies MembershipDiscountCouponsInfo;
 }
 
 export async function saveMembershipDiscountCoupons(
