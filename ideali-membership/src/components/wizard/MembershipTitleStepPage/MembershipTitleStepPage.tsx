@@ -237,6 +237,7 @@ export function MembershipTitleStepPage() {
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Enter membership title"
+                data-wizard-focus="true"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                 aria-invalid={Boolean(error)}
                 aria-describedby={error ? "membership-title-error" : undefined}

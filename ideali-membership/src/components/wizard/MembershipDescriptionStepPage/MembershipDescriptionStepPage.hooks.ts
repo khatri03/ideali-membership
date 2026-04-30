@@ -97,6 +97,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
       attributes: {
         class:
           "min-h-[18rem] rounded-[1.5rem] border border-slate-200 bg-white px-5 py-4 text-sm leading-7 text-slate-900 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
+        "data-wizard-focus": "true",
       },
     },
   });

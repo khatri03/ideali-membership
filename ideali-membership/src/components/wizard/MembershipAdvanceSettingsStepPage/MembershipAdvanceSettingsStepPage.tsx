@@ -63,6 +63,10 @@ export function MembershipAdvanceSettingsStepPage() {
     registrationStartDateUtc,
     registrationEndDateUtc,
     requiresApproval,
+    donationCampaignEnabled,
+    donationCampaigns,
+    selectedDonationCampaignUniqueId,
+    isDonationCampaignsLoading,
     error,
     validationError,
     isLoading,
@@ -72,6 +76,8 @@ export function MembershipAdvanceSettingsStepPage() {
     setRegistrationStartDateUtc,
     setRegistrationEndDateUtc,
     setRequiresApproval,
+    setDonationCampaignEnabled,
+    setSelectedDonationCampaignUniqueId,
   } = useMembershipAdvanceSettingsStep();
 
   if (error) {
@@ -105,6 +111,7 @@ export function MembershipAdvanceSettingsStepPage() {
                 <button
                   type="button"
                   onClick={() => setRequiresApproval(!requiresApproval)}
+                  data-wizard-focus="true"
                   className={[
                     "relative inline-flex h-8 w-14 items-center rounded-full border transition",
                     requiresApproval
@@ -204,6 +211,61 @@ export function MembershipAdvanceSettingsStepPage() {
                 </label>
               </fieldset>
             </div>
+
+            {!isDonationCampaignsLoading && donationCampaigns.length > 0 ? (
+              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-700">
+                      Promote Donation Campaign?
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Pick an active campaign that should receive donations for this organizer.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDonationCampaignEnabled(!donationCampaignEnabled)}
+                    className={[
+                      "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                      donationCampaignEnabled
+                        ? "border-cyan-500 bg-cyan-500"
+                        : "border-slate-300 bg-slate-200",
+                    ].join(" ")}
+                    aria-pressed={donationCampaignEnabled}
+                    aria-label={
+                      donationCampaignEnabled ? "Disable donation campaign selection" : "Enable donation campaign selection"
+                    }
+                  >
+                    <span
+                      className={[
+                        "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                        donationCampaignEnabled ? "translate-x-7" : "translate-x-1",
+                      ].join(" ")}
+                    />
+                  </button>
+                </div>
+
+                <label className="mt-4 block space-y-2">
+                  <span className="block text-sm font-semibold text-slate-800">Campaign</span>
+                  <select
+                    value={selectedDonationCampaignUniqueId}
+                    onChange={(event) => setSelectedDonationCampaignUniqueId(event.target.value)}
+                    disabled={!donationCampaignEnabled}
+                    className={[
+                      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
+                      !donationCampaignEnabled ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-70" : "",
+                    ].join(" ")}
+                  >
+                    {donationCampaigns.map((campaign) => (
+                      <option key={campaign.uniqueId} value={campaign.uniqueId}>
+                        {campaign.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : null}
             </div>
 
             {validationError ? (

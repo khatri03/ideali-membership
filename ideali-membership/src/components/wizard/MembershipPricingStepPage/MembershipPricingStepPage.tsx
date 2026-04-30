@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   getMembershipPricingDays,
   MEMBERSHIP_PRICING_CONTENT,
@@ -65,6 +66,7 @@ export function MembershipPricingStepPage() {
   const isCustomSelected = selectedPricing === 4;
   const isAnnualCustomSelected = selectedAnnualExpiryMode === "custom";
   const availableDays = getMembershipPricingDays(selectedCustomExpiryMonth);
+  const pricingInputRef = useRef<HTMLInputElement | null>(null);
   const annualPanelClassName = [
     "overflow-hidden transition-all duration-300 ease-out",
     isAnnualSelected ? "max-h-[24rem] opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-2",
@@ -73,6 +75,18 @@ export function MembershipPricingStepPage() {
     "overflow-hidden transition-all duration-300 ease-out",
     isCustomSelected ? "max-h-[14rem] opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-2",
   ].join(" ");
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      pricingInputRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoading]);
 
   if (error) {
     return (
@@ -105,11 +119,13 @@ export function MembershipPricingStepPage() {
                   </span>
                 </span>
                 <input
+                  ref={pricingInputRef}
                   type="text"
                   inputMode="decimal"
                   value={selectedMembershipCharges}
                   onChange={(event) => selectMembershipCharges(event.target.value)}
                   placeholder="0.00"
+                  data-wizard-focus="true"
                   className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                 />
                 <p className="text-sm text-slate-500">{MEMBERSHIP_PRICING_CONTENT.priceHelper}</p>

@@ -1101,6 +1101,7 @@ export function MembershipQuestionsStepPage() {
               <button
                 type="button"
                 onClick={() => setCustomFormDropdownOpen(!isCustomFormDropdownOpen)}
+                data-wizard-focus="true"
                 className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm text-slate-900 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <span>

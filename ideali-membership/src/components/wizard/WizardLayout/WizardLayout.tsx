@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { matchPath, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
@@ -43,6 +43,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const [footerActions, setFooterActions] = useState(defaultWizardFooterActions);
   const [membershipTitle, setMembershipTitle] = useState("");
   const [isMembershipTitleLoading, setIsMembershipTitleLoading] = useState(true);
+  const mainRef = useRef<HTMLElement | null>(null);
   const isResumeRoute =
     matchPath({ path: APP_ROUTES.membershipWizardResume, end: true }, location.pathname) !== null;
 
@@ -243,6 +244,65 @@ export function WizardLayout({ children }: WizardLayoutProps) {
     }));
   }, [currentStepIndex, isFirstStep, isLastStep, isResumeRoute, setFooterActions]);
 
+  useEffect(() => {
+    const focusFirstInteractiveElement = () => {
+      const mainElement = mainRef.current;
+      if (!mainElement) {
+        return false;
+      }
+
+      const preferredTarget = mainElement.querySelector<HTMLElement>('[data-wizard-focus="true"]');
+      if (preferredTarget) {
+        preferredTarget.focus();
+        return true;
+      }
+
+      const selector = [
+        'button:not([disabled])',
+        'a[href]',
+        'input:not([disabled]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])',
+      ].join(", ");
+
+      const firstFocusable = mainElement.querySelector<HTMLElement>(selector);
+      if (!firstFocusable) {
+        return false;
+      }
+
+      firstFocusable.focus();
+      return true;
+    };
+
+    let cancelled = false;
+    let attempts = 0;
+    let timeoutId: number | undefined;
+
+    const tryFocus = () => {
+      if (cancelled) {
+        return;
+      }
+
+      attempts += 1;
+      const didFocus = focusFirstInteractiveElement();
+      if (didFocus || attempts >= 100) {
+        return;
+      }
+
+      timeoutId = window.setTimeout(tryFocus, 50);
+    };
+
+    timeoutId = window.setTimeout(tryFocus, 0);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [currentStepIndex, location.pathname, isProgressLoading, isMembershipTitleLoading]);
+
   return (
     <WizardFooterActionsProvider footerActions={footerActions} setFooterActions={setFooterActions}>
       <WizardMembershipTitleProvider
@@ -290,7 +350,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
               />
             ) : null}
 
-            <main className="min-w-0 flex-1 self-start space-y-6">
+            <main ref={mainRef} className="min-w-0 flex-1 self-start space-y-6">
               {children ?? <Outlet />}
 
               <footer className="rounded-[2rem] border border-slate-200 bg-white/90 px-6 py-5 shadow-sm">

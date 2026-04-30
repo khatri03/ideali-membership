@@ -147,6 +147,7 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
       attributes: {
         class:
           "min-h-[1.75rem] text-sm leading-6 text-slate-900 outline-none",
+        "data-wizard-focus": "true",
       },
     },
   });

@@ -58,7 +58,7 @@ export function MembershipBannerStepPage() {
           <MembershipBannerSkeleton />
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6">
+            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6" tabIndex={-1} data-wizard-focus="true">
               <p className="text-sm font-semibold tracking-[0.15em] text-cyan-700 uppercase">
                 Optional step
               </p>

@@ -100,6 +100,7 @@ export function MembershipPaymentAccountStepPage() {
                 <select
                   value={selectedPaymentAccountUniqueId}
                   onChange={(event) => selectPaymentAccount(event.target.value)}
+                  data-wizard-focus="true"
                   className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                 >
                   <option value="">Select payment account</option>

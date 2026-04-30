@@ -831,6 +831,7 @@ export function MembershipDiscountCouponsStepPage() {
               aria-checked={discountsEnabled}
               aria-label="Toggle membership discounts"
               onClick={() => void handleToggleDiscounts()}
+              data-wizard-focus="true"
               disabled={isLoading || isSaving}
               className={[
                 "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition",

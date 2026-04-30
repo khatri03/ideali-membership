@@ -30,10 +30,12 @@ function ToggleSwitch({
   checked,
   onChange,
   disabled,
+  focusTarget,
 }: {
   checked: boolean;
   onChange: () => void;
   disabled?: boolean;
+  focusTarget?: boolean;
 }) {
   return (
     <button
@@ -42,6 +44,7 @@ function ToggleSwitch({
       aria-checked={checked}
       onClick={onChange}
       disabled={disabled}
+      data-wizard-focus={focusTarget ? "true" : undefined}
       className={[
         "relative inline-flex h-8 w-14 items-center rounded-full border transition",
         checked ? "border-cyan-500 bg-cyan-500" : "border-slate-300 bg-slate-200",
@@ -614,6 +617,7 @@ export function MembershipReviewStepPage() {
                       checked={availableForSignUp}
                       onChange={() => setAvailableForSignUp((current) => !current)}
                       disabled={isSaving}
+                      focusTarget
                     />
                   </div>
                 </ReviewGridRow>

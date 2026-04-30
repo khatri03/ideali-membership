@@ -57,11 +57,13 @@ function MembershipColorSwatch({
   label,
   value,
   isSelected,
+  isFocusTarget,
   onSelect,
 }: {
   label: string;
   value: string;
   isSelected: boolean;
+  isFocusTarget: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -71,6 +73,7 @@ function MembershipColorSwatch({
         title={label}
         aria-pressed={isSelected}
         onClick={onSelect}
+        data-wizard-focus={isFocusTarget ? "true" : undefined}
         className={[
           "relative h-full w-full cursor-pointer rounded-2xl border border-transparent transition",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2",
@@ -209,6 +212,7 @@ export function MembershipColorStepPage() {
                       label={color.label}
                       value={color.value}
                       isSelected={isSelected}
+                      isFocusTarget={color.value === MEMBERSHIP_COLOR_SWATCHES[0]?.value}
                       onSelect={() => selectPresetColor(color.value)}
                     />
                   );

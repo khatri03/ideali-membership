@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
+import { getCurrentOrganizerDonationCampaigns } from "../../../lib/donationCampaigns";
 import {
   getMembershipAdvanceSettingsInfo,
   invalidateMembershipWizardAdvanceSettingsCache,
@@ -120,6 +121,10 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
   const [registrationStartDateUtc, setRegistrationStartDateUtc] = useState<Date | null>(null);
   const [registrationEndDateUtc, setRegistrationEndDateUtc] = useState<Date | null>(null);
   const [requiresApproval, setRequiresApproval] = useState(false);
+  const [donationCampaignEnabled, setDonationCampaignEnabled] = useState(false);
+  const [donationCampaigns, setDonationCampaigns] = useState<Array<{ uniqueId: string; name: string }>>([]);
+  const [selectedDonationCampaignUniqueId, setSelectedDonationCampaignUniqueId] = useState("");
+  const [isDonationCampaignsLoading, setIsDonationCampaignsLoading] = useState(true);
   const [error, setError] = useState("");
   const [validationError, setValidationError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -180,6 +185,43 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
   useEffect(() => {
     setValidationError("");
   }, [registrationEndDateUtc, registrationStartDateUtc]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDonationCampaigns() {
+      setIsDonationCampaignsLoading(true);
+
+      try {
+        const campaigns = await getCurrentOrganizerDonationCampaigns();
+        if (!isMounted) {
+          return;
+        }
+
+        setDonationCampaigns(campaigns);
+        setDonationCampaignEnabled(false);
+        setSelectedDonationCampaignUniqueId((current) => current || campaigns[0]?.uniqueId || "");
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setDonationCampaigns([]);
+        setDonationCampaignEnabled(false);
+        setSelectedDonationCampaignUniqueId("");
+      } finally {
+        if (isMounted) {
+          setIsDonationCampaignsLoading(false);
+        }
+      }
+    }
+
+    void loadDonationCampaigns();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useLayoutEffect(() => {
     setFooterActions({
@@ -271,10 +313,14 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
     registrationStartDateUtc,
     registrationEndDateUtc,
     requiresApproval,
+    donationCampaignEnabled,
+    donationCampaigns,
+    selectedDonationCampaignUniqueId,
     error,
     validationError,
     isLoading,
     isSaving,
+    isDonationCampaignsLoading,
     reload: () => {
       if (currentMembershipTypeUniqueId) {
         invalidateMembershipWizardAdvanceSettingsCache(currentMembershipTypeUniqueId);
@@ -291,6 +337,8 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
     setRegistrationStartDateUtc,
     setRegistrationEndDateUtc,
     setRequiresApproval,
+    setDonationCampaignEnabled,
+    setSelectedDonationCampaignUniqueId,
   };
 }
 
