@@ -212,62 +212,84 @@ export function MembershipAdvanceSettingsStepPage() {
               </fieldset>
             </div>
 
-            {!isDonationCampaignsLoading && (donationCampaigns.length > 0 || donationCampaignEnabled) ? (
-              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-700">
-                      Promote Donation Campaign?
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Pick an active campaign that should receive donations for this organizer.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setDonationCampaignEnabled(!donationCampaignEnabled)}
-                    className={[
-                      "relative inline-flex h-8 w-14 items-center rounded-full border transition",
-                      donationCampaignEnabled
-                        ? "border-cyan-500 bg-cyan-500"
-                        : "border-slate-300 bg-slate-200",
-                    ].join(" ")}
-                    aria-pressed={donationCampaignEnabled}
-                    aria-label={
-                      donationCampaignEnabled ? "Disable donation campaign selection" : "Enable donation campaign selection"
-                    }
-                  >
-                    <span
-                      className={[
-                        "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
-                        donationCampaignEnabled ? "translate-x-7" : "translate-x-1",
-                      ].join(" ")}
-                    />
-                  </button>
-                </div>
-
+            {!isDonationCampaignsLoading ? (
+              <div
+                className={[
+                  "w-full rounded-[1.75rem] p-4 shadow-sm md:w-[34rem] lg:w-[38rem]",
+                  donationCampaigns.length > 0
+                    ? "border border-slate-200 bg-slate-50"
+                    : "border border-amber-200 bg-amber-50",
+                ].join(" ")}
+              >
                 {donationCampaigns.length > 0 ? (
-                  <label className="mt-4 block space-y-2">
-                    <span className="block text-sm font-semibold text-slate-800">Campaign</span>
-                    <select
-                      value={selectedDonationCampaignUniqueId}
-                      onChange={(event) => setSelectedDonationCampaignUniqueId(event.target.value)}
-                      disabled={!donationCampaignEnabled}
-                      className={[
-                        "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
-                        !donationCampaignEnabled ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-70" : "",
-                      ].join(" ")}
-                    >
-                      {donationCampaigns.map((campaign) => (
-                        <option key={campaign.uniqueId} value={campaign.uniqueId}>
-                          {campaign.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-700">
+                          Promote Donation Campaign?
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Pick an active campaign that should receive donations for this organizer.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDonationCampaignEnabled(!donationCampaignEnabled)}
+                        className={[
+                          "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                          donationCampaignEnabled
+                            ? "border-cyan-500 bg-cyan-500"
+                            : "border-slate-300 bg-slate-200",
+                        ].join(" ")}
+                        aria-pressed={donationCampaignEnabled}
+                        aria-label={
+                          donationCampaignEnabled
+                            ? "Disable donation campaign selection"
+                            : "Enable donation campaign selection"
+                        }
+                      >
+                        <span
+                          className={[
+                            "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                            donationCampaignEnabled ? "translate-x-7" : "translate-x-1",
+                          ].join(" ")}
+                        />
+                      </button>
+                    </div>
+
+                    {donationCampaigns.length > 0 ? (
+                      <label className="mt-4 block space-y-2">
+                        <span className="block text-sm font-semibold text-slate-800">
+                          Campaign
+                          {donationCampaignEnabled ? <span className="ml-1 text-rose-600">*</span> : null}
+                        </span>
+                        <select
+                          value={selectedDonationCampaignUniqueId}
+                          onChange={(event) => setSelectedDonationCampaignUniqueId(event.target.value)}
+                          disabled={!donationCampaignEnabled}
+                          aria-required={donationCampaignEnabled}
+                          className={[
+                            "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
+                            !donationCampaignEnabled ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-70" : "",
+                          ].join(" ")}
+                        >
+                          {donationCampaigns.map((campaign) => (
+                            <option key={campaign.uniqueId} value={campaign.uniqueId}>
+                              {campaign.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+                  </>
                 ) : (
-                  <p className="mt-4 text-sm text-slate-500">
-                    No active donation campaigns are currently available for this organizer.
+                  <p className="inline-flex items-start gap-2 text-sm leading-5 text-amber-700">
+                    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600">
+                      <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+                        <path d="M10 2.5 18 17.5H2L10 2.5Zm0 4.1a.75.75 0 0 0-.75.75v4.3a.75.75 0 0 0 1.5 0v-4.3A.75.75 0 0 0 10 6.6Zm0 8.1a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+                      </svg>
+                    </span>
+                    <span>No active donation campaign found.</span>
                   </p>
                 )}
               </div>

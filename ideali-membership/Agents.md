@@ -48,3 +48,4 @@ This file defines the working rules for agents contributing to `ideali-membershi
 - Work incrementally and leave the codebase cleaner than you found it.
 - Explain important changes in plain language.
 - If a request has hidden risk, pause and surface the risk instead of silently guessing.
+- Treat `commit` and `push` as opt-in actions only. Do not commit or push changes unless the user explicitly asks for it.

@@ -24,6 +24,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
   registrationStartDateUtc,
   registrationEndDateUtc,
   requiresApproval,
+  donationCampaignEnabled,
   donationCampaignUniqueId,
   stepNumber,
   membershipTypeUniqueId,
@@ -35,6 +36,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
   requiresApproval: boolean;
+  donationCampaignEnabled: boolean;
   donationCampaignUniqueId: string | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
@@ -49,6 +51,11 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
   );
   if (nextValidationError) {
     setValidationError(nextValidationError);
+    return;
+  }
+
+  if (donationCampaignEnabled && !donationCampaignUniqueId) {
+    setValidationError("Please select a donation campaign before continuing.");
     return;
   }
 
@@ -79,24 +86,34 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
   registrationStartDateUtc,
   registrationEndDateUtc,
   requiresApproval,
+  donationCampaignEnabled,
   donationCampaignUniqueId,
   stepNumber,
   membershipTypeUniqueId,
   setError,
+  setValidationError,
   setIsSaving,
   onSuccess,
 }: {
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
   requiresApproval: boolean;
+  donationCampaignEnabled: boolean;
   donationCampaignUniqueId: string | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
+  setValidationError: (value: string) => void;
   setIsSaving: (value: boolean) => void;
   onSuccess: (membershipTypeUniqueId: string) => void | Promise<void>;
 }) {
   setError("");
+
+  if (donationCampaignEnabled && !donationCampaignUniqueId) {
+    setValidationError("Please select a donation campaign before saving.");
+    return;
+  }
+
   setIsSaving(true);
 
   try {
@@ -288,6 +305,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          donationCampaignEnabled,
           donationCampaignUniqueId:
             donationCampaignEnabled && selectedDonationCampaignUniqueId
               ? selectedDonationCampaignUniqueId
@@ -295,6 +313,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
+          setValidationError,
           setIsSaving,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
@@ -312,6 +331,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          donationCampaignEnabled,
           donationCampaignUniqueId:
             donationCampaignEnabled && selectedDonationCampaignUniqueId
               ? selectedDonationCampaignUniqueId
@@ -337,6 +357,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          donationCampaignEnabled,
           donationCampaignUniqueId:
             donationCampaignEnabled && selectedDonationCampaignUniqueId
               ? selectedDonationCampaignUniqueId
