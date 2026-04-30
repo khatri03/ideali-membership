@@ -9,6 +9,7 @@ export interface MembershipTypeListItem {
   isFree: boolean;
   membershipCharges: number;
   paymentCurrencyCode: string | null;
+  paymentCurrencySymbol: string | null;
   tenureText: string | null;
   customExpiryDays: number | null;
   annualExpiryMonth: number | null;

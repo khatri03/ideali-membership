@@ -1,21 +1,21 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
-import { LoginScreen } from "./components/LoginScreen";
-import { ProtectedShell } from "./components/ProtectedShell";
-import { AppLayout } from "./components/layout/AppLayout";
-import { MembershipDescriptionStepPage } from "./components/wizard/MembershipDescriptionStepPage";
-import { MembershipBannerStepPage } from "./components/wizard/MembershipBannerStepPage";
-import { MembershipColorStepPage } from "./components/wizard/MembershipColorStepPage";
-import { MembershipPaymentAccountStepPage } from "./components/wizard/MembershipPaymentAccountStepPage";
-import { MembershipPricingStepPage } from "./components/wizard/MembershipPricingStepPage";
-import { MembershipDiscountCouponsStepPage } from "./components/wizard/MembershipDiscountCouponsStepPage";
-import { MembershipAdvanceSettingsStepPage } from "./components/wizard/MembershipAdvanceSettingsStepPage";
-import { MembershipQuestionsStepPage } from "./components/wizard/MembershipQuestionsStepPage";
-import { MembershipThankYouEmailStepPage } from "./components/wizard/MembershipThankYouEmailStepPage";
-import { MembershipReviewStepPage } from "./components/wizard/MembershipReviewStepPage";
-import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage";
-import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage";
-import { WizardLayout } from "./components/wizard/WizardLayout";
+import { LoginScreen } from "./components/LoginScreen/LoginScreen";
+import { ProtectedShell } from "./components/ProtectedShell/ProtectedShell";
+import { AppLayout } from "./components/layout/AppLayout/AppLayout";
+import { MembershipDescriptionStepPage } from "./components/wizard/MembershipDescriptionStepPage/MembershipDescriptionStepPage";
+import { MembershipBannerStepPage } from "./components/wizard/MembershipBannerStepPage/MembershipBannerStepPage";
+import { MembershipColorStepPage } from "./components/wizard/MembershipColorStepPage/MembershipColorStepPage";
+import { MembershipPaymentAccountStepPage } from "./components/wizard/MembershipPaymentAccountStepPage/MembershipPaymentAccountStepPage";
+import { MembershipPricingStepPage } from "./components/wizard/MembershipPricingStepPage/MembershipPricingStepPage";
+import { MembershipDiscountCouponsStepPage } from "./components/wizard/MembershipDiscountCouponsStepPage/MembershipDiscountCouponsStepPage";
+import { MembershipAdvanceSettingsStepPage } from "./components/wizard/MembershipAdvanceSettingsStepPage/MembershipAdvanceSettingsStepPage";
+import { MembershipQuestionsStepPage } from "./components/wizard/MembershipQuestionsStepPage/MembershipQuestionsStepPage";
+import { MembershipThankYouEmailStepPage } from "./components/wizard/MembershipThankYouEmailStepPage/MembershipThankYouEmailStepPage";
+import { MembershipReviewStepPage } from "./components/wizard/MembershipReviewStepPage/MembershipReviewStepPage";
+import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage/MembershipTitleStepPage";
+import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage/MembershipWizardResumePage";
+import { WizardLayout } from "./components/wizard/WizardLayout/WizardLayout";
 import { CustomFormCreatePage } from "./pages/CustomFormCreatePage";
 import { CustomFormsPage } from "./pages/CustomFormsPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -141,3 +141,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

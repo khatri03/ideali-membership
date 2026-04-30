@@ -147,7 +147,7 @@ function SortableOrderItem({ item }: { item: MembershipTypeOrderListItem }) {
   );
 }
 
-function formatCurrencyAmount(value: number, currencyCode: string | null) {
+function formatCurrencyAmount(value: number, currencyCode: string | null, currencySymbol: string | null) {
   if (!value) {
     return "Free";
   }
@@ -157,15 +157,11 @@ function formatCurrencyAmount(value: number, currencyCode: string | null) {
     maximumFractionDigits: 2,
   }).format(value);
 
-  const symbolMap: Record<string, string> = {
-    USD: "$",
-    CAD: "C$",
-  };
+  const resolvedCurrencyPrefix = currencyCode?.trim()
+    ? currencyCode.trim().toUpperCase()
+    : currencySymbol?.trim() ?? "";
 
-  const normalizedCurrencyCode = currencyCode?.toUpperCase() ?? "";
-  const currencySymbol = symbolMap[normalizedCurrencyCode] ?? (normalizedCurrencyCode ? `${normalizedCurrencyCode} ` : "");
-
-  return `${currencySymbol}${amount}`;
+  return `${resolvedCurrencyPrefix}${amount}`;
 }
 
 function AvailabilityBadge({ value }: { value: boolean }) {
@@ -701,7 +697,7 @@ function MembershipTypeRow({
   item: MembershipTypeListItem;
   onRefresh: () => Promise<void>;
 }) {
-  const price = formatCurrencyAmount(item.membershipCharges, item.paymentCurrencyCode);
+  const price = formatCurrencyAmount(item.membershipCharges, item.paymentCurrencyCode, item.paymentCurrencySymbol);
 
   return (
     <tr className="border-b border-slate-200 last:border-b-0">
