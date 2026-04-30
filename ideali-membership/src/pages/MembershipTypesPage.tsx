@@ -761,11 +761,22 @@ function MembershipTypeActionsMenu({
                     title="Members list is coming soon."
                   >
                     <Users className="h-4 w-4 text-slate-300" />
-                    Members
+                    List
                     <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
                       Disabled
                     </span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyRegistrationLink()}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <Link2 className="h-4 w-4" />
+                    Copy Sign-Up Link
+                  </button>
+
+                  <div className="my-1 border-t border-slate-200" />
 
                   <Link
                     to={buildMembershipRegisterPath(item.value)}
@@ -778,15 +789,6 @@ function MembershipTypeActionsMenu({
                     <UserPlus className="h-4 w-4" />
                     Add
                   </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleCopyRegistrationLink()}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                  >
-                    <Link2 className="h-4 w-4" />
-                    Registration Link
-                  </button>
                 </div>
               ) : null}
 
