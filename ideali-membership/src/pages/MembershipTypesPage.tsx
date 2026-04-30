@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpDown, BadgeInfo, Check, ChevronRight, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -246,6 +246,53 @@ function getTenureLabel(value: string | null) {
   return value || "—";
 }
 
+function formatUtcDateLabel(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = monthLabels[date.getUTCMonth()];
+  const year = date.getUTCFullYear();
+
+  if (!month) {
+    return null;
+  }
+
+  return `${day}-${month}-${year}`;
+}
+
+function getTenureWindowLabel(item: MembershipTypeListItem) {
+  const startDate = item.registrationStartDateUtc ? new Date(item.registrationStartDateUtc) : null;
+  const endDate = item.registrationEndDateUtc ? new Date(item.registrationEndDateUtc) : null;
+  const now = Date.now();
+  const startVisible = Boolean(startDate && !Number.isNaN(startDate.getTime()) && startDate.getTime() > now);
+  const endVisible = Boolean(endDate && !Number.isNaN(endDate.getTime()) && endDate.getTime() > now);
+
+  const startLabel = startVisible ? formatUtcDateLabel(item.registrationStartDateUtc) : null;
+  const endLabel = endVisible ? formatUtcDateLabel(item.registrationEndDateUtc) : null;
+
+  if (startLabel && endLabel) {
+    return `${startLabel} to ${endLabel}`;
+  }
+
+  if (startLabel) {
+    return `Available From ${startLabel}`;
+  }
+
+  if (endLabel) {
+    return `Available Till ${endLabel}`;
+  }
+
+  return null;
+}
+
 function getTenureDetailLabel(item: MembershipTypeListItem) {
   if (item.tenureText === "Annual" && item.annualExpiryMonth && item.annualExpiryDay) {
     const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -449,7 +496,6 @@ function MembershipTypeActionsMenu({
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [memberMenuPosition, setMemberMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
@@ -534,27 +580,6 @@ function MembershipTypeActionsMenu({
       document.removeEventListener("keydown", handleEscape);
     };
   }, []);
-
-  async function handleEdit() {
-    setIsNavigating(true);
-
-    try {
-      const completedStepNo = await getMembershipWizardProgress(item.value);
-      const nextStepNo = Math.min(
-        Math.max(completedStepNo + 1, 1),
-        MEMBERSHIP_WIZARD_STEPS.length,
-      );
-      const step = MEMBERSHIP_WIZARD_STEPS[nextStepNo - 1] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
-
-      navigate(buildMembershipWizardStepPath(step.to, item.value, nextStepNo));
-      setIsOpen(false);
-      setIsStatusOpen(false);
-      setIsMemberOpen(false);
-      setPendingStatus(null);
-    } finally {
-      setIsNavigating(false);
-    }
-  }
 
   function openMenu() {
     const buttonRect = buttonRef.current?.getBoundingClientRect();
@@ -702,15 +727,19 @@ function MembershipTypeActionsMenu({
                   left: `${menuPosition.left}px`,
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => void handleEdit()}
-                  disabled={isNavigating}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                <Link
+                  to={buildMembershipWizardStepPath(APP_ROUTES.membershipWizardResume, item.value)}
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsStatusOpen(false);
+                    setIsMemberOpen(false);
+                    setPendingStatus(null);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-normal text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                 >
                   <EditIcon />
-                  {isNavigating ? "Opening..." : "Edit"}
-                </button>
+                  Edit
+                </Link>
 
                 {canShowMemberMenu(item.setupState) ? (
                   <div
@@ -878,6 +907,8 @@ function MembershipTypeRow({
   onRefresh: () => Promise<void>;
 }) {
   const price = formatCurrencyAmount(item.membershipCharges, item.paymentCurrencyCode, item.paymentCurrencySymbol);
+  const tenureWindowLabel = getTenureWindowLabel(item);
+  const tenureDetailLabel = getTenureDetailLabel(item);
 
   return (
     <tr className="border-b border-slate-200 last:border-b-0">
@@ -904,19 +935,17 @@ function MembershipTypeRow({
         <AvailabilityBadge value={item.availableForSignUp} />
       </td>
       <td className="px-4 py-4 align-middle">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-1">
           <p className="text-sm font-medium text-slate-600">{getTenureLabel(item.tenureText)}</p>
-          {item.tenureText === "Annual" && getTenureDetailLabel(item) ? (
-            <>
-              <InlineSeparator />
-              <MembershipMetaPill value={getTenureDetailLabel(item)} tone="warning" />
-            </>
-          ) : item.tenureText === "Custom" && getTenureDetailLabel(item) ? (
-            <>
-              <InlineSeparator />
-              <p className="text-xs font-medium text-slate-400">{getTenureDetailLabel(item)}</p>
-            </>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {item.tenureText === "Annual" && tenureDetailLabel ? (
+              <MembershipMetaPill value={tenureDetailLabel} tone="warning" />
+            ) : item.tenureText === "Custom" && tenureDetailLabel ? (
+              <p className="text-xs font-medium text-slate-400">{tenureDetailLabel}</p>
+            ) : null}
+
+            {tenureWindowLabel ? <MembershipMetaPill value={tenureWindowLabel} tone="warning" /> : null}
+          </div>
         </div>
       </td>
     </tr>
