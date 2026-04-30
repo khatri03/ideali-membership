@@ -12,6 +12,7 @@ export interface MembershipRegisterPageViewModel {
   submitError: string;
   submitMessage: string;
   isSubmitting: boolean;
+  isRegistrationUnavailable: boolean;
   errors: Partial<Record<keyof MembershipRegistrationFormState, string>>;
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   onRetry: () => void;

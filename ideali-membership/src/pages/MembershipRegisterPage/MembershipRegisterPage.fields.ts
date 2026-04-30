@@ -33,5 +33,7 @@ export const MEMBERSHIP_REGISTER_PAGE_COPY = {
     "Review the plan, share your details, and complete the enrollment request using the payment method connected to this membership type.",
   priceFreeLabel: "Free",
   paymentFallbackLabel: "Cheque / offline payment",
+  unavailableTitle: "Registration is not available yet.",
+  unavailableBody:
+    "This membership is not open for public registration right now. Please check back later or contact the organizer for help.",
 };
-

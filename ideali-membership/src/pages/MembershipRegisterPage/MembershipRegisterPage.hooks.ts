@@ -69,6 +69,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const previousTitleRef = useRef(document.title);
+  const isRegistrationUnavailable = loadError === "Membership registration is not available yet.";
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -240,5 +241,6 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     organizerName,
     membershipName,
     membershipDescription,
+    isRegistrationUnavailable,
   };
 }
