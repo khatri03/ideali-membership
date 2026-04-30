@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BadgeInfo, Check, ChevronRight, GripVertical, Info, X } from "lucide-react";
+import { ArrowUpDown, BadgeInfo, Check, ChevronRight, Info, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
 import { getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep } from "../lib/membershipWizard";
@@ -61,6 +61,10 @@ function InfoIcon() {
   return (
     <Info className="h-5 w-5" />
   );
+}
+
+function DragSortIcon() {
+  return <ArrowUpDown className="h-5 w-5" />;
 }
 
 function formatCurrencyAmount(value: number, currencyCode: string | null) {
@@ -172,6 +176,62 @@ function canShowStatusMenu(setupState: string) {
   return setupState === "ReadyForReview" || setupState === "Published";
 }
 
+function OrderConfirmModal({
+  onCancel,
+  modalRef,
+  membershipTypeName,
+}: {
+  onCancel: () => void;
+  modalRef: { current: HTMLDivElement | null };
+  membershipTypeName?: string;
+}) {
+  return createPortal(
+    <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+      <div ref={modalRef} className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+          <DragSortIcon />
+        </div>
+
+        <h3 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">Change order</h3>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          {membershipTypeName ? (
+            <>
+              Membership type <span className="font-semibold text-slate-900">{membershipTypeName}</span> is ready to be reordered.
+            </>
+          ) : (
+            <>
+              Use the drag handle below to sort membership types in the desired order.
+            </>
+          )}
+        </p>
+
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Membership Title</p>
+          <p className="mt-2 text-sm font-semibold text-slate-900">{membershipTypeName}</p>
+
+          <div className="mt-4 flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
+              <DragSortIcon />
+            </span>
+            <span className="text-sm text-slate-600">Drag to sort</span>
+          </div>
+        </div>
+
+        <div className="mt-8 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function StatusChangeConfirmModal({
   membershipTypeName,
   targetStatusLabel,
@@ -232,14 +292,17 @@ function MembershipTypeActionsMenu({
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const orderButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const statusMenuRef = useRef<HTMLDivElement>(null);
   const confirmModalRef = useRef<HTMLDivElement>(null);
+  const orderModalRef = useRef<HTMLDivElement>(null);
   const statusCloseTimerRef = useRef<number | null>(null);
 
   function clearStatusCloseTimer() {
@@ -260,15 +323,18 @@ function MembershipTypeActionsMenu({
     function handleDocumentClick(event: MouseEvent) {
       const target = event.target as Node;
       const clickedButton = buttonRef.current?.contains(target) ?? false;
+      const clickedOrderButton = orderButtonRef.current?.contains(target) ?? false;
       const clickedMenu = menuRef.current?.contains(target) ?? false;
       const clickedStatus = statusRef.current?.contains(target) ?? false;
       const clickedStatusMenu = statusMenuRef.current?.contains(target) ?? false;
       const clickedConfirmModal = confirmModalRef.current?.contains(target) ?? false;
+      const clickedOrderModal = orderModalRef.current?.contains(target) ?? false;
 
-      if (!clickedButton && !clickedMenu && !clickedStatus && !clickedStatusMenu && !clickedConfirmModal) {
+      if (!clickedButton && !clickedOrderButton && !clickedMenu && !clickedStatus && !clickedStatusMenu && !clickedConfirmModal && !clickedOrderModal) {
         setIsOpen(false);
         setIsStatusOpen(false);
         setPendingStatus(null);
+        setIsOrderModalOpen(false);
       }
     }
 
@@ -277,6 +343,7 @@ function MembershipTypeActionsMenu({
         setIsOpen(false);
         setIsStatusOpen(false);
         setPendingStatus(null);
+        setIsOrderModalOpen(false);
       }
     }
 
@@ -305,6 +372,7 @@ function MembershipTypeActionsMenu({
       setIsOpen(false);
       setIsStatusOpen(false);
       setPendingStatus(null);
+      setIsOrderModalOpen(false);
     } finally {
       setIsNavigating(false);
     }
@@ -331,6 +399,7 @@ function MembershipTypeActionsMenu({
     setIsOpen(true);
     setIsStatusOpen(false);
     setPendingStatus(null);
+    setIsOrderModalOpen(false);
     clearStatusCloseTimer();
   }
 
@@ -380,6 +449,10 @@ function MembershipTypeActionsMenu({
     }
 
     void handleStatusChange(pendingStatus);
+  }
+
+  function openOrderModal() {
+    setIsOrderModalOpen(true);
   }
 
   return (
@@ -544,6 +617,12 @@ export function MembershipTypesPage() {
   const [types, setTypes] = useState<MembershipTypeListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const orderModalRef = useRef<HTMLDivElement>(null);
+
+  function openOrderModal() {
+    setIsOrderModalOpen(true);
+  }
 
   async function loadTypes() {
     setIsLoading(true);
@@ -584,11 +663,12 @@ export function MembershipTypesPage() {
       <div className="mt-8 flex justify-end">
         <button
           type="button"
+          onClick={openOrderModal}
           className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
           aria-label="Change order"
           title="Change order"
         >
-          <GripVertical className="h-5 w-5" />
+          <ArrowUpDown className="h-5 w-5" />
         </button>
       </div>
 
@@ -641,6 +721,9 @@ export function MembershipTypesPage() {
           </div>
         )}
       </div>
+      {isOrderModalOpen ? (
+        <OrderConfirmModal onCancel={() => setIsOrderModalOpen(false)} modalRef={orderModalRef} />
+      ) : null}
     </section>
   );
 }
