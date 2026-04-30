@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
-import { getMembershipWizardProgress, getMembershipTypes } from "../lib/membershipWizard";
+import { getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep } from "../lib/membershipWizard";
 import { MEMBERSHIP_WIZARD_STEPS } from "../components/wizard/membershipWizardSteps";
 import type { MembershipTypeListItem } from "../types/membership";
 
@@ -33,6 +33,14 @@ function ChevronRightIcon() {
 }
 
 function CheckBadgeIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.52 5.96-4.23 5.3a1 1 0 0 1-.76.38h-.02a1 1 0 0 1-.75-.33l-1.98-2.18a1 1 0 1 1 1.48-1.34l1.22 1.34 3.5-4.4a1 1 0 0 1 1.54 1.23Z" />
+    </svg>
+  );
+}
+
+function MenuCheckIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
       <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.52 5.96-4.23 5.3a1 1 0 0 1-.76.38h-.02a1 1 0 0 1-.75-.33l-1.98-2.18a1 1 0 1 1 1.48-1.34l1.22 1.34 3.5-4.4a1 1 0 0 1 1.54 1.23Z" />
@@ -87,42 +95,105 @@ function AvailabilityBadge({ value }: { value: boolean }) {
   );
 }
 
+function formatSetupStateLabel(value: string) {
+  if (!value) {
+    return "Draft";
+  }
+
+  if (value === "ReadyForReview") {
+    return "Ready For Review";
+  }
+
+  return value.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+function SetupStateBadge({ value }: { value: string }) {
+  const normalizedValue = value || "Draft";
+
+  if (normalizedValue === "Published") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        {formatSetupStateLabel(normalizedValue)}
+      </span>
+    );
+  }
+
+  if (normalizedValue === "ReadyForReview") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+        {formatSetupStateLabel(normalizedValue)}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+      {formatSetupStateLabel(normalizedValue)}
+    </span>
+  );
+}
+
 function getTenureLabel(value: string | null) {
   return value || "—";
 }
 
+function getTenureDetailLabel(item: MembershipTypeListItem) {
+  if (item.tenureText === "Annual" && item.annualExpiryMonth && item.annualExpiryDay) {
+    const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthLabel = monthLabels[item.annualExpiryMonth - 1];
+
+    if (!monthLabel) {
+      return null;
+    }
+
+    return `Renewal due on ${String(item.annualExpiryDay).padStart(2, "0")}-${monthLabel}`;
+  }
+
+  if (item.tenureText === "Custom" && item.customExpiryDays) {
+    return `${item.customExpiryDays} Days`;
+  }
+
+  if (item.tenureText !== "Custom" && item.tenureText !== "Annual") {
+    return null;
+  }
+
+  return null;
+}
+
 function MembershipTypeActionsMenu({
   item,
+  onRefresh,
 }: {
   item: MembershipTypeListItem;
+  onRefresh: () => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const moreRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
       const target = event.target as Node;
       const clickedButton = buttonRef.current?.contains(target) ?? false;
       const clickedMenu = menuRef.current?.contains(target) ?? false;
-      const clickedMore = moreRef.current?.contains(target) ?? false;
+      const clickedStatus = statusRef.current?.contains(target) ?? false;
 
-      if (!clickedButton && !clickedMenu && !clickedMore) {
+      if (!clickedButton && !clickedMenu && !clickedStatus) {
         setIsOpen(false);
-        setIsMoreOpen(false);
+        setIsStatusOpen(false);
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
-        setIsMoreOpen(false);
+        setIsStatusOpen(false);
       }
     }
 
@@ -148,7 +219,7 @@ function MembershipTypeActionsMenu({
 
       navigate(buildMembershipWizardStepPath(step.to, item.value, nextStepNo));
       setIsOpen(false);
-      setIsMoreOpen(false);
+      setIsStatusOpen(false);
     } finally {
       setIsNavigating(false);
     }
@@ -161,7 +232,7 @@ function MembershipTypeActionsMenu({
       return;
     }
 
-    const menuHeight = 128;
+    const menuHeight = item.setupState === "ReadyForReview" ? 176 : 128;
     const menuWidth = 176;
     const gap = 8;
     const spaceBelow = window.innerHeight - buttonRect.bottom;
@@ -173,27 +244,40 @@ function MembershipTypeActionsMenu({
       left: Math.max(gap, Math.min(buttonRect.left, window.innerWidth - menuWidth - gap)),
     });
     setIsOpen(true);
-    setIsMoreOpen(false);
+    setIsStatusOpen(false);
   }
 
-  function openMoreMenu(targetElement: HTMLDivElement | null) {
+  function openStatusMenu(targetElement: HTMLDivElement | null) {
     if (!targetElement) {
       return;
     }
 
     const rect = targetElement.getBoundingClientRect();
     const submenuWidth = 180;
-    const submenuHeight = 116;
+    const submenuHeight = 96;
     const gap = 8;
     const spaceRight = window.innerWidth - rect.right;
     const spaceLeft = rect.left;
     const openLeft = spaceRight < submenuWidth + gap && spaceLeft > submenuWidth + gap;
 
-    setSubmenuPosition({
+    setStatusMenuPosition({
       top: Math.max(gap, Math.min(rect.top, window.innerHeight - submenuHeight - gap)),
       left: openLeft ? rect.left - submenuWidth - gap : rect.right + gap,
     });
-    setIsMoreOpen(true);
+    setIsStatusOpen(true);
+  }
+
+  async function handleStatusChange(availableForSignUp: boolean) {
+    setIsNavigating(true);
+
+    try {
+      await saveMembershipReviewStep({ availableForSignUp }, 11, item.value);
+      await onRefresh();
+      setIsOpen(false);
+      setIsStatusOpen(false);
+    } finally {
+      setIsNavigating(false);
+    }
   }
 
   return (
@@ -238,48 +322,60 @@ function MembershipTypeActionsMenu({
                   {isNavigating ? "Opening..." : "Edit"}
                 </button>
 
-                <div
-                  ref={moreRef}
-                  className="relative"
-                  onMouseEnter={() => openMoreMenu(moreRef.current)}
-                  onMouseLeave={() => setIsMoreOpen(false)}
-                >
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                    aria-haspopup="menu"
-                    aria-expanded={isMoreOpen}
+                {item.setupState === "ReadyForReview" ? (
+                  <div
+                    ref={statusRef}
+                    className="relative"
+                    onMouseEnter={() => openStatusMenu(statusRef.current)}
+                    onMouseLeave={() => setIsStatusOpen(false)}
                   >
-                    <span className="flex items-center gap-2">
-                      <DotsIcon />
-                      More
-                    </span>
-                    <ChevronRightIcon />
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                      aria-haspopup="menu"
+                      aria-expanded={isStatusOpen}
+                    >
+                      <span className="flex items-center gap-2">
+                        <DotsIcon />
+                        Status
+                      </span>
+                      <ChevronRightIcon />
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
-              {isMoreOpen && submenuPosition ? (
+              {isStatusOpen && statusMenuPosition ? (
                 <div
                   className="fixed z-[1001] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
                   style={{
-                    top: `${submenuPosition.top}px`,
-                    left: `${submenuPosition.left}px`,
+                    top: `${statusMenuPosition.top}px`,
+                    left: `${statusMenuPosition.left}px`,
                   }}
-                  onMouseEnter={() => setIsMoreOpen(true)}
-                  onMouseLeave={() => setIsMoreOpen(false)}
+                  onMouseEnter={() => setIsStatusOpen(true)}
+                  onMouseLeave={() => setIsStatusOpen(false)}
                 >
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                    onClick={() => void handleStatusChange(true)}
+                    disabled={isNavigating}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Sample Item 1
+                    <span className={item.availableForSignUp ? "text-emerald-600" : "text-slate-300"}>
+                      <MenuCheckIcon />
+                    </span>
+                    Online
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                    onClick={() => void handleStatusChange(false)}
+                    disabled={isNavigating}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Sample Item 2
+                    <span className={!item.availableForSignUp ? "text-slate-500" : "text-slate-300"}>
+                      <MenuCheckIcon />
+                    </span>
+                    Offline
                   </button>
                 </div>
               ) : null}
@@ -293,18 +389,23 @@ function MembershipTypeActionsMenu({
 
 function MembershipTypeRow({
   item,
+  onRefresh,
 }: {
   item: MembershipTypeListItem;
+  onRefresh: () => Promise<void>;
 }) {
   const price = formatCurrencyAmount(item.membershipCharges, item.paymentCurrencyCode);
 
   return (
     <tr className="border-b border-slate-200 last:border-b-0">
       <td className="w-16 px-4 py-4 align-middle">
-        <MembershipTypeActionsMenu item={item} />
+        <MembershipTypeActionsMenu item={item} onRefresh={onRefresh} />
       </td>
       <td className="px-4 py-4 align-middle">
         <p className="text-sm font-semibold text-slate-900">{item.text}</p>
+      </td>
+      <td className="px-4 py-4 align-middle">
+        <SetupStateBadge value={item.setupState} />
       </td>
       <td className="px-4 py-4 text-right align-middle">
         <p className="text-sm font-semibold tabular-nums text-slate-900">{price}</p>
@@ -313,7 +414,12 @@ function MembershipTypeRow({
         <AvailabilityBadge value={item.availableForSignUp} />
       </td>
       <td className="px-4 py-4 align-middle">
-        <p className="text-sm font-medium text-slate-600">{getTenureLabel(item.tenureText)}</p>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-slate-600">{getTenureLabel(item.tenureText)}</p>
+          {getTenureDetailLabel(item) ? (
+            <p className="text-xs font-medium text-slate-400">{getTenureDetailLabel(item)}</p>
+          ) : null}
+        </div>
       </td>
     </tr>
   );
@@ -324,35 +430,22 @@ export function MembershipTypesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let isMounted = true;
+  async function loadTypes() {
+    setIsLoading(true);
 
-    async function loadTypes() {
-      try {
-        const items = await getMembershipTypes();
-        if (!isMounted) {
-          return;
-        }
-
-        setTypes(items);
-      } catch (loadError) {
-        if (!isMounted) {
-          return;
-        }
-
-        setError(loadError instanceof Error ? loadError.message : "Unable to load membership types.");
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+    try {
+      const items = await getMembershipTypes();
+      setTypes(items);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load membership types.");
+    } finally {
+      setIsLoading(false);
     }
+  }
 
+  useEffect(() => {
     void loadTypes();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   return (
@@ -394,6 +487,9 @@ export function MembershipTypesPage() {
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Membership Type
                     </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Status
+                    </th>
                     <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Pricing
                     </th>
@@ -407,7 +503,7 @@ export function MembershipTypesPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {types.map((item) => (
-                    <MembershipTypeRow key={item.value} item={item} />
+                    <MembershipTypeRow key={item.value} item={item} onRefresh={loadTypes} />
                   ))}
                 </tbody>
               </table>

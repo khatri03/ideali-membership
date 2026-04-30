@@ -4,10 +4,14 @@ export interface MembershipTypeListItem {
   hasDiscountCoupons: boolean;
   discountsEnabled: boolean;
   availableForSignUp: boolean;
+  setupState: string;
   isFree: boolean;
   membershipCharges: number;
   paymentCurrencyCode: string | null;
   tenureText: string | null;
+  customExpiryDays: number | null;
+  annualExpiryMonth: number | null;
+  annualExpiryDay: number | null;
 }
 
 export interface MembershipTitleInfo {

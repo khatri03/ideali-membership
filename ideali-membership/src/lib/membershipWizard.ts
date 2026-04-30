@@ -240,10 +240,14 @@ export async function getMembershipTypes() {
       hasDiscountCoupons: readBoolean(item.HasDiscountCoupons ?? item.hasDiscountCoupons) ?? false,
       discountsEnabled: readBoolean(item.DiscountsEnabled ?? item.discountsEnabled) ?? false,
       availableForSignUp: readBoolean(item.AvailableForSignUp ?? item.availableForSignUp) ?? false,
+      setupState: readText(item.SetupState ?? item.setupState) || "Draft",
       isFree: readBoolean(item.IsFree ?? item.isFree) ?? false,
       membershipCharges: readNumber(item.MembershipCharges ?? item.membershipCharges) ?? 0,
       paymentCurrencyCode: readText(item.PaymentCurrencyCode ?? item.paymentCurrencyCode) || null,
       tenureText: readText(item.TenureText ?? item.tenureText) || null,
+      customExpiryDays: readNumber(item.CustomExpiryDays ?? item.customExpiryDays) ?? null,
+      annualExpiryMonth: readNumber(item.AnnualExpiryMonth ?? item.annualExpiryMonth) ?? null,
+      annualExpiryDay: readNumber(item.AnnualExpiryDay ?? item.annualExpiryDay) ?? null,
     }))
     .filter((item) => item.text && item.value);
 }
