@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, BadgeInfo, Check, ChevronRight, Info, X } from "lucide-react";
+import { ArrowUpDown, BadgeInfo, Check, ChevronRight, GripVertical, Info, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
-import { getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep } from "../lib/membershipWizard";
+import { getMembershipTypeOrderList, getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep, saveMembershipTypeOrderList } from "../lib/membershipWizard";
 import { MEMBERSHIP_WIZARD_STEPS } from "../components/wizard/membershipWizardSteps";
-import type { MembershipTypeListItem } from "../types/membership";
+import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
 
 function EditIcon() {
   return (
@@ -63,8 +63,40 @@ function InfoIcon() {
   );
 }
 
-function DragSortIcon() {
-  return <ArrowUpDown className="h-5 w-5" />;
+function OrderListSkeletonRow() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+      <span className="block h-3 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+      <span className="mt-2 block h-4 w-40 max-w-full rounded-full bg-slate-200/80 animate-pulse" />
+    </div>
+  );
+}
+
+function moveMembershipTypeOrder(
+  items: MembershipTypeOrderListItem[],
+  sourceUniqueId: string,
+  targetUniqueId: string,
+) {
+  if (sourceUniqueId === targetUniqueId) {
+    return items;
+  }
+
+  const sourceIndex = items.findIndex((item) => item.uniqueId === sourceUniqueId);
+  const targetIndex = items.findIndex((item) => item.uniqueId === targetUniqueId);
+
+  if (sourceIndex < 0 || targetIndex < 0) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [removedItem] = nextItems.splice(sourceIndex, 1);
+  if (!removedItem) {
+    return items;
+  }
+
+  const insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+  nextItems.splice(insertionIndex, 0, removedItem);
+  return nextItems;
 }
 
 function formatCurrencyAmount(value: number, currencyCode: string | null) {
@@ -172,6 +204,10 @@ function getTenureDetailLabel(item: MembershipTypeListItem) {
   return null;
 }
 
+function InlineSeparator() {
+  return <span className="text-slate-300">|</span>;
+}
+
 function canShowStatusMenu(setupState: string) {
   return setupState === "ReadyForReview" || setupState === "Published";
 }
@@ -179,41 +215,109 @@ function canShowStatusMenu(setupState: string) {
 function OrderConfirmModal({
   onCancel,
   modalRef,
-  membershipTypeName,
+  isLoading,
+  items,
+  error,
+  isSaving,
+  onMoveItem,
+  onSave,
 }: {
   onCancel: () => void;
   modalRef: { current: HTMLDivElement | null };
-  membershipTypeName?: string;
+  isLoading: boolean;
+  items: MembershipTypeOrderListItem[];
+  error: string;
+  isSaving: boolean;
+  onMoveItem: (sourceUniqueId: string, targetUniqueId: string) => void;
+  onSave: () => Promise<void>;
 }) {
-  return createPortal(
-    <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
-      <div ref={modalRef} className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-          <DragSortIcon />
-        </div>
+  const [draggedUniqueId, setDraggedUniqueId] = useState<string | null>(null);
+  const [dragOverUniqueId, setDragOverUniqueId] = useState<string | null>(null);
 
+  function handleDragStart(uniqueId: string) {
+    setDraggedUniqueId(uniqueId);
+  }
+
+  function handleDragEnd() {
+    setDraggedUniqueId(null);
+    setDragOverUniqueId(null);
+  }
+
+  function handleDrop(targetUniqueId: string) {
+    if (!draggedUniqueId || draggedUniqueId === targetUniqueId) {
+      handleDragEnd();
+      return;
+    }
+
+    onMoveItem(draggedUniqueId, targetUniqueId);
+    handleDragEnd();
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        ref={modalRef}
+        className="w-full max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <h3 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">Change order</h3>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          {membershipTypeName ? (
-            <>
-              Membership type <span className="font-semibold text-slate-900">{membershipTypeName}</span> is ready to be reordered.
-            </>
-          ) : (
-            <>
-              Use the drag handle below to sort membership types in the desired order.
-            </>
-          )}
+          Review the current sort order and drag items into place when the ordering action is connected.
         </p>
 
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Membership Title</p>
-          <p className="mt-2 text-sm font-semibold text-slate-900">{membershipTypeName}</p>
+        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+          <div className="border-b border-slate-200 bg-slate-100/80 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Membership Title
+          </div>
 
-          <div className="mt-4 flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
-              <DragSortIcon />
-            </span>
-            <span className="text-sm text-slate-600">Drag to sort</span>
+          <div className="space-y-3 p-4">
+            {isLoading ? (
+              <>
+                <OrderListSkeletonRow />
+                <OrderListSkeletonRow />
+                <OrderListSkeletonRow />
+              </>
+            ) : error ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {error}
+              </div>
+            ) : items.length > 0 ? (
+              items.map((item) => (
+                <div
+                  key={item.uniqueId}
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", item.uniqueId);
+                    handleDragStart(item.uniqueId);
+                  }}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragOverUniqueId(item.uniqueId);
+                  }}
+                  onDrop={() => handleDrop(item.uniqueId)}
+                  className={[
+                    "flex cursor-grab items-center justify-between gap-4 rounded-2xl border bg-white px-4 py-3 shadow-sm transition active:cursor-grabbing",
+                    draggedUniqueId === item.uniqueId ? "border-cyan-300 bg-cyan-50/60 opacity-80" : "border-slate-200",
+                    dragOverUniqueId === item.uniqueId ? "ring-2 ring-cyan-200" : "",
+                  ].join(" ")}
+                >
+                  <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                  <span
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-400"
+                    aria-hidden="true"
+                    title="Drag to sort"
+                  >
+                    <GripVertical className="h-5 w-5" />
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
+                No membership types found.
+              </div>
+            )}
           </div>
         </div>
 
@@ -224,6 +328,14 @@ function OrderConfirmModal({
             className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
           >
             Close
+          </button>
+          <button
+            type="button"
+            onClick={() => void onSave()}
+            disabled={isSaving || isLoading || items.length === 0 || !!error}
+            className="rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? "Saving..." : "Save Order"}
           </button>
         </div>
       </div>
@@ -292,17 +404,14 @@ function MembershipTypeActionsMenu({
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const orderButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const statusMenuRef = useRef<HTMLDivElement>(null);
   const confirmModalRef = useRef<HTMLDivElement>(null);
-  const orderModalRef = useRef<HTMLDivElement>(null);
   const statusCloseTimerRef = useRef<number | null>(null);
 
   function clearStatusCloseTimer() {
@@ -323,18 +432,15 @@ function MembershipTypeActionsMenu({
     function handleDocumentClick(event: MouseEvent) {
       const target = event.target as Node;
       const clickedButton = buttonRef.current?.contains(target) ?? false;
-      const clickedOrderButton = orderButtonRef.current?.contains(target) ?? false;
       const clickedMenu = menuRef.current?.contains(target) ?? false;
       const clickedStatus = statusRef.current?.contains(target) ?? false;
       const clickedStatusMenu = statusMenuRef.current?.contains(target) ?? false;
       const clickedConfirmModal = confirmModalRef.current?.contains(target) ?? false;
-      const clickedOrderModal = orderModalRef.current?.contains(target) ?? false;
 
-      if (!clickedButton && !clickedOrderButton && !clickedMenu && !clickedStatus && !clickedStatusMenu && !clickedConfirmModal && !clickedOrderModal) {
+      if (!clickedButton && !clickedMenu && !clickedStatus && !clickedStatusMenu && !clickedConfirmModal) {
         setIsOpen(false);
         setIsStatusOpen(false);
         setPendingStatus(null);
-        setIsOrderModalOpen(false);
       }
     }
 
@@ -343,7 +449,6 @@ function MembershipTypeActionsMenu({
         setIsOpen(false);
         setIsStatusOpen(false);
         setPendingStatus(null);
-        setIsOrderModalOpen(false);
       }
     }
 
@@ -372,7 +477,6 @@ function MembershipTypeActionsMenu({
       setIsOpen(false);
       setIsStatusOpen(false);
       setPendingStatus(null);
-      setIsOrderModalOpen(false);
     } finally {
       setIsNavigating(false);
     }
@@ -399,7 +503,6 @@ function MembershipTypeActionsMenu({
     setIsOpen(true);
     setIsStatusOpen(false);
     setPendingStatus(null);
-    setIsOrderModalOpen(false);
     clearStatusCloseTimer();
   }
 
@@ -449,10 +552,6 @@ function MembershipTypeActionsMenu({
     }
 
     void handleStatusChange(pendingStatus);
-  }
-
-  function openOrderModal() {
-    setIsOrderModalOpen(true);
   }
 
   return (
@@ -590,10 +689,11 @@ function MembershipTypeRow({
         <MembershipTypeActionsMenu item={item} onRefresh={onRefresh} />
       </td>
       <td className="border-r border-slate-200 px-4 py-4 align-middle">
-        <p className="text-sm font-semibold text-slate-900">{item.text}</p>
-      </td>
-      <td className="border-r border-slate-200 px-4 py-4 align-middle">
-        <SetupStateBadge value={item.setupState} />
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-slate-900">{item.text}</p>
+          <InlineSeparator />
+          <SetupStateBadge value={item.setupState} />
+        </div>
       </td>
       <td className="border-r border-slate-200 px-4 py-4 text-right align-middle">
         <p className="text-sm font-semibold tabular-nums text-slate-900">{price}</p>
@@ -602,10 +702,13 @@ function MembershipTypeRow({
         <AvailabilityBadge value={item.availableForSignUp} />
       </td>
       <td className="px-4 py-4 align-middle">
-        <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-medium text-slate-600">{getTenureLabel(item.tenureText)}</p>
           {getTenureDetailLabel(item) ? (
-            <p className="text-xs font-medium text-slate-400">{getTenureDetailLabel(item)}</p>
+            <>
+              <InlineSeparator />
+              <p className="text-xs font-medium text-slate-400">{getTenureDetailLabel(item)}</p>
+            </>
           ) : null}
         </div>
       </td>
@@ -618,10 +721,34 @@ export function MembershipTypesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isOrderModalLoading, setIsOrderModalLoading] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [orderItems, setOrderItems] = useState<MembershipTypeOrderListItem[]>([]);
+  const [orderError, setOrderError] = useState("");
   const orderModalRef = useRef<HTMLDivElement>(null);
 
   function openOrderModal() {
     setIsOrderModalOpen(true);
+  }
+
+  function moveOrderItem(sourceUniqueId: string, targetUniqueId: string) {
+    setOrderItems((currentItems) => moveMembershipTypeOrder(currentItems, sourceUniqueId, targetUniqueId));
+  }
+
+  async function saveOrder() {
+    if (orderItems.length === 0) {
+      return;
+    }
+
+    setIsSavingOrder(true);
+
+    try {
+      await saveMembershipTypeOrderList(orderItems.map((item) => item.uniqueId));
+      await loadTypes();
+      setIsOrderModalOpen(false);
+    } finally {
+      setIsSavingOrder(false);
+    }
   }
 
   async function loadTypes() {
@@ -641,6 +768,40 @@ export function MembershipTypesPage() {
   useEffect(() => {
     void loadTypes();
   }, []);
+
+  useEffect(() => {
+    if (!isOrderModalOpen) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadOrderItems() {
+      setIsOrderModalLoading(true);
+      setOrderError("");
+
+      try {
+        const items = await getMembershipTypeOrderList();
+        if (isMounted) {
+          setOrderItems(items);
+        }
+      } catch (loadOrderError) {
+        if (isMounted) {
+          setOrderError(loadOrderError instanceof Error ? loadOrderError.message : "Unable to load membership order.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsOrderModalLoading(false);
+        }
+      }
+    }
+
+    void loadOrderItems();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOrderModalOpen]);
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -693,9 +854,6 @@ export function MembershipTypesPage() {
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Membership Type
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Status
-                    </th>
                     <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Pricing
                     </th>
@@ -722,7 +880,16 @@ export function MembershipTypesPage() {
         )}
       </div>
       {isOrderModalOpen ? (
-        <OrderConfirmModal onCancel={() => setIsOrderModalOpen(false)} modalRef={orderModalRef} />
+        <OrderConfirmModal
+          onCancel={() => setIsOrderModalOpen(false)}
+          modalRef={orderModalRef}
+          isLoading={isOrderModalLoading}
+          items={orderItems}
+          error={orderError}
+          isSaving={isSavingOrder}
+          onMoveItem={moveOrderItem}
+          onSave={saveOrder}
+        />
       ) : null}
     </section>
   );

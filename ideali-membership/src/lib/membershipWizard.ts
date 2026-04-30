@@ -13,6 +13,7 @@ import type {
   MembershipReviewPaymentAccountInfo,
   MembershipTypePlaceholderGroup,
   MembershipTypePlaceholderItem,
+  MembershipTypeOrderListItem,
   MembershipTitleInfo,
   MembershipTypeListItem,
   OrganizerPaymentAccountSelectionItem,
@@ -250,6 +251,48 @@ export async function getMembershipTypes() {
       annualExpiryDay: readNumber(item.AnnualExpiryDay ?? item.annualExpiryDay) ?? null,
     }))
     .filter((item) => item.text && item.value);
+}
+
+export async function getMembershipTypeOrderList() {
+  const payload = await getJson<unknown>("/api/organizer/membership/type/order-list");
+  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null;
+  const items = (Array.isArray(responseData?.PageData)
+    ? responseData?.PageData
+    : Array.isArray(responseData?.Data)
+      ? responseData?.Data
+      : responseData) as Array<Record<string, unknown>>;
+
+  return items
+    .map((item): MembershipTypeOrderListItem => ({
+      uniqueId: readText(item.UniqueId ?? item.uniqueId),
+      name: readText(item.Name ?? item.name),
+      displayOrder: readNumber(item.DisplayOrder ?? item.displayOrder) ?? 0,
+    }))
+    .filter((item) => item.uniqueId && item.name)
+    .sort((left, right) => left.displayOrder - right.displayOrder || left.name.localeCompare(right.name));
+}
+
+export async function saveMembershipTypeOrderList(membershipTypeUniqueIds: string[]) {
+  const payload = await postJson<unknown>("/api/organizer/membership/type/order-list", {
+    membershipTypeUniqueIds,
+  });
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId || null,
+    responseData,
+  };
 }
 
 export interface MembershipDiscountCouponBatchSaveItem {

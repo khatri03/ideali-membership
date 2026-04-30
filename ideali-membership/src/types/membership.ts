@@ -14,6 +14,12 @@ export interface MembershipTypeListItem {
   annualExpiryDay: number | null;
 }
 
+export interface MembershipTypeOrderListItem {
+  uniqueId: string;
+  name: string;
+  displayOrder: number;
+}
+
 export interface MembershipTitleInfo {
   uniqueId: string;
   name: string;
