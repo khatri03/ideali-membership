@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
 import { DEFAULT_MEMBERSHIP_REGISTER_FORM, MEMBERSHIP_REGISTER_PAGE_COPY, PAYMENT_PRODUCT_LABELS } from "./MembershipRegisterPage.fields";
 import { validateMembershipRegistrationForm } from "./MembershipRegisterPage.schema";
@@ -68,6 +68,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const [submitError, setSubmitError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const previousTitleRef = useRef(document.title);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -110,6 +111,12 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   }, [currentMembershipTypeUniqueId]);
 
   useEffect(() => {
+    return () => {
+      document.title = previousTitleRef.current;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!info) {
       return;
     }
@@ -138,9 +145,16 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
 
   const customFormCount = info?.membershipDetail.customForms.length ?? 0;
   const isFreeMembership = Boolean(info?.membershipDetail.isFree);
-  const organizerName = info?.membershipDetail.organizerName || "Membership organizer";
+  const organizerName = info?.organizerName || info?.membershipDetail.organizerName || "Membership organizer";
   const membershipName = info?.membershipDetail.name || "Membership";
   const membershipDescription = info?.membershipDetail.description || "";
+  const pageOrganizerName = info?.organizerName || info?.membershipDetail.organizerName || "";
+
+  useEffect(() => {
+    document.title = pageOrganizerName
+      ? `${pageOrganizerName} | Member Registration`
+      : "Member Registration";
+  }, [pageOrganizerName]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

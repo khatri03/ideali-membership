@@ -32,6 +32,7 @@ export interface MembershipRegistrationPaymentSettings {
 
 export interface MembershipRegistrationInfo {
   uniqueId: string;
+  organizerName: string;
   membershipDetail: MembershipRegistrationDetail;
   paymentSettings: MembershipRegistrationPaymentSettings;
   taxSettings: Record<string, unknown> | null;

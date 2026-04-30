@@ -245,6 +245,7 @@ export async function getMembershipTypes() {
       setupState: readText(item.SetupState ?? item.setupState) || "Draft",
       isFree: readBoolean(item.IsFree ?? item.isFree) ?? false,
       membershipCharges: readNumber(item.MembershipCharges ?? item.membershipCharges) ?? 0,
+      paymentMerchant: readText(item.PaymentMerchant ?? item.paymentMerchant) || null,
       paymentCurrencyCode: readText(item.PaymentCurrencyCode ?? item.paymentCurrencyCode) || null,
       paymentCurrencySymbol: readText(item.PaymentCurrencySymbol ?? item.paymentCurrencySymbol) || null,
       tenureText: readText(item.TenureText ?? item.tenureText) || null,

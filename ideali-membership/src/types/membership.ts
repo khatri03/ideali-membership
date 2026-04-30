@@ -8,6 +8,7 @@ export interface MembershipTypeListItem {
   setupState: string;
   isFree: boolean;
   membershipCharges: number;
+  paymentMerchant: string | null;
   paymentCurrencyCode: string | null;
   paymentCurrencySymbol: string | null;
   tenureText: string | null;

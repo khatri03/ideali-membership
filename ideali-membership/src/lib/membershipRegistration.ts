@@ -103,10 +103,10 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     | undefined;
 
   const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+  const organizerName = readText(responseData?.OrganizerName ?? responseData?.organizerName);
   const membershipDetailUniqueId = readText(membershipDetailRecord?.UniqueId ?? membershipDetailRecord?.uniqueId);
   const name = readText(membershipDetailRecord?.Name ?? membershipDetailRecord?.name);
   const description = readText(membershipDetailRecord?.Description ?? membershipDetailRecord?.description);
-  const organizerName = readText(membershipDetailRecord?.OrganizerName ?? membershipDetailRecord?.organizerName);
   const tenure = readScalar(membershipDetailRecord?.Tenure ?? membershipDetailRecord?.tenure);
   const expiresCalendarYear = readBoolean(
     membershipDetailRecord?.ExpiresCalendarYear ?? membershipDetailRecord?.expiresCalendarYear,
@@ -142,6 +142,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
 
   return {
     uniqueId,
+    organizerName,
     membershipDetail: {
       uniqueId: membershipDetailUniqueId || uniqueId,
       name,

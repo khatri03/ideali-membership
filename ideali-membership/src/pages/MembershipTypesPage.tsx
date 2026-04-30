@@ -194,31 +194,52 @@ function formatSetupStateLabel(value: string) {
   return value.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
-function SetupStateBadge({ value }: { value: string }) {
-  const normalizedValue = value || "Draft";
-
-  if (normalizedValue === "Published") {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-        <CheckBadgeIcon />
-        Online
-      </span>
-    );
+function MembershipMetaPill({
+  value,
+  tone = "neutral",
+}: {
+  value: string | null | undefined;
+  tone?: "neutral" | "success" | "warning";
+}) {
+  if (!value) {
+    return null;
   }
 
-  if (normalizedValue === "ReadyForReview" || normalizedValue === "Ready For Review") {
-    return (
-      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-        {formatSetupStateLabel(normalizedValue)}
-      </span>
-    );
-  }
+  const toneClasses = {
+    neutral: "border-slate-200 bg-slate-50 text-slate-700",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warning: "border-amber-200 bg-amber-50 text-amber-700",
+  }[tone];
 
   return (
-    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-      {formatSetupStateLabel(normalizedValue)}
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${toneClasses}`}>
+      {value}
     </span>
   );
+}
+
+function getSetupStatePillValue(value: string) {
+  if (value === "Published") {
+    return "Live";
+  }
+
+  if (value === "ReadyForReview" || value === "Ready For Review") {
+    return "Ready For Review";
+  }
+
+  return formatSetupStateLabel(value);
+}
+
+function getSetupStatePillTone(value: string): "neutral" | "success" | "warning" {
+  if (value === "Published") {
+    return "success";
+  }
+
+  if (value === "ReadyForReview" || value === "Ready For Review") {
+    return "warning";
+  }
+
+  return "neutral";
 }
 
 function getTenureLabel(value: string | null) {
@@ -717,6 +738,8 @@ function MembershipTypeActionsMenu({
                 ) : null}
 
                 {canShowStatusMenu(item.setupState) ? (
+                  <>
+                    <div className="my-1 border-t border-slate-200" />
                   <div
                     ref={statusRef}
                     className="relative"
@@ -739,6 +762,7 @@ function MembershipTypeActionsMenu({
                       <ChevronRightIcon />
                     </button>
                   </div>
+                  </>
                 ) : null}
               </div>
 
@@ -780,6 +804,8 @@ function MembershipTypeActionsMenu({
 
                   <Link
                     to={buildMembershipRegisterPath(item.value)}
+                    target="_blank"
+                    rel="noreferrer"
                     onClick={() => {
                       setIsOpen(false);
                       setIsMemberOpen(false);
@@ -859,10 +885,16 @@ function MembershipTypeRow({
         <MembershipTypeActionsMenu item={item} onRefresh={onRefresh} />
       </td>
       <td className="border-r border-slate-200 px-4 py-4 align-middle">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-slate-900">{item.text}</p>
-          <InlineSeparator />
-          <SetupStateBadge value={item.setupState} />
+          <div className="flex flex-wrap items-center gap-2">
+            <MembershipMetaPill
+              value={getSetupStatePillValue(item.setupState)}
+              tone={getSetupStatePillTone(item.setupState)}
+            />
+            <MembershipMetaPill value={item.paymentMerchant} />
+            <MembershipMetaPill value={item.paymentCurrencyCode?.trim() || item.paymentCurrencySymbol?.trim() || null} />
+          </div>
         </div>
       </td>
       <td className="border-r border-slate-200 px-4 py-4 text-right align-middle">
