@@ -16,6 +16,7 @@ import { MembershipReviewStepPage } from "./components/wizard/MembershipReviewSt
 import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage/MembershipTitleStepPage";
 import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage/MembershipWizardResumePage";
 import { WizardLayout } from "./components/wizard/WizardLayout/WizardLayout";
+import { MembershipRegisterPage } from "./pages/MembershipRegisterPage";
 import { CustomFormCreatePage } from "./pages/CustomFormCreatePage";
 import { CustomFormsPage } from "./pages/CustomFormsPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -71,6 +72,7 @@ function AppHome() {
 function RouterApp() {
   return (
     <Routes>
+      <Route path={APP_ROUTES.membershipRegister} element={<MembershipRegisterPage />} />
       <Route path={APP_ROUTES.root} element={<AppHome />} />
       <Route path={APP_ROUTES.login} element={<LoginRoute />} />
       <Route

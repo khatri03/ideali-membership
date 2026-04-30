@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, BadgeInfo, Check, ChevronRight, GripVertical, Info, X } from "lucide-react";
+import { ArrowUpDown, BadgeInfo, Check, ChevronRight, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
+import { APP_ROUTES, buildMembershipRegisterPath, buildMembershipWizardStepPath } from "../routes";
 import { getMembershipTypeOrderList, getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep, saveMembershipTypeOrderList } from "../lib/membershipWizard";
 import { MEMBERSHIP_WIZARD_STEPS } from "../components/wizard/membershipWizardSteps";
 import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
@@ -256,6 +256,10 @@ function canShowStatusMenu(setupState: string) {
   return setupState === "ReadyForReview" || setupState === "Published";
 }
 
+function canShowMemberMenu(setupState: string) {
+  return setupState === "Published";
+}
+
 function OrderConfirmModal({
   onCancel,
   modalRef,
@@ -418,17 +422,22 @@ function MembershipTypeActionsMenu({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isMemberOpen, setIsMemberOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [memberMenuPosition, setMemberMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const statusMenuRef = useRef<HTMLDivElement>(null);
+  const memberRef = useRef<HTMLDivElement>(null);
+  const memberMenuRef = useRef<HTMLDivElement>(null);
   const confirmModalRef = useRef<HTMLDivElement>(null);
   const statusCloseTimerRef = useRef<number | null>(null);
+  const memberCloseTimerRef = useRef<number | null>(null);
 
   function clearStatusCloseTimer() {
     if (statusCloseTimerRef.current !== null) {
@@ -444,6 +453,20 @@ function MembershipTypeActionsMenu({
     }, 180);
   }
 
+  function clearMemberCloseTimer() {
+    if (memberCloseTimerRef.current !== null) {
+      window.clearTimeout(memberCloseTimerRef.current);
+      memberCloseTimerRef.current = null;
+    }
+  }
+
+  function scheduleMemberClose() {
+    clearMemberCloseTimer();
+    memberCloseTimerRef.current = window.setTimeout(() => {
+      setIsMemberOpen(false);
+    }, 180);
+  }
+
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
       const target = event.target as Node;
@@ -451,11 +474,22 @@ function MembershipTypeActionsMenu({
       const clickedMenu = menuRef.current?.contains(target) ?? false;
       const clickedStatus = statusRef.current?.contains(target) ?? false;
       const clickedStatusMenu = statusMenuRef.current?.contains(target) ?? false;
+      const clickedMember = memberRef.current?.contains(target) ?? false;
+      const clickedMemberMenu = memberMenuRef.current?.contains(target) ?? false;
       const clickedConfirmModal = confirmModalRef.current?.contains(target) ?? false;
 
-      if (!clickedButton && !clickedMenu && !clickedStatus && !clickedStatusMenu && !clickedConfirmModal) {
+      if (
+        !clickedButton &&
+        !clickedMenu &&
+        !clickedStatus &&
+        !clickedStatusMenu &&
+        !clickedMember &&
+        !clickedMemberMenu &&
+        !clickedConfirmModal
+      ) {
         setIsOpen(false);
         setIsStatusOpen(false);
+        setIsMemberOpen(false);
         setPendingStatus(null);
       }
     }
@@ -464,6 +498,7 @@ function MembershipTypeActionsMenu({
       if (event.key === "Escape") {
         setIsOpen(false);
         setIsStatusOpen(false);
+        setIsMemberOpen(false);
         setPendingStatus(null);
       }
     }
@@ -473,6 +508,7 @@ function MembershipTypeActionsMenu({
 
     return () => {
       clearStatusCloseTimer();
+      clearMemberCloseTimer();
       document.removeEventListener("mousedown", handleDocumentClick);
       document.removeEventListener("keydown", handleEscape);
     };
@@ -492,6 +528,7 @@ function MembershipTypeActionsMenu({
       navigate(buildMembershipWizardStepPath(step.to, item.value, nextStepNo));
       setIsOpen(false);
       setIsStatusOpen(false);
+      setIsMemberOpen(false);
       setPendingStatus(null);
     } finally {
       setIsNavigating(false);
@@ -505,8 +542,12 @@ function MembershipTypeActionsMenu({
       return;
     }
 
-    const menuHeight = canShowStatusMenu(item.setupState) ? 176 : 128;
-    const menuWidth = 176;
+    const menuHeight = canShowMemberMenu(item.setupState) && canShowStatusMenu(item.setupState)
+      ? 224
+      : canShowMemberMenu(item.setupState) || canShowStatusMenu(item.setupState)
+        ? 176
+        : 128;
+    const menuWidth = 224;
     const gap = 8;
     const spaceBelow = window.innerHeight - buttonRect.bottom;
     const spaceAbove = buttonRect.top;
@@ -518,8 +559,10 @@ function MembershipTypeActionsMenu({
     });
     setIsOpen(true);
     setIsStatusOpen(false);
+    setIsMemberOpen(false);
     setPendingStatus(null);
     clearStatusCloseTimer();
+    clearMemberCloseTimer();
   }
 
   function openStatusMenu(targetElement: HTMLDivElement | null) {
@@ -543,6 +586,40 @@ function MembershipTypeActionsMenu({
     clearStatusCloseTimer();
   }
 
+  function openMemberMenu(targetElement: HTMLDivElement | null) {
+    if (!targetElement) {
+      return;
+    }
+
+    const rect = targetElement.getBoundingClientRect();
+    const submenuWidth = 240;
+    const submenuHeight = 144;
+    const gap = 8;
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    const openLeft = spaceRight < submenuWidth + gap && spaceLeft > submenuWidth + gap;
+
+    setMemberMenuPosition({
+      top: Math.max(gap, Math.min(rect.top, window.innerHeight - submenuHeight - gap)),
+      left: openLeft ? rect.left - submenuWidth - gap : rect.right + gap,
+    });
+    setIsMemberOpen(true);
+    clearMemberCloseTimer();
+  }
+
+  async function handleCopyRegistrationLink() {
+    const registrationUrl = `${window.location.origin}${buildMembershipRegisterPath(item.value)}`;
+
+    try {
+      await navigator.clipboard.writeText(registrationUrl);
+      showToast("Registration link copied to clipboard.");
+      setIsOpen(false);
+      setIsMemberOpen(false);
+    } catch {
+      showToast("Unable to copy the registration link.");
+    }
+  }
+
   async function handleStatusChange(availableForSignUp: boolean) {
     setIsNavigating(true);
 
@@ -551,6 +628,7 @@ function MembershipTypeActionsMenu({
       await onRefresh();
       setIsOpen(false);
       setIsStatusOpen(false);
+      setIsMemberOpen(false);
     } finally {
       setIsNavigating(false);
     }
@@ -559,6 +637,7 @@ function MembershipTypeActionsMenu({
   function requestStatusChange(availableForSignUp: boolean) {
     setPendingStatus(availableForSignUp);
     setIsStatusOpen(false);
+    setIsMemberOpen(false);
     setIsOpen(false);
   }
 
@@ -596,7 +675,7 @@ function MembershipTypeActionsMenu({
             <>
               <div
                 ref={menuRef}
-                className="fixed z-[1000] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
+                className="fixed z-[1000] w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
                 style={{
                   top: `${menuPosition.top}px`,
                   left: `${menuPosition.left}px`,
@@ -611,6 +690,31 @@ function MembershipTypeActionsMenu({
                   <EditIcon />
                   {isNavigating ? "Opening..." : "Edit"}
                 </button>
+
+                {canShowMemberMenu(item.setupState) ? (
+                  <div
+                    ref={memberRef}
+                    className="relative"
+                    onMouseEnter={() => {
+                      clearMemberCloseTimer();
+                      openMemberMenu(memberRef.current);
+                    }}
+                    onMouseLeave={scheduleMemberClose}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                      aria-haspopup="menu"
+                      aria-expanded={isMemberOpen}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Member
+                      </span>
+                      <ChevronRightIcon />
+                    </button>
+                  </div>
+                ) : null}
 
                 {canShowStatusMenu(item.setupState) ? (
                   <div
@@ -637,6 +741,54 @@ function MembershipTypeActionsMenu({
                   </div>
                 ) : null}
               </div>
+
+              {isMemberOpen && memberMenuPosition ? (
+                <div
+                  ref={memberMenuRef}
+                  className="fixed z-[1001] w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
+                  style={{
+                    top: `${memberMenuPosition.top}px`,
+                    left: `${memberMenuPosition.left}px`,
+                  }}
+                  onMouseEnter={clearMemberCloseTimer}
+                  onMouseLeave={scheduleMemberClose}
+                >
+                  <button
+                    type="button"
+                    disabled
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition"
+                    aria-disabled="true"
+                    title="Members list is coming soon."
+                  >
+                    <Users className="h-4 w-4 text-slate-300" />
+                    Members
+                    <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                      Disabled
+                    </span>
+                  </button>
+
+                  <Link
+                    to={buildMembershipRegisterPath(item.value)}
+                    onClick={() => {
+                      setIsOpen(false);
+                      setIsMemberOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyRegistrationLink()}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <Link2 className="h-4 w-4" />
+                    Registration Link
+                  </button>
+                </div>
+              ) : null}
 
               {isStatusOpen && statusMenuPosition ? (
                 <div

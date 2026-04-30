@@ -4,6 +4,7 @@ export const APP_ROUTES = {
   root: "/",
   login: "/login",
   app: "/",
+  membershipRegister: "/membership/:membershipTypeUniqueId/register",
   membership: "/organizer/membership/type",
   membershipDashboard: "/organizer/membership/type/dashboard",
   membershipTypes: "/organizer/membership/type/list",
@@ -50,4 +51,8 @@ export function buildMembershipWizardStepPath(
 
   const resolvedPath = generatePath(path, { membershipTypeUniqueId });
   return stepNo ? `${resolvedPath}?stepNo=${stepNo}` : resolvedPath;
+}
+
+export function buildMembershipRegisterPath(membershipTypeUniqueId: string) {
+  return generatePath(APP_ROUTES.membershipRegister, { membershipTypeUniqueId });
 }
