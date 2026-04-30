@@ -389,6 +389,9 @@ export async function getMembershipAdvanceSettingsInfo(membershipTypeUniqueId: s
     );
     const requiresApproval =
       readBoolean(responseData?.RequiresApproval ?? responseData?.requiresApproval) ?? false;
+    const donationCampaignUniqueId = readText(
+      responseData?.DonationCampaignUniqueId ?? responseData?.donationCampaignUniqueId,
+    );
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
@@ -400,6 +403,7 @@ export async function getMembershipAdvanceSettingsInfo(membershipTypeUniqueId: s
       registrationStartDateUtc: registrationStartDateUtc || null,
       registrationEndDateUtc: registrationEndDateUtc || null,
       requiresApproval,
+      donationCampaignUniqueId: donationCampaignUniqueId || null,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 10,
     } satisfies MembershipAdvanceSettingsInfo;
   });
@@ -512,6 +516,7 @@ export async function saveMembershipAdvanceSettingsStep(
     registrationStartDateUtc: string | null;
     registrationEndDateUtc: string | null;
     requiresApproval: boolean;
+    donationCampaignUniqueId: string | null;
   },
   stepNumber: number,
   membershipTypeUniqueId?: string,

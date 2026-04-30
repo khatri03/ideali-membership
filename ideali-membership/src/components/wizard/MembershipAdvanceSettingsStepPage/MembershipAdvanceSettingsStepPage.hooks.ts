@@ -24,6 +24,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
   registrationStartDateUtc,
   registrationEndDateUtc,
   requiresApproval,
+  donationCampaignUniqueId,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -34,6 +35,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
   requiresApproval: boolean;
+  donationCampaignUniqueId: string | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -60,6 +62,7 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
         registrationStartDateUtc: formatUtcDate(registrationStartDateUtc),
         registrationEndDateUtc: formatUtcDate(registrationEndDateUtc),
         requiresApproval,
+        donationCampaignUniqueId,
       },
       stepNumber,
       membershipTypeUniqueId,
@@ -76,6 +79,7 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
   registrationStartDateUtc,
   registrationEndDateUtc,
   requiresApproval,
+  donationCampaignUniqueId,
   stepNumber,
   membershipTypeUniqueId,
   setError,
@@ -85,6 +89,7 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
   requiresApproval: boolean;
+  donationCampaignUniqueId: string | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -100,6 +105,7 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
         registrationStartDateUtc: formatUtcDate(registrationStartDateUtc),
         registrationEndDateUtc: formatUtcDate(registrationEndDateUtc),
         requiresApproval,
+        donationCampaignUniqueId,
       },
       stepNumber,
       membershipTypeUniqueId,
@@ -122,6 +128,7 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
   const [registrationEndDateUtc, setRegistrationEndDateUtc] = useState<Date | null>(null);
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [donationCampaignEnabled, setDonationCampaignEnabled] = useState(false);
+  const [savedDonationCampaignUniqueId, setSavedDonationCampaignUniqueId] = useState("");
   const [donationCampaigns, setDonationCampaigns] = useState<Array<{ uniqueId: string; name: string }>>([]);
   const [selectedDonationCampaignUniqueId, setSelectedDonationCampaignUniqueId] = useState("");
   const [isDonationCampaignsLoading, setIsDonationCampaignsLoading] = useState(true);
@@ -158,6 +165,8 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         setRegistrationEndDateUtc(loadedEndDateUtc);
         setRegistrationWindowEnabled(Boolean(loadedStartDateUtc || loadedEndDateUtc));
         setRequiresApproval(info.requiresApproval);
+        setDonationCampaignEnabled(Boolean(info.donationCampaignUniqueId));
+        setSavedDonationCampaignUniqueId(info.donationCampaignUniqueId ?? "");
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -167,6 +176,9 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         setRegistrationStartDateUtc(null);
         setRegistrationEndDateUtc(null);
         setRequiresApproval(false);
+        setDonationCampaignEnabled(false);
+        setSavedDonationCampaignUniqueId("");
+        setSelectedDonationCampaignUniqueId("");
         setError(loadError instanceof Error ? loadError.message : "Unable to load advance settings.");
       } finally {
         if (isMounted) {
@@ -199,8 +211,11 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
         }
 
         setDonationCampaigns(campaigns);
-        setDonationCampaignEnabled(false);
-        setSelectedDonationCampaignUniqueId((current) => current || campaigns[0]?.uniqueId || "");
+        setSelectedDonationCampaignUniqueId((current) =>
+          campaigns.some((campaign) => campaign.uniqueId === current)
+            ? current
+            : campaigns[0]?.uniqueId || current || "",
+        );
       } catch {
         if (!isMounted) {
           return;
@@ -222,6 +237,32 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (savedDonationCampaignUniqueId) {
+      setDonationCampaignEnabled(true);
+      setSelectedDonationCampaignUniqueId((current) => {
+        if (donationCampaigns.some((campaign) => campaign.uniqueId === current)) {
+          return current;
+        }
+
+        if (donationCampaigns.some((campaign) => campaign.uniqueId === savedDonationCampaignUniqueId)) {
+          return savedDonationCampaignUniqueId;
+        }
+
+        return donationCampaigns[0]?.uniqueId || current;
+      });
+      return;
+    }
+
+    if (donationCampaigns.length > 0) {
+      setSelectedDonationCampaignUniqueId((current) =>
+        donationCampaigns.some((campaign) => campaign.uniqueId === current)
+          ? current
+          : donationCampaigns[0]?.uniqueId || "",
+      );
+    }
+  }, [donationCampaigns, savedDonationCampaignUniqueId]);
 
   useLayoutEffect(() => {
     setFooterActions({
@@ -247,6 +288,10 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          donationCampaignUniqueId:
+            donationCampaignEnabled && selectedDonationCampaignUniqueId
+              ? selectedDonationCampaignUniqueId
+              : null,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -267,6 +312,10 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          donationCampaignUniqueId:
+            donationCampaignEnabled && selectedDonationCampaignUniqueId
+              ? selectedDonationCampaignUniqueId
+              : null,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -288,6 +337,10 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          donationCampaignUniqueId:
+            donationCampaignEnabled && selectedDonationCampaignUniqueId
+              ? selectedDonationCampaignUniqueId
+              : null,
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
@@ -300,8 +353,10 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
     });
   }, [
     currentMembershipTypeUniqueId,
+    donationCampaignEnabled,
     isSaving,
     navigate,
+    selectedDonationCampaignUniqueId,
     registrationWindowEnabled,
     registrationEndDateUtc,
     registrationStartDateUtc,

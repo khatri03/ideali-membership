@@ -212,7 +212,7 @@ export function MembershipAdvanceSettingsStepPage() {
               </fieldset>
             </div>
 
-            {!isDonationCampaignsLoading && donationCampaigns.length > 0 ? (
+            {!isDonationCampaignsLoading && (donationCampaigns.length > 0 || donationCampaignEnabled) ? (
               <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -246,24 +246,30 @@ export function MembershipAdvanceSettingsStepPage() {
                   </button>
                 </div>
 
-                <label className="mt-4 block space-y-2">
-                  <span className="block text-sm font-semibold text-slate-800">Campaign</span>
-                  <select
-                    value={selectedDonationCampaignUniqueId}
-                    onChange={(event) => setSelectedDonationCampaignUniqueId(event.target.value)}
-                    disabled={!donationCampaignEnabled}
-                    className={[
-                      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
-                      !donationCampaignEnabled ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-70" : "",
-                    ].join(" ")}
-                  >
-                    {donationCampaigns.map((campaign) => (
-                      <option key={campaign.uniqueId} value={campaign.uniqueId}>
-                        {campaign.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {donationCampaigns.length > 0 ? (
+                  <label className="mt-4 block space-y-2">
+                    <span className="block text-sm font-semibold text-slate-800">Campaign</span>
+                    <select
+                      value={selectedDonationCampaignUniqueId}
+                      onChange={(event) => setSelectedDonationCampaignUniqueId(event.target.value)}
+                      disabled={!donationCampaignEnabled}
+                      className={[
+                        "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
+                        !donationCampaignEnabled ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-70" : "",
+                      ].join(" ")}
+                    >
+                      {donationCampaigns.map((campaign) => (
+                        <option key={campaign.uniqueId} value={campaign.uniqueId}>
+                          {campaign.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">
+                    No active donation campaigns are currently available for this organizer.
+                  </p>
+                )}
               </div>
             ) : null}
             </div>

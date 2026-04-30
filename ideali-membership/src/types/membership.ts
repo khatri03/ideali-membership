@@ -83,6 +83,7 @@ export interface MembershipAdvanceSettingsInfo {
   registrationStartDateUtc: string | null;
   registrationEndDateUtc: string | null;
   requiresApproval: boolean;
+  donationCampaignUniqueId: string | null;
   stepNo: number;
 }
 
