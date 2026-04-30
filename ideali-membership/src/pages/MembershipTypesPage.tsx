@@ -906,7 +906,12 @@ function MembershipTypeRow({
       <td className="px-4 py-4 align-middle">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-medium text-slate-600">{getTenureLabel(item.tenureText)}</p>
-          {getTenureDetailLabel(item) ? (
+          {item.tenureText === "Annual" && getTenureDetailLabel(item) ? (
+            <>
+              <InlineSeparator />
+              <MembershipMetaPill value={getTenureDetailLabel(item)} tone="warning" />
+            </>
+          ) : item.tenureText === "Custom" && getTenureDetailLabel(item) ? (
             <>
               <InlineSeparator />
               <p className="text-xs font-medium text-slate-400">{getTenureDetailLabel(item)}</p>
