@@ -238,6 +238,7 @@ export async function getMembershipTypes() {
     .map((item): MembershipTypeListItem => ({
       text: readText(item.Text ?? item.text ?? item.Name ?? item.name),
       value: readText(item.Value ?? item.value ?? item.UniqueId ?? item.uniqueId),
+      displayOrder: readNumber(item.DisplayOrder ?? item.displayOrder) ?? 0,
       hasDiscountCoupons: readBoolean(item.HasDiscountCoupons ?? item.hasDiscountCoupons) ?? false,
       discountsEnabled: readBoolean(item.DiscountsEnabled ?? item.discountsEnabled) ?? false,
       availableForSignUp: readBoolean(item.AvailableForSignUp ?? item.availableForSignUp) ?? false,
@@ -250,7 +251,8 @@ export async function getMembershipTypes() {
       annualExpiryMonth: readNumber(item.AnnualExpiryMonth ?? item.annualExpiryMonth) ?? null,
       annualExpiryDay: readNumber(item.AnnualExpiryDay ?? item.annualExpiryDay) ?? null,
     }))
-    .filter((item) => item.text && item.value);
+    .filter((item) => item.text && item.value)
+    .sort((left, right) => left.displayOrder - right.displayOrder || left.text.localeCompare(right.text));
 }
 
 export async function getMembershipTypeOrderList() {

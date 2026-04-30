@@ -1,6 +1,7 @@
 export interface MembershipTypeListItem {
   text: string;
   value: string;
+  displayOrder: number;
   hasDiscountCoupons: boolean;
   discountsEnabled: boolean;
   availableForSignUp: boolean;

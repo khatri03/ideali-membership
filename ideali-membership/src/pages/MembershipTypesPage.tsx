@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpDown, BadgeInfo, Check, ChevronRight, GripVertical, Info, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
 import { getMembershipTypeOrderList, getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep, saveMembershipTypeOrderList } from "../lib/membershipWizard";
 import { MEMBERSHIP_WIZARD_STEPS } from "../components/wizard/membershipWizardSteps";
@@ -63,6 +66,45 @@ function InfoIcon() {
   );
 }
 
+function showToast(message: string) {
+  const existingToast = document.getElementById("membership-order-toast");
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  const toast = document.createElement("div");
+  toast.id = "membership-order-toast";
+  toast.className =
+    "fixed right-6 top-6 z-[1300] rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-xl";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  window.setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+
+const constrainOrderDragToParent: Modifier = ({
+  activeNodeRect,
+  containerNodeRect,
+  transform,
+}) => {
+  if (!activeNodeRect || !containerNodeRect) {
+    return transform;
+  }
+
+  const minX = containerNodeRect.left - activeNodeRect.left;
+  const maxX = containerNodeRect.right - activeNodeRect.right;
+  const minY = containerNodeRect.top - activeNodeRect.top;
+  const maxY = containerNodeRect.bottom - activeNodeRect.bottom;
+
+  return {
+    ...transform,
+    x: Math.min(Math.max(transform.x, minX), maxX),
+    y: Math.min(Math.max(transform.y, minY), maxY),
+  };
+};
+
 function OrderListSkeletonRow() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
@@ -72,31 +114,37 @@ function OrderListSkeletonRow() {
   );
 }
 
-function moveMembershipTypeOrder(
-  items: MembershipTypeOrderListItem[],
-  sourceUniqueId: string,
-  targetUniqueId: string,
-) {
-  if (sourceUniqueId === targetUniqueId) {
-    return items;
-  }
+function SortableOrderItem({ item }: { item: MembershipTypeOrderListItem }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.uniqueId,
+  });
 
-  const sourceIndex = items.findIndex((item) => item.uniqueId === sourceUniqueId);
-  const targetIndex = items.findIndex((item) => item.uniqueId === targetUniqueId);
-
-  if (sourceIndex < 0 || targetIndex < 0) {
-    return items;
-  }
-
-  const nextItems = [...items];
-  const [removedItem] = nextItems.splice(sourceIndex, 1);
-  if (!removedItem) {
-    return items;
-  }
-
-  const insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
-  nextItems.splice(insertionIndex, 0, removedItem);
-  return nextItems;
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={[
+        "flex items-center justify-between gap-4 rounded-2xl border bg-white px-4 py-3 shadow-sm",
+        isDragging ? "border-cyan-300 bg-cyan-50/70 opacity-80 shadow-lg" : "border-slate-200",
+      ].join(" ")}
+    >
+      <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+      <button
+        type="button"
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 active:cursor-grabbing"
+        aria-label={`Drag ${item.name} to sort`}
+        title="Drag to sort"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+    </div>
+  );
 }
 
 function formatCurrencyAmount(value: number, currencyCode: string | null) {
@@ -231,26 +279,16 @@ function OrderConfirmModal({
   onMoveItem: (sourceUniqueId: string, targetUniqueId: string) => void;
   onSave: () => Promise<void>;
 }) {
-  const [draggedUniqueId, setDraggedUniqueId] = useState<string | null>(null);
-  const [dragOverUniqueId, setDragOverUniqueId] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  function handleDragStart(uniqueId: string) {
-    setDraggedUniqueId(uniqueId);
-  }
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
 
-  function handleDragEnd() {
-    setDraggedUniqueId(null);
-    setDragOverUniqueId(null);
-  }
-
-  function handleDrop(targetUniqueId: string) {
-    if (!draggedUniqueId || draggedUniqueId === targetUniqueId) {
-      handleDragEnd();
+    if (!over || active.id === over.id) {
       return;
     }
 
-    onMoveItem(draggedUniqueId, targetUniqueId);
-    handleDragEnd();
+    onMoveItem(String(active.id), String(over.id));
   }
 
   return createPortal(
@@ -270,7 +308,7 @@ function OrderConfirmModal({
             Membership Title
           </div>
 
-          <div className="space-y-3 p-4">
+          <div className={["space-y-3 p-4", isSaving ? "pointer-events-none opacity-60" : ""].join(" ")}>
             {isLoading ? (
               <>
                 <OrderListSkeletonRow />
@@ -282,37 +320,18 @@ function OrderConfirmModal({
                 {error}
               </div>
             ) : items.length > 0 ? (
-              items.map((item) => (
-                <div
-                  key={item.uniqueId}
-                  draggable
-                  onDragStart={(event) => {
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", item.uniqueId);
-                    handleDragStart(item.uniqueId);
-                  }}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[constrainOrderDragToParent]}
                   onDragEnd={handleDragEnd}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    setDragOverUniqueId(item.uniqueId);
-                  }}
-                  onDrop={() => handleDrop(item.uniqueId)}
-                  className={[
-                    "flex cursor-grab items-center justify-between gap-4 rounded-2xl border bg-white px-4 py-3 shadow-sm transition active:cursor-grabbing",
-                    draggedUniqueId === item.uniqueId ? "border-cyan-300 bg-cyan-50/60 opacity-80" : "border-slate-200",
-                    dragOverUniqueId === item.uniqueId ? "ring-2 ring-cyan-200" : "",
-                  ].join(" ")}
-                >
-                  <p className="text-sm font-semibold text-slate-900">{item.name}</p>
-                  <span
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-400"
-                    aria-hidden="true"
-                    title="Drag to sort"
-                  >
-                    <GripVertical className="h-5 w-5" />
-                  </span>
-                </div>
-              ))
+              >
+                <SortableContext items={items.map((item) => item.uniqueId)} strategy={verticalListSortingStrategy}>
+                  {items.map((item) => (
+                    <SortableOrderItem key={item.uniqueId} item={item} />
+                  ))}
+                </SortableContext>
+              </DndContext>
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
                 No membership types found.
@@ -321,11 +340,12 @@ function OrderConfirmModal({
           </div>
         </div>
 
-        <div className="mt-8 flex items-center justify-end gap-3">
+        <div className="mt-8 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            disabled={isSaving}
+            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Close
           </button>
@@ -732,7 +752,16 @@ export function MembershipTypesPage() {
   }
 
   function moveOrderItem(sourceUniqueId: string, targetUniqueId: string) {
-    setOrderItems((currentItems) => moveMembershipTypeOrder(currentItems, sourceUniqueId, targetUniqueId));
+    setOrderItems((currentItems) => {
+      const sourceIndex = currentItems.findIndex((item) => item.uniqueId === sourceUniqueId);
+      const targetIndex = currentItems.findIndex((item) => item.uniqueId === targetUniqueId);
+
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+        return currentItems;
+      }
+
+      return arrayMove(currentItems, sourceIndex, targetIndex);
+    });
   }
 
   async function saveOrder() {
@@ -745,6 +774,7 @@ export function MembershipTypesPage() {
     try {
       await saveMembershipTypeOrderList(orderItems.map((item) => item.uniqueId));
       await loadTypes();
+      showToast("Membership order saved successfully.");
       setIsOrderModalOpen(false);
     } finally {
       setIsSavingOrder(false);
