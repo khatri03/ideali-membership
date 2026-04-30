@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BadgeInfo, Check, ChevronRight, Info, X } from "lucide-react";
+import { BadgeInfo, Check, ChevronRight, GripVertical, Info, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
 import { getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep } from "../lib/membershipWizard";
@@ -579,6 +579,17 @@ export function MembershipTypesPage() {
         >
           Create
         </Link>
+      </div>
+
+      <div className="mt-8 flex justify-end">
+        <button
+          type="button"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+          aria-label="Change order"
+          title="Change order"
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
       </div>
 
       <div className="mt-8">
