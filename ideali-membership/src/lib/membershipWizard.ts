@@ -239,6 +239,11 @@ export async function getMembershipTypes() {
       value: readText(item.Value ?? item.value ?? item.UniqueId ?? item.uniqueId),
       hasDiscountCoupons: readBoolean(item.HasDiscountCoupons ?? item.hasDiscountCoupons) ?? false,
       discountsEnabled: readBoolean(item.DiscountsEnabled ?? item.discountsEnabled) ?? false,
+      availableForSignUp: readBoolean(item.AvailableForSignUp ?? item.availableForSignUp) ?? false,
+      isFree: readBoolean(item.IsFree ?? item.isFree) ?? false,
+      membershipCharges: readNumber(item.MembershipCharges ?? item.membershipCharges) ?? 0,
+      paymentCurrencyCode: readText(item.PaymentCurrencyCode ?? item.paymentCurrencyCode) || null,
+      tenureText: readText(item.TenureText ?? item.tenureText) || null,
     }))
     .filter((item) => item.text && item.value);
 }

@@ -3,6 +3,11 @@ export interface MembershipTypeListItem {
   value: string;
   hasDiscountCoupons: boolean;
   discountsEnabled: boolean;
+  availableForSignUp: boolean;
+  isFree: boolean;
+  membershipCharges: number;
+  paymentCurrencyCode: string | null;
+  tenureText: string | null;
 }
 
 export interface MembershipTitleInfo {

@@ -24,6 +24,65 @@ function DotsIcon() {
   );
 }
 
+function CheckBadgeIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.52 5.96-4.23 5.3a1 1 0 0 1-.76.38h-.02a1 1 0 0 1-.75-.33l-1.98-2.18a1 1 0 1 1 1.48-1.34l1.22 1.34 3.5-4.4a1 1 0 0 1 1.54 1.23Z" />
+    </svg>
+  );
+}
+
+function XBadgeIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.3 10.14a1 1 0 0 1-1.41 1.41L10 10.41l-1.89 1.89a1 1 0 1 1-1.41-1.41L8.59 9l-1.89-1.89a1 1 0 0 1 1.41-1.41L10 7.59l1.89-1.89a1 1 0 0 1 1.41 1.41L11.41 9Z" />
+    </svg>
+  );
+}
+
+function formatCurrencyAmount(value: number, currencyCode: string | null) {
+  if (!value) {
+    return "Free";
+  }
+
+  const amount = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+  const symbolMap: Record<string, string> = {
+    USD: "$",
+    CAD: "C$",
+  };
+
+  const normalizedCurrencyCode = currencyCode?.toUpperCase() ?? "";
+  const currencySymbol = symbolMap[normalizedCurrencyCode] ?? (normalizedCurrencyCode ? `${normalizedCurrencyCode} ` : "");
+
+  return `${currencySymbol}${amount}`;
+}
+
+function AvailabilityBadge({ value }: { value: boolean }) {
+  if (value) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        <CheckBadgeIcon />
+        Yes
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+      <XBadgeIcon />
+      No
+    </span>
+  );
+}
+
+function getTenureLabel(value: string | null) {
+  return value || "—";
+}
+
 function MembershipTypeActionsMenu({
   item,
 }: {
@@ -154,14 +213,25 @@ function MembershipTypeRow({
 }: {
   item: MembershipTypeListItem;
 }) {
+  const price = formatCurrencyAmount(item.membershipCharges, item.paymentCurrencyCode);
+
   return (
     <tr className="border-b border-slate-200 last:border-b-0">
       <td className="w-16 px-4 py-4 align-middle">
         <MembershipTypeActionsMenu item={item} />
       </td>
-        <td className="px-4 py-4 align-middle">
-          <p className="text-sm font-semibold text-slate-900">{item.text}</p>
-        </td>
+      <td className="px-4 py-4 align-middle">
+        <p className="text-sm font-semibold text-slate-900">{item.text}</p>
+      </td>
+      <td className="px-4 py-4 text-right align-middle">
+        <p className="text-sm font-semibold tabular-nums text-slate-900">{price}</p>
+      </td>
+      <td className="px-4 py-4 align-middle">
+        <AvailabilityBadge value={item.availableForSignUp} />
+      </td>
+      <td className="px-4 py-4 align-middle">
+        <p className="text-sm font-medium text-slate-600">{getTenureLabel(item.tenureText)}</p>
+      </td>
     </tr>
   );
 }
@@ -240,6 +310,15 @@ export function MembershipTypesPage() {
                     </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Membership Type
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Pricing
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Signup
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Tenure
                     </th>
                   </tr>
                 </thead>
