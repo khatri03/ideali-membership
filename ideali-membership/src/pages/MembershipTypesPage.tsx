@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { BadgeInfo, Check, ChevronRight, Info, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../routes";
 import { getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep } from "../lib/membershipWizard";
@@ -34,25 +35,31 @@ function ChevronRightIcon() {
 
 function CheckBadgeIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
-      <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.52 5.96-4.23 5.3a1 1 0 0 1-.76.38h-.02a1 1 0 0 1-.75-.33l-1.98-2.18a1 1 0 1 1 1.48-1.34l1.22 1.34 3.5-4.4a1 1 0 0 1 1.54 1.23Z" />
-    </svg>
+    <Check className="h-4 w-4" />
   );
 }
 
 function MenuCheckIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
-      <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.52 5.96-4.23 5.3a1 1 0 0 1-.76.38h-.02a1 1 0 0 1-.75-.33l-1.98-2.18a1 1 0 1 1 1.48-1.34l1.22 1.34 3.5-4.4a1 1 0 0 1 1.54 1.23Z" />
-    </svg>
+    <Check className="h-4 w-4" />
+  );
+}
+
+function StatusIcon() {
+  return (
+    <BadgeInfo className="h-4 w-4" />
   );
 }
 
 function XBadgeIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
-      <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.3 10.14a1 1 0 0 1-1.41 1.41L10 10.41l-1.89 1.89a1 1 0 1 1-1.41-1.41L8.59 9l-1.89-1.89a1 1 0 0 1 1.41-1.41L10 7.59l1.89-1.89a1 1 0 0 1 1.41 1.41L11.41 9Z" />
-    </svg>
+    <X className="h-4 w-4" />
+  );
+}
+
+function InfoIcon() {
+  return (
+    <Info className="h-5 w-5" />
   );
 }
 
@@ -100,8 +107,8 @@ function formatSetupStateLabel(value: string) {
     return "Draft";
   }
 
-  if (value === "ReadyForReview") {
-    return "Ready For Review";
+  if (value === "ReadyForReview" || value === "Ready For Review") {
+    return "Ready To Go Live";
   }
 
   return value.replace(/([a-z])([A-Z])/g, "$1 $2");
@@ -112,13 +119,14 @@ function SetupStateBadge({ value }: { value: string }) {
 
   if (normalizedValue === "Published") {
     return (
-      <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-        {formatSetupStateLabel(normalizedValue)}
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        <CheckBadgeIcon />
+        Online
       </span>
     );
   }
 
-  if (normalizedValue === "ReadyForReview") {
+  if (normalizedValue === "ReadyForReview" || normalizedValue === "Ready For Review") {
     return (
       <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
         {formatSetupStateLabel(normalizedValue)}
@@ -160,6 +168,59 @@ function getTenureDetailLabel(item: MembershipTypeListItem) {
   return null;
 }
 
+function canShowStatusMenu(setupState: string) {
+  return setupState === "ReadyForReview" || setupState === "Published";
+}
+
+function StatusChangeConfirmModal({
+  membershipTypeName,
+  targetStatusLabel,
+  onCancel,
+  onConfirm,
+  modalRef,
+}: {
+  membershipTypeName: string;
+  targetStatusLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  modalRef: { current: HTMLDivElement | null };
+}) {
+  return createPortal(
+    <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+      <div ref={modalRef} className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+          <InfoIcon />
+        </div>
+
+        <h3 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">Confirm status change</h3>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          Membership type <span className="font-semibold text-slate-900">{membershipTypeName}</span> will be marked as{" "}
+          <span className="font-semibold text-slate-900">{targetStatusLabel}</span>.
+          Please confirm if you want to continue.
+        </p>
+
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function MembershipTypeActionsMenu({
   item,
   onRefresh,
@@ -170,12 +231,30 @@ function MembershipTypeActionsMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+  const confirmModalRef = useRef<HTMLDivElement>(null);
+  const statusCloseTimerRef = useRef<number | null>(null);
+
+  function clearStatusCloseTimer() {
+    if (statusCloseTimerRef.current !== null) {
+      window.clearTimeout(statusCloseTimerRef.current);
+      statusCloseTimerRef.current = null;
+    }
+  }
+
+  function scheduleStatusClose() {
+    clearStatusCloseTimer();
+    statusCloseTimerRef.current = window.setTimeout(() => {
+      setIsStatusOpen(false);
+    }, 180);
+  }
 
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
@@ -183,10 +262,13 @@ function MembershipTypeActionsMenu({
       const clickedButton = buttonRef.current?.contains(target) ?? false;
       const clickedMenu = menuRef.current?.contains(target) ?? false;
       const clickedStatus = statusRef.current?.contains(target) ?? false;
+      const clickedStatusMenu = statusMenuRef.current?.contains(target) ?? false;
+      const clickedConfirmModal = confirmModalRef.current?.contains(target) ?? false;
 
-      if (!clickedButton && !clickedMenu && !clickedStatus) {
+      if (!clickedButton && !clickedMenu && !clickedStatus && !clickedStatusMenu && !clickedConfirmModal) {
         setIsOpen(false);
         setIsStatusOpen(false);
+        setPendingStatus(null);
       }
     }
 
@@ -194,6 +276,7 @@ function MembershipTypeActionsMenu({
       if (event.key === "Escape") {
         setIsOpen(false);
         setIsStatusOpen(false);
+        setPendingStatus(null);
       }
     }
 
@@ -201,6 +284,7 @@ function MembershipTypeActionsMenu({
     document.addEventListener("keydown", handleEscape);
 
     return () => {
+      clearStatusCloseTimer();
       document.removeEventListener("mousedown", handleDocumentClick);
       document.removeEventListener("keydown", handleEscape);
     };
@@ -220,6 +304,7 @@ function MembershipTypeActionsMenu({
       navigate(buildMembershipWizardStepPath(step.to, item.value, nextStepNo));
       setIsOpen(false);
       setIsStatusOpen(false);
+      setPendingStatus(null);
     } finally {
       setIsNavigating(false);
     }
@@ -232,7 +317,7 @@ function MembershipTypeActionsMenu({
       return;
     }
 
-    const menuHeight = item.setupState === "ReadyForReview" ? 176 : 128;
+    const menuHeight = canShowStatusMenu(item.setupState) ? 176 : 128;
     const menuWidth = 176;
     const gap = 8;
     const spaceBelow = window.innerHeight - buttonRect.bottom;
@@ -245,6 +330,8 @@ function MembershipTypeActionsMenu({
     });
     setIsOpen(true);
     setIsStatusOpen(false);
+    setPendingStatus(null);
+    clearStatusCloseTimer();
   }
 
   function openStatusMenu(targetElement: HTMLDivElement | null) {
@@ -265,6 +352,7 @@ function MembershipTypeActionsMenu({
       left: openLeft ? rect.left - submenuWidth - gap : rect.right + gap,
     });
     setIsStatusOpen(true);
+    clearStatusCloseTimer();
   }
 
   async function handleStatusChange(availableForSignUp: boolean) {
@@ -278,6 +366,20 @@ function MembershipTypeActionsMenu({
     } finally {
       setIsNavigating(false);
     }
+  }
+
+  function requestStatusChange(availableForSignUp: boolean) {
+    setPendingStatus(availableForSignUp);
+    setIsStatusOpen(false);
+    setIsOpen(false);
+  }
+
+  function confirmStatusChange() {
+    if (pendingStatus === null) {
+      return;
+    }
+
+    void handleStatusChange(pendingStatus);
   }
 
   return (
@@ -322,12 +424,15 @@ function MembershipTypeActionsMenu({
                   {isNavigating ? "Opening..." : "Edit"}
                 </button>
 
-                {item.setupState === "ReadyForReview" ? (
+                {canShowStatusMenu(item.setupState) ? (
                   <div
                     ref={statusRef}
                     className="relative"
-                    onMouseEnter={() => openStatusMenu(statusRef.current)}
-                    onMouseLeave={() => setIsStatusOpen(false)}
+                    onMouseEnter={() => {
+                      clearStatusCloseTimer();
+                      openStatusMenu(statusRef.current);
+                    }}
+                    onMouseLeave={scheduleStatusClose}
                   >
                     <button
                       type="button"
@@ -336,7 +441,7 @@ function MembershipTypeActionsMenu({
                       aria-expanded={isStatusOpen}
                     >
                       <span className="flex items-center gap-2">
-                        <DotsIcon />
+                        <StatusIcon />
                         Status
                       </span>
                       <ChevronRightIcon />
@@ -347,32 +452,33 @@ function MembershipTypeActionsMenu({
 
               {isStatusOpen && statusMenuPosition ? (
                 <div
+                  ref={statusMenuRef}
                   className="fixed z-[1001] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
                   style={{
                     top: `${statusMenuPosition.top}px`,
                     left: `${statusMenuPosition.left}px`,
                   }}
-                  onMouseEnter={() => setIsStatusOpen(true)}
-                  onMouseLeave={() => setIsStatusOpen(false)}
+                  onMouseEnter={clearStatusCloseTimer}
+                  onMouseLeave={scheduleStatusClose}
                 >
                   <button
                     type="button"
-                    onClick={() => void handleStatusChange(true)}
+                    onClick={() => requestStatusChange(true)}
                     disabled={isNavigating}
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <span className={item.availableForSignUp ? "text-emerald-600" : "text-slate-300"}>
+                    <span className={item.availableForSignUp ? "text-emerald-600" : "invisible"}>
                       <MenuCheckIcon />
                     </span>
                     Online
                   </button>
                   <button
                     type="button"
-                    onClick={() => void handleStatusChange(false)}
+                    onClick={() => requestStatusChange(false)}
                     disabled={isNavigating}
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <span className={!item.availableForSignUp ? "text-slate-500" : "text-slate-300"}>
+                    <span className={!item.availableForSignUp ? "text-slate-500" : "invisible"}>
                       <MenuCheckIcon />
                     </span>
                     Offline
@@ -383,6 +489,15 @@ function MembershipTypeActionsMenu({
             document.body,
           )
         : null}
+      {pendingStatus !== null ? (
+        <StatusChangeConfirmModal
+          membershipTypeName={item.text}
+          targetStatusLabel={pendingStatus ? "Online" : "Offline"}
+          onCancel={() => setPendingStatus(null)}
+          onConfirm={confirmStatusChange}
+          modalRef={confirmModalRef}
+        />
+      ) : null}
     </div>
   );
 }
@@ -398,19 +513,19 @@ function MembershipTypeRow({
 
   return (
     <tr className="border-b border-slate-200 last:border-b-0">
-      <td className="w-16 px-4 py-4 align-middle">
+      <td className="w-16 border-r border-slate-200 px-4 py-4 align-middle">
         <MembershipTypeActionsMenu item={item} onRefresh={onRefresh} />
       </td>
-      <td className="px-4 py-4 align-middle">
+      <td className="border-r border-slate-200 px-4 py-4 align-middle">
         <p className="text-sm font-semibold text-slate-900">{item.text}</p>
       </td>
-      <td className="px-4 py-4 align-middle">
+      <td className="border-r border-slate-200 px-4 py-4 align-middle">
         <SetupStateBadge value={item.setupState} />
       </td>
-      <td className="px-4 py-4 text-right align-middle">
+      <td className="border-r border-slate-200 px-4 py-4 text-right align-middle">
         <p className="text-sm font-semibold tabular-nums text-slate-900">{price}</p>
       </td>
-      <td className="px-4 py-4 align-middle">
+      <td className="border-r border-slate-200 px-4 py-4 align-middle">
         <AvailabilityBadge value={item.availableForSignUp} />
       </td>
       <td className="px-4 py-4 align-middle">

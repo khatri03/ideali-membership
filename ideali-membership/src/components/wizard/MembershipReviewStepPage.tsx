@@ -416,7 +416,7 @@ function ReviewLiveStatusConfirmModal({
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Publish state</p>
             <p className="mt-2 text-sm font-semibold text-slate-900">
-              {isLive ? "Published" : "Ready For Review"}
+              {isLive ? "Published" : "Ready To Go Live"}
             </p>
           </div>
           <p className="text-sm leading-6 text-slate-600">Please confirm this before saving the membership review.</p>
@@ -584,11 +584,11 @@ export function MembershipReviewStepPage() {
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={[
+                      className={[
                             "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
                             reviewInfo.setupState === "Published"
                               ? "bg-emerald-50 text-emerald-700"
-                              : reviewInfo.setupState === "Ready For Review"
+                              : reviewInfo.setupState === "Ready For Review" || reviewInfo.setupState === "Ready To Go Live"
                                 ? "bg-amber-50 text-amber-700"
                                 : "bg-slate-100 text-slate-600",
                           ].join(" ")}
