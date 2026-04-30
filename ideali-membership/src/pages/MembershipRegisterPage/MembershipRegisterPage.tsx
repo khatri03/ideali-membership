@@ -158,9 +158,25 @@ function UnavailableCard() {
 
 export function MembershipRegisterPage() {
   const { isLoading, registrationState, registrationStartDateUtc, onRetry } = useMembershipRegisterPage();
+  const effectiveRegistrationState = useMemo(() => {
+    if (!registrationStartDateUtc) {
+      return registrationState;
+    }
+
+    const startTime = new Date(registrationStartDateUtc).getTime();
+    if (!Number.isFinite(startTime)) {
+      return registrationState;
+    }
+
+    if (startTime > Date.now()) {
+      return "Upcoming" as const;
+    }
+
+    return registrationState;
+  }, [registrationStartDateUtc, registrationState]);
 
   useEffect(() => {
-    if (registrationState !== "Upcoming" || !registrationStartDateUtc) {
+    if (effectiveRegistrationState !== "Upcoming" || !registrationStartDateUtc) {
       return;
     }
 
@@ -177,7 +193,7 @@ export function MembershipRegisterPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [onRetry, registrationStartDateUtc, registrationState]);
+  }, [effectiveRegistrationState, onRetry, registrationStartDateUtc]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.14),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#eef6fb_100%)] px-4 py-10 text-slate-900">
@@ -186,9 +202,9 @@ export function MembershipRegisterPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-700">Loading</p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">Registration details</h1>
         </section>
-      ) : registrationState === "Upcoming" && registrationStartDateUtc ? (
+      ) : effectiveRegistrationState === "Upcoming" && registrationStartDateUtc ? (
         <UpcomingCard targetUtc={registrationStartDateUtc} />
-      ) : registrationState === "Open" ? (
+      ) : effectiveRegistrationState === "Open" ? (
         <OpenCard />
       ) : (
         <UnavailableCard />

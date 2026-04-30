@@ -5,6 +5,16 @@ import type {
   MembershipRegistrationSubmitRequest,
 } from "../types/membershipRegistration";
 
+const PAYMENT_PRODUCT_NAME_TO_ID: Record<string, number> = {
+  CreditCard: 1,
+  ElectronicCheck: 2,
+  Cheque: 3,
+  Ach: 4,
+  Pad: 5,
+  TapToPay: 6,
+  WalletPay: 7,
+};
+
 function readResponseData(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return payload;
@@ -52,6 +62,10 @@ function readPaymentProducts(value: unknown) {
 
   return value
     .map((item) => {
+      if (typeof item === "string" && item in PAYMENT_PRODUCT_NAME_TO_ID) {
+        return PAYMENT_PRODUCT_NAME_TO_ID[item];
+      }
+
       const numberValue = typeof item === "number" ? item : Number(item);
       return Number.isFinite(numberValue) ? numberValue : null;
     })
@@ -102,7 +116,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     | Record<string, unknown>
     | undefined;
 
-  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+  const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId) || membershipTypeUniqueId;
   const organizerName = readText(responseData?.OrganizerName ?? responseData?.organizerName);
   const registrationStartDateUtc = readText(
     responseData?.RegistrationStartDateUtc ?? responseData?.registrationStartDateUtc,
@@ -112,7 +126,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   );
   const registrationState = readText(responseData?.RegistrationState ?? responseData?.registrationState) || "Unavailable";
   const canRegister = readBoolean(responseData?.CanRegister ?? responseData?.canRegister);
-  const membershipDetailUniqueId = readText(membershipDetailRecord?.UniqueId ?? membershipDetailRecord?.uniqueId);
+  const membershipDetailUniqueId = readText(membershipDetailRecord?.UniqueId ?? membershipDetailRecord?.uniqueId) || uniqueId;
   const name = readText(membershipDetailRecord?.Name ?? membershipDetailRecord?.name);
   const description = readText(membershipDetailRecord?.Description ?? membershipDetailRecord?.description);
   const tenure = readScalar(membershipDetailRecord?.Tenure ?? membershipDetailRecord?.tenure);
@@ -144,7 +158,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     paymentSettingsRecord?.PaymentProducts ?? paymentSettingsRecord?.paymentProducts,
   );
 
-  if (!uniqueId || !membershipDetailUniqueId || !name) {
+  if (!name) {
     throw new Error("Unexpected membership registration response.");
   }
 
