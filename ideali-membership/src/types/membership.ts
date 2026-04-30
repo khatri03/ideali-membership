@@ -110,6 +110,8 @@ export interface MembershipReviewInfo {
   registrationStartDateUtc: string | null;
   registrationEndDateUtc: string | null;
   publishedAtUtc: string | null;
+  donationCampaignUniqueId: string | null;
+  donationCampaignName: string | null;
   setupState: string;
   availableForSignUp: boolean;
   stepNo: number;

@@ -446,6 +446,12 @@ export async function getMembershipReviewInfo(membershipTypeUniqueId: string) {
       responseData?.RegistrationEndDateUtc ?? responseData?.registrationEndDateUtc,
     );
     const publishedAtUtc = readText(responseData?.PublishedAtUtc ?? responseData?.publishedAtUtc);
+    const donationCampaignUniqueId = readText(
+      responseData?.DonationCampaignUniqueId ?? responseData?.donationCampaignUniqueId,
+    );
+    const donationCampaignName = readText(
+      responseData?.DonationCampaignName ?? responseData?.donationCampaignName,
+    );
     const setupState = readText(responseData?.SetupState ?? responseData?.setupState) || "Draft";
     const availableForSignUp =
       readBoolean(responseData?.AvailableForSignUp ?? responseData?.availableForSignUp) ?? false;
@@ -487,6 +493,8 @@ export async function getMembershipReviewInfo(membershipTypeUniqueId: string) {
       registrationStartDateUtc: registrationStartDateUtc || null,
       registrationEndDateUtc: registrationEndDateUtc || null,
       publishedAtUtc: publishedAtUtc || null,
+      donationCampaignUniqueId: donationCampaignUniqueId || null,
+      donationCampaignName: donationCampaignName || null,
       setupState,
       availableForSignUp,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 11,
