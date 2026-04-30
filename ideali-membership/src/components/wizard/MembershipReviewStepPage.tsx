@@ -218,6 +218,18 @@ function formatTenureSelectionLabel(review: MembershipReviewInfo) {
   return null;
 }
 
+function formatSetupStateLabel(setupState: string) {
+  const normalized = setupState.trim();
+  if (!normalized) {
+    return "Draft";
+  }
+
+  return normalized
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .trim();
+}
+
 function formatRenewalDueLabel(review: MembershipReviewInfo) {
   if (review.tenure === 2 && review.annualExpiryMonth && review.annualExpiryDay) {
     const date = new Date(Date.UTC(2000, review.annualExpiryMonth - 1, review.annualExpiryDay));
@@ -399,12 +411,12 @@ function ReviewLiveStatusConfirmModal({
 
         <div className="space-y-3 px-6 py-5">
           <p className="text-sm leading-6 text-slate-600">
-            You are about to save the review and {isLive ? "make this membership live for subscription." : "keep this membership offline for subscription."}
+            You are about to save the review and {isLive ? "publish this membership for signup." : "keep this membership in review."}
           </p>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Live status</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Publish state</p>
             <p className="mt-2 text-sm font-semibold text-slate-900">
-              {isLive ? "Live for subscription" : "Offline for subscription"}
+              {isLive ? "Published" : "Ready For Review"}
             </p>
           </div>
           <p className="text-sm leading-6 text-slate-600">Please confirm this before saving the membership review.</p>
@@ -569,8 +581,33 @@ export function MembershipReviewStepPage() {
               <div>
                 <ReviewGridRow label="Are we live?">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-slate-900">Available for subscription</p>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={[
+                            "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
+                            reviewInfo.setupState === "Published"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : reviewInfo.setupState === "Ready For Review"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-slate-100 text-slate-600",
+                          ].join(" ")}
+                        >
+                          {formatSetupStateLabel(reviewInfo.setupState)}
+                        </span>
+                        {reviewInfo.publishedAtUtc ? (
+                          <span className="text-xs font-medium text-slate-500">
+                            Published at {new Intl.DateTimeFormat(undefined, {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "UTC",
+                            }).format(new Date(reviewInfo.publishedAtUtc))}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-slate-500">Toggle the membership live state.</p>
                     </div>
                     <ToggleSwitch

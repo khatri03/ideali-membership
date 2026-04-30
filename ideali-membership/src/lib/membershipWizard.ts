@@ -390,6 +390,8 @@ export async function getMembershipReviewInfo(membershipTypeUniqueId: string) {
     const registrationEndDateUtc = readText(
       responseData?.RegistrationEndDateUtc ?? responseData?.registrationEndDateUtc,
     );
+    const publishedAtUtc = readText(responseData?.PublishedAtUtc ?? responseData?.publishedAtUtc);
+    const setupState = readText(responseData?.SetupState ?? responseData?.setupState) || "Draft";
     const availableForSignUp =
       readBoolean(responseData?.AvailableForSignUp ?? responseData?.availableForSignUp) ?? false;
     const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
@@ -429,6 +431,8 @@ export async function getMembershipReviewInfo(membershipTypeUniqueId: string) {
       requiresApproval,
       registrationStartDateUtc: registrationStartDateUtc || null,
       registrationEndDateUtc: registrationEndDateUtc || null,
+      publishedAtUtc: publishedAtUtc || null,
+      setupState,
       availableForSignUp,
       stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 11,
     } satisfies MembershipReviewInfo;

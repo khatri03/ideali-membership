@@ -220,24 +220,27 @@ export function WizardLayout({ children }: WizardLayoutProps) {
 
   useEffect(() => {
     if (isResumeRoute) {
-      setFooterActions({
+      setFooterActions((current) => ({
         ...defaultWizardFooterActions,
+        ...current,
         showBack: false,
         showSkip: false,
         showSaveNext: false,
         showSaveExit: false,
         isSaving: false,
-      });
+      }));
       return;
     }
 
-    setFooterActions({
+    setFooterActions((current) => ({
       ...defaultWizardFooterActions,
+      ...current,
       showBack: !isFirstStep,
       showSkip: false,
       showSaveNext: !isLastStep,
       showSaveExit: true,
-    });
+      isSaving: current.isSaving,
+    }));
   }, [currentStepIndex, isFirstStep, isLastStep, isResumeRoute, setFooterActions]);
 
   return (

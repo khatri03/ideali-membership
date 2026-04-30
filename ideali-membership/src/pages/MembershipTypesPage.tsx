@@ -24,6 +24,14 @@ function DotsIcon() {
   );
 }
 
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+      <path d="m7.25 4.5 5.75 5.5-5.75 5.5a1 1 0 1 0 1.4 1.42l6.5-6.22a1 1 0 0 0 0-1.4l-6.5-6.22A1 1 0 1 0 7.25 4.5Z" />
+    </svg>
+  );
+}
+
 function CheckBadgeIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
@@ -89,26 +97,32 @@ function MembershipTypeActionsMenu({
   item: MembershipTypeListItem;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number } | null>(null);
   const navigate = useNavigate();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
       const target = event.target as Node;
       const clickedButton = buttonRef.current?.contains(target) ?? false;
       const clickedMenu = menuRef.current?.contains(target) ?? false;
+      const clickedMore = moreRef.current?.contains(target) ?? false;
 
-      if (!clickedButton && !clickedMenu) {
+      if (!clickedButton && !clickedMenu && !clickedMore) {
         setIsOpen(false);
+        setIsMoreOpen(false);
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setIsMoreOpen(false);
       }
     }
 
@@ -134,6 +148,7 @@ function MembershipTypeActionsMenu({
 
       navigate(buildMembershipWizardStepPath(step.to, item.value, nextStepNo));
       setIsOpen(false);
+      setIsMoreOpen(false);
     } finally {
       setIsNavigating(false);
     }
@@ -158,6 +173,27 @@ function MembershipTypeActionsMenu({
       left: Math.max(gap, Math.min(buttonRect.left, window.innerWidth - menuWidth - gap)),
     });
     setIsOpen(true);
+    setIsMoreOpen(false);
+  }
+
+  function openMoreMenu(targetElement: HTMLDivElement | null) {
+    if (!targetElement) {
+      return;
+    }
+
+    const rect = targetElement.getBoundingClientRect();
+    const submenuWidth = 180;
+    const submenuHeight = 116;
+    const gap = 8;
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    const openLeft = spaceRight < submenuWidth + gap && spaceLeft > submenuWidth + gap;
+
+    setSubmenuPosition({
+      top: Math.max(gap, Math.min(rect.top, window.innerHeight - submenuHeight - gap)),
+      left: openLeft ? rect.left - submenuWidth - gap : rect.right + gap,
+    });
+    setIsMoreOpen(true);
   }
 
   return (
@@ -183,24 +219,71 @@ function MembershipTypeActionsMenu({
 
       {isOpen && menuPosition
         ? createPortal(
-            <div
-              ref={menuRef}
-              className="fixed z-[1000] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
-              style={{
-                top: `${menuPosition.top}px`,
-                left: `${menuPosition.left}px`,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => void handleEdit()}
-                disabled={isNavigating}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            <>
+              <div
+                ref={menuRef}
+                className="fixed z-[1000] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
+                style={{
+                  top: `${menuPosition.top}px`,
+                  left: `${menuPosition.left}px`,
+                }}
               >
-                <EditIcon />
-                {isNavigating ? "Opening..." : "Edit"}
-              </button>
-            </div>,
+                <button
+                  type="button"
+                  onClick={() => void handleEdit()}
+                  disabled={isNavigating}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <EditIcon />
+                  {isNavigating ? "Opening..." : "Edit"}
+                </button>
+
+                <div
+                  ref={moreRef}
+                  className="relative"
+                  onMouseEnter={() => openMoreMenu(moreRef.current)}
+                  onMouseLeave={() => setIsMoreOpen(false)}
+                >
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                    aria-haspopup="menu"
+                    aria-expanded={isMoreOpen}
+                  >
+                    <span className="flex items-center gap-2">
+                      <DotsIcon />
+                      More
+                    </span>
+                    <ChevronRightIcon />
+                  </button>
+                </div>
+              </div>
+
+              {isMoreOpen && submenuPosition ? (
+                <div
+                  className="fixed z-[1001] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
+                  style={{
+                    top: `${submenuPosition.top}px`,
+                    left: `${submenuPosition.left}px`,
+                  }}
+                  onMouseEnter={() => setIsMoreOpen(true)}
+                  onMouseLeave={() => setIsMoreOpen(false)}
+                >
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    Sample Item 1
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    Sample Item 2
+                  </button>
+                </div>
+              ) : null}
+            </>,
             document.body,
           )
         : null}

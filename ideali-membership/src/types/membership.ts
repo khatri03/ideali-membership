@@ -95,6 +95,8 @@ export interface MembershipReviewInfo {
   requiresApproval: boolean;
   registrationStartDateUtc: string | null;
   registrationEndDateUtc: string | null;
+  publishedAtUtc: string | null;
+  setupState: string;
   availableForSignUp: boolean;
   stepNo: number;
 }

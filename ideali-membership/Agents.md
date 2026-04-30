@@ -41,6 +41,7 @@ This file defines the working rules for agents contributing to `ideali-membershi
 - Use spacing, hierarchy, and typography to guide attention before adding decoration.
 - Keep layouts completely responsive from mobile to desktop and make sure the UI looks modern at every breakpoint.
 - Use motion sparingly and only when it improves understanding or polish.
+- If backend schema changes are required, ensure the API project creates migrations through `dotnet ef migrations add` only; never hand-create migration files.
 
 ## Collaboration Rules
 
