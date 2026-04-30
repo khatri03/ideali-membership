@@ -9,6 +9,9 @@ export interface MembershipRegisterPageViewModel {
   form: MembershipRegistrationFormState;
   isLoading: boolean;
   loadError: string;
+  registrationState: MembershipRegistrationInfo["registrationState"];
+  registrationStartDateUtc: string | null;
+  registrationEndDateUtc: string | null;
   submitError: string;
   submitMessage: string;
   isSubmitting: boolean;

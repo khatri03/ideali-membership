@@ -104,6 +104,14 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
 
   const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
   const organizerName = readText(responseData?.OrganizerName ?? responseData?.organizerName);
+  const registrationStartDateUtc = readText(
+    responseData?.RegistrationStartDateUtc ?? responseData?.registrationStartDateUtc,
+  );
+  const registrationEndDateUtc = readText(
+    responseData?.RegistrationEndDateUtc ?? responseData?.registrationEndDateUtc,
+  );
+  const registrationState = readText(responseData?.RegistrationState ?? responseData?.registrationState) || "Unavailable";
+  const canRegister = readBoolean(responseData?.CanRegister ?? responseData?.canRegister);
   const membershipDetailUniqueId = readText(membershipDetailRecord?.UniqueId ?? membershipDetailRecord?.uniqueId);
   const name = readText(membershipDetailRecord?.Name ?? membershipDetailRecord?.name);
   const description = readText(membershipDetailRecord?.Description ?? membershipDetailRecord?.description);
@@ -143,6 +151,10 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   return {
     uniqueId,
     organizerName,
+    registrationStartDateUtc: registrationStartDateUtc || null,
+    registrationEndDateUtc: registrationEndDateUtc || null,
+    registrationState: (registrationState as MembershipRegistrationInfo["registrationState"]) || "Unavailable",
+    canRegister,
     membershipDetail: {
       uniqueId: membershipDetailUniqueId || uniqueId,
       name,

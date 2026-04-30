@@ -36,4 +36,8 @@ export const MEMBERSHIP_REGISTER_PAGE_COPY = {
   unavailableTitle: "Registration is not available yet.",
   unavailableBody:
     "This membership is not open for public registration right now. Please check back later or contact the organizer for help.",
+  openingSoonTitle: "Registration opens in",
+  openingSoonBody: "This membership is published, but the registration window has not started yet.",
+  openTitle: "Registration is open",
+  openBody: "This membership is ready for public registration.",
 };

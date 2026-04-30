@@ -33,6 +33,10 @@ export interface MembershipRegistrationPaymentSettings {
 export interface MembershipRegistrationInfo {
   uniqueId: string;
   organizerName: string;
+  registrationStartDateUtc: string | null;
+  registrationEndDateUtc: string | null;
+  registrationState: "Open" | "Upcoming" | "Closed" | "Unavailable";
+  canRegister: boolean;
   membershipDetail: MembershipRegistrationDetail;
   paymentSettings: MembershipRegistrationPaymentSettings;
   taxSettings: Record<string, unknown> | null;

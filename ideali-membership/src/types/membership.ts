@@ -12,6 +12,8 @@ export interface MembershipTypeListItem {
   paymentCurrencyCode: string | null;
   paymentCurrencySymbol: string | null;
   tenureText: string | null;
+  registrationStartDateUtc: string | null;
+  registrationEndDateUtc: string | null;
   customExpiryDays: number | null;
   annualExpiryMonth: number | null;
   annualExpiryDay: number | null;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
 import { DEFAULT_MEMBERSHIP_REGISTER_FORM, MEMBERSHIP_REGISTER_PAGE_COPY, PAYMENT_PRODUCT_LABELS } from "./MembershipRegisterPage.fields";
 import { validateMembershipRegistrationForm } from "./MembershipRegisterPage.schema";
@@ -150,6 +150,9 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const membershipName = info?.membershipDetail.name || "Membership";
   const membershipDescription = info?.membershipDetail.description || "";
   const pageOrganizerName = info?.organizerName || info?.membershipDetail.organizerName || "";
+  const registrationState = info?.registrationState ?? "Unavailable";
+  const registrationStartDateUtc = info?.registrationStartDateUtc ?? null;
+  const registrationEndDateUtc = info?.registrationEndDateUtc ?? null;
 
   useEffect(() => {
     document.title = pageOrganizerName
@@ -192,7 +195,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     }
   }
 
-  function onRetry() {
+  const onRetry = useCallback(() => {
     setLoadError("");
     setIsLoading(true);
     setInfo(null);
@@ -209,7 +212,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
         setIsLoading(false);
       }
     })();
-  }
+  }, [currentMembershipTypeUniqueId]);
 
   function setField<T extends keyof MembershipRegistrationFormState>(field: T, value: MembershipRegistrationFormState[T]) {
     setForm((current) => ({
@@ -241,6 +244,9 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     organizerName,
     membershipName,
     membershipDescription,
+    registrationState,
+    registrationStartDateUtc,
+    registrationEndDateUtc,
     isRegistrationUnavailable,
   };
 }

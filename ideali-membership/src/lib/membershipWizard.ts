@@ -249,6 +249,8 @@ export async function getMembershipTypes() {
       paymentCurrencyCode: readText(item.PaymentCurrencyCode ?? item.paymentCurrencyCode) || null,
       paymentCurrencySymbol: readText(item.PaymentCurrencySymbol ?? item.paymentCurrencySymbol) || null,
       tenureText: readText(item.TenureText ?? item.tenureText) || null,
+      registrationStartDateUtc: readText(item.RegistrationStartDateUtc ?? item.registrationStartDateUtc) || null,
+      registrationEndDateUtc: readText(item.RegistrationEndDateUtc ?? item.registrationEndDateUtc) || null,
       customExpiryDays: readNumber(item.CustomExpiryDays ?? item.customExpiryDays) ?? null,
       annualExpiryMonth: readNumber(item.AnnualExpiryMonth ?? item.annualExpiryMonth) ?? null,
       annualExpiryDay: readNumber(item.AnnualExpiryDay ?? item.annualExpiryDay) ?? null,
