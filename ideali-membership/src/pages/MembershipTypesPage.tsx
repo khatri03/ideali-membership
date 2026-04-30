@@ -328,6 +328,26 @@ function canShowMemberMenu(setupState: string) {
   return setupState === "Published";
 }
 
+function canCopyRegistrationLink(item: MembershipTypeListItem) {
+  if (item.setupState !== "Published" || !item.availableForSignUp) {
+    return false;
+  }
+
+  const startDate = item.registrationStartDateUtc ? new Date(item.registrationStartDateUtc) : null;
+  const endDate = item.registrationEndDateUtc ? new Date(item.registrationEndDateUtc) : null;
+  const now = Date.now();
+
+  if (startDate && !Number.isNaN(startDate.getTime()) && startDate.getTime() > now) {
+    return false;
+  }
+
+  if (endDate && !Number.isNaN(endDate.getTime()) && endDate.getTime() <= now) {
+    return false;
+  }
+
+  return true;
+}
+
 function OrderConfirmModal({
   onCancel,
   modalRef,
@@ -809,7 +829,7 @@ function MembershipTypeActionsMenu({
                   <button
                     type="button"
                     disabled
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition"
+                    className="flex w-full cursor-not-allowed items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition"
                     aria-disabled="true"
                     title="Members list is coming soon."
                   >
@@ -831,19 +851,32 @@ function MembershipTypeActionsMenu({
 
                   <div className="my-1 border-t border-slate-200" />
 
-                  <Link
-                    to={buildMembershipRegisterPath(item.value)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => {
-                      setIsOpen(false);
-                      setIsMemberOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Add
-                  </Link>
+                  {canCopyRegistrationLink(item) ? (
+                    <Link
+                      to={buildMembershipRegisterPath(item.value)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => {
+                        setIsOpen(false);
+                        setIsMemberOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Add
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex w-full cursor-not-allowed items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition"
+                      aria-disabled="true"
+                      title="Registration is not open yet."
+                    >
+                      <UserPlus className="h-4 w-4 text-slate-300" />
+                      Add
+                    </button>
+                  )}
                 </div>
               ) : null}
 
