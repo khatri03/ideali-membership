@@ -279,11 +279,11 @@ function getTenureWindowLabel(item: MembershipTypeListItem) {
   const endLabel = endVisible ? formatUtcDateLabel(item.registrationEndDateUtc) : null;
 
   if (startLabel && endLabel) {
-    return `${startLabel} to ${endLabel}`;
+    return `From ${startLabel} to ${endLabel}`;
   }
 
   if (startLabel) {
-    return `Available From ${startLabel}`;
+    return `From ${startLabel}`;
   }
 
   if (endLabel) {
