@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
+import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
@@ -524,6 +525,15 @@ function PricingStep({
   const donationCampaignName = info.membershipDetail.donationCampaignName?.trim();
   const donationCampaignAmount = parseDonationAmount(form.donationAmount);
   const currencyPrefix = buildCurrencyPrefix(info);
+  const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
+  const totalAmount = membershipAmount + donationCampaignAmount;
+  const totalAmountLabel =
+    totalAmount > 0
+      ? `${currencyPrefix}${new Intl.NumberFormat("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(totalAmount)}`
+      : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[3fr_7fr] xl:gap-6">
@@ -536,32 +546,45 @@ function PricingStep({
         className="space-y-5 rounded-3xl border p-4 sm:p-5"
         style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
       >
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: theme.titleColor }}>
-            {info.membershipDetail.name}
-            {info.organizerName ? (
-              <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
-                by <span className="font-extrabold uppercase">{info.organizerName}</span>
-              </span>
-            ) : null}
-            {tenureInfo.expiryLabel ? (
-              <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
-                <span
-                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold leading-5"
-                  style={{
-                    color: theme.level1,
-                    borderColor: theme.level1,
-                    background: theme.cardBackground,
-                  }}
-                >
-                  {renderRenewalDueLabel(tenureInfo.expiryLabel)}
+        <div className="space-y-2 lg:flex lg:items-start lg:justify-between lg:gap-6">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: theme.titleColor }}>
+              {info.membershipDetail.name}
+              {info.organizerName ? (
+                <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
+                  by <span className="font-extrabold uppercase">{info.organizerName}</span>
                 </span>
-              </span>
-            ) : null}
-          </h1>
-          <p className="text-base leading-6" style={{ color: theme.bodyColor }}>
-            Review the membership charge before moving ahead.
-          </p>
+              ) : null}
+              {tenureInfo.expiryLabel ? (
+                <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
+                  <span
+                    className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold leading-5"
+                    style={{
+                      color: theme.level1,
+                      borderColor: theme.level1,
+                      background: theme.cardBackground,
+                    }}
+                  >
+                    {renderRenewalDueLabel(tenureInfo.expiryLabel)}
+                  </span>
+                </span>
+              ) : null}
+            </h1>
+            <p className="text-base leading-6" style={{ color: theme.bodyColor }}>
+              Review the membership charge before moving ahead.
+            </p>
+          </div>
+          <div
+            className="rounded-2xl border px-4 py-3 text-right sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
+            style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}
+          >
+            <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+              Total Payable
+            </span>
+            <span className="mt-2 block text-2xl font-bold sm:text-3xl" style={{ color: theme.level1 }}>
+              {totalAmountLabel}
+            </span>
+          </div>
         </div>
         <div
           className="rounded-2xl border px-4 py-3 sm:px-5 sm:py-4"
