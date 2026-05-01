@@ -320,8 +320,9 @@ function MembershipDescriptionPanel({
   return (
     <>
       <div
-        className="space-y-2 rounded-3xl p-4 text-left sm:p-5"
+        className="space-y-2 rounded-3xl border p-4 text-left sm:p-5"
         style={{
+          borderColor: theme.cardBorder,
           background: theme.cardBackground,
           boxShadow: `0 18px 42px -28px ${theme.cardShadow}`,
         }}
@@ -542,8 +543,8 @@ function PricingStep({
       />
 
       <div
-        className="space-y-5 rounded-3xl border p-4 sm:p-5"
-        style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
+        className="space-y-5 rounded-3xl p-4 sm:p-5"
+        style={{ background: theme.cardBackground }}
       >
         <div className="space-y-2 lg:flex lg:items-start lg:justify-between lg:gap-6">
           <div className="space-y-2">
@@ -587,6 +588,7 @@ function PricingStep({
             </div>
           ) : null}
         </div>
+        <div className="h-px w-full" style={{ background: theme.tileBorder, opacity: 0.7 }} />
         <div className="rounded-2xl px-4 py-3 sm:px-5 sm:py-4" style={{ background: theme.tileBackground }}>
           <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
             Amount
