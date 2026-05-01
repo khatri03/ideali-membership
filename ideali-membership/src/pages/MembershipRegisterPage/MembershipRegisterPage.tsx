@@ -201,32 +201,19 @@ function UpcomingCard({
 
   return (
     <section
-      className="w-full max-w-2xl rounded-[2rem] border p-8 shadow-xl backdrop-blur-sm"
+      className="w-full max-w-2xl rounded-[2rem] border p-8 text-center shadow-xl backdrop-blur-sm"
       style={{
         borderColor: theme.cardBorder,
         background: theme.cardBackground,
       }}
     >
-      <div
-        className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border"
-        style={{
-          borderColor: theme.iconBorder,
-          background: theme.iconBackground,
-          color: theme.iconColor,
-        }}
-      >
-        <WarningIcon />
-      </div>
-      <p className="mt-5 text-sm font-semibold uppercase tracking-[0.24em]" style={{ color: theme.level1 }}>
-        {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonTitle}
-      </p>
       <h1 className="mt-3 text-3xl font-bold tracking-tight" style={{ color: theme.level1 }}>
         {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonTitle}
       </h1>
-      <p className="mt-3 text-sm leading-6" style={{ color: theme.bodyColor }}>
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6" style={{ color: theme.bodyColor }}>
         {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonBody}
       </p>
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mx-auto mt-6 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
         <CountdownTile theme={theme} label="Days" value={countdown.days} />
         <CountdownTile theme={theme} label="Hours" value={countdown.hours} />
         <CountdownTile theme={theme} label="Minutes" value={countdown.minutes} />
