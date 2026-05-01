@@ -764,17 +764,22 @@ function CustomFormFieldCard({
           ))}
         </select>
       ) : controlType === "radio" && field.options.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {field.options.map((option) => (
-            <label key={option.uniqueId || option.value} className="flex items-center gap-3 text-sm" style={{ color: theme.titleColor }}>
+            <label
+              key={option.uniqueId || option.value}
+              className="flex items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-black/5"
+              style={{ color: theme.titleColor }}
+            >
               <input
                 type="radio"
                 name={`custom-form-${field.uniqueId}`}
                 checked={defaultOptionValue === option.value}
                 onChange={() => onChange(option.value)}
                 className="h-4 w-4 accent-cyan-600"
+                style={{ accentColor: theme.level1 }}
               />
-              <span>{option.displayText}</span>
+              <span className="text-sm font-medium">{option.displayText}</span>
             </label>
           ))}
         </div>
