@@ -74,6 +74,28 @@ function isEmailValid(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function isPhoneLikeValue(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length <= 15;
+}
+
+function isValidDateValue(value: string) {
+  if (!value.trim()) {
+    return false;
+  }
+
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime());
+}
+
+function isValidNumberValue(value: string) {
+  if (!value.trim()) {
+    return false;
+  }
+
+  return /^-?\d+(\.\d+)?$/.test(value.trim());
+}
+
 function formatShortExpiryLabel(value: string | null) {
   if (!value) {
     return null;
@@ -155,6 +177,18 @@ function normalizeDonationAmountInput(value: string) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(parsed);
+}
+
+function formatFileSize(size: number) {
+  if (!Number.isFinite(size) || size <= 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const unitIndex = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
+  const value = size / 1024 ** unitIndex;
+
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }
 
 function formatRenewalDueLabel(month: number | null, day: number | null) {
@@ -573,6 +607,7 @@ function validateCustomFormField(
 ) {
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const textValue = typeof value === "string" ? value.trim() : "";
+  const normalizedString = typeof value === "string" ? value : "";
 
   if (controlType === "checkbox") {
     if (field.isMandatory && value !== true) {
@@ -588,6 +623,37 @@ function validateCustomFormField(
     }
 
     return "";
+  }
+
+  if (controlType === "email" && textValue) {
+    if (!isEmailValid(textValue)) {
+      return "Enter a valid email address.";
+    }
+  }
+
+  if (controlType === "phone" && textValue) {
+    if (!isPhoneLikeValue(textValue)) {
+      return "Enter a valid phone number.";
+    }
+  }
+
+  if (controlType === "number" && textValue) {
+    if (!isValidNumberValue(textValue)) {
+      return "Enter a valid number.";
+    }
+  }
+
+  if (controlType === "date" && textValue) {
+    if (!isValidDateValue(textValue)) {
+      return "Enter a valid date.";
+    }
+  }
+
+  if ((controlType === "select" || controlType === "radio") && field.options.length > 0 && textValue) {
+    const isValidOption = field.options.some((option) => option.value === normalizedString);
+    if (!isValidOption) {
+      return "Select a valid option.";
+    }
   }
 
   if (field.isMandatory && !textValue) {
@@ -656,6 +722,9 @@ function CustomFormFieldCard({
   const label = field.placeHolder || field.controlLabel;
   const defaultOptionValue = typeof value === "string" ? value : "";
   const checkboxValue = typeof value === "boolean" ? value : false;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const selectedFile = value instanceof File ? value : null;
 
   return (
     <div className="space-y-3 rounded-2xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}>
@@ -722,11 +791,91 @@ function CustomFormFieldCard({
           </span>
         </label>
       ) : controlType === "file" ? (
-        <input
-          type="file"
-          onChange={(event) => onChange(event.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-slate-500"
-        />
+        <div
+          className="space-y-3"
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDragging(false);
+            onChange(event.dataTransfer.files?.[0] ?? null);
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex w-full items-center gap-4 rounded-3xl border border-dashed px-4 py-4 text-left transition hover:shadow-sm sm:px-5"
+            style={{
+              borderColor: isDragging ? theme.level1 : theme.cardBorder,
+              background: isDragging ? theme.level3 : theme.cardBackground,
+            }}
+          >
+            <div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+              style={{
+                background: theme.level3,
+                color: theme.level1,
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 fill-current">
+                <path d="M12 2.5a6.5 6.5 0 0 0-4.6 11.1l.1.1h-1a4.9 4.9 0 0 0 0 9.8h11a4.9 4.9 0 0 0 0-9.8h-1l.1-.1A6.5 6.5 0 0 0 12 2.5Zm0 2a4.5 4.5 0 0 1 3.2 7.7l-.8.8V9.2a1 1 0 1 0-2 0V13l-1.3-1.3a1 1 0 0 0-1.4 1.4l3 3a1 1 0 0 0 1.4 0l3-3a1 1 0 1 0-1.4-1.4L15 13V9.2l.8-.8A4.5 4.5 0 0 1 12 4.5Z" />
+              </svg>
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+                {selectedFile?.name || "Drop a file here or browse"}
+              </p>
+              <p className="text-xs leading-5" style={{ color: theme.bodyColor }}>
+                Drag and drop a file here, or click to choose one from your device.
+              </p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: theme.mutedLabelColor }}>
+                Any file type
+              </p>
+            </div>
+          </button>
+
+          {selectedFile ? (
+            <div
+              className="flex items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+              style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold" style={{ color: theme.titleColor }}>
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs" style={{ color: theme.bodyColor }}>
+                  {formatFileSize(selectedFile.size)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onChange(null)}
+                className="rounded-full border px-3 py-1 text-xs font-semibold transition hover:opacity-80"
+                style={{
+                  borderColor: theme.cardBorder,
+                  color: theme.titleColor,
+                  background: theme.level3,
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : controlType === "number" ? (
         <input
           type="number"
@@ -812,9 +961,6 @@ function CustomFormSection({
   return (
     <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-          Custom Form
-        </p>
         <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
           {displayTitle}
         </h3>
