@@ -576,7 +576,7 @@ function PricingStep({
           </div>
           {donationCampaignName ? (
             <div
-              className="rounded-2xl px-4 py-3 text-right sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
+              className="rounded-2xl px-4 py-3 text-center sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
               style={{ background: theme.tileBackground }}
             >
               <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
@@ -589,20 +589,18 @@ function PricingStep({
           ) : null}
         </div>
         <div className="h-px w-full" style={{ background: theme.tileBorder, opacity: 0.7 }} />
-        <div className="rounded-2xl px-4 py-3 sm:px-5 sm:py-4" style={{ background: theme.tileBackground }}>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-            Amount
-          </p>
-          <p className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: theme.level1 }}>
-            {formattedMembershipCharges}
-          </p>
-        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl px-4 py-3 sm:px-5 sm:py-4" style={{ background: theme.tileBackground }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+              Amount
+            </p>
+            <p className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: theme.level1 }}>
+              {formattedMembershipCharges}
+            </p>
+          </div>
 
-        {info.membershipDetail.donationCampaignName ? (
-          <>
-            <div className="h-px w-full" style={{ background: theme.tileBorder, opacity: 0.7 }} />
-          <div className="space-y-3 rounded-2xl px-4 py-3 sm:px-5 sm:py-4" style={{ background: theme.tileBackground }}>
-            <div className="grid gap-3 lg:grid-cols-[1fr_2fr] lg:items-center">
+          {info.membershipDetail.donationCampaignName ? (
+            <div className="space-y-3 rounded-2xl px-4 py-3 sm:px-5 sm:py-4" style={{ background: theme.tileBackground }}>
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
                   Donation Campaign
@@ -629,13 +627,12 @@ function PricingStep({
                   style={{ color: theme.titleColor }}
                 />
               </label>
-              <p className="text-xs leading-5 lg:col-start-2" style={{ color: theme.mutedLabelColor }}>
+              <p className="text-xs leading-5" style={{ color: theme.mutedLabelColor }}>
                 Optional. Leave blank if you do not want to donate.
               </p>
             </div>
-          </div>
-          </>
-        ) : null}
+          ) : null}
+        </div>
 
       </div>
 
