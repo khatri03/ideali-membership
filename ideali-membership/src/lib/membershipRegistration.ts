@@ -130,6 +130,7 @@ function readCustomForms(value: unknown) {
             placeHolder: readText(fieldRecord.PlaceHolder ?? fieldRecord.placeHolder) || null,
             tooltip: readText(fieldRecord.Tooltip ?? fieldRecord.tooltip) || null,
             isMandatory: readBoolean(fieldRecord.IsMandatory ?? fieldRecord.isMandatory),
+            requiredMessage: readText(fieldRecord.RequiredMessage ?? fieldRecord.requiredMessage) || null,
             minLength: readNumber(fieldRecord.MinLength ?? fieldRecord.minLength),
             maxLength: readNumber(fieldRecord.MaxLength ?? fieldRecord.maxLength),
             defaultValue: readText(fieldRecord.DefaultValue ?? fieldRecord.defaultValue) || null,
@@ -149,6 +150,7 @@ function readCustomForms(value: unknown) {
             placeHolder: string | null;
             tooltip: string | null;
             isMandatory: boolean;
+            requiredMessage: string | null;
             minLength: number | null;
             maxLength: number | null;
             defaultValue: string | null;
@@ -188,6 +190,7 @@ function readCustomForms(value: unknown) {
         placeHolder: string | null;
         tooltip: string | null;
         isMandatory: boolean;
+        requiredMessage: string | null;
         minLength: number | null;
         maxLength: number | null;
         defaultValue: string | null;
@@ -249,6 +252,7 @@ function readCustomQuestions(value: unknown) {
         placeHolder: readText(record.PlaceHolder ?? record.placeHolder) || null,
         tooltip: readText(record.Tooltip ?? record.tooltip) || null,
         required: readBoolean(record.Required ?? record.required),
+        requiredMessage: readText(record.RequiredMessage ?? record.requiredMessage) || null,
         minLength: readText(record.MinLength ?? record.minLength) || null,
         maxLength: readText(record.MaxLength ?? record.maxLength) || null,
         defaultValue: readText(record.DefaultValue ?? record.defaultValue) || null,
@@ -267,6 +271,7 @@ function readCustomQuestions(value: unknown) {
         placeHolder: string | null;
         tooltip: string | null;
         required: boolean;
+        requiredMessage: string | null;
         minLength: string | null;
         maxLength: string | null;
         defaultValue: string | null;

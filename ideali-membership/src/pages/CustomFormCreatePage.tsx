@@ -22,8 +22,13 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Link, useNavigate } from "react-router-dom";
-import { createCustomForm, fetchCustomFormControls } from "../lib/customForms";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  createCustomForm,
+  fetchCustomFormControls,
+  fetchCustomFormPreview,
+  updateCustomForm,
+} from "../lib/customForms";
 import type {
   CustomFormControl,
   CustomFormDraft,
@@ -94,6 +99,14 @@ function createOptionId() {
   return `option-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function createUniqueId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `unique-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function clearDefaultOption(options: CustomFormOptionDraft[], optionId: string) {
   return options.map((option) => ({
     ...option,
@@ -114,6 +127,8 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
 
   return {
     id: createFieldId(),
+    uniqueId: createUniqueId(),
+    controlUniqueId: createFieldId(),
     controlId: control.id,
     controlName: control.name,
     controlType: control.controlType,
@@ -122,6 +137,7 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
     placeholder: "",
     tooltip: "",
     required: false,
+    requiredMessage: "This field is required.",
     minLength: "",
     maxLength: "",
     defaultValue: defaultOptionValue,
@@ -136,6 +152,64 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
           },
         ]
       : [],
+  };
+}
+
+function mapPreviewFieldToDraft(field: {
+  uniqueId: string;
+  controlUniqueId: string | null;
+  formControlTypeId: number;
+  displayOrder: number;
+  controlLabel: string;
+  placeHolder: string | null;
+  tooltip: string | null;
+  isMandatory: boolean;
+  requiredMessage: string | null;
+  minLength: number | null;
+  maxLength: number | null;
+  defaultValue: string | null;
+  options: { value: string; displayText: string; id: number }[];
+  formControl: {
+    id: number;
+    name: string;
+    controlType: string;
+    iconClass: string;
+    defaultLabel: string;
+    hasOptions: boolean;
+  } | null;
+}): CustomFormFieldDraft {
+  return {
+    id: createFieldId(),
+    uniqueId: field.uniqueId,
+    controlUniqueId: field.controlUniqueId ?? createFieldId(),
+    controlId: field.formControlTypeId,
+    controlName: field.formControl?.name ?? "",
+    controlType: field.formControl?.controlType ?? "",
+    iconClass: field.formControl?.iconClass ?? "",
+    label: field.controlLabel,
+    placeholder: field.placeHolder ?? "",
+    tooltip: field.tooltip ?? "",
+    required: field.isMandatory,
+    requiredMessage: field.requiredMessage ?? "",
+    minLength: field.minLength === null ? "" : String(field.minLength),
+    maxLength: field.maxLength === null ? "" : String(field.maxLength),
+    defaultValue: field.defaultValue ?? "",
+    displayOrder: field.displayOrder,
+    options: field.options.map((option) => ({
+      id: createOptionId(),
+      displayText: option.displayText,
+      value: option.value,
+      isDefault: field.defaultValue === option.value,
+    })),
+  };
+}
+
+function buildEmptyDraft(): CustomFormDraft {
+  return {
+    name: "",
+    headerText: "",
+    description: "",
+    layoutColumn: 2,
   };
 }
 
@@ -716,17 +790,14 @@ function ToggleField({
 }
 
 export function CustomFormCreatePage() {
+  const { customFormUniqueId } = useParams<{ customFormUniqueId?: string }>();
+  const isEditMode = Boolean(customFormUniqueId);
   const [controls, setControls] = useState<CustomFormControl[]>([]);
   const [isLoadingControls, setIsLoadingControls] = useState(true);
   const [controlsError, setControlsError] = useState<string | null>(null);
   const [controlSearch, setControlSearch] = useState("");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<CustomFormDraft>({
-    name: "",
-    headerText: "",
-    description: "",
-    layoutColumn: 2,
-  });
+  const [draft, setDraft] = useState<CustomFormDraft>(buildEmptyDraft());
   const [fields, setFields] = useState<CustomFormFieldDraft[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [activeDragItem, setActiveDragItem] = useState<ActiveDragItem>(null);
@@ -738,6 +809,8 @@ export function CustomFormCreatePage() {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSavingForm, setIsSavingForm] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isLoadingForm, setIsLoadingForm] = useState(isEditMode);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreateValidation, setShowCreateValidation] = useState(false);
   const lastDropTargetIdRef = useRef<string | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -775,6 +848,51 @@ export function CustomFormCreatePage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!customFormUniqueId) {
+      setIsLoadingForm(false);
+      setLoadError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadCustomForm(formUniqueId: string) {
+      setIsLoadingForm(true);
+      setLoadError(null);
+
+      try {
+        const preview = await fetchCustomFormPreview(formUniqueId);
+        if (cancelled) {
+          return;
+        }
+
+        setDraft({
+          name: preview.name,
+          headerText: preview.headerText,
+          description: preview.description ?? "",
+          layoutColumn: preview.layoutColumn,
+        });
+        setFields(preview.fields.map((field) => mapPreviewFieldToDraft(field)));
+        setSelectedFieldId(null);
+      } catch (formError) {
+        if (!cancelled) {
+          setLoadError(formError instanceof Error ? formError.message : "Unable to load custom form.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingForm(false);
+        }
+      }
+    }
+
+    void loadCustomForm(customFormUniqueId);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customFormUniqueId]);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -1014,8 +1132,8 @@ export function CustomFormCreatePage() {
     setIsPreviewOpen(true);
   }
 
-  async function handleCreateForm() {
-    if (isSavingForm) {
+  async function handleSaveForm() {
+    if (isSavingForm || isLoadingForm) {
       return;
     }
 
@@ -1030,15 +1148,17 @@ export function CustomFormCreatePage() {
     setShowCreateValidation(false);
 
     try {
-      const formId = await createCustomForm(draft, fields);
+      const formId = isEditMode && customFormUniqueId
+        ? await updateCustomForm(customFormUniqueId, draft, fields)
+        : await createCustomForm(draft, fields);
       if (formId > 0) {
         navigate(APP_ROUTES.customForms, { replace: true });
         return;
       }
 
-      setSaveError("We couldn't create the form. Please try again.");
+      setSaveError(isEditMode ? "We couldn't update the form. Please try again." : "We couldn't create the form. Please try again.");
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Failed to create the form.");
+      setSaveError(error instanceof Error ? error.message : isEditMode ? "Failed to update the form." : "Failed to create the form.");
     } finally {
       setIsSavingForm(false);
     }
@@ -1234,11 +1354,12 @@ export function CustomFormCreatePage() {
               Custom Forms
             </p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Build a new custom form
+              {isEditMode ? "Edit custom form" : "Build a new custom form"}
             </h1>
             <p className="mt-3 text-slate-600">
-              Drag field types from the palette, arrange them on the canvas, and tune the
-              constraints in the inspector.
+              {isEditMode
+                ? "Update the existing form, keep field identity stable, and publish the revised structure."
+                : "Drag field types from the palette, arrange them on the canvas, and tune the constraints in the inspector."}
             </p>
           </div>
 
@@ -1252,15 +1373,21 @@ export function CustomFormCreatePage() {
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-slate-500">
-            {saveError ? <span className="text-rose-600">{saveError}</span> : "Ready to save."}
+            {loadError ? (
+              <span className="text-rose-600">{loadError}</span>
+            ) : saveError ? (
+              <span className="text-rose-600">{saveError}</span>
+            ) : (
+              "Ready to save."
+            )}
           </div>
           <button
             type="button"
-            onClick={handleCreateForm}
-            disabled={isSavingForm}
+            onClick={handleSaveForm}
+            disabled={isSavingForm || isLoadingForm || Boolean(loadError)}
             className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isSavingForm ? "Creating..." : "Create"}
+            {isSavingForm ? (isEditMode ? "Saving..." : "Creating...") : isEditMode ? "Save changes" : "Create"}
           </button>
         </div>
 
@@ -1546,9 +1673,27 @@ export function CustomFormCreatePage() {
                       updateSelectedField((field) => ({
                         ...field,
                         required: value,
+                        requiredMessage:
+                          value && !field.requiredMessage.trim()
+                            ? "This field is required."
+                            : field.requiredMessage,
                       }))
                     }
                   />
+
+                  {selectedControl?.canBeRequired ? (
+                    <FieldPreview
+                      title="Required message"
+                      value={selectedField.requiredMessage}
+                      onChange={(value) =>
+                        updateSelectedField((field) => ({
+                          ...field,
+                          requiredMessage: value,
+                        }))
+                      }
+                      placeholder="This field is required."
+                    />
+                  ) : null}
 
                   {controls.find((control) => control.id === selectedField.controlId)?.canHaveMinLength ? (
                     <div className="grid grid-cols-2 gap-3">

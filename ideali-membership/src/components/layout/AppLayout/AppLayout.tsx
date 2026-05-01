@@ -12,14 +12,16 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
-  const isCustomFormCreateRoute = location.pathname.startsWith(APP_ROUTES.customFormsCreate);
-  const [isNavVisible, setIsNavVisible] = useState(!isCustomFormCreateRoute);
+  const isCustomFormBuilderRoute =
+    location.pathname.startsWith(APP_ROUTES.customFormsCreate) ||
+    /^\/organizer\/custom-form\/[0-9a-fA-F-]{36}$/.test(location.pathname);
+  const [isNavVisible, setIsNavVisible] = useState(!isCustomFormBuilderRoute);
 
   useEffect(() => {
-    if (isCustomFormCreateRoute) {
+    if (isCustomFormBuilderRoute) {
       setIsNavVisible(false);
     }
-  }, [isCustomFormCreateRoute]);
+  }, [isCustomFormBuilderRoute]);
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-slate-50 text-slate-900">
@@ -32,7 +34,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {isNavVisible ? (
           <SideNav
             onNavigate={() => {
-              if (window.innerWidth < 1024 || isCustomFormCreateRoute) {
+              if (window.innerWidth < 1024 || isCustomFormBuilderRoute) {
                 setIsNavVisible(false);
               }
             }}

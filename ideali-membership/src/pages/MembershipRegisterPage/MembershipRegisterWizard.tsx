@@ -608,10 +608,11 @@ function validateCustomFormField(
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const textValue = typeof value === "string" ? value.trim() : "";
   const normalizedString = typeof value === "string" ? value : "";
+  const requiredMessage = field.requiredMessage?.trim() || "This field is required.";
 
   if (controlType === "checkbox") {
     if (field.isMandatory && value !== true) {
-      return "This field is required.";
+      return requiredMessage;
     }
 
     return "";
@@ -619,7 +620,7 @@ function validateCustomFormField(
 
   if (controlType === "file") {
     if (field.isMandatory && !value) {
-      return "This field is required.";
+      return requiredMessage;
     }
 
     return "";
@@ -657,7 +658,7 @@ function validateCustomFormField(
   }
 
   if (field.isMandatory && !textValue) {
-    return "This field is required.";
+    return requiredMessage;
   }
 
   if (field.minLength != null && textValue.length > 0 && textValue.length < field.minLength) {

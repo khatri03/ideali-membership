@@ -5,6 +5,7 @@ import type {
   CustomFormFieldDraft,
   CustomFormOptionDraft,
   CustomFormPreview,
+  CustomFormSummary,
 } from "../types/customForms";
 
 function getResponseData(payload: unknown) {
@@ -54,6 +55,28 @@ export async function fetchCustomFormListItems() {
       value: asString(candidate.Value ?? candidate.value),
     };
   }).filter((item) => item.text && item.value);
+}
+
+export async function fetchCustomForms() {
+  const payload = await getJson<unknown>("/api/organizer/custom-form/list");
+  const data = getResponseData(payload);
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((item): CustomFormSummary => {
+      const candidate = item as Record<string, unknown>;
+      return {
+        id: asNumber(candidate.Id ?? candidate.id),
+        uniqueId: asString(candidate.UniqueId ?? candidate.uniqueId),
+        name: asString(candidate.Name ?? candidate.name),
+        headerText: asString(candidate.HeaderText ?? candidate.headerText),
+        description: asString(candidate.Description ?? candidate.description) || null,
+      };
+    })
+    .filter((item) => item.uniqueId && item.name);
 }
 
 export async function fetchCustomFormControls() {
@@ -116,6 +139,7 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
           placeHolder: asString(candidate.PlaceHolder ?? candidate.placeHolder) || null,
           tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
           isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
+          requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
           minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
           maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
           defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
@@ -155,12 +179,15 @@ interface CustomFormOptionPayload {
 }
 
 interface CustomFormFieldPayload {
+  UniqueId: string;
+  ControlUniqueId: string;
   FormControlTypeId: number;
   DisplayOrder: number;
   ControlLabel: string;
   PlaceHolder: string | null;
   Tooltip: string | null;
   IsMandatory: boolean;
+  RequiredMessage: string | null;
   MinLength: number | null;
   MaxLength: number | null;
   DefaultValue: string | null;
@@ -194,12 +221,15 @@ function mapFieldOptions(options: CustomFormOptionDraft[]) {
 
 function mapFields(fields: CustomFormFieldDraft[]): CustomFormFieldPayload[] {
   return fields.map((field) => ({
+    UniqueId: field.uniqueId,
+    ControlUniqueId: field.controlUniqueId,
     FormControlTypeId: field.controlId,
     DisplayOrder: field.displayOrder,
     ControlLabel: field.label,
     PlaceHolder: asNullableString(field.placeholder),
     Tooltip: asNullableString(field.tooltip),
     IsMandatory: field.required,
+    RequiredMessage: asNullableString(field.requiredMessage),
     MinLength: asNullableNumber(field.minLength),
     MaxLength: asNullableNumber(field.maxLength),
     DefaultValue: asNullableString(field.defaultValue),
@@ -228,6 +258,49 @@ export async function createCustomForm(
 
   if (typeof data === "string" && data.length > 0 && !Number.isNaN(Number(data))) {
     return Number(data);
+  }
+
+  return 0;
+}
+
+export async function updateCustomForm(
+  customFormUniqueId: string,
+  draft: CustomFormDraft,
+  fields: CustomFormFieldDraft[],
+) {
+  const payload: CustomFormPayload = {
+    Name: draft.name.trim(),
+    HeaderText: draft.headerText.trim(),
+    Description: asNullableString(draft.description),
+    LayoutColumn: draft.layoutColumn,
+    Fields: mapFields(fields),
+  };
+
+  const response = await fetch(`/api/organizer/custom-form/${customFormUniqueId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = (data as { message?: string; error?: string } | null)?.message
+      ?? (data as { message?: string; error?: string } | null)?.error
+      ?? `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  const responseData = getResponseData(data);
+
+  if (typeof responseData === "number") {
+    return responseData;
+  }
+
+  if (typeof responseData === "string" && responseData.length > 0 && !Number.isNaN(Number(responseData))) {
+    return Number(responseData);
   }
 
   return 0;

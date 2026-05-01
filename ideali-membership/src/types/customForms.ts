@@ -33,6 +33,7 @@ export interface CustomFormPreviewField {
   placeHolder: string | null;
   tooltip: string | null;
   isMandatory: boolean;
+  requiredMessage: string | null;
   minLength: number | null;
   maxLength: number | null;
   defaultValue: string | null;
@@ -60,6 +61,14 @@ export interface CustomFormPreview {
   fields: CustomFormPreviewField[];
 }
 
+export interface CustomFormSummary {
+  id: number;
+  uniqueId: string;
+  name: string;
+  headerText: string;
+  description: string | null;
+}
+
 export interface CustomFormOptionDraft {
   id: string;
   displayText: string;
@@ -69,6 +78,8 @@ export interface CustomFormOptionDraft {
 
 export interface CustomFormFieldDraft {
   id: string;
+  uniqueId: string;
+  controlUniqueId: string;
   controlId: number;
   controlName: string;
   controlType: string;
@@ -77,6 +88,7 @@ export interface CustomFormFieldDraft {
   placeholder: string;
   tooltip: string;
   required: boolean;
+  requiredMessage: string;
   minLength: string;
   maxLength: string;
   defaultValue: string;

@@ -28,6 +28,7 @@ export const APP_ROUTES = {
   membershipWizardReview: "/organizer/membership/type/wizard/:membershipTypeUniqueId/review",
   customForms: "/organizer/custom-form/list",
   customFormsCreate: "/organizer/custom-form/create-form",
+  customFormsEdit: "/organizer/custom-form/:customFormUniqueId",
 } as const;
 
 export function buildMembershipWizardStepPath(
@@ -36,7 +37,7 @@ export function buildMembershipWizardStepPath(
   stepNo?: number,
 ) {
   if (path === APP_ROUTES.membershipWizardTitle && membershipTypeUniqueId) {
-    const resolvedTitlePath = generatePath(APP_ROUTES.membershipWizardTitleWithId, {
+    const resolvedTitlePath = generatePath(APP_ROUTES.membershipWizardTitleWithId as string, {
       membershipTypeUniqueId,
     });
     return stepNo ? `${resolvedTitlePath}?stepNo=${stepNo}` : resolvedTitlePath;
@@ -50,14 +51,18 @@ export function buildMembershipWizardStepPath(
     throw new Error("membershipTypeUniqueId is required for wizard step navigation.");
   }
 
-  const resolvedPath = generatePath(path, { membershipTypeUniqueId });
+  const resolvedPath = generatePath(path as string, { membershipTypeUniqueId });
   return stepNo ? `${resolvedPath}?stepNo=${stepNo}` : resolvedPath;
 }
 
 export function buildMembershipRegisterPath(membershipTypeUniqueId: string) {
-  return generatePath(APP_ROUTES.membershipRegister, { membershipTypeUniqueId });
+  return generatePath(APP_ROUTES.membershipRegister as string, { membershipTypeUniqueId });
 }
 
 export function buildMembershipRegisterCountdownPath(membershipTypeUniqueId: string) {
-  return generatePath(APP_ROUTES.membershipRegisterCountdown, { membershipTypeUniqueId });
+  return generatePath(APP_ROUTES.membershipRegisterCountdown as string, { membershipTypeUniqueId });
+}
+
+export function buildCustomFormEditPath(customFormUniqueId: string) {
+  return generatePath(APP_ROUTES.customFormsEdit as string, { customFormUniqueId });
 }

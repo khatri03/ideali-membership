@@ -107,6 +107,7 @@ function RouterApp() {
           <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />
           <Route path="organizer/custom-form">
             <Route path="create-form" element={<CustomFormCreatePage />} />
+            <Route path=":customFormUniqueId" element={<CustomFormCreatePage />} />
           </Route>
         </Route>
 

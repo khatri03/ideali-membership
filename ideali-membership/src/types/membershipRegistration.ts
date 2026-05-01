@@ -15,6 +15,7 @@ export interface MembershipRegistrationCustomFormField {
   placeHolder: string | null;
   tooltip: string | null;
   isMandatory: boolean;
+  requiredMessage: string | null;
   minLength: number | null;
   maxLength: number | null;
   defaultValue: string | null;
