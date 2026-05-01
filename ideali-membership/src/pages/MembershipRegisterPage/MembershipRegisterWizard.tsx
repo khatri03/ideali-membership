@@ -129,19 +129,29 @@ function formatDonationAmountInput(value: string) {
     return "";
   }
 
-  const [wholePartRaw = "0", decimalPartRaw = ""] = sanitized.split(".");
+  const [wholePartRaw = "0", ...decimalParts] = sanitized.split(".");
+  const decimalPartRaw = decimalParts.join("");
   const wholePart = wholePartRaw.replace(/^0+(?=\d)/, "") || "0";
-  const decimalPart = decimalPartRaw.slice(0, 2);
-  const numericValue = Number(`${wholePart}.${decimalPart || "0"}`);
+  const formattedWholePart = new Intl.NumberFormat("en-US").format(Number(wholePart));
 
-  if (!Number.isFinite(numericValue)) {
+  if (!sanitized.includes(".")) {
+    return formattedWholePart;
+  }
+
+  const decimalPart = decimalPartRaw.slice(0, 2);
+  return decimalPart ? `${formattedWholePart}.${decimalPart}` : `${formattedWholePart}.`;
+}
+
+function normalizeDonationAmountInput(value: string) {
+  const parsed = parseDonationAmount(value);
+  if (!Number.isFinite(parsed) || value.trim() === "") {
     return "";
   }
 
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(numericValue);
+  }).format(parsed);
 }
 
 function formatRenewalDueLabel(month: number | null, day: number | null) {
@@ -588,6 +598,7 @@ function PricingStep({
                   inputMode="decimal"
                   value={form.donationAmount}
                   onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
+                  onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
                   placeholder="0.00"
                   className="w-full bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
                   style={{ color: theme.titleColor }}
@@ -597,15 +608,6 @@ function PricingStep({
                 Optional. Leave blank if you do not want to donate.
               </p>
             </div>
-            {donationCampaignAmount > 0 ? (
-              <p className="text-xs font-semibold whitespace-nowrap" style={{ color: theme.tileValueColor }}>
-                Current donation: {currencyPrefix ? `${currencyPrefix}` : ""}
-                {new Intl.NumberFormat("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }).format(donationCampaignAmount)}
-              </p>
-            ) : null}
           </div>
         ) : null}
 
