@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import { useMembershipRegisterPage } from "./MembershipRegisterPage.hooks";
+import { MembershipRegisterWizard } from "./MembershipRegisterWizard";
 import { buildMembershipRegisterCountdownPath } from "../../routes";
 
 type MembershipTheme = {
@@ -25,6 +26,17 @@ type MembershipTheme = {
   tileLabelColor: string;
   tileValueColor: string;
   barBackground: string;
+};
+
+type DecorativeShape = {
+  kind: "circle" | "square" | "diamond" | "hex" | "ring" | "shield";
+  top?: string;
+  left?: string;
+  right?: string;
+  bottom?: string;
+  size: number;
+  opacity: number;
+  rotate: number;
 };
 
 function normalizeHexColor(value: string | null | undefined) {
@@ -74,6 +86,69 @@ function rgba(rgb: { r: number; g: number; b: number }, alpha: number) {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
+function hashSeed(value: string | null | undefined) {
+  const source = value?.trim() || "ideali-membership";
+  let hash = 0;
+
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+function seededValue(seed: number, offset: number) {
+  const value = (seed * 1103515245 + offset * 12345) >>> 0;
+  return value % 1000;
+}
+
+function isEnabledFlag(value: unknown) {
+  return String(value ?? "").trim().toLowerCase() === "true";
+}
+
+function buildDecorativeShapes(seed: number): DecorativeShape[] {
+  const kinds: DecorativeShape["kind"][] = ["circle", "square", "diamond", "hex", "ring", "shield"];
+  const shapeIndex = seed % kinds.length;
+  const kind = kinds[shapeIndex] ?? "circle";
+  const size = (42 + (seededValue(seed, 1) % 12)) * 2;
+  const rotateBase = (seededValue(seed, 21) % 32) - 16;
+
+  return [
+    {
+      kind,
+      top: "4%",
+      left: "0%",
+      size,
+      opacity: 1,
+      rotate: rotateBase,
+    },
+    {
+      kind,
+      top: "4%",
+      right: "0%",
+      size,
+      opacity: 1,
+      rotate: -rotateBase,
+    },
+    {
+      kind,
+      bottom: "4%",
+      left: "0%",
+      size,
+      opacity: 1,
+      rotate: -rotateBase,
+    },
+    {
+      kind,
+      bottom: "4%",
+      right: "0%",
+      size,
+      opacity: 1,
+      rotate: rotateBase,
+    },
+  ];
+}
+
 function buildMembershipTheme(color: string | null | undefined): MembershipTheme {
   const level1 = normalizeHexColor(color) ?? "#0ea5e9";
   const accentRgb = hexToRgb(level1) ?? { r: 14, g: 165, b: 233 };
@@ -104,12 +179,57 @@ function buildMembershipTheme(color: string | null | undefined): MembershipTheme
   };
 }
 
-function OpenIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-7 w-7 fill-current">
-      <path d="M10 1.75a8.25 8.25 0 1 0 8.25 8.25A8.26 8.26 0 0 0 10 1.75Zm3.68 6.62-4.18 4.75a.9.9 0 0 1-.67.3.87.87 0 0 1-.63-.26L6.3 10.58l1.3-1.3 1.17 1.17 3.57-4.06Z" />
-    </svg>
-  );
+function DecorativeShapeGlyph({ kind, size }: { kind: DecorativeShape["kind"]; size: number }) {
+  const strokeWidth = Math.max(2, Math.round(size / 16));
+  const fillOpacity = kind === "ring" ? 0 : 1;
+  const commonProps = {
+    width: size,
+    height: size,
+    viewBox: "0 0 64 64",
+    "aria-hidden": true as const,
+    fill: "currentColor",
+  };
+
+  switch (kind) {
+    case "square":
+      return (
+        <svg {...commonProps}>
+          <rect x="10" y="10" width="44" height="44" rx="10" />
+        </svg>
+      );
+    case "diamond":
+      return (
+        <svg {...commonProps}>
+          <path d="M32 8 56 32 32 56 8 32Z" />
+        </svg>
+      );
+    case "hex":
+      return (
+        <svg {...commonProps}>
+          <path d="M22 10h20l14 22-14 22H22L8 32Z" />
+        </svg>
+      );
+    case "ring":
+      return (
+        <svg {...commonProps} fill="none">
+          <circle cx="32" cy="32" r="20" stroke="currentColor" strokeWidth={strokeWidth} fillOpacity={fillOpacity} />
+          <circle cx="32" cy="32" r="10" fill="currentColor" fillOpacity="0.26" />
+        </svg>
+      );
+    case "shield":
+      return (
+        <svg {...commonProps}>
+          <path d="M32 8 52 14v16c0 13-8 22-20 26-12-4-20-13-20-26V14Z" />
+        </svg>
+      );
+    case "circle":
+    default:
+      return (
+        <svg {...commonProps}>
+          <circle cx="32" cy="32" r="22" />
+        </svg>
+      );
+  }
 }
 
 function WarningIcon() {
@@ -117,39 +237,6 @@ function WarningIcon() {
     <svg viewBox="0 0 20 20" aria-hidden="true" className="h-7 w-7 fill-current">
       <path d="M10 2.5 18 17.5H2L10 2.5Zm0 4.1a.75.75 0 0 0-.75.75v4.3a.75.75 0 0 0 1.5 0v-4.3A.75.75 0 0 0 10 6.6Zm0 8.1a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
     </svg>
-  );
-}
-
-function OpenCard({ theme }: { theme: MembershipTheme }) {
-  return (
-    <section
-      className="w-full max-w-2xl rounded-[2rem] border p-8 text-slate-950 shadow-xl backdrop-blur-sm"
-      style={{
-        borderColor: theme.cardBorder,
-        background: theme.cardBackground,
-        boxShadow: `0 30px 80px ${theme.cardShadow}`,
-      }}
-    >
-      <div
-        className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border"
-        style={{
-          borderColor: theme.iconBorder,
-          background: theme.iconBackground,
-          color: theme.iconColor,
-        }}
-      >
-        <OpenIcon />
-      </div>
-      <p className="mt-5 text-sm font-semibold uppercase tracking-[0.24em]" style={{ color: theme.level1 }}>
-        Registration is live
-      </p>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight" style={{ color: theme.level1 }}>
-        {MEMBERSHIP_REGISTER_PAGE_COPY.openBody}
-      </h1>
-      <p className="mt-3 text-sm leading-6" style={{ color: theme.bodyColor }}>
-        You can continue with public registration now.
-      </p>
-    </section>
   );
 }
 
@@ -171,8 +258,14 @@ function UnavailableCard() {
 
 export function MembershipRegisterPage() {
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
-  const { isLoading, registrationState, registrationStartDateUtc, membershipColor } = useMembershipRegisterPage();
+  const registration = useMembershipRegisterPage();
+  const { isLoading, registrationState, registrationStartDateUtc, membershipColor } = registration;
   const theme = useMemo(() => buildMembershipTheme(membershipColor), [membershipColor]);
+  const showBackgroundIcons = isEnabledFlag(import.meta.env.VITE_SHOW_REGISTRATION_BACKGROUND_ICONS);
+  const decorativeIcons = useMemo(
+    () => (showBackgroundIcons ? buildDecorativeShapes(hashSeed(membershipTypeUniqueId ?? membershipColor ?? theme.level1)) : []),
+    [membershipTypeUniqueId, membershipColor, showBackgroundIcons, theme.level1],
+  );
   const effectiveRegistrationState = useMemo(() => {
     if (!registrationStartDateUtc) {
       return registrationState;
@@ -196,23 +289,63 @@ export function MembershipRegisterPage() {
 
   return (
     <main
-      className="flex min-h-screen items-center justify-center px-4 py-10 text-slate-900"
+      className="relative flex min-h-screen items-start justify-center overflow-hidden px-4 py-6 text-slate-900"
       style={{ background: theme.pageBackground }}
     >
-      {isLoading ? (
-        <section className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white/95 p-8 text-center shadow-xl shadow-slate-200/50 backdrop-blur-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em]" style={{ color: theme.level1 }}>
-            Loading
-          </p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">Registration details</h1>
-        </section>
-      ) : effectiveRegistrationState === "Upcoming" && registrationStartDateUtc && membershipTypeUniqueId ? (
-        <Navigate to={buildMembershipRegisterCountdownPath(membershipTypeUniqueId)} replace />
-      ) : effectiveRegistrationState === "Open" ? (
-        <OpenCard theme={theme} />
-      ) : (
-        <UnavailableCard />
-      )}
+      {showBackgroundIcons ? (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          {decorativeIcons.map(({ kind, top, left, right, bottom, size, opacity, rotate }, index) => (
+            <div
+              key={`${top ?? bottom}-${left ?? right ?? "x"}-${index}`}
+              className="absolute flex items-center justify-center"
+              style={{
+                top,
+                left,
+                right,
+                bottom,
+                width: `${size}px`,
+                height: `${size}px`,
+                color: theme.level1,
+                opacity,
+                transform: `rotate(${rotate}deg) ${left ? "translateX(-48%)" : ""}`.trim(),
+              }}
+            >
+              <DecorativeShapeGlyph kind={kind} size={size} />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="relative z-10 flex w-full justify-center">
+        {isLoading ? (
+          <section className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white/95 p-8 text-center shadow-xl shadow-slate-200/50 backdrop-blur-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em]" style={{ color: theme.level1 }}>
+              Loading
+            </p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">Registration details</h1>
+          </section>
+        ) : effectiveRegistrationState === "Upcoming" && registrationStartDateUtc && membershipTypeUniqueId ? (
+          <Navigate to={buildMembershipRegisterCountdownPath(membershipTypeUniqueId)} replace />
+        ) : effectiveRegistrationState === "Open" ? (
+          <MembershipRegisterWizard
+            info={registration.info!}
+            form={registration.form}
+            errors={registration.errors}
+            isSubmitting={registration.isSubmitting}
+            onSubmit={registration.onSubmit}
+            setField={registration.setField}
+            formattedMembershipCharges={registration.formattedMembershipCharges}
+            isFreeMembership={registration.isFreeMembership}
+            paymentMethodOptions={registration.paymentMethodOptions}
+            theme={theme}
+            membershipName={registration.membershipName}
+            membershipDescription={registration.membershipDescription}
+            organizerName={registration.organizerName}
+          />
+        ) : (
+          <UnavailableCard />
+        )}
+      </div>
     </main>
   );
 }

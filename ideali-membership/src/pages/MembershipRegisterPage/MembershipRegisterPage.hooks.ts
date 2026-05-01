@@ -151,16 +151,13 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const membershipName = info?.membershipDetail.name || "Membership";
   const membershipDescription = info?.membershipDetail.description || "";
   const membershipColor = info?.membershipDetail.color || null;
-  const pageOrganizerName = info?.organizerName || info?.membershipDetail.organizerName || "";
   const registrationState = info?.registrationState ?? "Unavailable";
   const registrationStartDateUtc = info?.registrationStartDateUtc ?? null;
   const registrationEndDateUtc = info?.registrationEndDateUtc ?? null;
 
   useEffect(() => {
-    document.title = pageOrganizerName
-      ? `${pageOrganizerName} | Member Registration`
-      : "Member Registration";
-  }, [pageOrganizerName]);
+    document.title = membershipName || "Membership";
+  }, [membershipName]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
