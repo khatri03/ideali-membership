@@ -18,6 +18,8 @@ export interface MembershipRegistrationDetail {
   annualExpiryMonth: number | null;
   annualExpiryDay: number | null;
   customExpiryDays: number | null;
+  donationCampaignUniqueId: string | null;
+  donationCampaignName: string | null;
   isFree: boolean;
   membershipCharges: number | null;
   allowPartialPayment: boolean;
@@ -64,6 +66,7 @@ export interface MembershipRegistrationFormState {
   streetLine1: string;
   streetLine2: string;
   zipCode: string;
+  donationAmount: string;
   paymentMethod: string;
   notes: string;
 }

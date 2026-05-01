@@ -22,6 +22,7 @@ export const DEFAULT_MEMBERSHIP_REGISTER_FORM: MembershipRegistrationFormState =
   streetLine1: "",
   streetLine2: "",
   zipCode: "",
+  donationAmount: "",
   paymentMethod: "",
   notes: "",
 };

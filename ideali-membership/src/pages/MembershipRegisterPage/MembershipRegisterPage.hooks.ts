@@ -7,11 +7,11 @@ import { getMembershipRegistrationInfo, submitMembershipRegistration } from "../
 import type { MembershipRegistrationFormState, MembershipRegistrationInfo } from "../../types/membershipRegistration";
 
 function buildPaymentCurrencyPrefix(info: MembershipRegistrationInfo | null) {
-  const currencyCode = info?.paymentSettings.paymentCurrencyCode?.trim();
   const currencySymbol = info?.paymentSettings.paymentCurrencySymbol?.trim();
+  const currencyCode = info?.paymentSettings.paymentCurrencyCode?.trim();
 
   if (currencyCode) {
-    return currencyCode.toUpperCase();
+    return `${currencyCode.toUpperCase()} $`;
   }
 
   if (currencySymbol) {
@@ -32,7 +32,7 @@ function formatAmount(amount: number, info: MembershipRegistrationInfo | null) {
   }).format(amount);
 
   const prefix = buildPaymentCurrencyPrefix(info);
-  return prefix ? `${prefix} ${formattedAmount}` : formattedAmount;
+  return prefix ? `${prefix}${formattedAmount}` : formattedAmount;
 }
 
 function getPaymentMethodOptions(info: MembershipRegistrationInfo | null) {
@@ -44,6 +44,11 @@ function getPaymentMethodOptions(info: MembershipRegistrationInfo | null) {
       value,
       label: PAYMENT_PRODUCT_LABELS[value] ?? `Payment method ${value}`,
     }));
+}
+
+function parseDonationAmount(value: string) {
+  const parsed = Number(value.replace(/,/g, "").trim());
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
@@ -126,14 +131,16 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
       }
 
       const firstPaymentMethod = getPaymentMethodOptions(info)[0];
-      const nextPaymentMethod = info.membershipDetail.isFree || !firstPaymentMethod ? "" : String(firstPaymentMethod.value);
+      const donationAmount = parseDonationAmount(current.donationAmount);
+      const requiresPaymentMethod = !info.membershipDetail.isFree || donationAmount > 0;
+      const nextPaymentMethod = requiresPaymentMethod && firstPaymentMethod ? String(firstPaymentMethod.value) : "";
 
       return {
         ...current,
         paymentMethod: nextPaymentMethod,
       };
     });
-  }, [info]);
+  }, [info, form.donationAmount]);
 
   const paymentMethodOptions = useMemo(() => getPaymentMethodOptions(info), [info]);
 
@@ -175,11 +182,14 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
 
     try {
       const selectedPaymentMethod = form.paymentMethod.trim() ? Number(form.paymentMethod) : null;
+      const donationAmount = parseDonationAmount(form.donationAmount);
       const result = await submitMembershipRegistration(
         currentMembershipTypeUniqueId,
         form,
         info.membershipDetail.membershipCharges ?? 0,
         selectedPaymentMethod,
+        donationAmount,
+        info.membershipDetail.donationCampaignName,
       );
 
       setSubmitMessage(result.message);

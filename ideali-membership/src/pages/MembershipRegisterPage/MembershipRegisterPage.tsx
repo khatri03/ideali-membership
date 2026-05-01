@@ -350,7 +350,6 @@ export function MembershipRegisterPage() {
             theme={theme}
             membershipName={registration.membershipName}
             membershipDescription={registration.membershipDescription}
-            organizerName={registration.organizerName}
           />
         ) : (
           <UnavailableCard />

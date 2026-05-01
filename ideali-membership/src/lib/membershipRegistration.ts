@@ -143,6 +143,12 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   const customExpiryDays = readNumber(
     membershipDetailRecord?.CustomExpiryDays ?? membershipDetailRecord?.customExpiryDays,
   );
+  const donationCampaignUniqueId = readText(
+    membershipDetailRecord?.DonationCampaignUniqueId ?? membershipDetailRecord?.donationCampaignUniqueId,
+  );
+  const donationCampaignName = readText(
+    membershipDetailRecord?.DonationCampaignName ?? membershipDetailRecord?.donationCampaignName,
+  );
   const isFree = readBoolean(membershipDetailRecord?.IsFree ?? membershipDetailRecord?.isFree);
   const membershipCharges = readNumber(
     membershipDetailRecord?.MembershipCharges ?? membershipDetailRecord?.membershipCharges,
@@ -190,6 +196,8 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       annualExpiryMonth,
       annualExpiryDay,
       customExpiryDays,
+      donationCampaignUniqueId: donationCampaignUniqueId || null,
+      donationCampaignName: donationCampaignName || null,
       isFree,
       membershipCharges,
       allowPartialPayment,
@@ -213,8 +221,29 @@ export async function submitMembershipRegistration(
   formState: MembershipRegistrationFormState,
   membershipCharges: number,
   paymentMethod: number | null,
+  donationAmount: number,
+  donationCampaignName: string | null,
 ) {
   const amount = Number.isFinite(membershipCharges) ? membershipCharges : 0;
+  const donationTotal = Number.isFinite(donationAmount) && donationAmount > 0 ? donationAmount : 0;
+  const campaignLabel = donationCampaignName?.trim() || "campaign";
+  const invoiceItems = [
+    {
+      description: "Membership registration",
+      quantity: 1,
+      unitPrice: amount,
+      itemType: 1,
+    },
+  ];
+
+  if (donationTotal > 0) {
+    invoiceItems.push({
+      description: `Donation to ${campaignLabel}`,
+      quantity: 1,
+      unitPrice: donationTotal,
+      itemType: 1,
+    });
+  }
 
   const requestBody: MembershipRegistrationSubmitRequest = {
     contactInfo: {
@@ -241,8 +270,8 @@ export async function submitMembershipRegistration(
       zipCode: formState.zipCode.trim(),
     },
     invoiceDetail: {
-      invoiceAmount: amount,
-      amountPaid: amount,
+      invoiceAmount: amount + donationTotal,
+      amountPaid: amount + donationTotal,
       paymentMethod,
       notes: formState.notes.trim(),
       paymentMethodDetail: null,
@@ -250,14 +279,7 @@ export async function submitMembershipRegistration(
       invoiceType: 1,
       taxDetail: null,
       discountDetail: null,
-      invoiceItems: [
-        {
-          description: "Membership registration",
-          quantity: 1,
-          unitPrice: amount,
-          itemType: 1,
-        },
-      ],
+      invoiceItems,
     },
     discountDetail: null,
   };

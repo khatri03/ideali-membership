@@ -40,14 +40,20 @@ export function validateMembershipRegistrationForm(
     errors.zipCode = "Zip code is required.";
   }
 
-  const membershipDetail = info?.membershipDetail;
-  const requiresPaymentMethod = Boolean(membershipDetail && !membershipDetail.isFree);
-  const hasOnlineOptions = Boolean(info?.paymentSettings.paymentProducts.length);
+  if (form.donationAmount.trim()) {
+    const parsedDonationAmount = Number(form.donationAmount.replace(/,/g, ""));
+    if (!Number.isFinite(parsedDonationAmount) || parsedDonationAmount < 0) {
+      errors.donationAmount = "Enter a valid donation amount.";
+    }
+  }
 
-  if (requiresPaymentMethod && hasOnlineOptions && !form.paymentMethod.trim()) {
+  const membershipDetail = info?.membershipDetail;
+  const donationAmount = form.donationAmount.trim() ? Number(form.donationAmount.replace(/,/g, "")) : 0;
+  const requiresPaymentMethod = Boolean(membershipDetail && (!membershipDetail.isFree || donationAmount > 0));
+
+  if (requiresPaymentMethod && !form.paymentMethod.trim()) {
     errors.paymentMethod = "Select a payment method.";
   }
 
   return errors;
 }
-
