@@ -86,6 +86,17 @@ function rgba(rgb: { r: number; g: number; b: number }, alpha: number) {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
+function blendWithWhite(rgb: { r: number; g: number; b: number }, ratio: number) {
+  const whiteRatio = 1 - ratio;
+  const mix = {
+    r: Math.round(rgb.r * ratio + 255 * whiteRatio),
+    g: Math.round(rgb.g * ratio + 255 * whiteRatio),
+    b: Math.round(rgb.b * ratio + 255 * whiteRatio),
+  };
+
+  return `rgb(${mix.r}, ${mix.g}, ${mix.b})`;
+}
+
 function hashSeed(value: string | null | undefined) {
   const source = value?.trim() || "ideali-membership";
   let hash = 0;
@@ -160,9 +171,9 @@ function buildMembershipTheme(color: string | null | undefined): MembershipTheme
     level1,
     level2,
     level3,
-    pageBackground: rgba(accentRgb, 0.18),
+    pageBackground: blendWithWhite(accentRgb, 0.1),
     cardBackground: "transparent",
-    cardBorder: rgba(accentRgb, 0.32),
+    cardBorder: rgba(accentRgb, 0.58),
     cardShadow: rgba(accentRgb, 0.18),
     iconBackground: rgba(accentRgb, 0.18),
     iconBorder: rgba(accentRgb, 0.46),
@@ -171,7 +182,7 @@ function buildMembershipTheme(color: string | null | undefined): MembershipTheme
     bodyColor: "#334155",
     labelColor: level1,
     mutedLabelColor: level2,
-    tileBorder: rgba(accentRgb, 0.28),
+    tileBorder: rgba(accentRgb, 0.5),
     tileBackground: "transparent",
     tileLabelColor: level2,
     tileValueColor: "#020617",
