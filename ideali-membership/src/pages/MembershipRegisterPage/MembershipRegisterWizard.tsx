@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import type {
   MembershipRegistrationFormState,
@@ -44,7 +44,7 @@ type MembershipRegisterWizardProps = Pick<
 
 const STEPS = [
   {
-    title: "Pricing",
+    title: "Membership Info",
     description: "Review the price and choose a payment method.",
   },
   {
@@ -103,6 +103,143 @@ function isInformationStepComplete(form: MembershipRegistrationFormState) {
   );
 }
 
+function MembershipDescriptionPanel({
+  description,
+  theme,
+}: {
+  description: string;
+  theme: MembershipTheme;
+}) {
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const trimmedDescription = description.trim();
+
+  useEffect(() => {
+    if (!trimmedDescription || !previewRef.current) {
+      setIsOverflowing(false);
+      return;
+    }
+
+    const element = previewRef.current;
+    const updateOverflowState = () => {
+      setIsOverflowing(element.scrollHeight > element.clientHeight + 2);
+    };
+
+    updateOverflowState();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(updateOverflowState);
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [trimmedDescription]);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen]);
+
+  if (!trimmedDescription) {
+    return null;
+  }
+
+  return (
+    <>
+      <div
+        className="space-y-2 rounded-3xl border p-4 text-left sm:p-5"
+        style={{
+          borderColor: theme.cardBorder,
+          background: theme.cardBackground,
+          boxShadow: `0 18px 42px -28px ${theme.cardShadow}`,
+        }}
+      >
+        <p className="text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: theme.level1 }}>
+          About This Membership
+        </p>
+        <div
+          ref={previewRef}
+          className="max-h-44 overflow-hidden text-base leading-7 [&_p]:m-0 [&_p+p]:mt-3 [&_ul]:my-3 [&_ol]:my-3 [&_li]:ml-6 sm:max-h-52 lg:max-h-60"
+          style={{ color: theme.bodyColor }}
+          dangerouslySetInnerHTML={{ __html: description }}
+        />
+        {isOverflowing ? (
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 text-sm font-semibold transition hover:opacity-80"
+            style={{ color: theme.level1 }}
+          >
+            More
+          </button>
+        ) : null}
+      </div>
+
+      {isModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            aria-label="Close description modal"
+            className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"
+            onClick={() => setIsModalOpen(false)}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="About This Membership"
+            className="relative z-10 w-full max-w-3xl overflow-hidden rounded-[2rem] border p-5 shadow-2xl sm:p-6"
+            style={{
+              borderColor: theme.cardBorder,
+              background: "rgba(255, 255, 255, 0.98)",
+              boxShadow: `0 30px 80px -30px ${theme.cardShadow}, 0 0 0 1px rgba(255, 255, 255, 0.7) inset`,
+            }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: theme.level1 }}>
+                  About This Membership
+                </p>
+                <p className="text-sm" style={{ color: theme.bodyColor }}>
+                  Full description
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-full border px-3 py-1 text-sm font-semibold text-white transition hover:opacity-80"
+                style={{
+                  borderColor: theme.cardBorder,
+                  background: theme.level1,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div
+              className="mt-5 max-h-[70vh] overflow-y-auto text-base leading-7 [&_p]:m-0 [&_p+p]:mt-3 [&_ul]:my-3 [&_ol]:my-3 [&_li]:ml-6"
+              style={{ color: "#0f172a" }}
+              dangerouslySetInnerHTML={{ __html: description }}
+            />
+          </section>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function StepBadge({
   index,
   title,
@@ -128,7 +265,7 @@ function StepBadge({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "relative flex min-w-[10rem] flex-1 flex-col items-center gap-2 rounded-none border-0 px-3 py-2 text-center transition",
+        "relative flex min-w-[7.5rem] flex-1 flex-col items-center gap-1.5 rounded-none border-0 px-2 py-2 text-center transition sm:min-w-[10rem] sm:gap-2 sm:px-3",
         disabled ? "cursor-not-allowed opacity-50" : "hover:opacity-100",
       ].join(" ")}
       style={{
@@ -136,7 +273,7 @@ function StepBadge({
       }}
     >
       <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-4 ring-white transition"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-4 ring-white transition sm:h-10 sm:w-10"
         style={{
           background: completed || active ? theme.level1 : "rgba(71, 85, 105, 0.18)",
           color: completed || active ? "#ffffff" : "#020617",
@@ -146,10 +283,10 @@ function StepBadge({
         {completed && !active ? <CheckIcon className="h-4 w-4" /> : formatStepNumber(index)}
       </div>
       <div className="min-w-0 space-y-0.5">
-        <p className="text-base font-semibold leading-5" style={{ color: active ? theme.level1 : theme.titleColor }}>
+        <p className="text-sm font-semibold leading-5 sm:text-base" style={{ color: active ? theme.level1 : theme.titleColor }}>
           {title}
         </p>
-        <p className="text-sm leading-5" style={{ color: theme.bodyColor }}>
+        <p className="text-xs leading-4 sm:text-sm sm:leading-5" style={{ color: theme.bodyColor }}>
           {description}
         </p>
       </div>
@@ -231,18 +368,23 @@ function PricingStep({
   membershipDescription: string;
 }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+    <div className="grid gap-4 lg:grid-cols-2 xl:gap-6">
+      <MembershipDescriptionPanel
+        description={membershipDescription}
+        theme={theme}
+      />
+
       <div
-        className="space-y-5 rounded-3xl border p-5"
+        className="space-y-5 rounded-3xl border p-4 sm:p-5"
         style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
       >
         <SectionTitle
-          title="Pricing"
+          title={info.membershipDetail.name}
           description="Review the membership charge before moving ahead."
           theme={theme}
         />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+          <div className="rounded-2xl border p-3.5 sm:p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
               Membership
             </p>
@@ -253,7 +395,7 @@ function PricingStep({
               {info.organizerName}
             </p>
           </div>
-          <div className="rounded-2xl border p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
+          <div className="rounded-2xl border p-3.5 sm:p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
               Amount
             </p>
@@ -290,25 +432,6 @@ function PricingStep({
         ) : null}
       </div>
 
-      {membershipDescription.trim() ? (
-        <div
-          className="space-y-2 rounded-3xl border p-5 text-left"
-          style={{
-            borderColor: theme.cardBorder,
-            background: theme.cardBackground,
-            boxShadow: `0 18px 42px -28px ${theme.cardShadow}`,
-          }}
-        >
-          <p className="text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: theme.level1 }}>
-            About This Membership
-          </p>
-          <div
-            className="text-base leading-7 [&_p]:m-0 [&_p+p]:mt-3 [&_ul]:my-3 [&_ol]:my-3 [&_li]:ml-6"
-            style={{ color: theme.bodyColor }}
-            dangerouslySetInnerHTML={{ __html: membershipDescription }}
-          />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -325,7 +448,7 @@ function InformationStep({
   theme: MembershipTheme;
 }) {
   return (
-    <div className="rounded-3xl border p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <div className="rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <SectionTitle
         title="Your Information"
         description="Tell us who is joining and how we can contact them."
@@ -442,7 +565,7 @@ function PaymentStep({
   theme: MembershipTheme;
 }) {
   return (
-    <div className="rounded-3xl border p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <div className="rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <SectionTitle
         title="Payment"
         description="Confirm your payment note and final review before submitting."
@@ -519,8 +642,8 @@ export function MembershipRegisterWizard({
 
   return (
     <form className="w-full max-w-6xl space-y-6" onSubmit={onSubmit}>
-      <div className="relative overflow-x-auto pb-2">
-        <div className="relative z-10 flex min-w-max flex-nowrap gap-4">
+      <div className="relative -mx-4 overflow-x-auto pb-2 px-4 sm:mx-0 sm:px-0">
+        <div className="relative z-10 flex min-w-full flex-nowrap gap-3 sm:min-w-max sm:gap-4">
           {stepTitles.map((step, index) => (
             <StepBadge
               key={step.title}
@@ -542,7 +665,7 @@ export function MembershipRegisterWizard({
       </div>
 
       <section
-        className="rounded-[2rem] border p-6"
+        className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
         style={{
           borderColor: theme.cardBorder,
           background: theme.cardBackground,
@@ -567,18 +690,21 @@ export function MembershipRegisterWizard({
         )}
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handleBack}
-            disabled={currentStep === 0}
-            className="rounded-2xl border px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              borderColor: theme.cardBorder,
-              color: theme.titleColor,
-            }}
-          >
-            Back
-          </button>
+          <div>
+            {currentStep > 0 ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="rounded-2xl border px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+                style={{
+                  borderColor: theme.cardBorder,
+                  color: theme.titleColor,
+                }}
+              >
+                Back
+              </button>
+            ) : null}
+          </div>
 
           {currentStep < STEPS.length - 1 ? (
             <button

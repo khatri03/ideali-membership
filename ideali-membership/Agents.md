@@ -23,6 +23,7 @@ This file defines the working rules for agents contributing to `ideali-membershi
 - When backend work is needed, refer to the API project at `D:\My Projects\V4Ideas\Ideali\ideali.api` as the source backend codebase.
 - Backend routes must start with `/api/<module name>`, and frontend routes should mirror the backend path exactly with only the `/api` prefix removed.
 - Make accessibility a baseline requirement: semantic HTML, visible focus states, good contrast, and keyboard support.
+- The registration page must be fully responsive at every breakpoint. No exceptions: verify mobile, tablet, and desktop behavior before considering it done.
 - Avoid hardcoded magic values when a shared constant or reusable token makes more sense.
 - Frontend routes should mirror backend route paths exactly, with only the `/api` prefix removed when the route represents a backend-controlled resource or step.
 - Document any non-obvious behavior directly in code or in this file.
