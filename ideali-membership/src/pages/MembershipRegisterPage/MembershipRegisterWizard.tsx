@@ -526,11 +526,24 @@ function PricingStep({
         className="space-y-5 rounded-3xl border p-4 sm:p-5"
         style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
       >
-        <SectionTitle
-          title={info.membershipDetail.name}
-          description="Review the membership charge before moving ahead."
-          theme={theme}
-        />
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: theme.titleColor }}>
+            {info.membershipDetail.name}
+            {info.organizerName ? (
+              <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
+                by <span className="font-extrabold uppercase">{info.organizerName}</span>
+              </span>
+            ) : null}
+            {tenureInfo.expiryLabel ? (
+              <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
+                | <span style={{ color: theme.level1 }}>{renderRenewalDueLabel(tenureInfo.expiryLabel)}</span>
+              </span>
+            ) : null}
+          </h1>
+          <p className="text-base leading-6" style={{ color: theme.bodyColor }}>
+            Review the membership charge before moving ahead.
+          </p>
+        </div>
         <div
           className="rounded-2xl border px-4 py-3 sm:px-5 sm:py-4"
           style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}
@@ -552,19 +565,6 @@ function PricingStep({
             </p>
             <p className="text-lg font-semibold" style={{ color: theme.tileValueColor }}>
               {tenureInfo.tenureLabel}
-            </p>
-            {tenureInfo.expiryLabel ? (
-              <p className="text-xs font-medium" style={{ color: theme.mutedLabelColor }}>
-                {renderRenewalDueLabel(tenureInfo.expiryLabel)}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              Organizer
-            </p>
-            <p className="text-lg font-bold" style={{ color: theme.tileValueColor }}>
-              {info.organizerName}
             </p>
           </div>
         </div>
