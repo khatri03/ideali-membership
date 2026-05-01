@@ -246,6 +246,11 @@ function getTenureLabel(value: string | null) {
   return value || "—";
 }
 
+function isLifetimeTenure(value: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "lifetime" || normalized === "life time";
+}
+
 function formatUtcDateLabel(value: string | null) {
   if (!value) {
     return null;
@@ -268,6 +273,59 @@ function formatUtcDateLabel(value: string | null) {
   return `${day}-${month}-${year}`;
 }
 
+function getTenureDisplayLabel(item: MembershipTypeListItem) {
+  const tenureLabel = getTenureLabel(item.tenureText);
+
+  return tenureLabel;
+}
+
+function getTenureExpiryCaseLabel(item: MembershipTypeListItem) {
+  if (item.tenureText === "Monthly") {
+    return "Requires monthly renewal";
+  }
+
+  if (item.tenureText === "Annual") {
+    if (item.annualExpiryMonth && item.annualExpiryDay) {
+      const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthLabel = monthLabels[item.annualExpiryMonth - 1];
+
+      if (monthLabel) {
+        return `Renewal due on ${String(item.annualExpiryDay).padStart(2, "0")}-${monthLabel}`;
+      }
+    }
+
+    return "Every Year";
+  }
+
+  if (isLifetimeTenure(item.tenureText)) {
+    return "No Expiry";
+  }
+
+  if (item.tenureText === "Custom" && item.customExpiryDays) {
+    return `${item.customExpiryDays} Days`;
+  }
+
+  return null;
+}
+
+function renderTenureExpiryCaseLabel(label: string | null) {
+  if (!label) {
+    return null;
+  }
+
+  const renewalPrefix = "Renewal due on ";
+  if (label.startsWith(renewalPrefix)) {
+    return (
+      <>
+        {renewalPrefix}
+        <span className="font-semibold text-slate-700">{label.slice(renewalPrefix.length)}</span>
+      </>
+    );
+  }
+
+  return label;
+}
+
 function getTenureWindowLabel(item: MembershipTypeListItem) {
   const startDate = item.registrationStartDateUtc ? new Date(item.registrationStartDateUtc) : null;
   const endDate = item.registrationEndDateUtc ? new Date(item.registrationEndDateUtc) : null;
@@ -288,29 +346,6 @@ function getTenureWindowLabel(item: MembershipTypeListItem) {
 
   if (endLabel) {
     return `Available Till ${endLabel}`;
-  }
-
-  return null;
-}
-
-function getTenureDetailLabel(item: MembershipTypeListItem) {
-  if (item.tenureText === "Annual" && item.annualExpiryMonth && item.annualExpiryDay) {
-    const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const monthLabel = monthLabels[item.annualExpiryMonth - 1];
-
-    if (!monthLabel) {
-      return null;
-    }
-
-    return `Renewal due on ${String(item.annualExpiryDay).padStart(2, "0")}-${monthLabel}`;
-  }
-
-  if (item.tenureText === "Custom" && item.customExpiryDays) {
-    return `${item.customExpiryDays} Days`;
-  }
-
-  if (item.tenureText !== "Custom" && item.tenureText !== "Annual") {
-    return null;
   }
 
   return null;
@@ -941,7 +976,8 @@ function MembershipTypeRow({
 }) {
   const price = formatCurrencyAmount(item.membershipCharges, item.paymentCurrencyCode, item.paymentCurrencySymbol);
   const tenureWindowLabel = getTenureWindowLabel(item);
-  const tenureDetailLabel = getTenureDetailLabel(item);
+  const tenureDisplayLabel = getTenureDisplayLabel(item);
+  const tenureExpiryCaseLabel = getTenureExpiryCaseLabel(item);
 
   return (
     <tr className="border-b border-slate-200 last:border-b-0">
@@ -969,14 +1005,11 @@ function MembershipTypeRow({
       </td>
       <td className="px-4 py-4 align-middle">
         <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-slate-600">{getTenureLabel(item.tenureText)}</p>
+          <p className="text-sm font-semibold text-slate-700">{tenureDisplayLabel}</p>
+          {tenureExpiryCaseLabel ? (
+            <p className="text-xs font-medium text-slate-500">{renderTenureExpiryCaseLabel(tenureExpiryCaseLabel)}</p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
-            {item.tenureText === "Annual" && tenureDetailLabel ? (
-              <MembershipMetaPill value={tenureDetailLabel} tone="warning" />
-            ) : item.tenureText === "Custom" && tenureDetailLabel ? (
-              <p className="text-xs font-medium text-slate-400">{tenureDetailLabel}</p>
-            ) : null}
-
             {tenureWindowLabel ? <MembershipMetaPill value={tenureWindowLabel} tone="warning" /> : null}
           </div>
         </div>

@@ -347,7 +347,6 @@ export function MembershipRegisterPage() {
             setField={registration.setField}
             formattedMembershipCharges={registration.formattedMembershipCharges}
             isFreeMembership={registration.isFreeMembership}
-            paymentMethodOptions={registration.paymentMethodOptions}
             theme={theme}
             membershipName={registration.membershipName}
             membershipDescription={registration.membershipDescription}

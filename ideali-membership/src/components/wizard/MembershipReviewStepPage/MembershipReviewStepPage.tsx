@@ -206,19 +206,26 @@ function formatTenureLabel(review: MembershipReviewInfo) {
   const tenureMap: Record<number, string> = {
     1: "Monthly",
     2: "Annual",
-    3: "Lifetime",
+    3: "Life Time",
     4: "Custom",
   };
 
   return review.tenure ? tenureMap[review.tenure] ?? "No" : "No";
 }
 
-function formatTenureSelectionLabel(review: MembershipReviewInfo) {
-  if (review.tenure === 2) {
-    return "Every Year";
+function formatShortExpiryLabel(month?: number | null, day?: number | null) {
+  if (!month || !day) {
+    return null;
   }
 
-  return null;
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthLabel = monthLabels[month - 1];
+
+  if (!monthLabel) {
+    return null;
+  }
+
+  return `${String(day).padStart(2, "0")}-${monthLabel}`;
 }
 
 function formatSetupStateLabel(setupState: string) {
@@ -235,16 +242,38 @@ function formatSetupStateLabel(setupState: string) {
 
 function formatRenewalDueLabel(review: MembershipReviewInfo) {
   if (review.tenure === 2 && review.annualExpiryMonth && review.annualExpiryDay) {
-    const date = new Date(Date.UTC(2000, review.annualExpiryMonth - 1, review.annualExpiryDay));
-    return `Renewal due on ${new Intl.DateTimeFormat(undefined, {
-      day: "2-digit",
-      month: "short",
-      timeZone: "UTC",
-    }).format(date)}`;
+    const renewalDate = formatShortExpiryLabel(review.annualExpiryMonth, review.annualExpiryDay);
+    return renewalDate ? (
+      <>
+        Renewal due on <span className="font-semibold text-slate-700">{renewalDate}</span>
+      </>
+    ) : null;
   }
 
   if (review.tenure === 4 && review.customExpiryDays) {
     return `${review.customExpiryDays} Days`;
+  }
+
+  return null;
+}
+
+function formatTenureExpiryCaseLabel(review: MembershipReviewInfo) {
+  const tenureLabel = formatTenureLabel(review);
+
+  if (review.tenure === 1) {
+    return "Requires monthly renewal";
+  }
+
+  if (review.tenure === 2) {
+    return formatRenewalDueLabel(review) ?? "Every Year";
+  }
+
+  if (review.tenure === 3) {
+    return "No Expiry";
+  }
+
+  if (review.tenure === 4) {
+    return formatRenewalDueLabel(review) ?? "No Expiry";
   }
 
   return null;
@@ -257,7 +286,7 @@ function ReviewField({
 }: {
   label: string;
   value: string;
-  helper?: string;
+  helper?: ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -311,15 +340,20 @@ function ReviewPaymentAccountCard({ reviewInfo }: { reviewInfo: MembershipReview
 }
 
 function ReviewPricingCard({ reviewInfo }: { reviewInfo: MembershipReviewInfo }) {
+  const tenureLabel = formatTenureLabel(reviewInfo);
+  const tenureExpiryCaseLabel = formatTenureExpiryCaseLabel(reviewInfo);
+
   return (
     <SummaryCard title="Pricing">
       <ReviewField
-        label="Amount | Renewal Due"
+        label="Amount | Tenure"
         value={`${formatCurrencySymbol(reviewInfo.paymentAccount?.currency)}${formatCurrencyAmount(
           reviewInfo.membershipCharges,
           reviewInfo.isFree,
-        )} | ${formatTenureLabel(reviewInfo)}${formatRenewalDueLabel(reviewInfo) ? ` | ${formatRenewalDueLabel(reviewInfo)}` : ""}`}
-        helper="Free when the amount is 0"
+        )}`}
+        helper={`${tenureLabel}${tenureExpiryCaseLabel ? ` | ${tenureExpiryCaseLabel}` : ""}${
+          reviewInfo.isFree ? " • Free when the amount is 0" : ""
+        }`}
       />
     </SummaryCard>
   );
@@ -657,14 +691,7 @@ export function MembershipReviewStepPage() {
 
                 <ReviewGridRow label="Pricing">
                   {(() => {
-                    const hasCustomPricing = reviewInfo.customExpiryDays !== null || reviewInfo.tenure === 4;
-                    const hasAnnualPricing = reviewInfo.tenure === 2 && !hasCustomPricing;
-                    const pricingLabel = hasCustomPricing ? "Custom" : formatTenureLabel(reviewInfo);
-                    const pricingRenewalLabel = hasAnnualPricing
-                      ? formatRenewalDueLabel(reviewInfo)
-                      : hasCustomPricing && reviewInfo.customExpiryDays !== null
-                        ? `${reviewInfo.customExpiryDays} Days`
-                        : null;
+                    const pricingLabel = formatTenureExpiryCaseLabel(reviewInfo);
 
                     return (
                       <div className="flex flex-wrap items-center gap-2 text-sm text-slate-900">
@@ -677,27 +704,6 @@ export function MembershipReviewStepPage() {
                         </span>
                         <span className="text-slate-300">|</span>
                         <span className="font-semibold">{pricingLabel}</span>
-                        {hasAnnualPricing ? (
-                          <>
-                            <span className="text-slate-300">|</span>
-                            <span>Every Year</span>
-                          </>
-                        ) : null}
-                        {pricingRenewalLabel ? (
-                          <>
-                            <span className="text-slate-300">|</span>
-                            <span
-                              className={[
-                                "rounded-full px-3 py-1 font-semibold",
-                                hasAnnualPricing
-                                  ? "bg-amber-50 text-amber-700"
-                                  : "bg-cyan-50 text-cyan-700",
-                              ].join(" ")}
-                            >
-                              {pricingRenewalLabel}
-                            </span>
-                          </>
-                        ) : null}
                       </div>
                     );
                   })()}

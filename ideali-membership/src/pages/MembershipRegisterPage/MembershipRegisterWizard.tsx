@@ -35,7 +35,6 @@ type MembershipRegisterWizardProps = Pick<
   info: MembershipRegistrationInfo;
   formattedMembershipCharges: string;
   isFreeMembership: boolean;
-  paymentMethodOptions: Array<{ value: number; label: string }>;
   theme: MembershipTheme;
   membershipName: string;
   membershipDescription: string;
@@ -73,20 +72,127 @@ function isEmailValid(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function formatShortExpiryLabel(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function formatMonthDayLabel(month: number | null, day: number | null) {
+  if (!month || !day) {
+    return null;
+  }
+
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthLabel = monthLabels[month - 1];
+
+  if (!monthLabel) {
+    return null;
+  }
+
+  return `${String(day).padStart(2, "0")}-${monthLabel}`;
+}
+
+function formatRenewalDueLabel(month: number | null, day: number | null) {
+  const monthDayLabel = formatMonthDayLabel(month, day);
+
+  if (!monthDayLabel) {
+    return null;
+  }
+
+  return `Renewal due on ${monthDayLabel}`;
+}
+
+function renderRenewalDueLabel(label: string | null) {
+  if (!label) {
+    return null;
+  }
+
+  const renewalPrefix = "Renewal due on ";
+  if (label.startsWith(renewalPrefix)) {
+    return (
+      <>
+        {renewalPrefix}
+        <span className="font-semibold">{label.slice(renewalPrefix.length)}</span>
+      </>
+    );
+  }
+
+  return label;
+}
+
+function formatTenureLabel(value: string | number | null) {
+  const tenureMap: Record<number, string> = {
+    1: "Monthly",
+    2: "Annual",
+    3: "Life Time",
+    4: "Custom",
+  };
+
+  if (typeof value === "number") {
+    return tenureMap[value] ?? "Membership";
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  return "Membership";
+}
+
+function isLifetimeTenure(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return normalized === "lifetime" || normalized === "life time";
+}
+
+function formatTenureWithExpiryLabel(info: MembershipRegistrationInfo) {
+  const tenureLabel = formatTenureLabel(info.membershipDetail.tenure);
+  const annualExpiryLabel = formatRenewalDueLabel(
+    info.membershipDetail.annualExpiryMonth,
+    info.membershipDetail.annualExpiryDay,
+  );
+  const customExpiryLabel =
+    info.membershipDetail.tenure === "Custom" || info.membershipDetail.tenure === 4
+      ? info.membershipDetail.customExpiryDays
+        ? `${info.membershipDetail.customExpiryDays} Days`
+        : formatShortExpiryLabel(info.membershipDetail.customExpiryDate)
+      : null;
+
+  if (tenureLabel === "Monthly") {
+    return { tenureLabel, expiryLabel: "Requires monthly renewal" };
+  }
+
+  if (tenureLabel === "Annual") {
+    return { tenureLabel, expiryLabel: annualExpiryLabel ?? "Every Year" };
+  }
+
+  if (isLifetimeTenure(tenureLabel)) {
+    return { tenureLabel, expiryLabel: "No Expiry" };
+  }
+
+  if (tenureLabel === "Custom") {
+    return { tenureLabel, expiryLabel: customExpiryLabel ?? "No Expiry" };
+  }
+
+  return { tenureLabel, expiryLabel: annualExpiryLabel ?? customExpiryLabel ?? null };
+}
+
 function isPricingStepComplete(
   form: MembershipRegistrationFormState,
   isFreeMembership: boolean,
-  paymentMethodOptions: Array<{ value: number; label: string }>,
 ) {
-  if (isFreeMembership) {
-    return true;
-  }
-
-  if (paymentMethodOptions.length === 0) {
-    return true;
-  }
-
-  return Boolean(form.paymentMethod.trim());
+  return isFreeMembership ? true : Boolean(form.paymentMethod.trim());
 }
 
 function isInformationStepComplete(form: MembershipRegistrationFormState) {
@@ -348,25 +454,19 @@ function WizardField({
 
 function PricingStep({
   info,
-  form,
-  paymentMethodOptions,
   formattedMembershipCharges,
   isFreeMembership,
-  errors,
-  setField,
   theme,
   membershipDescription,
 }: {
   info: MembershipRegistrationInfo;
-  form: MembershipRegistrationFormState;
-  paymentMethodOptions: Array<{ value: number; label: string }>;
   formattedMembershipCharges: string;
   isFreeMembership: boolean;
-  errors: Partial<Record<keyof MembershipRegistrationFormState, string>>;
-  setField: MembershipRegisterPageViewModel["setField"];
   theme: MembershipTheme;
   membershipDescription: string;
 }) {
+  const tenureInfo = formatTenureWithExpiryLabel(info);
+
   return (
     <div className="grid gap-4 lg:grid-cols-2 xl:gap-6">
       <MembershipDescriptionPanel
@@ -383,53 +483,44 @@ function PricingStep({
           description="Review the membership charge before moving ahead."
           theme={theme}
         />
-        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-          <div className="rounded-2xl border p-3.5 sm:p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
+        <div
+          className="rounded-2xl border px-4 py-3 sm:px-5 sm:py-4"
+          style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+            Amount
+          </p>
+          <p className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: theme.level1 }}>
+            {formattedMembershipCharges}
+          </p>
+        </div>
+        <div
+          className="grid gap-4 rounded-2xl border px-4 py-3 sm:px-5 sm:py-4"
+          style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}
+        >
+          <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              Membership
+              Tenure
             </p>
-            <p className="mt-2 text-lg font-bold" style={{ color: theme.tileValueColor }}>
-              {info.membershipDetail.name}
+            <p className="text-lg font-semibold" style={{ color: theme.tileValueColor }}>
+              {tenureInfo.tenureLabel}
             </p>
-            <p className="mt-1 text-sm" style={{ color: theme.bodyColor }}>
-              {info.organizerName}
-            </p>
+            {tenureInfo.expiryLabel ? (
+              <p className="text-xs font-medium" style={{ color: theme.mutedLabelColor }}>
+                {renderRenewalDueLabel(tenureInfo.expiryLabel)}
+              </p>
+            ) : null}
           </div>
-          <div className="rounded-2xl border p-3.5 sm:p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
+          <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              Amount
+              Organizer
             </p>
-            <p className="mt-2 text-lg font-bold" style={{ color: theme.level1 }}>
-              {formattedMembershipCharges}
-            </p>
-            <p className="mt-1 text-sm" style={{ color: theme.bodyColor }}>
-              {isFreeMembership ? "No payment is required." : "Payment method is required to continue."}
+            <p className="text-lg font-bold" style={{ color: theme.tileValueColor }}>
+              {info.organizerName}
             </p>
           </div>
         </div>
 
-        {!isFreeMembership ? (
-          <WizardField
-            label="Payment Method"
-            theme={theme}
-            required
-            error={errors.paymentMethod}
-          >
-            <select
-              value={form.paymentMethod}
-              onChange={(event) => setField("paymentMethod", event.target.value)}
-              className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-              style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-            >
-              <option value="">Select a payment method</option>
-              {paymentMethodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </WizardField>
-        ) : null}
       </div>
 
     </div>
@@ -608,14 +699,13 @@ export function MembershipRegisterWizard({
   setField,
   formattedMembershipCharges,
   isFreeMembership,
-  paymentMethodOptions,
   theme,
   membershipName,
   membershipDescription,
   organizerName,
 }: MembershipRegisterWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const pricingStepComplete = isPricingStepComplete(form, isFreeMembership, paymentMethodOptions);
+  const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
   const infoStepComplete = isInformationStepComplete(form);
 
   const canGoNext =
@@ -672,17 +762,13 @@ export function MembershipRegisterWizard({
         }}
       >
         {currentStep === 0 ? (
-          <PricingStep
-            info={info}
-            form={form}
-            paymentMethodOptions={paymentMethodOptions}
-          formattedMembershipCharges={formattedMembershipCharges}
-          isFreeMembership={isFreeMembership}
-          errors={errors}
-          setField={setField}
-          theme={theme}
-          membershipDescription={membershipDescription}
-        />
+              <PricingStep
+                info={info}
+                formattedMembershipCharges={formattedMembershipCharges}
+                isFreeMembership={isFreeMembership}
+                theme={theme}
+                membershipDescription={membershipDescription}
+              />
         ) : currentStep === 1 ? (
           <InformationStep form={form} errors={errors} setField={setField} theme={theme} />
         ) : (

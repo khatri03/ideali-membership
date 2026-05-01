@@ -15,6 +15,9 @@ export interface MembershipRegistrationDetail {
   tenure: string | number | null;
   expiresCalendarYear: boolean;
   customExpiryDate: string | null;
+  annualExpiryMonth: number | null;
+  annualExpiryDay: number | null;
+  customExpiryDays: number | null;
   isFree: boolean;
   membershipCharges: number | null;
   allowPartialPayment: boolean;

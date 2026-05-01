@@ -134,6 +134,15 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     membershipDetailRecord?.ExpiresCalendarYear ?? membershipDetailRecord?.expiresCalendarYear,
   );
   const customExpiryDate = readText(membershipDetailRecord?.CustomExpiryDate ?? membershipDetailRecord?.customExpiryDate);
+  const annualExpiryMonth = readNumber(
+    membershipDetailRecord?.AnnualExpiryMonth ?? membershipDetailRecord?.annualExpiryMonth,
+  );
+  const annualExpiryDay = readNumber(
+    membershipDetailRecord?.AnnualExpiryDay ?? membershipDetailRecord?.annualExpiryDay,
+  );
+  const customExpiryDays = readNumber(
+    membershipDetailRecord?.CustomExpiryDays ?? membershipDetailRecord?.customExpiryDays,
+  );
   const isFree = readBoolean(membershipDetailRecord?.IsFree ?? membershipDetailRecord?.isFree);
   const membershipCharges = readNumber(
     membershipDetailRecord?.MembershipCharges ?? membershipDetailRecord?.membershipCharges,
@@ -178,6 +187,9 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       tenure,
       expiresCalendarYear,
       customExpiryDate: customExpiryDate || null,
+      annualExpiryMonth,
+      annualExpiryDay,
+      customExpiryDays,
       isFree,
       membershipCharges,
       allowPartialPayment,

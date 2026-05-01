@@ -31,7 +31,8 @@ function formatAmount(amount: number, info: MembershipRegistrationInfo | null) {
     maximumFractionDigits: 2,
   }).format(amount);
 
-  return `${buildPaymentCurrencyPrefix(info)}${formattedAmount}`;
+  const prefix = buildPaymentCurrencyPrefix(info);
+  return prefix ? `${prefix} ${formattedAmount}` : formattedAmount;
 }
 
 function getPaymentMethodOptions(info: MembershipRegistrationInfo | null) {
