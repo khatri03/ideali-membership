@@ -197,9 +197,11 @@ function UpcomingCard({ targetUtc, theme }: { targetUtc: string; theme: Membersh
       <h1 className="mt-3 text-3xl font-bold tracking-tight" style={{ color: theme.level1 }}>
         {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonTitle}
       </h1>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-6" style={{ color: theme.bodyColor }}>
-        {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonBody}
-      </p>
+      {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonBody ? (
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6" style={{ color: theme.bodyColor }}>
+          {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonBody}
+        </p>
+      ) : null}
       <div
         className="mx-auto mt-6 grid max-w-xl gap-3"
         style={{ gridTemplateColumns: `repeat(${countdownTiles.length}, minmax(0, 1fr))` }}
