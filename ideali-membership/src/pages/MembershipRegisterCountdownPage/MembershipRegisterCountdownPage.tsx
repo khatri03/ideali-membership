@@ -224,7 +224,6 @@ function UpcomingCard({ targetUtc, theme }: { targetUtc: string; theme: Membersh
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
-            timeZone: "UTC",
           }).format(new Date(targetUtc))}
         </strong>
       </div>
@@ -248,6 +247,7 @@ export function MembershipRegisterCountdownPage() {
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { isLoading, registrationState, registrationStartDateUtc, membershipColor } = useMembershipRegisterPage();
   const theme = useMemo(() => buildMembershipTheme(membershipColor), [membershipColor]);
+  const countdown = useCountdown(registrationStartDateUtc);
 
   const effectiveRegistrationState = useMemo(() => {
     if (!registrationStartDateUtc) {
@@ -279,6 +279,10 @@ export function MembershipRegisterCountdownPage() {
   }
 
   if (effectiveRegistrationState !== "Upcoming" || !registrationStartDateUtc) {
+    return <Navigate to={currentMembershipTypeUniqueId ? buildMembershipRegisterPath(currentMembershipTypeUniqueId) : APP_ROUTES.root} replace />;
+  }
+
+  if (countdown && countdown.remaining === 0) {
     return <Navigate to={currentMembershipTypeUniqueId ? buildMembershipRegisterPath(currentMembershipTypeUniqueId) : APP_ROUTES.root} replace />;
   }
 
