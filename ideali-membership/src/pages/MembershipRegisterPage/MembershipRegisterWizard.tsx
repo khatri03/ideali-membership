@@ -573,19 +573,20 @@ function PricingStep({
               Review the membership charge before moving ahead.
             </p>
           </div>
-          <div
-            className="rounded-2xl px-4 py-3 text-right sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
-            style={{ background: theme.tileBackground }}
-          >
-            <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              Total Payable
-            </span>
-            <span className="mt-2 block text-2xl font-bold sm:text-3xl" style={{ color: theme.level1 }}>
-              {totalAmountLabel}
-            </span>
-          </div>
+          {donationCampaignName ? (
+            <div
+              className="rounded-2xl px-4 py-3 text-right sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
+              style={{ background: theme.tileBackground }}
+            >
+              <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                Total Payable
+              </span>
+              <span className="mt-2 block text-2xl font-bold sm:text-3xl" style={{ color: theme.level1 }}>
+                {totalAmountLabel}
+              </span>
+            </div>
+          ) : null}
         </div>
-        <div className="h-px w-full" style={{ background: theme.tileBorder, opacity: 0.7 }} />
         <div className="rounded-2xl px-4 py-3 sm:px-5 sm:py-4" style={{ background: theme.tileBackground }}>
           <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
             Amount
