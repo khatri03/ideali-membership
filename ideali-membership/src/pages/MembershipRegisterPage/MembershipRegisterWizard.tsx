@@ -536,7 +536,6 @@ function PricingStep({
             ) : null}
             {tenureInfo.expiryLabel ? (
               <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
-                |{" "}
                 <span
                   className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold leading-5"
                   style={{
@@ -564,19 +563,6 @@ function PricingStep({
           <p className="mt-2 text-2xl font-bold sm:text-3xl" style={{ color: theme.level1 }}>
             {formattedMembershipCharges}
           </p>
-        </div>
-        <div
-          className="grid gap-4 rounded-2xl border px-4 py-3 sm:px-5 sm:py-4"
-          style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}
-        >
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              Tenure
-            </p>
-            <p className="text-lg font-semibold" style={{ color: theme.tileValueColor }}>
-              {tenureInfo.tenureLabel}
-            </p>
-          </div>
         </div>
 
         {info.membershipDetail.donationCampaignName ? (
