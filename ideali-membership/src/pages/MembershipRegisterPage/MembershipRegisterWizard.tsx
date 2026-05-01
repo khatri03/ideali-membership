@@ -731,7 +731,7 @@ export function MembershipRegisterWizard({
   }
 
   return (
-    <form className="w-full max-w-6xl space-y-6" onSubmit={onSubmit}>
+    <form className="w-full max-w-[100rem] space-y-6" onSubmit={onSubmit}>
       <div className="relative -mx-4 overflow-x-auto pb-2 px-4 sm:mx-0 sm:px-0">
         <div className="relative z-10 flex min-w-full flex-nowrap gap-3 sm:min-w-max sm:gap-4">
           {stepTitles.map((step, index) => (
