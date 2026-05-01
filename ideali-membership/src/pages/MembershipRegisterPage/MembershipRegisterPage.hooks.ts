@@ -37,10 +37,6 @@ function formatAmount(amount: number, info: MembershipRegistrationInfo | null) {
 function getPaymentMethodOptions(info: MembershipRegistrationInfo | null) {
   const options = [...(info?.paymentSettings.paymentProducts ?? [])];
 
-  if (!options.includes(3)) {
-    options.push(3);
-  }
-
   return options
     .filter((value, index, array) => array.indexOf(value) === index)
     .map((value) => ({
@@ -128,9 +124,8 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
         return current;
       }
 
-      const nextPaymentMethod = info.membershipDetail.isFree
-        ? ""
-        : String(getPaymentMethodOptions(info)[0]?.value ?? 3);
+      const firstPaymentMethod = getPaymentMethodOptions(info)[0];
+      const nextPaymentMethod = info.membershipDetail.isFree || !firstPaymentMethod ? "" : String(firstPaymentMethod.value);
 
       return {
         ...current,
