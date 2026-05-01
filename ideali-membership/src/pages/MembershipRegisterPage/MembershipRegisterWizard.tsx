@@ -232,7 +232,10 @@ function PricingStep({
 }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className="space-y-5 rounded-3xl border p-5" style={{ borderColor: theme.cardBorder, background: "#fff" }}>
+      <div
+        className="space-y-5 rounded-3xl border p-5"
+        style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
+      >
         <SectionTitle
           title="Pricing"
           description="Review the membership charge before moving ahead."
@@ -288,8 +291,15 @@ function PricingStep({
       </div>
 
       {membershipDescription.trim() ? (
-        <div className="space-y-2 rounded-3xl border p-5 text-left" style={{ borderColor: theme.cardBorder, background: "#fff" }}>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: theme.labelColor }}>
+        <div
+          className="space-y-2 rounded-3xl border p-5 text-left"
+          style={{
+            borderColor: theme.cardBorder,
+            background: theme.cardBackground,
+            boxShadow: `0 18px 42px -28px ${theme.cardShadow}`,
+          }}
+        >
+          <p className="text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: theme.level1 }}>
             About This Membership
           </p>
           <div
@@ -315,7 +325,7 @@ function InformationStep({
   theme: MembershipTheme;
 }) {
   return (
-    <div className="rounded-3xl border p-5" style={{ borderColor: theme.cardBorder, background: "#fff" }}>
+    <div className="rounded-3xl border p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <SectionTitle
         title="Your Information"
         description="Tell us who is joining and how we can contact them."
@@ -432,7 +442,7 @@ function PaymentStep({
   theme: MembershipTheme;
 }) {
   return (
-    <div className="rounded-3xl border p-5" style={{ borderColor: theme.cardBorder, background: "#fff" }}>
+    <div className="rounded-3xl border p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <SectionTitle
         title="Payment"
         description="Confirm your payment note and final review before submitting."
