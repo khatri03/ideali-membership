@@ -85,6 +85,81 @@ function readCustomForms(value: unknown) {
 
       const record = item as Record<string, unknown>;
       const fields = Array.isArray(record.Fields ?? record.fields) ? (record.Fields ?? record.fields) as unknown[] : [];
+      const parsedFields = fields
+        .map((field) => {
+          if (!field || typeof field !== "object") {
+            return null;
+          }
+
+          const fieldRecord = field as Record<string, unknown>;
+          const options = Array.isArray(fieldRecord.Options ?? fieldRecord.options)
+            ? ((fieldRecord.Options ?? fieldRecord.options) as unknown[])
+                .map((option) => {
+                  if (!option || typeof option !== "object") {
+                    return null;
+                  }
+
+                  const optionRecord = option as Record<string, unknown>;
+
+                  return {
+                    uniqueId: readText(optionRecord.UniqueId ?? optionRecord.uniqueId),
+                    displayText: readText(optionRecord.DisplayText ?? optionRecord.displayText),
+                    value: readText(optionRecord.Value ?? optionRecord.value),
+                    isDefault: readBoolean(optionRecord.IsDefault ?? optionRecord.isDefault),
+                  };
+                })
+                .filter(
+                  (
+                    option,
+                  ): option is {
+                    uniqueId: string;
+                    displayText: string;
+                    value: string;
+                    isDefault: boolean;
+                  } => option !== null,
+                )
+            : [];
+
+          return {
+            uniqueId: readText(fieldRecord.UniqueId ?? fieldRecord.uniqueId),
+            formId: readNumber(fieldRecord.FormId ?? fieldRecord.formId) ?? 0,
+            formControlTypeId: readNumber(fieldRecord.FormControlTypeId ?? fieldRecord.formControlTypeId) ?? 0,
+            controlUniqueId: readText(fieldRecord.ControlUniqueId ?? fieldRecord.controlUniqueId) || null,
+            displayOrder: readNumber(fieldRecord.DisplayOrder ?? fieldRecord.displayOrder) ?? 0,
+            controlLabel: readText(fieldRecord.ControlLabel ?? fieldRecord.controlLabel),
+            placeHolder: readText(fieldRecord.PlaceHolder ?? fieldRecord.placeHolder) || null,
+            tooltip: readText(fieldRecord.Tooltip ?? fieldRecord.tooltip) || null,
+            isMandatory: readBoolean(fieldRecord.IsMandatory ?? fieldRecord.isMandatory),
+            minLength: readNumber(fieldRecord.MinLength ?? fieldRecord.minLength),
+            maxLength: readNumber(fieldRecord.MaxLength ?? fieldRecord.maxLength),
+            defaultValue: readText(fieldRecord.DefaultValue ?? fieldRecord.defaultValue) || null,
+            options,
+          };
+        })
+        .filter(
+          (
+            field,
+          ): field is {
+            uniqueId: string;
+            formId: number;
+            formControlTypeId: number;
+            controlUniqueId: string | null;
+            displayOrder: number;
+            controlLabel: string;
+            placeHolder: string | null;
+            tooltip: string | null;
+            isMandatory: boolean;
+            minLength: number | null;
+            maxLength: number | null;
+            defaultValue: string | null;
+            options: Array<{
+              uniqueId: string;
+              displayText: string;
+              value: string;
+              isDefault: boolean;
+            }>;
+          } => field !== null,
+        );
 
       return {
         uniqueId: readText(record.UniqueId ?? record.uniqueId),
@@ -92,7 +167,8 @@ function readCustomForms(value: unknown) {
         description: readText(record.Description ?? record.description),
         headerText: readText(record.HeaderText ?? record.headerText),
         layoutColumn: readNumber(record.LayoutColumn ?? record.layoutColumn),
-        fieldCount: fields.length,
+        fieldCount: parsedFields.length,
+        fields: parsedFields,
       };
     })
     .filter((item): item is {
@@ -102,7 +178,107 @@ function readCustomForms(value: unknown) {
       headerText: string;
       layoutColumn: number | null;
       fieldCount: number;
+      fields: Array<{
+        uniqueId: string;
+        formId: number;
+        formControlTypeId: number;
+        controlUniqueId: string | null;
+        displayOrder: number;
+        controlLabel: string;
+        placeHolder: string | null;
+        tooltip: string | null;
+        isMandatory: boolean;
+        minLength: number | null;
+        maxLength: number | null;
+        defaultValue: string | null;
+        options: Array<{
+          uniqueId: string;
+          displayText: string;
+          value: string;
+          isDefault: boolean;
+        }>;
+      }>;
     } => item !== null);
+}
+
+function readCustomQuestions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const options = Array.isArray(record.Options ?? record.options)
+        ? ((record.Options ?? record.options) as unknown[])
+            .map((option) => {
+              if (!option || typeof option !== "object") {
+                return null;
+              }
+
+              const optionRecord = option as Record<string, unknown>;
+
+              return {
+                uniqueId: readText(optionRecord.UniqueId ?? optionRecord.uniqueId),
+                displayText: readText(optionRecord.DisplayText ?? optionRecord.displayText),
+                value: readText(optionRecord.Value ?? optionRecord.value),
+                isDefault: readBoolean(optionRecord.IsDefault ?? optionRecord.isDefault),
+              };
+            })
+            .filter(
+              (option): option is {
+                uniqueId: string;
+                displayText: string;
+                value: string;
+                isDefault: boolean;
+              } => option !== null,
+            )
+        : [];
+
+      return {
+        uniqueId: readText(record.UniqueId ?? record.uniqueId),
+        controlId: readNumber(record.ControlId ?? record.controlId) ?? 0,
+        controlName: readText(record.ControlName ?? record.controlName),
+        controlType: readText(record.ControlType ?? record.controlType),
+        iconClass: readText(record.IconClass ?? record.iconClass),
+        label: readText(record.Label ?? record.label),
+        placeHolder: readText(record.PlaceHolder ?? record.placeHolder) || null,
+        tooltip: readText(record.Tooltip ?? record.tooltip) || null,
+        required: readBoolean(record.Required ?? record.required),
+        minLength: readText(record.MinLength ?? record.minLength) || null,
+        maxLength: readText(record.MaxLength ?? record.maxLength) || null,
+        defaultValue: readText(record.DefaultValue ?? record.defaultValue) || null,
+        displayOrder: readNumber(record.DisplayOrder ?? record.displayOrder) ?? 0,
+        options,
+      };
+    })
+    .filter(
+      (item): item is {
+        uniqueId: string;
+        controlId: number;
+        controlName: string;
+        controlType: string;
+        iconClass: string;
+        label: string;
+        placeHolder: string | null;
+        tooltip: string | null;
+        required: boolean;
+        minLength: string | null;
+        maxLength: string | null;
+        defaultValue: string | null;
+        displayOrder: number;
+        options: Array<{
+          uniqueId: string;
+          displayText: string;
+          value: string;
+          isDefault: boolean;
+        }>;
+      } => item !== null,
+    );
 }
 
 export async function getMembershipRegistrationInfo(membershipTypeUniqueId: string) {
@@ -158,6 +334,9 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   );
   const color = readText(membershipDetailRecord?.Color ?? membershipDetailRecord?.color);
   const customForms = readCustomForms(membershipDetailRecord?.CustomForms ?? membershipDetailRecord?.customForms);
+  const customQuestions = readCustomQuestions(
+    membershipDetailRecord?.CustomQuestions ?? membershipDetailRecord?.customQuestions,
+  );
 
   const paymentAccountId = readNumber(
     paymentSettingsRecord?.PaymentAccountId ?? paymentSettingsRecord?.paymentAccountId,
@@ -203,6 +382,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       allowPartialPayment,
       color: color || null,
       customForms,
+      customQuestions,
     },
     paymentSettings: {
       paymentAccountId,

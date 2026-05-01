@@ -4,6 +4,8 @@ import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
+  MembershipRegistrationCustomFormField,
+  MembershipRegistrationCustomFormSummary,
 } from "../../types/membershipRegistration";
 
 type MembershipTheme = {
@@ -48,7 +50,7 @@ const STEPS = [
   },
   {
     title: "Your Information",
-    description: "Share the member details we need.",
+    description: "Complete the mapped custom forms.",
   },
   {
     title: "Payment",
@@ -249,18 +251,11 @@ function isPricingStepComplete(
   return requiresPaymentMethod ? Boolean(form.paymentMethod.trim()) : true;
 }
 
-function isInformationStepComplete(form: MembershipRegistrationFormState) {
-  return Boolean(
-    form.firstName.trim() &&
-      form.lastName.trim() &&
-      form.email.trim() &&
-      isEmailValid(form.email) &&
-      form.password.length >= 6 &&
-      form.confirmPassword &&
-      form.confirmPassword === form.password &&
-      form.streetLine1.trim() &&
-      form.zipCode.trim(),
-  );
+function isInformationStepComplete(
+  customForms: MembershipRegistrationCustomFormSummary[],
+  values: CustomFormValues,
+) {
+  return Object.keys(validateCustomForms(customForms, values)).length === 0;
 }
 
 function MembershipDescriptionPanel({
@@ -506,6 +501,352 @@ function WizardField({
   );
 }
 
+type CustomFormValue = string | boolean | File | null;
+type CustomFormValues = Record<string, CustomFormValue>;
+type CustomFormErrors = Record<string, string>;
+
+function buildCustomFormFieldKey(formUniqueId: string, fieldUniqueId: string) {
+  return `${formUniqueId}:${fieldUniqueId}`;
+}
+
+function getCustomFormControlType(controlTypeId: number) {
+  switch (controlTypeId) {
+    case 1:
+      return "text";
+    case 2:
+      return "email";
+    case 3:
+      return "number";
+    case 4:
+      return "date";
+    case 5:
+      return "select";
+    case 6:
+      return "checkbox";
+    case 7:
+      return "radio";
+    case 8:
+      return "textarea";
+    case 9:
+      return "file";
+    case 10:
+      return "password";
+    case 14:
+      return "phone";
+    default:
+      return "text";
+  }
+}
+
+function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField) {
+  const controlType = getCustomFormControlType(field.formControlTypeId);
+
+  if (controlType === "checkbox") {
+    return field.defaultValue === "true" || field.defaultValue === "1";
+  }
+
+  if (controlType === "file") {
+    return null;
+  }
+
+  if (controlType === "select" || controlType === "radio") {
+    const selectedOption = field.options.find((option) => option.isDefault)?.value || field.defaultValue || "";
+    return selectedOption;
+  }
+
+  return field.defaultValue || "";
+}
+
+function buildCustomFormValues(customForms: MembershipRegistrationCustomFormSummary[]) {
+  return customForms.reduce<CustomFormValues>((accumulator, form) => {
+    form.fields.forEach((field) => {
+      accumulator[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] = getCustomFormDefaultValue(field);
+    });
+
+    return accumulator;
+  }, {});
+}
+
+function validateCustomFormField(
+  field: MembershipRegistrationCustomFormField,
+  value: CustomFormValue,
+) {
+  const controlType = getCustomFormControlType(field.formControlTypeId);
+  const textValue = typeof value === "string" ? value.trim() : "";
+
+  if (controlType === "checkbox") {
+    if (field.isMandatory && value !== true) {
+      return "This field is required.";
+    }
+
+    return "";
+  }
+
+  if (controlType === "file") {
+    if (field.isMandatory && !value) {
+      return "This field is required.";
+    }
+
+    return "";
+  }
+
+  if (field.isMandatory && !textValue) {
+    return "This field is required.";
+  }
+
+  if (field.minLength != null && textValue.length > 0 && textValue.length < field.minLength) {
+    return `Minimum ${field.minLength} characters required.`;
+  }
+
+  if (field.maxLength != null && textValue.length > field.maxLength) {
+    return `Maximum ${field.maxLength} characters allowed.`;
+  }
+
+  return "";
+}
+
+function validateCustomForms(
+  customForms: MembershipRegistrationCustomFormSummary[],
+  values: CustomFormValues,
+) {
+  const errors: CustomFormErrors = {};
+
+  customForms.forEach((form) => {
+    form.fields.forEach((field) => {
+      const key = buildCustomFormFieldKey(form.uniqueId, field.uniqueId);
+      const error = validateCustomFormField(field, values[key] ?? "");
+      if (error) {
+        errors[key] = error;
+      }
+    });
+  });
+
+  return errors;
+}
+
+function getCustomFormGridClass(layoutColumn: number) {
+  switch (layoutColumn) {
+    case 1:
+      return "grid gap-4";
+    case 2:
+      return "grid gap-4 sm:grid-cols-2";
+    case 3:
+      return "grid gap-4 sm:grid-cols-2 lg:grid-cols-3";
+    case 4:
+      return "grid gap-4 sm:grid-cols-2 lg:grid-cols-4";
+    default:
+      return "grid gap-4 sm:grid-cols-2";
+  }
+}
+
+function CustomFormFieldCard({
+  field,
+  value,
+  error,
+  onChange,
+  theme,
+}: {
+  field: MembershipRegistrationCustomFormField;
+  value: CustomFormValue;
+  error: string;
+  onChange: (value: CustomFormValue) => void;
+  theme: MembershipTheme;
+}) {
+  const controlType = getCustomFormControlType(field.formControlTypeId);
+  const label = field.placeHolder || field.controlLabel;
+  const defaultOptionValue = typeof value === "string" ? value : "";
+  const checkboxValue = typeof value === "boolean" ? value : false;
+
+  return (
+    <div className="space-y-3 rounded-2xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}>
+      <div className="space-y-1">
+        <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+          {field.controlLabel}
+          {field.isMandatory ? <span className="ml-1 text-rose-600">*</span> : null}
+        </p>
+        {field.tooltip ? (
+          <p className="text-xs leading-5" style={{ color: theme.bodyColor }}>
+            {field.tooltip}
+          </p>
+        ) : null}
+      </div>
+
+      {controlType === "textarea" ? (
+        <textarea
+          rows={4}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={label}
+          className="w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "select" && field.options.length > 0 ? (
+        <select
+          value={defaultOptionValue}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        >
+          <option value="">{label || "Select one"}</option>
+          {field.options.map((option) => (
+            <option key={option.uniqueId || option.value} value={option.value}>
+              {option.displayText}
+            </option>
+          ))}
+        </select>
+      ) : controlType === "radio" && field.options.length > 0 ? (
+        <div className="space-y-3">
+          {field.options.map((option) => (
+            <label key={option.uniqueId || option.value} className="flex items-center gap-3 text-sm" style={{ color: theme.titleColor }}>
+              <input
+                type="radio"
+                name={`custom-form-${field.uniqueId}`}
+                checked={defaultOptionValue === option.value}
+                onChange={() => onChange(option.value)}
+                className="h-4 w-4 accent-cyan-600"
+              />
+              <span>{option.displayText}</span>
+            </label>
+          ))}
+        </div>
+      ) : controlType === "checkbox" ? (
+        <label className="inline-flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={checkboxValue}
+            onChange={(event) => onChange(event.target.checked)}
+            className="h-4 w-4 accent-cyan-600"
+          />
+          <span className="text-sm font-medium" style={{ color: theme.titleColor }}>
+            {field.controlLabel}
+          </span>
+        </label>
+      ) : controlType === "file" ? (
+        <input
+          type="file"
+          onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+          className="block w-full text-sm text-slate-500"
+        />
+      ) : controlType === "number" ? (
+        <input
+          type="number"
+          inputMode="numeric"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={label}
+          min={0}
+          step="1"
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "date" ? (
+        <input
+          type="date"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "phone" ? (
+        <input
+          type="tel"
+          inputMode="tel"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={label || "(555) 123-4567"}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "password" ? (
+        <input
+          type="password"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={label}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "email" ? (
+        <input
+          type="email"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={label}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : (
+        <input
+          type="text"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={label}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      )}
+
+      {error ? <p className="text-xs font-medium text-rose-600">{error}</p> : null}
+    </div>
+  );
+}
+
+function CustomFormSection({
+  form,
+  values,
+  errors,
+  onFieldChange,
+  theme,
+}: {
+  form: MembershipRegistrationCustomFormSummary;
+  values: CustomFormValues;
+  errors: CustomFormErrors;
+  onFieldChange: (key: string, value: CustomFormValue) => void;
+  theme: MembershipTheme;
+}) {
+  const displayTitle = form.headerText || form.name;
+  const displayDescription = form.description || "";
+  const layoutColumn = form.layoutColumn || 1;
+  const fields = [...(form.fields || [])].sort((left, right) => left.displayOrder - right.displayOrder);
+
+  return (
+    <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+          Custom Form
+        </p>
+        <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
+          {displayTitle}
+        </h3>
+        {displayDescription ? (
+          <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+            {displayDescription}
+          </p>
+        ) : null}
+      </div>
+
+      {fields.length === 0 ? (
+        <div className="rounded-2xl border border-dashed px-4 py-5 text-sm" style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}>
+          This custom form does not contain any fields.
+        </div>
+      ) : (
+        <div className={getCustomFormGridClass(layoutColumn)}>
+          {fields.map((field) => (
+            <CustomFormFieldCard
+              key={field.uniqueId || `${field.formId}-${field.displayOrder}`}
+              field={field}
+              value={values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
+              error={errors[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
+              onChange={(nextValue) => onFieldChange(buildCustomFormFieldKey(form.uniqueId, field.uniqueId), nextValue)}
+              theme={theme}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PricingStep({
   info,
   formattedMembershipCharges,
@@ -546,7 +887,7 @@ function PricingStep({
         className="space-y-5 rounded-3xl p-4 sm:p-5"
         style={{ background: theme.cardBackground }}
       >
-        <div className="space-y-2 lg:flex lg:items-start lg:justify-between lg:gap-6">
+        <div className="space-y-2 lg:flex lg:items-center lg:justify-between lg:gap-6">
           <div className="space-y-2">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: theme.titleColor }}>
               {info.membershipDetail.name}
@@ -641,120 +982,45 @@ function PricingStep({
 }
 
 function InformationStep({
-  form,
+  customForms,
+  values,
   errors,
-  setField,
+  onFieldChange,
   theme,
 }: {
-  form: MembershipRegistrationFormState;
-  errors: Partial<Record<keyof MembershipRegistrationFormState, string>>;
-  setField: MembershipRegisterPageViewModel["setField"];
+  customForms: MembershipRegistrationCustomFormSummary[];
+  values: CustomFormValues;
+  errors: CustomFormErrors;
+  onFieldChange: (key: string, value: CustomFormValue) => void;
   theme: MembershipTheme;
 }) {
+  const hasCustomForms = customForms.length > 0;
+
   return (
-    <div className="rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <div className="space-y-5">
       <SectionTitle
         title="Your Information"
-        description="Tell us who is joining and how we can contact them."
+        description={hasCustomForms ? "Complete the mapped custom forms below." : "No additional information required."}
         theme={theme}
       />
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <WizardField label="Prefix" theme={theme}>
-          <input
-            value={form.prefix}
-            onChange={(event) => setField("prefix", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="First Name" theme={theme} required error={errors.firstName}>
-          <input
-            value={form.firstName}
-            onChange={(event) => setField("firstName", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Middle Name" theme={theme}>
-          <input
-            value={form.middleName}
-            onChange={(event) => setField("middleName", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Last Name" theme={theme} required error={errors.lastName}>
-          <input
-            value={form.lastName}
-            onChange={(event) => setField("lastName", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Email" theme={theme} required error={errors.email}>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(event) => setField("email", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Cell Phone" theme={theme}>
-          <input
-            value={form.cellPhone}
-            onChange={(event) => setField("cellPhone", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Password" theme={theme} required error={errors.password}>
-          <input
-            type="password"
-            value={form.password}
-            onChange={(event) => setField("password", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Confirm Password" theme={theme} required error={errors.confirmPassword}>
-          <input
-            type="password"
-            value={form.confirmPassword}
-            onChange={(event) => setField("confirmPassword", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-      </div>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <WizardField label="Street Address" theme={theme} required error={errors.streetLine1}>
-          <input
-            value={form.streetLine1}
-            onChange={(event) => setField("streetLine1", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Street Address 2" theme={theme}>
-          <input
-            value={form.streetLine2}
-            onChange={(event) => setField("streetLine2", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-        <WizardField label="Zip Code" theme={theme} required error={errors.zipCode}>
-          <input
-            value={form.zipCode}
-            onChange={(event) => setField("zipCode", event.target.value)}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
-      </div>
+      {hasCustomForms ? (
+        <div className="space-y-5">
+          {customForms.map((form) => (
+            <CustomFormSection
+              key={form.uniqueId}
+              form={form}
+              values={values}
+              errors={errors}
+              onFieldChange={onFieldChange}
+              theme={theme}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-3xl border border-dashed px-4 py-5 text-sm" style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}>
+          No additional information required.
+        </div>
+      )}
     </div>
   );
 }
@@ -816,12 +1082,24 @@ export function MembershipRegisterWizard({
   membershipName,
   membershipDescription,
 }: MembershipRegisterWizardProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [customFormValues, setCustomFormValues] = useState<CustomFormValues>({});
+  const [customFormErrors, setCustomFormErrors] = useState<CustomFormErrors>({});
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
-  const infoStepComplete = isInformationStepComplete(form);
+  const infoStepComplete = info ? isInformationStepComplete(info.membershipDetail.customForms, customFormValues) : true;
 
-  const canGoNext =
-    (currentStep === 0 && pricingStepComplete) || (currentStep === 1 && infoStepComplete) || currentStep === 2;
+  useEffect(() => {
+    if (!info) {
+      setCustomFormValues({});
+      setCustomFormErrors({});
+      return;
+    }
+
+    setCustomFormValues(buildCustomFormValues(info.membershipDetail.customForms));
+    setCustomFormErrors({});
+  }, [info]);
+
+  const canGoNext = currentStep === 0 ? pricingStepComplete : true;
 
   const stepTitles = STEPS.map((step, index) => ({
     ...step,
@@ -831,8 +1109,17 @@ export function MembershipRegisterWizard({
   }));
 
   function handleNext() {
-    if (!canGoNext) {
+    if (currentStep === 0 && !pricingStepComplete) {
       return;
+    }
+
+    if (currentStep === 1 && info) {
+      const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
+      setCustomFormErrors(nextErrors);
+
+      if (Object.keys(nextErrors).length > 0) {
+        return;
+      }
     }
 
     setCurrentStep((value) => Math.min(value + 1, STEPS.length - 1));
@@ -842,8 +1129,34 @@ export function MembershipRegisterWizard({
     setCurrentStep((value) => Math.max(value - 1, 0));
   }
 
+  function handleCustomFormFieldChange(key: string, value: CustomFormValue) {
+    setCustomFormValues((current) => ({
+      ...current,
+      [key]: value,
+    }));
+    setCustomFormErrors((current) => ({
+      ...current,
+      [key]: "",
+    }));
+  }
+
   return (
-    <form className="w-full max-w-[100rem] space-y-6" onSubmit={onSubmit}>
+    <form
+      className="w-full max-w-[100rem] space-y-6"
+      onSubmit={(event) => {
+        if (info) {
+          const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
+          setCustomFormErrors(nextErrors);
+
+          if (Object.keys(nextErrors).length > 0) {
+            event.preventDefault();
+            return;
+          }
+        }
+
+        void onSubmit(event);
+      }}
+    >
       <div className="relative -mx-4 overflow-x-auto pb-2 px-4 sm:mx-0 sm:px-0">
         <div className="relative z-10 flex min-w-full flex-nowrap gap-3 sm:min-w-max sm:gap-4">
           {stepTitles.map((step, index) => (
@@ -883,10 +1196,18 @@ export function MembershipRegisterWizard({
                 setField={setField}
               />
         ) : currentStep === 1 ? (
-          <InformationStep form={form} errors={errors} setField={setField} theme={theme} />
+          <InformationStep
+            customForms={info.membershipDetail.customForms}
+            values={customFormValues}
+            errors={customFormErrors}
+            onFieldChange={handleCustomFormFieldChange}
+            theme={theme}
+          />
         ) : (
           <PaymentStep form={form} setField={setField} theme={theme} />
         )}
+
+        <div className="mt-6 h-px w-full" style={{ background: theme.cardBorder, opacity: 0.7 }} />
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <div>

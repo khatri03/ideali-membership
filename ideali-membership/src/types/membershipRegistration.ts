@@ -1,3 +1,26 @@
+export interface MembershipRegistrationCustomFormOption {
+  uniqueId: string;
+  displayText: string;
+  value: string;
+  isDefault: boolean;
+}
+
+export interface MembershipRegistrationCustomFormField {
+  uniqueId: string;
+  formId: number;
+  formControlTypeId: number;
+  controlUniqueId: string | null;
+  displayOrder: number;
+  controlLabel: string;
+  placeHolder: string | null;
+  tooltip: string | null;
+  isMandatory: boolean;
+  minLength: number | null;
+  maxLength: number | null;
+  defaultValue: string | null;
+  options: MembershipRegistrationCustomFormOption[];
+}
+
 export interface MembershipRegistrationCustomFormSummary {
   uniqueId: string;
   name: string;
@@ -5,6 +28,31 @@ export interface MembershipRegistrationCustomFormSummary {
   headerText: string;
   layoutColumn: number | null;
   fieldCount: number;
+  fields: MembershipRegistrationCustomFormField[];
+}
+
+export interface MembershipRegistrationCustomQuestionOption {
+  uniqueId: string;
+  displayText: string;
+  value: string;
+  isDefault: boolean;
+}
+
+export interface MembershipRegistrationCustomQuestion {
+  uniqueId: string;
+  controlId: number;
+  controlName: string;
+  controlType: string;
+  iconClass: string;
+  label: string;
+  placeHolder: string | null;
+  tooltip: string | null;
+  required: boolean;
+  minLength: string | null;
+  maxLength: string | null;
+  defaultValue: string | null;
+  displayOrder: number;
+  options: MembershipRegistrationCustomQuestionOption[];
 }
 
 export interface MembershipRegistrationDetail {
@@ -25,6 +73,7 @@ export interface MembershipRegistrationDetail {
   allowPartialPayment: boolean;
   color: string | null;
   customForms: MembershipRegistrationCustomFormSummary[];
+  customQuestions: MembershipRegistrationCustomQuestion[];
 }
 
 export interface MembershipRegistrationPaymentSettings {
