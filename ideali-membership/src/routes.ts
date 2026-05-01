@@ -5,6 +5,7 @@ export const APP_ROUTES = {
   login: "/login",
   app: "/",
   membershipRegister: "/membership/:membershipTypeUniqueId/register",
+  membershipRegisterCountdown: "/membership/:membershipTypeUniqueId/register/countdown",
   membership: "/organizer/membership/type",
   membershipDashboard: "/organizer/membership/type/dashboard",
   membershipTypes: "/organizer/membership/type/list",
@@ -55,4 +56,8 @@ export function buildMembershipWizardStepPath(
 
 export function buildMembershipRegisterPath(membershipTypeUniqueId: string) {
   return generatePath(APP_ROUTES.membershipRegister, { membershipTypeUniqueId });
+}
+
+export function buildMembershipRegisterCountdownPath(membershipTypeUniqueId: string) {
+  return generatePath(APP_ROUTES.membershipRegisterCountdown, { membershipTypeUniqueId });
 }
