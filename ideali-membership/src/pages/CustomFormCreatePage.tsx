@@ -124,6 +124,7 @@ function normalizeFields(fields: CustomFormFieldDraft[]) {
 function createFieldDraft(control: CustomFormControl, displayOrder: number): CustomFormFieldDraft {
   const hasOptions = control.hasOptions;
   const defaultOptionValue = hasOptions ? "option-1" : "";
+  const defaultValue = control.controlType.toLowerCase() === "checkbox" ? "false" : defaultOptionValue;
 
   return {
     id: createFieldId(),
@@ -140,7 +141,7 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
     requiredMessage: "This field is required.",
     minLength: "",
     maxLength: "",
-    defaultValue: defaultOptionValue,
+    defaultValue,
     displayOrder,
     options: hasOptions
       ? [
@@ -193,7 +194,10 @@ function mapPreviewFieldToDraft(field: {
     requiredMessage: field.requiredMessage ?? "",
     minLength: field.minLength === null ? "" : String(field.minLength),
     maxLength: field.maxLength === null ? "" : String(field.maxLength),
-    defaultValue: field.defaultValue ?? "",
+    defaultValue:
+      field.formControl?.controlType?.toLowerCase() === "checkbox"
+        ? getCheckboxDefaultValue(field.defaultValue)
+        : field.defaultValue ?? "",
     displayOrder: field.displayOrder,
     options: field.options.map((option) => ({
       id: createOptionId(),
@@ -248,6 +252,10 @@ function getControlTooltip(control: CustomFormControl) {
 
 function isTruthyValue(value: string) {
   return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
+}
+
+function getCheckboxDefaultValue(value: string | null | undefined) {
+  return isTruthyValue(value ?? "") ? "true" : "false";
 }
 
 function getDefaultOptionValue(field: CustomFormFieldDraft) {
@@ -715,6 +723,51 @@ function FieldPreview({
         ].join(" ")}
       />
       {error ? <p className="mt-2 text-xs font-medium text-rose-600">{error}</p> : null}
+    </label>
+  );
+}
+
+function SelectFieldPreview({
+  title,
+  value,
+  onChange,
+  options,
+  placeholder,
+  required = false,
+}: {
+  title: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+        <span>{title}</span>
+        {required ? (
+          <span className="text-sm font-bold leading-none text-rose-600" aria-label="Required" title="Required">
+            *
+          </span>
+        ) : null}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+      >
+        {placeholder ? (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        ) : null}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -1655,16 +1708,33 @@ export function CustomFormCreatePage() {
                     }
                     placeholder="Optional helper text"
                   />
-                  <FieldPreview
-                    title="Default value"
-                    value={selectedField.defaultValue}
-                    onChange={(value) =>
-                      updateSelectedField((field) => ({
-                        ...field,
-                        defaultValue: value,
-                      }))
-                    }
-                  />
+                  {selectedControl?.controlType.toLowerCase() === "checkbox" ? (
+                    <SelectFieldPreview
+                      title="Default value"
+                      value={selectedField.defaultValue === "true" ? "true" : "false"}
+                      onChange={(value) =>
+                        updateSelectedField((field) => ({
+                          ...field,
+                          defaultValue: value,
+                        }))
+                      }
+                      options={[
+                        { label: "Unchecked", value: "false" },
+                        { label: "Checked", value: "true" },
+                      ]}
+                    />
+                  ) : (
+                    <FieldPreview
+                      title="Default value"
+                      value={selectedField.defaultValue}
+                      onChange={(value) =>
+                        updateSelectedField((field) => ({
+                          ...field,
+                          defaultValue: value,
+                        }))
+                      }
+                    />
+                  )}
 
                   <ToggleField
                     title="Required"
