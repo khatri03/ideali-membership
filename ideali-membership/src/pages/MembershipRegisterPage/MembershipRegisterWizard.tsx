@@ -38,7 +38,6 @@ type MembershipRegisterWizardProps = Pick<
   theme: MembershipTheme;
   membershipName: string;
   membershipDescription: string;
-  organizerName: string;
 };
 
 const STEPS = [
@@ -102,6 +101,47 @@ function formatMonthDayLabel(month: number | null, day: number | null) {
   }
 
   return `${String(day).padStart(2, "0")}-${monthLabel}`;
+}
+
+function parseDonationAmount(value: string) {
+  const parsed = Number(value.replace(/,/g, "").trim());
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildCurrencyPrefix(info: MembershipRegistrationInfo) {
+  const currencySymbol = info.paymentSettings.paymentCurrencySymbol?.trim();
+  const currencyCode = info.paymentSettings.paymentCurrencyCode?.trim();
+
+  if (currencyCode) {
+    return `${currencyCode.toUpperCase()} $`;
+  }
+
+  if (currencySymbol) {
+    return currencySymbol;
+  }
+
+  return "";
+}
+
+function formatDonationAmountInput(value: string) {
+  const sanitized = value.replace(/[^0-9.]/g, "");
+  if (!sanitized) {
+    return "";
+  }
+
+  const [wholePartRaw = "0", decimalPartRaw = ""] = sanitized.split(".");
+  const wholePart = wholePartRaw.replace(/^0+(?=\d)/, "") || "0";
+  const decimalPart = decimalPartRaw.slice(0, 2);
+  const numericValue = Number(`${wholePart}.${decimalPart || "0"}`);
+
+  if (!Number.isFinite(numericValue)) {
+    return "";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericValue);
 }
 
 function formatRenewalDueLabel(month: number | null, day: number | null) {
@@ -192,7 +232,10 @@ function isPricingStepComplete(
   form: MembershipRegistrationFormState,
   isFreeMembership: boolean,
 ) {
-  return isFreeMembership ? true : Boolean(form.paymentMethod.trim());
+  const donationAmount = parseDonationAmount(form.donationAmount);
+  const requiresPaymentMethod = !isFreeMembership || donationAmount > 0;
+
+  return requiresPaymentMethod ? Boolean(form.paymentMethod.trim()) : true;
 }
 
 function isInformationStepComplete(form: MembershipRegistrationFormState) {
@@ -455,17 +498,22 @@ function WizardField({
 function PricingStep({
   info,
   formattedMembershipCharges,
-  isFreeMembership,
   theme,
   membershipDescription,
+  form,
+  setField,
 }: {
   info: MembershipRegistrationInfo;
   formattedMembershipCharges: string;
-  isFreeMembership: boolean;
   theme: MembershipTheme;
   membershipDescription: string;
+  form: MembershipRegistrationFormState;
+  setField: MembershipRegisterPageViewModel["setField"];
 }) {
   const tenureInfo = formatTenureWithExpiryLabel(info);
+  const donationCampaignName = info.membershipDetail.donationCampaignName?.trim();
+  const donationCampaignAmount = parseDonationAmount(form.donationAmount);
+  const currencyPrefix = buildCurrencyPrefix(info);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2 xl:gap-6">
@@ -520,6 +568,50 @@ function PricingStep({
             </p>
           </div>
         </div>
+
+        {info.membershipDetail.donationCampaignName ? (
+          <div className="space-y-3 rounded-2xl border px-4 py-3 sm:px-5 sm:py-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
+            <div className="grid gap-3 lg:grid-cols-[1fr_2fr] lg:items-center">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                  Donation Campaign
+                </p>
+                <p className="text-base font-semibold" style={{ color: theme.tileValueColor }}>
+                  {donationCampaignName}
+                </p>
+              </div>
+              <label className="flex min-w-0 items-stretch overflow-hidden rounded-2xl border" style={{ borderColor: theme.cardBorder }}>
+                <span
+                  className="flex shrink-0 items-center whitespace-nowrap border-r px-3 text-sm font-semibold"
+                  style={{ borderColor: theme.cardBorder, color: theme.tileValueColor, background: theme.level3 }}
+                >
+                  {currencyPrefix}
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.donationAmount}
+                  onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
+                  placeholder="0.00"
+                  className="w-full bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+                  style={{ color: theme.titleColor }}
+                />
+              </label>
+              <p className="text-xs leading-5 lg:col-start-2" style={{ color: theme.mutedLabelColor }}>
+                Optional. Leave blank if you do not want to donate.
+              </p>
+            </div>
+            {donationCampaignAmount > 0 ? (
+              <p className="text-xs font-semibold whitespace-nowrap" style={{ color: theme.tileValueColor }}>
+                Current donation: {currencyPrefix ? `${currencyPrefix}` : ""}
+                {new Intl.NumberFormat("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }).format(donationCampaignAmount)}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
       </div>
 
@@ -702,7 +794,6 @@ export function MembershipRegisterWizard({
   theme,
   membershipName,
   membershipDescription,
-  organizerName,
 }: MembershipRegisterWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
@@ -765,9 +856,10 @@ export function MembershipRegisterWizard({
               <PricingStep
                 info={info}
                 formattedMembershipCharges={formattedMembershipCharges}
-                isFreeMembership={isFreeMembership}
                 theme={theme}
                 membershipDescription={membershipDescription}
+                form={form}
+                setField={setField}
               />
         ) : currentStep === 1 ? (
           <InformationStep form={form} errors={errors} setField={setField} theme={theme} />
