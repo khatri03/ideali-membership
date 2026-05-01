@@ -151,7 +151,7 @@ function formatRenewalDueLabel(month: number | null, day: number | null) {
     return null;
   }
 
-  return `Renewal due on ${monthDayLabel}`;
+  return `Renewal due on\u00A0${monthDayLabel}`;
 }
 
 function renderRenewalDueLabel(label: string | null) {
@@ -159,7 +159,7 @@ function renderRenewalDueLabel(label: string | null) {
     return null;
   }
 
-  const renewalPrefix = "Renewal due on ";
+  const renewalPrefix = "Renewal due on\u00A0";
   if (label.startsWith(renewalPrefix)) {
     return (
       <>
@@ -536,7 +536,17 @@ function PricingStep({
             ) : null}
             {tenureInfo.expiryLabel ? (
               <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
-                | <span style={{ color: theme.level1 }}>{renderRenewalDueLabel(tenureInfo.expiryLabel)}</span>
+                |{" "}
+                <span
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold leading-5"
+                  style={{
+                    color: theme.level1,
+                    borderColor: theme.level1,
+                    background: theme.cardBackground,
+                  }}
+                >
+                  {renderRenewalDueLabel(tenureInfo.expiryLabel)}
+                </span>
               </span>
             ) : null}
           </h1>
