@@ -18,6 +18,7 @@ export interface MembershipRegistrationDetail {
   isFree: boolean;
   membershipCharges: number | null;
   allowPartialPayment: boolean;
+  color: string | null;
   customForms: MembershipRegistrationCustomFormSummary[];
 }
 

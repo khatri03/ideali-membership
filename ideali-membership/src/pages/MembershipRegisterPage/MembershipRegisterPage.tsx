@@ -199,6 +199,13 @@ function UpcomingCard({
     return null;
   }
 
+  const countdownTiles = [
+    countdown.days > 0 ? { label: "Days", value: countdown.days } : null,
+    countdown.hours > 0 ? { label: "Hours", value: countdown.hours } : null,
+    { label: "Minutes", value: countdown.minutes },
+    { label: "Seconds", value: countdown.seconds },
+  ].filter(Boolean) as Array<{ label: string; value: number }>;
+
   return (
     <section
       className="w-full max-w-2xl rounded-[2rem] border p-8 text-center shadow-xl backdrop-blur-sm"
@@ -213,11 +220,13 @@ function UpcomingCard({
       <p className="mx-auto mt-3 max-w-xl text-sm leading-6" style={{ color: theme.bodyColor }}>
         {MEMBERSHIP_REGISTER_PAGE_COPY.openingSoonBody}
       </p>
-      <div className="mx-auto mt-6 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
-        <CountdownTile theme={theme} label="Days" value={countdown.days} />
-        <CountdownTile theme={theme} label="Hours" value={countdown.hours} />
-        <CountdownTile theme={theme} label="Minutes" value={countdown.minutes} />
-        <CountdownTile theme={theme} label="Seconds" value={countdown.seconds} />
+      <div
+        className="mx-auto mt-6 grid max-w-xl gap-3"
+        style={{ gridTemplateColumns: `repeat(${countdownTiles.length}, minmax(0, 1fr))` }}
+      >
+        {countdownTiles.map((tile) => (
+          <CountdownTile key={tile.label} theme={theme} label={tile.label} value={tile.value} />
+        ))}
       </div>
       <div
         className="mt-6 rounded-2xl border px-4 py-3 text-sm shadow-sm"

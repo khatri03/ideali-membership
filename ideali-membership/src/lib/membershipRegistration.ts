@@ -141,6 +141,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   const allowPartialPayment = readBoolean(
     membershipDetailRecord?.AllowPartialPayment ?? membershipDetailRecord?.allowPartialPayment,
   );
+  const color = readText(membershipDetailRecord?.Color ?? membershipDetailRecord?.color);
   const customForms = readCustomForms(membershipDetailRecord?.CustomForms ?? membershipDetailRecord?.customForms);
 
   const paymentAccountId = readNumber(
@@ -180,6 +181,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       isFree,
       membershipCharges,
       allowPartialPayment,
+      color: color || null,
       customForms,
     },
     paymentSettings: {

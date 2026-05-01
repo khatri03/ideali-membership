@@ -57,6 +57,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   organizerName: string;
   membershipName: string;
   membershipDescription: string;
+  membershipColor: string | null;
 } {
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
@@ -149,6 +150,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const organizerName = info?.organizerName || info?.membershipDetail.organizerName || "Membership organizer";
   const membershipName = info?.membershipDetail.name || "Membership";
   const membershipDescription = info?.membershipDetail.description || "";
+  const membershipColor = info?.membershipDetail.color || null;
   const pageOrganizerName = info?.organizerName || info?.membershipDetail.organizerName || "";
   const registrationState = info?.registrationState ?? "Unavailable";
   const registrationStartDateUtc = info?.registrationStartDateUtc ?? null;
@@ -244,6 +246,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     organizerName,
     membershipName,
     membershipDescription,
+    membershipColor,
     registrationState,
     registrationStartDateUtc,
     registrationEndDateUtc,
