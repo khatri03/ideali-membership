@@ -124,15 +124,15 @@ function rgba(rgb: { r: number; g: number; b: number }, alpha: number) {
 function buildMembershipTheme(color: string | null | undefined): MembershipTheme {
   const level1 = normalizeHexColor(color) ?? "#0ea5e9";
   const accentRgb = hexToRgb(level1) ?? { r: 14, g: 165, b: 233 };
-  const level2 = rgba(accentRgb, 0.8);
-  const level3 = rgba(accentRgb, 0.5);
+  const level2 = rgba(accentRgb, 0.87);
+  const level3 = rgba(accentRgb, 0.63);
 
   return {
     accentRgb,
     level1,
     level2,
     level3,
-    pageBackground: rgba(accentRgb, 0.08),
+    pageBackground: rgba(accentRgb, 0.18),
     cardBackground: "#ffffff",
     cardBorder: rgba(accentRgb, 0.32),
     cardShadow: rgba(accentRgb, 0.18),
@@ -205,7 +205,6 @@ function UpcomingCard({
       style={{
         borderColor: theme.cardBorder,
         background: theme.cardBackground,
-        boxShadow: `0 30px 80px ${theme.cardShadow}`,
       }}
     >
       <div
@@ -241,15 +240,17 @@ function UpcomingCard({
           color: theme.bodyColor,
         }}
       >
-        <span style={{ color: theme.mutedLabelColor }}>Registration opens at</span>{" "}
-        {new Intl.DateTimeFormat(undefined, {
+        <span className="text-slate-500">Registration opens at</span>{" "}
+        <strong className="font-semibold text-slate-900">
+          {new Intl.DateTimeFormat(undefined, {
           day: "2-digit",
           month: "short",
           year: "numeric",
           hour: "2-digit",
           minute: "2-digit",
           timeZone: "UTC",
-        }).format(new Date(targetUtc))}
+          }).format(new Date(targetUtc))}
+        </strong>
       </div>
     </section>
   );
@@ -319,6 +320,10 @@ export function MembershipRegisterPage() {
 
     if (startTime > Date.now()) {
       return "Upcoming" as const;
+    }
+
+    if (registrationState === "Upcoming") {
+      return "Open" as const;
     }
 
     return registrationState;
