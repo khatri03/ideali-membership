@@ -516,7 +516,7 @@ function PricingStep({
   const currencyPrefix = buildCurrencyPrefix(info);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2 xl:gap-6">
+    <div className="grid gap-4 lg:grid-cols-[3fr_7fr] xl:gap-6">
       <MembershipDescriptionPanel
         description={membershipDescription}
         theme={theme}
