@@ -16,6 +16,7 @@ export interface MembershipRegistrationCustomFormField {
   tooltip: string | null;
   isMandatory: boolean;
   requiredMessage: string | null;
+  acceptedFileTypes: string | null;
   minLength: number | null;
   maxLength: number | null;
   defaultValue: string | null;
@@ -51,6 +52,7 @@ export interface MembershipRegistrationCustomQuestion {
   required: boolean;
   minLength: string | null;
   maxLength: string | null;
+  acceptedFileTypes: string | null;
   defaultValue: string | null;
   displayOrder: number;
   options: MembershipRegistrationCustomQuestionOption[];

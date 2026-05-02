@@ -139,6 +139,7 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
     tooltip: "",
     required: false,
     requiredMessage: "This field is required.",
+    acceptedFileTypes: [],
     minLength: "",
     maxLength: "",
     defaultValue,
@@ -166,6 +167,7 @@ function mapPreviewFieldToDraft(field: {
   tooltip: string | null;
   isMandatory: boolean;
   requiredMessage: string | null;
+  acceptedFileTypes: string[] | null;
   minLength: number | null;
   maxLength: number | null;
   defaultValue: string | null;
@@ -192,6 +194,7 @@ function mapPreviewFieldToDraft(field: {
     tooltip: field.tooltip ?? "",
     required: field.isMandatory,
     requiredMessage: field.requiredMessage ?? "",
+    acceptedFileTypes: normalizeAcceptedFileTypes(field.acceptedFileTypes),
     minLength: field.minLength === null ? "" : String(field.minLength),
     maxLength: field.maxLength === null ? "" : String(field.maxLength),
     defaultValue:
@@ -256,6 +259,10 @@ function isTruthyValue(value: string) {
 
 function getCheckboxDefaultValue(value: string | null | undefined) {
   return isTruthyValue(value ?? "") ? "true" : "false";
+}
+
+function normalizeAcceptedFileTypes(value: string[] | null | undefined) {
+  return Array.isArray(value) ? value : [];
 }
 
 function getDefaultOptionValue(field: CustomFormFieldDraft) {
@@ -533,7 +540,14 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
         </div>
       );
     case "file":
-      return <input type="file" readOnly className="block w-full text-sm text-slate-500" />;
+      return (
+        <input
+          type="file"
+          accept={field.acceptedFileTypes.length > 0 ? field.acceptedFileTypes.join(",") : undefined}
+          readOnly
+          className="block w-full text-sm text-slate-500"
+        />
+      );
     case "range":
       return <input type="range" value={field.defaultValue || undefined} readOnly className="w-full accent-cyan-600" />;
     case "color":
@@ -647,7 +661,13 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
         </div>
       );
     case "file":
-      return <input type="file" className="block w-full text-sm text-slate-500" />;
+      return (
+        <input
+          type="file"
+          accept={field.acceptedFileTypes.length > 0 ? field.acceptedFileTypes.join(",") : undefined}
+          className="block w-full text-sm text-slate-500"
+        />
+      );
     case "range":
       return <input type="range" defaultValue={field.defaultValue || undefined} className="w-full accent-cyan-600" />;
     case "color":
@@ -1723,7 +1743,7 @@ export function CustomFormCreatePage() {
                         { label: "Checked", value: "true" },
                       ]}
                     />
-                  ) : (
+                  ) : selectedControl?.controlType.toLowerCase() === "file" ? null : (
                     <FieldPreview
                       title="Default value"
                       value={selectedField.defaultValue}
@@ -1763,6 +1783,46 @@ export function CustomFormCreatePage() {
                       }
                       placeholder="This field is required."
                     />
+                  ) : null}
+
+                  {selectedControl?.controlType.toLowerCase() === "file" ? (
+                    <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Accepted file types</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Leave all unchecked to allow any file.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        {(selectedControl.acceptedFileTypes || []).map((item) => {
+                          const isChecked = selectedField.acceptedFileTypes.includes(item.value);
+
+                          return (
+                            <label
+                              key={item.value}
+                              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(event) =>
+                                  updateSelectedField((field) => ({
+                                    ...field,
+                                    acceptedFileTypes: event.target.checked
+                                      ? Array.from(new Set([...field.acceptedFileTypes, item.value]))
+                                      : field.acceptedFileTypes.filter((value) => value !== item.value),
+                                  }))
+                                }
+                                className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                              />
+                              <span>{item.text}</span>
+                              <span className="ml-auto text-xs font-normal text-slate-400">{item.value}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ) : null}
 
                   {controls.find((control) => control.id === selectedField.controlId)?.canHaveMinLength ? (

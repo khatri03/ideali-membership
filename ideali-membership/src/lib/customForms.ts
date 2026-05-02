@@ -40,6 +40,17 @@ function asString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+function splitAcceptValues(value: unknown) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export async function fetchCustomFormListItems() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/list-items");
   const data = getResponseData(payload);
@@ -100,6 +111,15 @@ export async function fetchCustomFormControls() {
       canHavePlaceHolder: asBoolean(candidate.CanHavePlaceHolder ?? candidate.canHavePlaceHolder),
       canHaveMinLength: asBoolean(candidate.CanHaveMinLength ?? candidate.canHaveMinLength),
       canHaveMaxLength: asBoolean(candidate.CanHaveMaxLength ?? candidate.canHaveMaxLength),
+      acceptedFileTypes: Array.isArray(candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes)
+        ? ((candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes) as unknown[]).map((item) => {
+            const acceptCandidate = item as Record<string, unknown>;
+            return {
+              text: asString(acceptCandidate.Text ?? acceptCandidate.text),
+              value: asString(acceptCandidate.Value ?? acceptCandidate.value),
+            };
+          }).filter((item) => item.text && item.value)
+        : [],
     };
   });
 }
@@ -140,6 +160,7 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
           tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
           isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
           requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
+          acceptedFileTypes: splitAcceptValues(candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes),
           minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
           maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
           defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
@@ -151,12 +172,21 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
                 canBeRequired: asBoolean(controlCandidate.CanBeRequired ?? controlCandidate.canBeRequired),
                 canHaveMaxLength: asBoolean(controlCandidate.CanHaveMaxLength ?? controlCandidate.canHaveMaxLength),
                 canHaveMinLength: asBoolean(controlCandidate.CanHaveMinLength ?? controlCandidate.canHaveMinLength),
-                canHavePlaceHolder: asBoolean(controlCandidate.CanHavePlaceHolder ?? controlCandidate.canHavePlaceHolder),
-                controlType: asString(controlCandidate.ControlType ?? controlCandidate.controlType),
-                defaultLabel: asString(controlCandidate.DefaultLabel ?? controlCandidate.defaultLabel),
-                hasOptions: asBoolean(controlCandidate.HasOptions ?? controlCandidate.hasOptions),
-                iconClass: asString(controlCandidate.IconClass ?? controlCandidate.iconClass),
-              }
+              canHavePlaceHolder: asBoolean(controlCandidate.CanHavePlaceHolder ?? controlCandidate.canHavePlaceHolder),
+              controlType: asString(controlCandidate.ControlType ?? controlCandidate.controlType),
+              defaultLabel: asString(controlCandidate.DefaultLabel ?? controlCandidate.defaultLabel),
+              hasOptions: asBoolean(controlCandidate.HasOptions ?? controlCandidate.hasOptions),
+              iconClass: asString(controlCandidate.IconClass ?? controlCandidate.iconClass),
+              acceptedFileTypes: Array.isArray(controlCandidate.AcceptedFileTypes ?? controlCandidate.acceptedFileTypes)
+                ? ((controlCandidate.AcceptedFileTypes ?? controlCandidate.acceptedFileTypes) as unknown[]).map((item) => {
+                    const acceptCandidate = item as Record<string, unknown>;
+                    return {
+                      text: asString(acceptCandidate.Text ?? acceptCandidate.text),
+                      value: asString(acceptCandidate.Value ?? acceptCandidate.value),
+                    };
+                  }).filter((item) => item.text && item.value)
+                : [],
+            }
             : null,
         };
       })
@@ -188,6 +218,7 @@ interface CustomFormFieldPayload {
   Tooltip: string | null;
   IsMandatory: boolean;
   RequiredMessage: string | null;
+  AcceptedFileTypes: string | null;
   MinLength: number | null;
   MaxLength: number | null;
   DefaultValue: string | null;
@@ -230,6 +261,7 @@ function mapFields(fields: CustomFormFieldDraft[]): CustomFormFieldPayload[] {
     Tooltip: asNullableString(field.tooltip),
     IsMandatory: field.required,
     RequiredMessage: asNullableString(field.requiredMessage),
+    AcceptedFileTypes: field.acceptedFileTypes.length > 0 ? field.acceptedFileTypes.join(",") : null,
     MinLength: asNullableNumber(field.minLength),
     MaxLength: asNullableNumber(field.maxLength),
     DefaultValue: asNullableString(field.defaultValue),

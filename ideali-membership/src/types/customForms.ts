@@ -9,6 +9,7 @@ export interface CustomFormControl {
   canHavePlaceHolder: boolean;
   canHaveMinLength: boolean;
   canHaveMaxLength: boolean;
+  acceptedFileTypes: CustomFormListItem[];
 }
 
 export interface CustomFormListItem {
@@ -34,6 +35,7 @@ export interface CustomFormPreviewField {
   tooltip: string | null;
   isMandatory: boolean;
   requiredMessage: string | null;
+  acceptedFileTypes: string[] | null;
   minLength: number | null;
   maxLength: number | null;
   defaultValue: string | null;
@@ -89,6 +91,7 @@ export interface CustomFormFieldDraft {
   tooltip: string;
   required: boolean;
   requiredMessage: string;
+  acceptedFileTypes: string[];
   minLength: string;
   maxLength: string;
   defaultValue: string;

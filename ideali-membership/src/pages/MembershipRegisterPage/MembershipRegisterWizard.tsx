@@ -817,6 +817,7 @@ function CustomFormFieldCard({
           <input
             ref={fileInputRef}
             type="file"
+            accept={field.acceptedFileTypes || undefined}
             onChange={(event) => onChange(event.target.files?.[0] ?? null)}
             className="hidden"
           />
@@ -849,7 +850,7 @@ function CustomFormFieldCard({
                 Drag and drop a file here, or click to choose one from your device.
               </p>
               <p className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: theme.mutedLabelColor }}>
-                Any file type
+                {field.acceptedFileTypes ? field.acceptedFileTypes : "Any file type"}
               </p>
             </div>
           </button>
