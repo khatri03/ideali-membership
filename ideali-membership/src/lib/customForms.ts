@@ -51,6 +51,36 @@ function splitAcceptValues(value: unknown) {
     .filter(Boolean);
 }
 
+function resolveAcceptedFileTypes(
+  value: unknown,
+  availableOptions: Array<{ value: string }>,
+) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return [];
+  }
+
+  if (availableOptions.length === 0) {
+    return splitAcceptValues(value);
+  }
+
+  const selectedTokens = new Set(splitAcceptValues(value));
+
+  return availableOptions
+    .map((option) => option.value.trim())
+    .filter((optionValue) => {
+      if (!optionValue) {
+        return false;
+      }
+
+      const optionTokens = optionValue
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      return optionTokens.length > 0 && optionTokens.every((token) => selectedTokens.has(token));
+    });
+}
+
 export async function fetchCustomFormListItems() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/list-items");
   const data = getResponseData(payload);
@@ -135,9 +165,9 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
 
   const fields = Array.isArray(data.Fields ?? data.fields)
     ? ((data.Fields ?? data.fields) as unknown[]).map((field) => {
-        const candidate = field as Record<string, unknown>;
-        const controlCandidate = (candidate.FormControl ?? candidate.formControl) as Record<string, unknown> | null;
-        const options = Array.isArray(candidate.Options ?? candidate.options)
+      const candidate = field as Record<string, unknown>;
+      const controlCandidate = (candidate.FormControl ?? candidate.formControl) as Record<string, unknown> | null;
+      const options = Array.isArray(candidate.Options ?? candidate.options)
           ? ((candidate.Options ?? candidate.options) as unknown[]).map((option) => {
               const optionCandidate = option as Record<string, unknown>;
 
@@ -147,6 +177,15 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
                 displayText: asString(optionCandidate.DisplayText ?? optionCandidate.displayText),
               };
             })
+          : [];
+        const controlAcceptedFileTypes = Array.isArray(controlCandidate?.AcceptedFileTypes ?? controlCandidate?.acceptedFileTypes)
+          ? ((controlCandidate?.AcceptedFileTypes ?? controlCandidate?.acceptedFileTypes) as unknown[]).map((item) => {
+              const acceptCandidate = item as Record<string, unknown>;
+              return {
+                text: asString(acceptCandidate.Text ?? acceptCandidate.text),
+                value: asString(acceptCandidate.Value ?? acceptCandidate.value),
+              };
+            }).filter((item) => item.text && item.value)
           : [];
 
       return {
@@ -161,7 +200,10 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
           tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
           isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
           requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
-          acceptedFileTypes: splitAcceptValues(candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes),
+          acceptedFileTypes: resolveAcceptedFileTypes(
+            candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes,
+            controlAcceptedFileTypes,
+          ),
           minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
           maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
           defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
@@ -178,15 +220,7 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
               defaultLabel: asString(controlCandidate.DefaultLabel ?? controlCandidate.defaultLabel),
               hasOptions: asBoolean(controlCandidate.HasOptions ?? controlCandidate.hasOptions),
               iconClass: asString(controlCandidate.IconClass ?? controlCandidate.iconClass),
-              acceptedFileTypes: Array.isArray(controlCandidate.AcceptedFileTypes ?? controlCandidate.acceptedFileTypes)
-                ? ((controlCandidate.AcceptedFileTypes ?? controlCandidate.acceptedFileTypes) as unknown[]).map((item) => {
-                    const acceptCandidate = item as Record<string, unknown>;
-                    return {
-                      text: asString(acceptCandidate.Text ?? acceptCandidate.text),
-                      value: asString(acceptCandidate.Value ?? acceptCandidate.value),
-                    };
-                  }).filter((item) => item.text && item.value)
-                : [],
+              acceptedFileTypes: controlAcceptedFileTypes,
             }
             : null,
         };
@@ -256,6 +290,10 @@ function mapFieldOptions(options: CustomFormOptionDraft[]) {
   }));
 }
 
+function serializeAcceptedFileTypes(acceptedFileTypes: string[]) {
+  return acceptedFileTypes.length > 0 ? acceptedFileTypes.join(",") : null;
+}
+
 function mapFields(fields: CustomFormFieldDraft[]): CustomFormFieldPayload[] {
   return fields.map((field) => ({
     UniqueId: field.uniqueId,
@@ -267,7 +305,7 @@ function mapFields(fields: CustomFormFieldDraft[]): CustomFormFieldPayload[] {
     Tooltip: asNullableString(field.tooltip),
     IsMandatory: field.required,
     RequiredMessage: asNullableString(field.requiredMessage),
-    AcceptedFileTypes: field.acceptedFileTypes.length > 0 ? field.acceptedFileTypes.join(",") : null,
+    AcceptedFileTypes: serializeAcceptedFileTypes(field.acceptedFileTypes),
     MinLength: asNullableNumber(field.minLength),
     MaxLength: asNullableNumber(field.maxLength),
     DefaultValue: asNullableString(field.defaultValue),

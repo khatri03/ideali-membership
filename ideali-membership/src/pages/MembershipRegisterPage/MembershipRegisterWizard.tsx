@@ -658,10 +658,7 @@ function getFileValidationError(field: MembershipRegistrationCustomFormField, va
   }
 
   if (!isFileTypeAccepted(value, field.acceptedFileTypes)) {
-    const acceptedFileTypes = formatAcceptedFileTypes(field.acceptedFileTypes);
-    return acceptedFileTypes
-      ? `Select a file of type ${acceptedFileTypes}.`
-      : "Select a valid file type.";
+    return "Select a valid file.";
   }
 
   return "";
@@ -920,9 +917,6 @@ function CustomFormFieldCard({
               </p>
               <p className="text-xs leading-5" style={{ color: theme.bodyColor }}>
                 Drag and drop a file here, or click to choose one from your device.
-              </p>
-              <p className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: theme.mutedLabelColor }}>
-                {field.acceptedFileTypes ? field.acceptedFileTypes : "Any file type"}
               </p>
             </div>
           </button>

@@ -194,7 +194,6 @@ function mapPreviewFieldToDraft(field: {
   } | null;
 }): CustomFormFieldDraft {
   const fallbackRequiredMessage = field.isMandatory ? `${toSentenceCase(field.controlLabel)} is required.` : "";
-  const fallbackAcceptedFileTypes = field.formControl?.acceptedFileTypes.map((item) => item.value) ?? [];
 
   return {
     id: createFieldId(),
@@ -209,10 +208,7 @@ function mapPreviewFieldToDraft(field: {
     tooltip: field.tooltip ?? "",
     required: field.isMandatory,
     requiredMessage: field.requiredMessage ?? fallbackRequiredMessage,
-    acceptedFileTypes:
-      normalizeAcceptedFileTypes(field.acceptedFileTypes).length > 0
-        ? normalizeAcceptedFileTypes(field.acceptedFileTypes)
-        : fallbackAcceptedFileTypes,
+    acceptedFileTypes: normalizeAcceptedFileTypes(field.acceptedFileTypes),
     minLength: field.minLength === null ? "" : String(field.minLength),
     maxLength: field.maxLength === null ? "" : String(field.maxLength),
     defaultValue:
@@ -281,6 +277,20 @@ function getCheckboxDefaultValue(value: string | null | undefined) {
 
 function normalizeAcceptedFileTypes(value: string[] | null | undefined) {
   return Array.isArray(value) ? value : [];
+}
+
+function toggleAcceptedFileType(
+  acceptedFileTypes: string[],
+  fileType: string,
+  checked: boolean,
+) {
+  const next = checked
+    ? Array.from(new Set([...acceptedFileTypes, fileType]))
+    : acceptedFileTypes.filter((value) => value !== fileType);
+
+  console.log("[custom-form] acceptedFileTypes:", next.join(","));
+
+  return next;
 }
 
 function getDefaultOptionValue(field: CustomFormFieldDraft) {
@@ -1827,9 +1837,11 @@ export function CustomFormCreatePage() {
                                 onChange={(event) =>
                                   updateSelectedField((field) => ({
                                     ...field,
-                                    acceptedFileTypes: event.target.checked
-                                      ? Array.from(new Set([...field.acceptedFileTypes, item.value]))
-                                      : field.acceptedFileTypes.filter((value) => value !== item.value),
+                                    acceptedFileTypes: toggleAcceptedFileType(
+                                      field.acceptedFileTypes,
+                                      item.value,
+                                      event.target.checked,
+                                    ),
                                   }))
                                 }
                                 className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
