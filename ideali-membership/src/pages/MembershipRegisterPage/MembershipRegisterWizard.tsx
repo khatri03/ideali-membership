@@ -1276,7 +1276,10 @@ function CustomQuestionsSection({
   }
 
   return (
-    <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <section
+      className="mt-5 space-y-4 rounded-3xl border p-4 sm:p-5"
+      style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
+    >
       <div className="space-y-1">
         <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
           Custom Questions
@@ -1769,10 +1772,10 @@ function InformationStep({
   customQuestionValues,
   customQuestionErrors,
   onCustomQuestionFieldChange,
-  onCustomQuestionFieldBlur,
-  theme,
-  showBorders,
-}: {
+    onCustomQuestionFieldBlur,
+    theme,
+    showBorders,
+  }: {
   customForms: MembershipRegistrationCustomFormSummary[]; 
   customQuestions: MembershipRegistrationCustomQuestion[];
   values: CustomFormValues;
@@ -1780,61 +1783,55 @@ function InformationStep({
   onFieldChange: (key: string, value: CustomFormValue) => void;
   customQuestionValues: CustomQuestionValues;
   customQuestionErrors: CustomQuestionErrors;
-  onCustomQuestionFieldChange: (key: string, value: CustomQuestionValue) => void;
-  onCustomQuestionFieldBlur: (key: string) => void;
-  theme: MembershipTheme;
-  showBorders: boolean;
-}) {
-  const hasCustomForms = customForms.length > 0;
-  const hasCustomQuestions = customQuestions.length > 0;
+    onCustomQuestionFieldChange: (key: string, value: CustomQuestionValue) => void;
+    onCustomQuestionFieldBlur: (key: string) => void;
+    theme: MembershipTheme;
+    showBorders: boolean;
+  }) {
+    const hasCustomForms = customForms.length > 0;
+    const hasCustomQuestions = customQuestions.length > 0;
 
-  return (
-    <div className="space-y-5">
-      <SectionTitle
-        title="Your Information"
-        description={
-          hasCustomForms || hasCustomQuestions
-            ? "Complete the membership forms and questions below."
-            : "No additional information required."
-        }
-        theme={theme}
-      />
-      {hasCustomForms ? (
-        <div className="space-y-5">
-          {customForms.map((form) => (
-            <CustomFormSection
-              key={form.uniqueId}
-              form={form}
-              values={values}
-              errors={errors}
-              onFieldChange={onFieldChange}
-              theme={theme}
-              showBorders={showBorders}
-            />
-          ))}
-        </div>
-      ) : null}
+    return (
+      <>
+        {hasCustomForms ? (
+          <div className="space-y-5">
+            {customForms.map((form) => (
+              <CustomFormSection
+                key={form.uniqueId}
+                form={form}
+                values={values}
+                errors={errors}
+                onFieldChange={onFieldChange}
+                theme={theme}
+                showBorders={showBorders}
+              />
+            ))}
+          </div>
+        ) : null}
 
-      {hasCustomQuestions ? (
-        <CustomQuestionsSection
-          questions={customQuestions}
-          values={customQuestionValues}
-          errors={customQuestionErrors}
-          onFieldChange={onCustomQuestionFieldChange}
-          onFieldBlur={onCustomQuestionFieldBlur}
-          theme={theme}
-          showBorders={showBorders}
-        />
-      ) : null}
+        {hasCustomQuestions ? (
+          <CustomQuestionsSection
+            questions={customQuestions}
+            values={customQuestionValues}
+            errors={customQuestionErrors}
+            onFieldChange={onCustomQuestionFieldChange}
+            onFieldBlur={onCustomQuestionFieldBlur}
+            theme={theme}
+            showBorders={showBorders}
+          />
+        ) : null}
 
-      {!hasCustomForms && !hasCustomQuestions ? (
-        <div className="rounded-3xl border border-dashed px-4 py-5 text-sm" style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}>
-          No additional information required.
-        </div>
-      ) : null}
-    </div>
-  );
-}
+        {!hasCustomForms && !hasCustomQuestions ? (
+          <div
+            className="rounded-3xl border border-dashed px-4 py-5 text-sm"
+            style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}
+          >
+            No additional information required.
+          </div>
+        ) : null}
+      </>
+    );
+  }
 
 function PaymentStep({
   form,
@@ -2056,23 +2053,7 @@ export function MembershipRegisterWizard({
         </div>
       </div>
 
-      <section
-        className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
-        style={{
-          borderColor: theme.cardBorder,
-          background: theme.cardBackground,
-        }}
-      >
-        {currentStep === 0 ? (
-              <PricingStep
-                info={info}
-                formattedMembershipCharges={formattedMembershipCharges}
-                theme={theme}
-                membershipDescription={membershipDescription}
-                form={form}
-                setField={setField}
-              />
-        ) : currentStep === 1 ? (
+        {currentStep === 1 ? (
           <InformationStep
             customForms={info.membershipDetail.customForms}
             customQuestions={info.membershipDetail.customQuestions}
@@ -2087,7 +2068,26 @@ export function MembershipRegisterWizard({
             showBorders={showBorders}
           />
         ) : (
-          <PaymentStep form={form} setField={setField} theme={theme} />
+          <section
+            className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
+            style={{
+              borderColor: theme.cardBorder,
+              background: theme.cardBackground,
+            }}
+          >
+            {currentStep === 0 ? (
+              <PricingStep
+                info={info}
+                formattedMembershipCharges={formattedMembershipCharges}
+                theme={theme}
+                membershipDescription={membershipDescription}
+                form={form}
+                setField={setField}
+              />
+            ) : (
+              <PaymentStep form={form} setField={setField} theme={theme} />
+            )}
+          </section>
         )}
 
         <div className="mt-6 h-px w-full" style={{ background: theme.cardBorder, opacity: 0.7 }} />
@@ -2130,7 +2130,6 @@ export function MembershipRegisterWizard({
             </button>
           )}
         </div>
-      </section>
     </form>
   );
 }
