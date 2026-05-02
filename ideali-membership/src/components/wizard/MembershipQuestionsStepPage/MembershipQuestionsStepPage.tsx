@@ -6,6 +6,7 @@ import { MEMBERSHIP_QUESTIONS_CONTENT } from "./MembershipQuestionsStepPage.fiel
 import { useMembershipQuestionsStep } from "./MembershipQuestionsStepPage.hooks";
 import type { CustomFormControl, CustomFormListItem } from "../../../types/customForms";
 import type { MembershipCustomQuestionDraft } from "../../../types/membership";
+import { PhoneInput } from "../../../components/inputs/PhoneInput/PhoneInput";
 
 function MembershipQuestionsSkeleton() {
   return (
@@ -652,24 +653,6 @@ function getPreviewDefaultOptionValue(options: Array<{ value: string }>, default
   return defaultValue || options[0]?.value || "";
 }
 
-function formatPhonePreviewValue(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 10);
-
-  if (digits.length === 0) {
-    return "";
-  }
-
-  if (digits.length <= 3) {
-    return `(${digits}`;
-  }
-
-  if (digits.length <= 6) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  }
-
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-}
-
 function PhonePreviewInput({
   value,
   placeholder,
@@ -677,16 +660,15 @@ function PhonePreviewInput({
   value: string;
   placeholder: string;
 }) {
-  const [phoneValue, setPhoneValue] = useState(() => formatPhonePreviewValue(value));
+  const [phoneValue, setPhoneValue] = useState(() => value);
 
   return (
-    <input
-      type="tel"
+    <PhoneInput
+      value={phoneValue}
+      onChange={setPhoneValue}
+      placeholder={placeholder}
       inputMode="tel"
       pattern="[0-9()\\-\\s]*"
-      value={phoneValue}
-      onChange={(event) => setPhoneValue(formatPhonePreviewValue(event.target.value))}
-      placeholder={placeholder || "(555) 123-4567"}
       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
     />
   );
