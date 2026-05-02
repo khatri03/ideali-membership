@@ -63,6 +63,10 @@ function formatStepNumber(index: number) {
   return String(index + 1).padStart(2, "0");
 }
 
+function isEnabledFlag(value: unknown) {
+  return String(value ?? "").trim().toLowerCase() === "true";
+}
+
 function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
@@ -194,6 +198,14 @@ function isPhoneInputNavigationKey(key: string) {
   return key === "Backspace" || key === "Delete" || key === "Tab" || key === "Enter" || key === "Escape" || key === "ArrowLeft" || key === "ArrowRight" || key === "Home" || key === "End";
 }
 
+function getFieldBorderClass(showBorders: boolean) {
+  return showBorders ? "border" : "";
+}
+
+function getFieldDashedBorderClass(showBorders: boolean) {
+  return showBorders ? "border border-dashed" : "";
+}
+
 function MaskedPhoneInput({
   value,
   onChange,
@@ -201,6 +213,7 @@ function MaskedPhoneInput({
   placeholder,
   className,
   style,
+  showBorders,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -208,6 +221,7 @@ function MaskedPhoneInput({
   placeholder: string;
   className: string;
   style: CSSProperties;
+  showBorders: boolean;
 }) {
   return (
     <input
@@ -238,7 +252,7 @@ function MaskedPhoneInput({
       }}
       onBlur={onBlur}
       placeholder={placeholder}
-      className={className}
+      className={`${className} ${getFieldBorderClass(showBorders)}`.trim()}
       style={style}
     />
   );
@@ -990,6 +1004,7 @@ function CustomQuestionFieldCard({
   onChange,
   onBlur,
   theme,
+  showBorders,
 }: {
   question: MembershipRegistrationCustomQuestion;
   value: CustomQuestionValue;
@@ -997,6 +1012,7 @@ function CustomQuestionFieldCard({
   onChange: (value: CustomQuestionValue) => void;
   onBlur: () => void;
   theme: MembershipTheme;
+  showBorders: boolean;
 }) {
   const controlType = getCustomQuestionControlType(question.controlType);
   const label = question.placeHolder || question.label;
@@ -1005,9 +1021,14 @@ function CustomQuestionFieldCard({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const selectedFile = value instanceof File ? value : null;
+  const controlBorderClass = getFieldBorderClass(showBorders);
+  const dashedBorderClass = getFieldDashedBorderClass(showBorders);
 
   return (
-    <div className="space-y-3 rounded-2xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}>
+    <div
+      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
+      style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
+    >
       <div className="space-y-1">
         <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
           {question.label}
@@ -1027,16 +1048,16 @@ function CustomQuestionFieldCard({
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
           placeholder={label}
-          className="w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
-          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+          className={`w-full resize-none rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ color: theme.titleColor }}
         />
       ) : controlType === "select" && question.options.length > 0 ? (
         <select
           value={defaultOptionValue}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
-          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ color: theme.titleColor }}
         >
           <option value="">{label || "Select one"}</option>
           {question.options.map((option) => (
@@ -1108,9 +1129,8 @@ function CustomQuestionFieldCard({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex w-full items-center gap-4 rounded-3xl border border-dashed px-4 py-4 text-left transition hover:shadow-sm sm:px-5"
+            className={`flex w-full items-center gap-4 rounded-3xl px-4 py-4 text-left transition hover:shadow-sm sm:px-5 ${dashedBorderClass}`.trim()}
             style={{
-              borderColor: isDragging ? theme.level1 : theme.cardBorder,
               background: isDragging ? theme.level3 : theme.cardBackground,
             }}
           >
@@ -1138,7 +1158,7 @@ function CustomQuestionFieldCard({
 
           {selectedFile ? (
             <div
-              className="flex items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+              className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ${controlBorderClass}`.trim()}
               style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
             >
               <div className="min-w-0">
@@ -1152,7 +1172,7 @@ function CustomQuestionFieldCard({
               <button
                 type="button"
                 onClick={() => onChange(null)}
-                className="rounded-full border px-3 py-1 text-xs font-semibold transition hover:opacity-80"
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition hover:opacity-80 ${controlBorderClass}`.trim()}
                 style={{
                   borderColor: theme.cardBorder,
                   color: theme.titleColor,
@@ -1174,7 +1194,7 @@ function CustomQuestionFieldCard({
           placeholder={label}
           min={0}
           step="1"
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "date" ? (
@@ -1183,7 +1203,7 @@ function CustomQuestionFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "phone" ? (
@@ -1191,8 +1211,9 @@ function CustomQuestionFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={onChange}
           placeholder={label || "(555) 123-4567"}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className="w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+          showBorders={showBorders}
         />
       ) : controlType === "password" ? (
         <input
@@ -1201,7 +1222,7 @@ function CustomQuestionFieldCard({
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
           placeholder={label}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "email" ? (
@@ -1213,7 +1234,7 @@ function CustomQuestionFieldCard({
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
           placeholder={label}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : (
@@ -1223,7 +1244,7 @@ function CustomQuestionFieldCard({
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
           placeholder={label}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       )}
@@ -1240,6 +1261,7 @@ function CustomQuestionsSection({
   onFieldChange,
   onFieldBlur,
   theme,
+  showBorders,
 }: {
   questions: MembershipRegistrationCustomQuestion[];
   values: CustomQuestionValues;
@@ -1247,6 +1269,7 @@ function CustomQuestionsSection({
   onFieldChange: (key: string, value: CustomQuestionValue) => void;
   onFieldBlur: (key: string) => void;
   theme: MembershipTheme;
+  showBorders: boolean;
 }) {
   if (questions.length === 0) {
     return null;
@@ -1279,6 +1302,7 @@ function CustomQuestionsSection({
                 onChange={(nextValue) => onFieldChange(key, nextValue)}
                 onBlur={() => onFieldBlur(key)}
                 theme={theme}
+                showBorders={showBorders}
               />
             );
           })}
@@ -1308,12 +1332,14 @@ function CustomFormFieldCard({
   error,
   onChange,
   theme,
+  showBorders,
 }: {
   field: MembershipRegistrationCustomFormField;
   value: CustomFormValue;
   error: string;
   onChange: (value: CustomFormValue) => void;
   theme: MembershipTheme;
+  showBorders: boolean;
 }) {
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const label = field.placeHolder || field.controlLabel;
@@ -1322,9 +1348,14 @@ function CustomFormFieldCard({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const selectedFile = value instanceof File ? value : null;
+  const controlBorderClass = getFieldBorderClass(showBorders);
+  const dashedBorderClass = getFieldDashedBorderClass(showBorders);
 
   return (
-    <div className="space-y-3 rounded-2xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}>
+    <div
+      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
+      style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
+    >
       <div className="space-y-1">
         <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
           {field.controlLabel}
@@ -1343,14 +1374,14 @@ function CustomFormFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={label}
-          className="w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full resize-none rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "select" && field.options.length > 0 ? (
         <select
           value={defaultOptionValue}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         >
           <option value="">{label || "Select one"}</option>
@@ -1420,7 +1451,7 @@ function CustomFormFieldCard({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex w-full items-center gap-4 rounded-3xl border border-dashed px-4 py-4 text-left transition hover:shadow-sm sm:px-5"
+            className={`flex w-full items-center gap-4 rounded-3xl px-4 py-4 text-left transition hover:shadow-sm sm:px-5 ${dashedBorderClass}`.trim()}
             style={{
               borderColor: isDragging ? theme.level1 : theme.cardBorder,
               background: isDragging ? theme.level3 : theme.cardBackground,
@@ -1450,7 +1481,7 @@ function CustomFormFieldCard({
 
           {selectedFile ? (
             <div
-              className="flex items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+              className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ${controlBorderClass}`.trim()}
               style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
             >
               <div className="min-w-0">
@@ -1464,7 +1495,7 @@ function CustomFormFieldCard({
               <button
                 type="button"
                 onClick={() => onChange(null)}
-                className="rounded-full border px-3 py-1 text-xs font-semibold transition hover:opacity-80"
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition hover:opacity-80 ${controlBorderClass}`.trim()}
                 style={{
                   borderColor: theme.cardBorder,
                   color: theme.titleColor,
@@ -1485,7 +1516,7 @@ function CustomFormFieldCard({
           placeholder={label}
           min={0}
           step="1"
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "date" ? (
@@ -1493,7 +1524,7 @@ function CustomFormFieldCard({
           type="date"
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "phone" ? (
@@ -1501,8 +1532,9 @@ function CustomFormFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={onChange}
           placeholder={label || "(555) 123-4567"}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className="w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+          showBorders={showBorders}
         />
       ) : controlType === "password" ? (
         <input
@@ -1510,7 +1542,7 @@ function CustomFormFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={label}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "email" ? (
@@ -1519,7 +1551,7 @@ function CustomFormFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={label}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : (
@@ -1528,7 +1560,7 @@ function CustomFormFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
           placeholder={label}
-          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       )}
@@ -1544,12 +1576,14 @@ function CustomFormSection({
   errors,
   onFieldChange,
   theme,
+  showBorders,
 }: {
   form: MembershipRegistrationCustomFormSummary;
   values: CustomFormValues;
   errors: CustomFormErrors;
   onFieldChange: (key: string, value: CustomFormValue) => void;
   theme: MembershipTheme;
+  showBorders: boolean;
 }) {
   const displayTitle = form.headerText || form.name;
   const displayDescription = form.description || "";
@@ -1583,6 +1617,7 @@ function CustomFormSection({
               error={errors[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
               onChange={(nextValue) => onFieldChange(buildCustomFormFieldKey(form.uniqueId, field.uniqueId), nextValue)}
               theme={theme}
+              showBorders={showBorders}
             />
           ))}
         </div>
@@ -1736,6 +1771,7 @@ function InformationStep({
   onCustomQuestionFieldChange,
   onCustomQuestionFieldBlur,
   theme,
+  showBorders,
 }: {
   customForms: MembershipRegistrationCustomFormSummary[]; 
   customQuestions: MembershipRegistrationCustomQuestion[];
@@ -1747,6 +1783,7 @@ function InformationStep({
   onCustomQuestionFieldChange: (key: string, value: CustomQuestionValue) => void;
   onCustomQuestionFieldBlur: (key: string) => void;
   theme: MembershipTheme;
+  showBorders: boolean;
 }) {
   const hasCustomForms = customForms.length > 0;
   const hasCustomQuestions = customQuestions.length > 0;
@@ -1772,6 +1809,7 @@ function InformationStep({
               errors={errors}
               onFieldChange={onFieldChange}
               theme={theme}
+              showBorders={showBorders}
             />
           ))}
         </div>
@@ -1785,6 +1823,7 @@ function InformationStep({
           onFieldChange={onCustomQuestionFieldChange}
           onFieldBlur={onCustomQuestionFieldBlur}
           theme={theme}
+          showBorders={showBorders}
         />
       ) : null}
 
@@ -1859,6 +1898,7 @@ export function MembershipRegisterWizard({
   const [customFormErrors, setCustomFormErrors] = useState<CustomFormErrors>({});
   const [customQuestionValues, setCustomQuestionValues] = useState<CustomQuestionValues>({});
   const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
+  const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
   const infoStepComplete = info
     ? isInformationStepComplete(info.membershipDetail.customForms, customFormValues) &&
@@ -2044,6 +2084,7 @@ export function MembershipRegisterWizard({
             onCustomQuestionFieldChange={handleCustomQuestionFieldChange}
             onCustomQuestionFieldBlur={handleCustomQuestionFieldBlur}
             theme={theme}
+            showBorders={showBorders}
           />
         ) : (
           <PaymentStep form={form} setField={setField} theme={theme} />
