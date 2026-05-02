@@ -1602,13 +1602,13 @@ export function CustomFormCreatePage() {
             <DragGhost item={activeDragItem} />
           </DragOverlay>
 
-          <main
-            ref={setCanvasRef}
-            className={[
-              "flex min-h-0 flex-col rounded-[2rem] border bg-white/90 p-4 shadow-sm transition overflow-hidden lg:max-h-[calc(100vh-14rem)] lg:p-5",
-              isCanvasOver || isCanvasTargeted
-                ? "border-cyan-400 ring-4 ring-cyan-100"
-                : "border-slate-200",
+            <main
+              ref={setCanvasRef}
+              className={[
+                "flex min-h-0 flex-col rounded-[2rem] border bg-white/90 p-4 shadow-sm transition overflow-hidden lg:p-5",
+                isCanvasOver || isCanvasTargeted
+                  ? "border-cyan-400 ring-4 ring-cyan-100"
+                  : "border-slate-200",
             ].join(" ")}
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -1644,16 +1644,16 @@ export function CustomFormCreatePage() {
               </div>
             </div>
 
-            <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-0 sm:pr-1">
-              <div
-                ref={canvasDropRef}
-                className={[
-                  "min-h-[320px] rounded-[2rem] border border-dashed bg-slate-50 p-3 transition sm:min-h-[380px] sm:p-4 lg:min-h-[420px]",
-                  isCanvasOver || isCanvasTargeted
-                    ? "border-cyan-400 bg-cyan-50/60 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
-                    : "border-slate-200",
-                ].join(" ")}
-              >
+            <div className="mt-5 max-h-[40rem] overflow-y-auto pr-0 sm:max-h-[44rem] sm:pr-1 lg:max-h-[48rem]">
+                <div
+                  ref={canvasDropRef}
+                  className={[
+                    "min-h-[24rem] rounded-[2rem] border border-dashed bg-slate-50 p-3 transition sm:min-h-[28rem] sm:p-4 lg:min-h-[32rem]",
+                    isCanvasOver || isCanvasTargeted
+                      ? "border-cyan-400 bg-cyan-50/60 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
+                      : "border-slate-200",
+                  ].join(" ")}
+                >
                 {isCanvasOver || isCanvasTargeted ? (
                   <div className="mb-4 rounded-2xl border border-cyan-200 bg-white/80 px-4 py-3 text-sm font-medium text-cyan-800">
                     Release to drop into the form canvas.
@@ -1674,7 +1674,7 @@ export function CustomFormCreatePage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex min-h-[280px] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-4 text-center sm:min-h-[340px] sm:px-6">
+                    <div className="flex min-h-[20rem] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-4 text-center sm:min-h-[24rem] sm:px-6 lg:min-h-[28rem]">
                       <div className="max-w-md">
                         <p className="text-lg font-semibold text-slate-900">Drop your first field here</p>
                         <p className="mt-2 text-sm leading-6 text-slate-500">

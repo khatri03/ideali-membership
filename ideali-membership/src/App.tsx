@@ -24,7 +24,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { MembershipTypesPage } from "./pages/MembershipTypesPage";
 import { MembersPage } from "./pages/MembersPage";
 import { SimplePage } from "./pages/SimplePage";
-import { APP_ROUTES } from "./routes";
+import { APP_ROUTES, buildMembershipRegisterPath } from "./routes";
 
 function AppLoading() {
   return (
@@ -66,8 +66,36 @@ function LoginRoute() {
   return <LoginScreen />;
 }
 
+function MembershipLaunchFallback() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-900">
+      <section className="w-full max-w-2xl rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-sm">
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-700">
+          Membership registration
+        </p>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+          Point the app at a membership type to launch registration.
+        </h1>
+        <p className="mt-4 text-base leading-7 text-slate-600">
+          Set <code className="rounded bg-slate-100 px-1.5 py-0.5 text-sm">VITE_DEFAULT_MEMBERSHIP_TYPE_UNIQUE_ID</code>
+          in your environment, then refresh the app to send visitors straight to the public registration form.
+        </p>
+        <div className="mt-6 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm text-cyan-900">
+          Once the ID is set, the root route will open the membership registration form automatically.
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function AppHome() {
-  return <Navigate to={APP_ROUTES.membershipDashboard} replace />;
+  const defaultMembershipTypeUniqueId = import.meta.env.VITE_DEFAULT_MEMBERSHIP_TYPE_UNIQUE_ID?.trim();
+
+  if (defaultMembershipTypeUniqueId) {
+    return <Navigate to={buildMembershipRegisterPath(defaultMembershipTypeUniqueId)} replace />;
+  }
+
+  return <MembershipLaunchFallback />;
 }
 
 function RouterApp() {
@@ -107,7 +135,7 @@ function RouterApp() {
           <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />
           <Route path="organizer/custom-form">
             <Route path="create-form" element={<CustomFormCreatePage />} />
-            <Route path=":customFormUniqueId" element={<CustomFormCreatePage />} />
+            <Route path=":customFormUniqueId/edit" element={<CustomFormCreatePage />} />
           </Route>
         </Route>
 

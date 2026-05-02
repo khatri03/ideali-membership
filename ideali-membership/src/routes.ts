@@ -28,7 +28,7 @@ export const APP_ROUTES = {
   membershipWizardReview: "/organizer/membership/type/wizard/:membershipTypeUniqueId/review",
   customForms: "/organizer/custom-form/list",
   customFormsCreate: "/organizer/custom-form/create-form",
-  customFormsEdit: "/organizer/custom-form/:customFormUniqueId",
+  customFormsEdit: "/organizer/custom-form/:customFormUniqueId/edit",
 } as const;
 
 export function buildMembershipWizardStepPath(

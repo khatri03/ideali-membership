@@ -14,7 +14,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const isCustomFormBuilderRoute =
     location.pathname.startsWith(APP_ROUTES.customFormsCreate) ||
-    /^\/organizer\/custom-form\/[0-9a-fA-F-]{36}$/.test(location.pathname);
+    /^\/organizer\/custom-form\/[0-9a-fA-F-]{36}\/edit$/.test(location.pathname);
   const [isNavVisible, setIsNavVisible] = useState(!isCustomFormBuilderRoute);
 
   useEffect(() => {
