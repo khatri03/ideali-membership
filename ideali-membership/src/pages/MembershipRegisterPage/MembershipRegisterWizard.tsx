@@ -591,6 +591,82 @@ function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField)
   return field.defaultValue || "";
 }
 
+function toSentenceCase(value: string | null | undefined) {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) {
+    return "Field";
+  }
+
+  const normalized = trimmed.toLowerCase();
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function parseAcceptedFileTypes(acceptedFileTypes: string | null | undefined) {
+  return (acceptedFileTypes ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function isFileTypeAccepted(file: File, acceptedFileTypes: string | null | undefined) {
+  const rules = parseAcceptedFileTypes(acceptedFileTypes);
+
+  if (rules.length === 0) {
+    return true;
+  }
+
+  const fileName = file.name.toLowerCase();
+  const fileType = file.type.toLowerCase();
+
+  return rules.some((rule) => {
+    const normalizedRule = rule.toLowerCase();
+
+    if (normalizedRule === "*" || normalizedRule === "*/*") {
+      return true;
+    }
+
+    if (normalizedRule.startsWith(".")) {
+      return fileName.endsWith(normalizedRule);
+    }
+
+    if (normalizedRule.endsWith("/*")) {
+      return fileType.startsWith(normalizedRule.slice(0, -1));
+    }
+
+    if (normalizedRule.includes("/")) {
+      return fileType === normalizedRule;
+    }
+
+    return fileName.endsWith(`.${normalizedRule}`);
+  });
+}
+
+function formatAcceptedFileTypes(acceptedFileTypes: string | null | undefined) {
+  const rules = parseAcceptedFileTypes(acceptedFileTypes);
+  return rules.length > 0 ? rules.join(", ") : "";
+}
+
+function getFileValidationError(field: MembershipRegistrationCustomFormField, value: CustomFormValue) {
+  const requiredMessage = field.requiredMessage?.trim() || `${toSentenceCase(field.controlLabel)} is required.`;
+
+  if (!value) {
+    return field.isMandatory ? requiredMessage : "";
+  }
+
+  if (!(value instanceof File)) {
+    return "";
+  }
+
+  if (!isFileTypeAccepted(value, field.acceptedFileTypes)) {
+    const acceptedFileTypes = formatAcceptedFileTypes(field.acceptedFileTypes);
+    return acceptedFileTypes
+      ? `Select a file of type ${acceptedFileTypes}.`
+      : "Select a valid file type.";
+  }
+
+  return "";
+}
+
 function buildCustomFormValues(customForms: MembershipRegistrationCustomFormSummary[]) {
   return customForms.reduce<CustomFormValues>((accumulator, form) => {
     form.fields.forEach((field) => {
@@ -608,7 +684,7 @@ function validateCustomFormField(
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const textValue = typeof value === "string" ? value.trim() : "";
   const normalizedString = typeof value === "string" ? value : "";
-  const requiredMessage = field.requiredMessage?.trim() || "This field is required.";
+  const requiredMessage = field.requiredMessage?.trim() || `${toSentenceCase(field.controlLabel)} is required.`;
 
   if (controlType === "checkbox") {
     if (field.isMandatory && value !== true) {
@@ -619,11 +695,7 @@ function validateCustomFormField(
   }
 
   if (controlType === "file") {
-    if (field.isMandatory && !value) {
-      return requiredMessage;
-    }
-
-    return "";
+    return getFileValidationError(field, value);
   }
 
   if (controlType === "email" && textValue) {
@@ -1287,6 +1359,34 @@ export function MembershipRegisterWizard({
       ...current,
       [key]: value,
     }));
+
+    if (!info) {
+      return;
+    }
+
+    const separatorIndex = key.indexOf(":");
+    if (separatorIndex < 0) {
+      setCustomFormErrors((current) => ({
+        ...current,
+        [key]: "",
+      }));
+      return;
+    }
+
+    const formUniqueId = key.slice(0, separatorIndex);
+    const fieldUniqueId = key.slice(separatorIndex + 1);
+    const form = info.membershipDetail.customForms.find((candidate) => candidate.uniqueId === formUniqueId);
+    const field = form?.fields.find((candidate) => candidate.uniqueId === fieldUniqueId) ?? null;
+
+    if (field && getCustomFormControlType(field.formControlTypeId) === "file") {
+      const nextError = getFileValidationError(field, value);
+      setCustomFormErrors((current) => ({
+        ...current,
+        [key]: nextError,
+      }));
+      return;
+    }
+
     setCustomFormErrors((current) => ({
       ...current,
       [key]: "",

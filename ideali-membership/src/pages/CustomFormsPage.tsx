@@ -76,7 +76,7 @@ function CustomFormActionsMenu({
 
     setMenuPosition({
       top: openUpward ? Math.max(gap, rect.top - menuHeight - gap) : rect.bottom + gap,
-      left: Math.max(gap, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - gap)),
+      left: Math.max(gap, Math.min(rect.left, window.innerWidth - menuWidth - gap)),
     });
     setIsOpen(true);
   }

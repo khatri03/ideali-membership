@@ -100,11 +100,11 @@ export async function fetchCustomFormControls() {
   }
 
   return data.map((control): CustomFormControl => {
-    const candidate = control as Record<string, unknown>;
-    return {
-      id: asNumber(candidate.Id ?? candidate.id),
-      name: asString(candidate.Name ?? candidate.name),
-      controlType: asString(candidate.ControlType ?? candidate.controlType),
+      const candidate = control as Record<string, unknown>;
+      return {
+        id: asNumber(candidate.Id ?? candidate.id),
+        name: asString(candidate.Name ?? candidate.name),
+        controlType: asString(candidate.ControlType ?? candidate.controlType),
       iconClass: asString(candidate.IconClass ?? candidate.iconClass),
       defaultLabel: asString(candidate.DefaultLabel ?? candidate.defaultLabel),
       canBeRequired: asBoolean(candidate.CanBeRequired ?? candidate.canBeRequired),
@@ -149,11 +149,11 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
             })
           : [];
 
-        return {
-          id: asNumber(candidate.Id ?? candidate.id),
-          uniqueId: asString(candidate.UniqueId ?? candidate.uniqueId),
-          formId: asNumber(candidate.FormId ?? candidate.formId),
-          formControlTypeId: asNumber(candidate.FormControlTypeId ?? candidate.formControlTypeId),
+      return {
+        id: asNumber(candidate.Id ?? candidate.id),
+        uniqueId: asString(candidate.UniqueId ?? candidate.uniqueId),
+        formId: asNumber(candidate.FormId ?? candidate.formId),
+        formControlTypeId: asNumber(candidate.FormControlTypeId ?? candidate.formControlTypeId),
           controlUniqueId: asString(candidate.ControlUniqueId ?? candidate.controlUniqueId) || null,
           displayOrder: asNumber(candidate.DisplayOrder ?? candidate.displayOrder),
           controlLabel: asString(candidate.ControlLabel ?? candidate.controlLabel),
@@ -239,7 +239,12 @@ function asNullableString(value: string) {
 }
 
 function asNullableNumber(value: string) {
-  const parsed = Number(value);
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : null;
 }
 

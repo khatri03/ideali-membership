@@ -51,6 +51,7 @@ export interface CustomFormPreviewField {
     defaultLabel: string;
     hasOptions: boolean;
     iconClass: string;
+    acceptedFileTypes: CustomFormListItem[];
   } | null;
 }
 

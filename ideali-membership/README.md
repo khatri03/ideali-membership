@@ -15,6 +15,10 @@ origin as the frontend. The login flow calls:
 - `POST /api/identity/account/authenticate`
 - `POST /api/identity/account/2fa/{twoFaToken}/verify`
 
+To launch the public membership registration form from the app root, set
+`VITE_DEFAULT_MEMBERSHIP_TYPE_UNIQUE_ID` in `.env` to the membership type
+unique id you want to expose.
+
 ## Scripts
 
 - `npm run dev` - start the Vite dev server

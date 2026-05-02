@@ -114,6 +114,16 @@ function clearDefaultOption(options: CustomFormOptionDraft[], optionId: string) 
   }));
 }
 
+function toSentenceCase(value: string | null | undefined) {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) {
+    return "Field";
+  }
+
+  const normalized = trimmed.toLowerCase();
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 function normalizeFields(fields: CustomFormFieldDraft[]) {
   return fields.map((field, index) => ({
     ...field,
@@ -125,6 +135,7 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
   const hasOptions = control.hasOptions;
   const defaultOptionValue = hasOptions ? "option-1" : "";
   const defaultValue = control.controlType.toLowerCase() === "checkbox" ? "false" : defaultOptionValue;
+  const label = control.defaultLabel || control.name;
 
   return {
     id: createFieldId(),
@@ -134,11 +145,11 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
     controlName: control.name,
     controlType: control.controlType,
     iconClass: control.iconClass,
-    label: control.defaultLabel || control.name,
+    label,
     placeholder: "",
     tooltip: "",
     required: false,
-    requiredMessage: "This field is required.",
+    requiredMessage: `${toSentenceCase(label)} is required.`,
     acceptedFileTypes: [],
     minLength: "",
     maxLength: "",
@@ -179,8 +190,12 @@ function mapPreviewFieldToDraft(field: {
     iconClass: string;
     defaultLabel: string;
     hasOptions: boolean;
+    acceptedFileTypes: { text: string; value: string }[];
   } | null;
 }): CustomFormFieldDraft {
+  const fallbackRequiredMessage = field.isMandatory ? `${toSentenceCase(field.controlLabel)} is required.` : "";
+  const fallbackAcceptedFileTypes = field.formControl?.acceptedFileTypes.map((item) => item.value) ?? [];
+
   return {
     id: createFieldId(),
     uniqueId: field.uniqueId,
@@ -193,8 +208,11 @@ function mapPreviewFieldToDraft(field: {
     placeholder: field.placeHolder ?? "",
     tooltip: field.tooltip ?? "",
     required: field.isMandatory,
-    requiredMessage: field.requiredMessage ?? "",
-    acceptedFileTypes: normalizeAcceptedFileTypes(field.acceptedFileTypes),
+    requiredMessage: field.requiredMessage ?? fallbackRequiredMessage,
+    acceptedFileTypes:
+      normalizeAcceptedFileTypes(field.acceptedFileTypes).length > 0
+        ? normalizeAcceptedFileTypes(field.acceptedFileTypes)
+        : fallbackAcceptedFileTypes,
     minLength: field.minLength === null ? "" : String(field.minLength),
     maxLength: field.maxLength === null ? "" : String(field.maxLength),
     defaultValue:
@@ -1765,7 +1783,7 @@ export function CustomFormCreatePage() {
                         required: value,
                         requiredMessage:
                           value && !field.requiredMessage.trim()
-                            ? "This field is required."
+                            ? `${toSentenceCase(field.label)} is required.`
                             : field.requiredMessage,
                       }))
                     }
