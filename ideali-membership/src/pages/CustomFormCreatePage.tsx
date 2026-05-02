@@ -811,7 +811,7 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
   }
 
   return (
-    <div className="w-full min-w-[20rem] cursor-grabbing rounded-3xl border border-cyan-200 bg-white p-4 shadow-2xl shadow-slate-900/10">
+    <div className="w-[min(20rem,calc(100vw-2rem))] cursor-grabbing rounded-3xl border border-cyan-200 bg-white p-4 shadow-2xl shadow-slate-900/10">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -1420,13 +1420,13 @@ export function CustomFormCreatePage() {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5 lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
               Custom Forms
             </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
               {isEditMode ? "Edit custom form" : "Build a new custom form"}
             </h1>
             <p className="mt-3 text-slate-600">
@@ -1464,7 +1464,7 @@ export function CustomFormCreatePage() {
           </button>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <FieldPreview
             title="Name"
             value={draft.name}
@@ -1522,9 +1522,9 @@ export function CustomFormCreatePage() {
         onDragEnd={onDragEnd}
         onDragCancel={onDragCancel}
       >
-        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_340px]">
+        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]">
           <aside className="space-y-4">
-            <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+            <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Field palette</h2>
@@ -1560,7 +1560,7 @@ export function CustomFormCreatePage() {
                 </label>
               </div>
 
-              <div className="mt-4 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
+              <div className="mt-4 max-h-[24rem] space-y-3 overflow-y-auto pr-1 sm:max-h-[28rem] lg:max-h-[32rem]">
                 {isLoadingControls ? (
                   <div className="space-y-3">
                     <div className="h-24 animate-pulse rounded-3xl bg-slate-100" />
@@ -1590,7 +1590,7 @@ export function CustomFormCreatePage() {
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-cyan-100 bg-cyan-50/80 p-5">
+            <div className="rounded-[2rem] border border-cyan-100 bg-cyan-50/80 p-4 sm:p-5">
               <p className="text-sm font-semibold text-slate-900">Builder note</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 Start with the core controls first. We can progressively add advanced settings,
@@ -1605,13 +1605,13 @@ export function CustomFormCreatePage() {
           <main
             ref={setCanvasRef}
             className={[
-              "flex max-h-[calc(100vh-14rem)] min-h-0 flex-col rounded-[2rem] border bg-white/90 p-5 shadow-sm transition overflow-hidden",
+              "flex min-h-0 flex-col rounded-[2rem] border bg-white/90 p-4 shadow-sm transition overflow-hidden lg:max-h-[calc(100vh-14rem)] lg:p-5",
               isCanvasOver || isCanvasTargeted
                 ? "border-cyan-400 ring-4 ring-cyan-100"
                 : "border-slate-200",
             ].join(" ")}
           >
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Form canvas</h2>
                 <p className="mt-1 text-sm text-slate-500">
@@ -1621,7 +1621,7 @@ export function CustomFormCreatePage() {
                   <p className="mt-2 text-sm font-medium text-rose-600">{canvasFieldError}</p>
                 ) : null}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
                   {fields.length} field{fields.length === 1 ? "" : "s"}
                 </span>
@@ -1644,11 +1644,11 @@ export function CustomFormCreatePage() {
               </div>
             </div>
 
-            <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-0 sm:pr-1">
               <div
                 ref={canvasDropRef}
                 className={[
-                  "min-h-[420px] rounded-[2rem] border border-dashed bg-slate-50 p-4 transition",
+                  "min-h-[320px] rounded-[2rem] border border-dashed bg-slate-50 p-3 transition sm:min-h-[380px] sm:p-4 lg:min-h-[420px]",
                   isCanvasOver || isCanvasTargeted
                     ? "border-cyan-400 bg-cyan-50/60 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]"
                     : "border-slate-200",
@@ -1674,7 +1674,7 @@ export function CustomFormCreatePage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex min-h-[380px] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-6 text-center">
+                    <div className="flex min-h-[280px] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-4 text-center sm:min-h-[340px] sm:px-6">
                       <div className="max-w-md">
                         <p className="text-lg font-semibold text-slate-900">Drop your first field here</p>
                         <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -1689,7 +1689,7 @@ export function CustomFormCreatePage() {
           </main>
 
           <aside className="space-y-4">
-            <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
+            <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
               <h2 className="text-lg font-semibold text-slate-900">Field inspector</h2>
               {selectedField ? (
                 <div className="mt-4 space-y-4">
@@ -1801,7 +1801,7 @@ export function CustomFormCreatePage() {
                           return (
                             <label
                               key={item.value}
-                              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"
+                              className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"
                             >
                               <input
                                 type="checkbox"
@@ -1816,8 +1816,10 @@ export function CustomFormCreatePage() {
                                 }
                                 className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                               />
-                              <span>{item.text}</span>
-                              <span className="ml-auto text-xs font-normal text-slate-400">{item.value}</span>
+                              <span className="min-w-0 flex-1">{item.text}</span>
+                              <span className="min-w-0 text-right text-xs font-normal text-slate-400 break-all sm:ml-auto sm:max-w-[12rem] sm:break-normal sm:truncate">
+                                {item.value}
+                              </span>
                             </label>
                           );
                         })}
@@ -1826,7 +1828,7 @@ export function CustomFormCreatePage() {
                   ) : null}
 
                   {controls.find((control) => control.id === selectedField.controlId)?.canHaveMinLength ? (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <FieldPreview
                         title="Min length"
                         value={selectedField.minLength}
@@ -1853,7 +1855,7 @@ export function CustomFormCreatePage() {
                   ) : null}
 
                   {controls.find((control) => control.id === selectedField.controlId)?.hasOptions ? (
-                    <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
                       <button
                         type="button"
                         onClick={addOption}
@@ -1991,7 +1993,7 @@ export function CustomFormCreatePage() {
 
       {fieldToRemove ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/20">
+          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/20 sm:p-6">
             <div className="flex items-start gap-4">
               <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-700">
                 !
@@ -2029,7 +2031,7 @@ export function CustomFormCreatePage() {
 
       {optionToRemove ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/20">
+          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/20 sm:p-6">
             <div className="flex items-start gap-4">
               <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-700">
                 !
@@ -2066,7 +2068,7 @@ export function CustomFormCreatePage() {
 
       {isPreviewOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+          <div className="flex max-h-[92vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
@@ -2085,8 +2087,8 @@ export function CustomFormCreatePage() {
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
-              <div className="mx-auto w-full max-w-7xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">
+              <div className="mx-auto w-full max-w-7xl rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
                 {draft.description ? (
                   <p className="mb-6 text-sm leading-6 text-slate-600">{draft.description}</p>
                 ) : null}
@@ -2116,7 +2118,7 @@ export function CustomFormCreatePage() {
 
       {isClearConfirmOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/20">
+          <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/20 sm:p-6">
             <div className="flex items-start gap-4">
               <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-700">
                 !
