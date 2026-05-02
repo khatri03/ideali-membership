@@ -69,6 +69,7 @@ export interface CustomFormSummary {
   name: string;
   headerText: string;
   description: string | null;
+  totalFields: number;
 }
 
 export interface CustomFormOptionDraft {

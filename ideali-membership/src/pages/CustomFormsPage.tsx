@@ -217,10 +217,13 @@ export function CustomFormsPage() {
                       Actions
                     </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Form
+                      Name
                     </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Description
+                      Header text
+                    </th>
+                    <th scope="col" className="w-36 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Mapped fields
                     </th>
                   </tr>
                 </thead>
@@ -233,13 +236,13 @@ export function CustomFormsPage() {
                       <td className="px-4 py-4 align-top">
                         <div className="space-y-2">
                           <p className="text-sm font-semibold text-slate-900">{form.name}</p>
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-700">
-                            {form.headerText}
-                          </p>
                         </div>
                       </td>
-                      <td className="px-4 py-4 align-top text-sm leading-6 text-slate-600">
-                        {form.description || "No description provided."}
+                      <td className="px-4 py-4 align-top text-sm font-medium text-slate-700">
+                        {form.headerText}
+                      </td>
+                      <td className="px-4 py-4 align-top text-sm font-medium text-slate-700">
+                        {form.totalFields}
                       </td>
                     </tr>
                   ))}

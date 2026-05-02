@@ -9,6 +9,13 @@ export default defineConfig({
     port: 4001,
     open: true,
     host: "localhost",
+    proxy: {
+      "/api": {
+        target: "http://localhost:5098",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     https: {
       key: fs.readFileSync("./ssl/key.pem"),
       cert: fs.readFileSync("./ssl/cert.pem"),

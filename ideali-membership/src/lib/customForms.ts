@@ -1,4 +1,4 @@
-import { getJson, postJson } from "./api";
+import { getJson, postJson, putJson } from "./api";
 import type {
   CustomFormControl,
   CustomFormDraft,
@@ -85,6 +85,7 @@ export async function fetchCustomForms() {
         name: asString(candidate.Name ?? candidate.name),
         headerText: asString(candidate.HeaderText ?? candidate.headerText),
         description: asString(candidate.Description ?? candidate.description) || null,
+        totalFields: asNumber(candidate.TotalFields ?? candidate.totalFields),
       };
     })
     .filter((item) => item.uniqueId && item.name);
@@ -125,7 +126,7 @@ export async function fetchCustomFormControls() {
 }
 
 export async function fetchCustomFormPreview(customFormUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/organizer/custom-form/${customFormUniqueId}`);
+  const payload = await getJson<unknown>(`/api/organizer/custom-form/${customFormUniqueId}/edit`);
   const data = getResponseData(payload) as Record<string, unknown> | null;
 
   if (!data) {
@@ -308,23 +309,7 @@ export async function updateCustomForm(
     Fields: mapFields(fields),
   };
 
-  const response = await fetch(`/api/organizer/custom-form/${customFormUniqueId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const message = (data as { message?: string; error?: string } | null)?.message
-      ?? (data as { message?: string; error?: string } | null)?.error
-      ?? `Request failed (${response.status})`;
-    throw new Error(message);
-  }
-
+  const data = await putJson<unknown>(`/api/organizer/custom-form/${customFormUniqueId}/edit`, payload);
   const responseData = getResponseData(data);
 
   if (typeof responseData === "number") {

@@ -77,6 +77,18 @@ export async function postJson<T>(path: string, body: unknown) {
   return readJsonResponse<T>(response);
 }
 
+export async function putJson<T>(path: string, body: unknown) {
+  const response = await fetch(createApiUrl(path), {
+    method: "PUT",
+    headers: buildHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(body),
+  });
+
+  return readJsonResponse<T>(response);
+}
+
 export async function getJson<T>(path: string) {
   const requestKey = createApiUrl(path);
   const existingRequest = inFlightGetRequests.get(requestKey);
