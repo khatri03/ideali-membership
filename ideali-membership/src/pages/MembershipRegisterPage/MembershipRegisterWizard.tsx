@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
   MembershipRegistrationCustomFormField,
+  MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
 } from "../../types/membershipRegistration";
 
@@ -165,6 +166,82 @@ function formatDonationAmountInput(value: string) {
 
   const decimalPart = decimalPartRaw.slice(0, 2);
   return decimalPart ? `${formattedWholePart}.${decimalPart}` : `${formattedWholePart}.`;
+}
+
+function extractPhoneDigits(value: string) {
+  return value.replace(/\D/g, "").slice(0, 10);
+}
+
+function formatPhoneInputValue(value: string) {
+  const digits = extractPhoneDigits(value);
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length <= 3) {
+    return `(${digits}`;
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function isPhoneInputNavigationKey(key: string) {
+  return key === "Backspace" || key === "Delete" || key === "Tab" || key === "Enter" || key === "Escape" || key === "ArrowLeft" || key === "ArrowRight" || key === "Home" || key === "End";
+}
+
+function MaskedPhoneInput({
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+  className,
+  style,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  placeholder: string;
+  className: string;
+  style: CSSProperties;
+}) {
+  return (
+    <input
+      type="tel"
+      inputMode="numeric"
+      autoComplete="tel"
+      value={formatPhoneInputValue(value)}
+      onChange={(event) => onChange(formatPhoneInputValue(event.target.value))}
+      onKeyDown={(event) => {
+        if (event.ctrlKey || event.metaKey || event.altKey) {
+          return;
+        }
+
+        if (isPhoneInputNavigationKey(event.key)) {
+          return;
+        }
+
+        if (/^\d$/.test(event.key)) {
+          return;
+        }
+
+        event.preventDefault();
+      }}
+      onPaste={(event) => {
+        event.preventDefault();
+        const pastedText = event.clipboardData.getData("text");
+        onChange(formatPhoneInputValue(`${value}${pastedText}`));
+      }}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      className={className}
+      style={style}
+    />
+  );
 }
 
 function normalizeDonationAmountInput(value: string) {
@@ -538,9 +615,16 @@ function WizardField({
 type CustomFormValue = string | boolean | File | null;
 type CustomFormValues = Record<string, CustomFormValue>;
 type CustomFormErrors = Record<string, string>;
+type CustomQuestionValue = CustomFormValue;
+type CustomQuestionValues = Record<string, CustomQuestionValue>;
+type CustomQuestionErrors = Record<string, string>;
 
 function buildCustomFormFieldKey(formUniqueId: string, fieldUniqueId: string) {
   return `${formUniqueId}:${fieldUniqueId}`;
+}
+
+function buildCustomQuestionKey(questionUniqueId: string) {
+  return questionUniqueId;
 }
 
 function getCustomFormControlType(controlTypeId: number) {
@@ -589,6 +673,29 @@ function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField)
   }
 
   return field.defaultValue || "";
+}
+
+function getCustomQuestionControlType(controlType: string) {
+  return controlType.trim().toLowerCase();
+}
+
+function getCustomQuestionDefaultValue(question: MembershipRegistrationCustomQuestion) {
+  const controlType = getCustomQuestionControlType(question.controlType);
+
+  if (controlType === "checkbox") {
+    return question.defaultValue === "true" || question.defaultValue === "1";
+  }
+
+  if (controlType === "file") {
+    return null;
+  }
+
+  if (controlType === "select" || controlType === "radio") {
+    const selectedOption = question.options.find((option) => option.isDefault)?.value || question.defaultValue || "";
+    return selectedOption;
+  }
+
+  return question.defaultValue || "";
 }
 
 function toSentenceCase(value: string | null | undefined) {
@@ -664,12 +771,40 @@ function getFileValidationError(field: MembershipRegistrationCustomFormField, va
   return "";
 }
 
+function getCustomQuestionFileValidationError(
+  question: MembershipRegistrationCustomQuestion,
+  value: CustomQuestionValue,
+) {
+  const requiredMessage = `${toSentenceCase(question.label)} is required.`;
+
+  if (!value) {
+    return question.required ? requiredMessage : "";
+  }
+
+  if (!(value instanceof File)) {
+    return "";
+  }
+
+  if (!isFileTypeAccepted(value, question.acceptedFileTypes)) {
+    return "Select a valid file.";
+  }
+
+  return "";
+}
+
 function buildCustomFormValues(customForms: MembershipRegistrationCustomFormSummary[]) {
   return customForms.reduce<CustomFormValues>((accumulator, form) => {
     form.fields.forEach((field) => {
       accumulator[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] = getCustomFormDefaultValue(field);
     });
 
+    return accumulator;
+  }, {});
+}
+
+function buildCustomQuestionValues(customQuestions: MembershipRegistrationCustomQuestion[]) {
+  return customQuestions.reduce<CustomQuestionValues>((accumulator, question) => {
+    accumulator[buildCustomQuestionKey(question.uniqueId)] = getCustomQuestionDefaultValue(question);
     return accumulator;
   }, {});
 }
@@ -741,6 +876,73 @@ function validateCustomFormField(
   return "";
 }
 
+function validateCustomQuestionField(
+  question: MembershipRegistrationCustomQuestion,
+  value: CustomQuestionValue,
+) {
+  const controlType = getCustomQuestionControlType(question.controlType);
+  const textValue = typeof value === "string" ? value.trim() : "";
+  const normalizedString = typeof value === "string" ? value : "";
+  const requiredMessage = `${toSentenceCase(question.label)} is required.`;
+
+  if (controlType === "checkbox") {
+    if (question.required && value !== true) {
+      return requiredMessage;
+    }
+
+    return "";
+  }
+
+  if (controlType === "file") {
+    return getCustomQuestionFileValidationError(question, value);
+  }
+
+  if (controlType === "email" && textValue) {
+    if (!isEmailValid(textValue)) {
+      return "Enter a valid email address.";
+    }
+  }
+
+  if (controlType === "phone" && textValue) {
+    if (!isPhoneLikeValue(textValue)) {
+      return "Enter a valid phone number.";
+    }
+  }
+
+  if (controlType === "number" && textValue) {
+    if (!isValidNumberValue(textValue)) {
+      return "Enter a valid number.";
+    }
+  }
+
+  if (controlType === "date" && textValue) {
+    if (!isValidDateValue(textValue)) {
+      return "Enter a valid date.";
+    }
+  }
+
+  if ((controlType === "select" || controlType === "radio") && question.options.length > 0 && textValue) {
+    const isValidOption = question.options.some((option) => option.value === normalizedString);
+    if (!isValidOption) {
+      return "Select a valid option.";
+    }
+  }
+
+  if (question.required && !textValue) {
+    return requiredMessage;
+  }
+
+  if (question.minLength != null && textValue.length > 0 && textValue.length < Number(question.minLength)) {
+    return `Minimum ${question.minLength} characters required.`;
+  }
+
+  if (question.maxLength != null && textValue.length > Number(question.maxLength)) {
+    return `Maximum ${question.maxLength} characters allowed.`;
+  }
+
+  return "";
+}
+
 function validateCustomForms(
   customForms: MembershipRegistrationCustomFormSummary[],
   values: CustomFormValues,
@@ -758,6 +960,331 @@ function validateCustomForms(
   });
 
   return errors;
+}
+
+function validateCustomQuestions(
+  customQuestions: MembershipRegistrationCustomQuestion[],
+  values: CustomQuestionValues,
+) {
+  const errors: CustomQuestionErrors = {};
+
+  customQuestions.forEach((question) => {
+    const key = buildCustomQuestionKey(question.uniqueId);
+    const error = validateCustomQuestionField(question, values[key] ?? "");
+    if (error) {
+      errors[key] = error;
+    }
+  });
+
+  return errors;
+}
+
+function getCustomQuestionGridClass() {
+  return "grid gap-4";
+}
+
+function CustomQuestionFieldCard({
+  question,
+  value,
+  error,
+  onChange,
+  onBlur,
+  theme,
+}: {
+  question: MembershipRegistrationCustomQuestion;
+  value: CustomQuestionValue;
+  error: string;
+  onChange: (value: CustomQuestionValue) => void;
+  onBlur: () => void;
+  theme: MembershipTheme;
+}) {
+  const controlType = getCustomQuestionControlType(question.controlType);
+  const label = question.placeHolder || question.label;
+  const defaultOptionValue = typeof value === "string" ? value : "";
+  const checkboxValue = typeof value === "boolean" ? value : false;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const selectedFile = value instanceof File ? value : null;
+
+  return (
+    <div className="space-y-3 rounded-2xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}>
+      <div className="space-y-1">
+        <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+          {question.label}
+          {question.required ? <span className="ml-1 text-rose-600">*</span> : null}
+        </p>
+        {question.tooltip ? (
+          <p className="text-xs leading-5" style={{ color: theme.bodyColor }}>
+            {question.tooltip}
+          </p>
+        ) : null}
+      </div>
+
+      {controlType === "textarea" ? (
+        <textarea
+          rows={4}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          placeholder={label}
+          className="w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "select" && question.options.length > 0 ? (
+        <select
+          value={defaultOptionValue}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        >
+          <option value="">{label || "Select one"}</option>
+          {question.options.map((option) => (
+            <option key={option.uniqueId || option.value} value={option.value}>
+              {option.displayText}
+            </option>
+          ))}
+        </select>
+      ) : controlType === "radio" && question.options.length > 0 ? (
+        <div className="space-y-2">
+          {question.options.map((option) => (
+            <label
+              key={option.uniqueId || option.value}
+              className="flex items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-black/5"
+              style={{ color: theme.titleColor }}
+            >
+              <input
+                type="radio"
+                name={`custom-question-${question.uniqueId}`}
+                checked={defaultOptionValue === option.value}
+                onChange={() => onChange(option.value)}
+                onBlur={onBlur}
+                className="h-4 w-4 accent-cyan-600"
+                style={{ accentColor: theme.level1 }}
+              />
+              <span className="text-sm font-medium">{option.displayText}</span>
+            </label>
+          ))}
+        </div>
+      ) : controlType === "checkbox" ? (
+        <label className="inline-flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={checkboxValue}
+            onChange={(event) => onChange(event.target.checked)}
+            onBlur={onBlur}
+            className="h-4 w-4 accent-cyan-600"
+          />
+          <span className="text-sm font-medium" style={{ color: theme.titleColor }}>
+            {question.label}
+          </span>
+        </label>
+      ) : controlType === "file" ? (
+        <div
+          className="space-y-3"
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDragging(false);
+            onChange(event.dataTransfer.files?.[0] ?? null);
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={question.acceptedFileTypes || undefined}
+            onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+            onBlur={onBlur}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex w-full items-center gap-4 rounded-3xl border border-dashed px-4 py-4 text-left transition hover:shadow-sm sm:px-5"
+            style={{
+              borderColor: isDragging ? theme.level1 : theme.cardBorder,
+              background: isDragging ? theme.level3 : theme.cardBackground,
+            }}
+          >
+            <div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+              style={{
+                background: theme.level3,
+                color: theme.level1,
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 fill-current">
+                <path d="M12 2.5a6.5 6.5 0 0 0-4.6 11.1l.1.1h-1a4.9 4.9 0 0 0 0 9.8h11a4.9 4.9 0 0 0 0-9.8h-1l.1-.1A6.5 6.5 0 0 0 12 2.5Zm0 2a4.5 4.5 0 0 1 3.2 7.7l-.8.8V9.2a1 1 0 1 0-2 0V13l-1.3-1.3a1 1 0 0 0-1.4 1.4l3 3a1 1 0 0 0 1.4 0l3-3a1 1 0 1 0-1.4-1.4L15 13V9.2l.8-.8A4.5 4.5 0 0 1 12 4.5Z" />
+              </svg>
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+                {selectedFile?.name || "Drop a file here or browse"}
+              </p>
+              <p className="text-xs leading-5" style={{ color: theme.bodyColor }}>
+                Drag and drop a file here, or click to choose one from your device.
+              </p>
+            </div>
+          </button>
+
+          {selectedFile ? (
+            <div
+              className="flex items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+              style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold" style={{ color: theme.titleColor }}>
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs" style={{ color: theme.bodyColor }}>
+                  {formatFileSize(selectedFile.size)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onChange(null)}
+                className="rounded-full border px-3 py-1 text-xs font-semibold transition hover:opacity-80"
+                style={{
+                  borderColor: theme.cardBorder,
+                  color: theme.titleColor,
+                  background: theme.level3,
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : controlType === "number" ? (
+        <input
+          type="number"
+          inputMode="numeric"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          placeholder={label}
+          min={0}
+          step="1"
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "date" ? (
+        <input
+          type="date"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "phone" ? (
+        <MaskedPhoneInput
+          value={typeof value === "string" ? value : ""}
+          onChange={onChange}
+          placeholder={label || "(555) 123-4567"}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "password" ? (
+        <input
+          type="password"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          placeholder={label}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "email" ? (
+        <input
+          type="text"
+          inputMode="email"
+          autoComplete="email"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          placeholder={label}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : (
+        <input
+          type="text"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          placeholder={label}
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      )}
+
+      {error ? <p className="text-xs font-medium text-rose-600">{error}</p> : null}
+    </div>
+  );
+}
+
+function CustomQuestionsSection({
+  questions,
+  values,
+  errors,
+  onFieldChange,
+  onFieldBlur,
+  theme,
+}: {
+  questions: MembershipRegistrationCustomQuestion[];
+  values: CustomQuestionValues;
+  errors: CustomQuestionErrors;
+  onFieldChange: (key: string, value: CustomQuestionValue) => void;
+  onFieldBlur: (key: string) => void;
+  theme: MembershipTheme;
+}) {
+  if (questions.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+      <div className="space-y-1">
+        <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
+          Custom Questions
+        </h3>
+        <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+          Complete the membership questions below.
+        </p>
+      </div>
+
+      <div className={getCustomQuestionGridClass()}>
+        {questions
+          .slice()
+          .sort((left, right) => left.displayOrder - right.displayOrder)
+          .map((question) => {
+            const key = buildCustomQuestionKey(question.uniqueId);
+
+            return (
+              <CustomQuestionFieldCard
+                key={question.uniqueId}
+                question={question}
+                value={values[key] ?? ""}
+                error={errors[key] ?? ""}
+                onChange={(nextValue) => onFieldChange(key, nextValue)}
+                onBlur={() => onFieldBlur(key)}
+                theme={theme}
+              />
+            );
+          })}
+      </div>
+    </section>
+  );
 }
 
 function getCustomFormGridClass(layoutColumn: number) {
@@ -970,11 +1497,9 @@ function CustomFormFieldCard({
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "phone" ? (
-        <input
-          type="tel"
-          inputMode="tel"
+        <MaskedPhoneInput
           value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={onChange}
           placeholder={label || "(555) 123-4567"}
           className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20"
           style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
@@ -1202,24 +1727,39 @@ function PricingStep({
 
 function InformationStep({
   customForms,
+  customQuestions,
   values,
   errors,
   onFieldChange,
+  customQuestionValues,
+  customQuestionErrors,
+  onCustomQuestionFieldChange,
+  onCustomQuestionFieldBlur,
   theme,
 }: {
-  customForms: MembershipRegistrationCustomFormSummary[];
+  customForms: MembershipRegistrationCustomFormSummary[]; 
+  customQuestions: MembershipRegistrationCustomQuestion[];
   values: CustomFormValues;
   errors: CustomFormErrors;
   onFieldChange: (key: string, value: CustomFormValue) => void;
+  customQuestionValues: CustomQuestionValues;
+  customQuestionErrors: CustomQuestionErrors;
+  onCustomQuestionFieldChange: (key: string, value: CustomQuestionValue) => void;
+  onCustomQuestionFieldBlur: (key: string) => void;
   theme: MembershipTheme;
 }) {
   const hasCustomForms = customForms.length > 0;
+  const hasCustomQuestions = customQuestions.length > 0;
 
   return (
     <div className="space-y-5">
       <SectionTitle
         title="Your Information"
-        description={hasCustomForms ? "Complete the mapped custom forms below." : "No additional information required."}
+        description={
+          hasCustomForms || hasCustomQuestions
+            ? "Complete the membership forms and questions below."
+            : "No additional information required."
+        }
         theme={theme}
       />
       {hasCustomForms ? (
@@ -1235,11 +1775,24 @@ function InformationStep({
             />
           ))}
         </div>
-      ) : (
+      ) : null}
+
+      {hasCustomQuestions ? (
+        <CustomQuestionsSection
+          questions={customQuestions}
+          values={customQuestionValues}
+          errors={customQuestionErrors}
+          onFieldChange={onCustomQuestionFieldChange}
+          onFieldBlur={onCustomQuestionFieldBlur}
+          theme={theme}
+        />
+      ) : null}
+
+      {!hasCustomForms && !hasCustomQuestions ? (
         <div className="rounded-3xl border border-dashed px-4 py-5 text-sm" style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}>
           No additional information required.
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1304,18 +1857,27 @@ export function MembershipRegisterWizard({
   const [currentStep, setCurrentStep] = useState(1);
   const [customFormValues, setCustomFormValues] = useState<CustomFormValues>({});
   const [customFormErrors, setCustomFormErrors] = useState<CustomFormErrors>({});
+  const [customQuestionValues, setCustomQuestionValues] = useState<CustomQuestionValues>({});
+  const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
-  const infoStepComplete = info ? isInformationStepComplete(info.membershipDetail.customForms, customFormValues) : true;
+  const infoStepComplete = info
+    ? isInformationStepComplete(info.membershipDetail.customForms, customFormValues) &&
+      Object.keys(validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues)).length === 0
+    : true;
 
   useEffect(() => {
     if (!info) {
       setCustomFormValues({});
       setCustomFormErrors({});
+      setCustomQuestionValues({});
+      setCustomQuestionErrors({});
       return;
     }
 
     setCustomFormValues(buildCustomFormValues(info.membershipDetail.customForms));
     setCustomFormErrors({});
+    setCustomQuestionValues(buildCustomQuestionValues(info.membershipDetail.customQuestions));
+    setCustomQuestionErrors({});
   }, [info]);
 
   const canGoNext = currentStep === 0 ? pricingStepComplete : true;
@@ -1334,9 +1896,11 @@ export function MembershipRegisterWizard({
 
     if (currentStep === 1 && info) {
       const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
+      const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
       setCustomFormErrors(nextErrors);
+      setCustomQuestionErrors(nextQuestionErrors);
 
-      if (Object.keys(nextErrors).length > 0) {
+      if (Object.keys(nextErrors).length > 0 || Object.keys(nextQuestionErrors).length > 0) {
         return;
       }
     }
@@ -1387,15 +1951,41 @@ export function MembershipRegisterWizard({
     }));
   }
 
+  function handleCustomQuestionFieldChange(key: string, value: CustomQuestionValue) {
+    setCustomQuestionValues((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  function handleCustomQuestionFieldBlur(key: string) {
+    if (!info) {
+      return;
+    }
+
+    const question = info.membershipDetail.customQuestions.find((candidate) => candidate.uniqueId === key);
+    if (!question) {
+      return;
+    }
+
+    const nextError = validateCustomQuestionField(question, customQuestionValues[key] ?? "");
+    setCustomQuestionErrors((current) => ({
+      ...current,
+      [key]: nextError,
+    }));
+  }
+
   return (
     <form
       className="w-full max-w-[100rem] space-y-6"
       onSubmit={(event) => {
         if (info) {
           const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
+          const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
           setCustomFormErrors(nextErrors);
+          setCustomQuestionErrors(nextQuestionErrors);
 
-          if (Object.keys(nextErrors).length > 0) {
+          if (Object.keys(nextErrors).length > 0 || Object.keys(nextQuestionErrors).length > 0) {
             event.preventDefault();
             return;
           }
@@ -1445,9 +2035,14 @@ export function MembershipRegisterWizard({
         ) : currentStep === 1 ? (
           <InformationStep
             customForms={info.membershipDetail.customForms}
+            customQuestions={info.membershipDetail.customQuestions}
             values={customFormValues}
             errors={customFormErrors}
             onFieldChange={handleCustomFormFieldChange}
+            customQuestionValues={customQuestionValues}
+            customQuestionErrors={customQuestionErrors}
+            onCustomQuestionFieldChange={handleCustomQuestionFieldChange}
+            onCustomQuestionFieldBlur={handleCustomQuestionFieldBlur}
             theme={theme}
           />
         ) : (
