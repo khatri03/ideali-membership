@@ -832,7 +832,7 @@ function ProfilePhotoField({
   }
 
   return (
-    <div className="grid h-full gap-4 p-4 sm:grid-cols-[auto_1fr] sm:items-stretch sm:p-5">
+    <div className="grid h-full w-full justify-items-center gap-4 p-4 sm:p-5">
       <div className="flex h-full flex-col items-center justify-center space-y-3 text-center">
         <button
           type="button"
