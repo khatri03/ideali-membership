@@ -839,7 +839,7 @@ function ProfilePhotoField({
           onClick={handleAvatarClick}
           aria-label={value ? "Change profile photo" : "Choose profile photo"}
           title={value ? "Change profile photo" : "Choose profile photo"}
-          className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border text-center transition hover:opacity-90"
+          className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border text-center transition hover:opacity-90"
           style={{
             borderColor: theme.cardBorder,
             background: theme.tileBackground,
