@@ -108,6 +108,7 @@ export interface MembershipRegistrationContactAddress {
 }
 
 export interface MembershipRegistrationFormState {
+  profilePhotoFile: File | null;
   prefix: string;
   firstName: string;
   middleName: string;
@@ -136,6 +137,7 @@ export interface MembershipRegistrationSubmitRequest {
   };
   userInfo: {
     email: string;
+    profilePhotoFileStorageId: number | null;
     password: string;
     confirmPassword: string;
   };

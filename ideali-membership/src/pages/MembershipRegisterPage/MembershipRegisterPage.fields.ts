@@ -11,6 +11,7 @@ export const PAYMENT_PRODUCT_LABELS: Record<number, string> = {
 };
 
 export const DEFAULT_MEMBERSHIP_REGISTER_FORM: MembershipRegistrationFormState = {
+  profilePhotoFile: null,
   prefix: "",
   firstName: "",
   middleName: "",

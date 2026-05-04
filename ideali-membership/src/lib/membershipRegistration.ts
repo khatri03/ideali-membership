@@ -1,4 +1,4 @@
-import { getJson, postJson } from "./api";
+import { getJson, postFormData, postJson } from "./api";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
@@ -66,6 +66,18 @@ function readBoolean(value: unknown) {
   }
 
   return false;
+}
+
+async function uploadMembershipProfilePhoto(membershipTypeUniqueId: string, file: File | null) {
+  if (!file) {
+    return null;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const payload = await postFormData<unknown>(`/api/membership/${membershipTypeUniqueId}/profile-photo`, formData);
+  return readNumber(readResponseData(payload));
 }
 
 function readPaymentProducts(value: unknown) {
@@ -430,6 +442,10 @@ export async function submitMembershipRegistration(
   const amount = Number.isFinite(membershipCharges) ? membershipCharges : 0;
   const donationTotal = Number.isFinite(donationAmount) && donationAmount > 0 ? donationAmount : 0;
   const campaignLabel = donationCampaignName?.trim() || "campaign";
+  const profilePhotoFileStorageId = await uploadMembershipProfilePhoto(
+    membershipTypeUniqueId,
+    formState.profilePhotoFile,
+  );
   const invoiceItems = [
     {
       description: "Membership registration",
@@ -464,6 +480,7 @@ export async function submitMembershipRegistration(
     },
     userInfo: {
       email: formState.email.trim(),
+      profilePhotoFileStorageId,
       password: formState.password,
       confirmPassword: formState.confirmPassword,
     },

@@ -65,6 +65,16 @@ export async function postForm<T>(path: string, fields: Record<string, string>) 
   return readJsonResponse<T>(response);
 }
 
+export async function postFormData<T>(path: string, formData: FormData) {
+  const response = await fetch(createApiUrl(path), {
+    method: "POST",
+    headers: buildHeaders(),
+    body: formData,
+  });
+
+  return readJsonResponse<T>(response);
+}
+
 export async function postJson<T>(path: string, body: unknown) {
   const response = await fetch(createApiUrl(path), {
     method: "POST",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from "react";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
@@ -568,6 +568,456 @@ function WizardField({
       {children}
       {error ? <span className="text-base text-rose-600">{error}</span> : null}
     </label>
+  );
+}
+
+function CameraIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M7.5 3.5 6.4 5H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2.4L12.5 3.5h-5Zm2.5 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" />
+    </svg>
+  );
+}
+
+function TrashIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M7 3a1 1 0 0 0-1 1v1H3.5a.5.5 0 0 0 0 1H4l.7 9.1A2 2 0 0 0 6.7 17h6.6a2 2 0 0 0 2-1.9L16 6h.5a.5.5 0 0 0 0-1H14V4a1 1 0 0 0-1-1H7Zm1 2V4h4v1H8Zm-1.2 2h6.4L12.7 15H7.3L6.8 7Zm2 2.2a.8.8 0 0 0-.8.8v2.8a.8.8 0 0 0 1.6 0v-2.8a.8.8 0 0 0-.8-.8Zm3 0a.8.8 0 0 0-.8.8v2.8a.8.8 0 0 0 1.6 0v-2.8a.8.8 0 0 0-.8-.8Z" />
+    </svg>
+  );
+}
+
+const AVATAR_VIEWPORT_SIZE = 240;
+const AVATAR_OUTPUT_SIZE = 400;
+const AVATAR_DEFAULT_ZOOM = 1.15;
+const AVATAR_MIN_ZOOM = 1.05;
+const AVATAR_MAX_ZOOM = 3;
+
+function clampAvatarOffset(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function loadImageElement(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Unable to load the selected image."));
+    image.src = src;
+  });
+}
+
+function buildAvatarFileName(sourceName: string, mimeType: string) {
+  const extension =
+    mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : mimeType === "image/png" ? "png" : "png";
+  const baseName = sourceName.replace(/\.[^.]+$/, "") || "avatar";
+  return `${baseName}-avatar.${extension}`;
+}
+
+async function cropAvatarFile(
+  file: File,
+  previewUrl: string,
+  dimensions: { width: number; height: number },
+  zoom: number,
+  offsetX: number,
+  offsetY: number,
+) {
+  const image = await loadImageElement(previewUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = AVATAR_OUTPUT_SIZE;
+  canvas.height = AVATAR_OUTPUT_SIZE;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return file;
+  }
+
+  const baseScale = Math.max(AVATAR_VIEWPORT_SIZE / dimensions.width, AVATAR_VIEWPORT_SIZE / dimensions.height);
+  const scale = baseScale * zoom;
+  const sourceWidth = AVATAR_VIEWPORT_SIZE / scale;
+  const sourceHeight = AVATAR_VIEWPORT_SIZE / scale;
+  const sourceX = clampAvatarOffset((dimensions.width - sourceWidth) / 2 - offsetX / scale, 0, Math.max(0, dimensions.width - sourceWidth));
+  const sourceY = clampAvatarOffset((dimensions.height - sourceHeight) / 2 - offsetY / scale, 0, Math.max(0, dimensions.height - sourceHeight));
+
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
+
+  const mimeType = file.type || "image/png";
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, mimeType, 0.92);
+  });
+
+  if (!blob) {
+    return file;
+  }
+
+  return new File([blob], buildAvatarFileName(file.name, mimeType), { type: mimeType });
+}
+
+function ProfilePhotoField({
+  value,
+  onChange,
+  theme,
+}: {
+  value: File | null;
+  onChange: (value: File | null) => void;
+  theme: MembershipTheme;
+}) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dragStateRef = useRef<{ startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
+  const cropViewportRef = useRef<HTMLDivElement | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewDimensions, setPreviewDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [editorSource, setEditorSource] = useState<File | null>(null);
+  const [editorUrl, setEditorUrl] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorZoom, setEditorZoom] = useState(AVATAR_DEFAULT_ZOOM);
+  const [editorOffsetXPercent, setEditorOffsetXPercent] = useState(0);
+  const [editorOffsetYPercent, setEditorOffsetYPercent] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!value) {
+      setPreviewUrl(null);
+      setPreviewDimensions(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(value);
+    setPreviewUrl(objectUrl);
+
+    const image = new Image();
+    image.onload = () => {
+      setPreviewDimensions({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+    };
+    image.src = objectUrl;
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [value]);
+
+  useEffect(() => {
+    if (!editorSource) {
+      setEditorUrl(null);
+      setPreviewDimensions(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(editorSource);
+    setEditorUrl(objectUrl);
+
+    const image = new Image();
+    image.onload = () => {
+      setPreviewDimensions({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+    };
+    image.src = objectUrl;
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [editorSource]);
+
+  useEffect(() => {
+    if (!editorOpen || !isDragging) {
+      return;
+    }
+
+    const handlePointerMove = (event: globalThis.PointerEvent) => {
+      if (!dragStateRef.current || !cropViewportRef.current) {
+        return;
+      }
+
+      const width = cropViewportRef.current.clientWidth || 1;
+      const height = cropViewportRef.current.clientHeight || 1;
+      const deltaXPercent = ((event.clientX - dragStateRef.current.startX) / width) * 100;
+      const deltaYPercent = ((event.clientY - dragStateRef.current.startY) / height) * 100;
+      setEditorOffsetXPercent(clampAvatarOffset(dragStateRef.current.startOffsetX + deltaXPercent, -40, 40));
+      setEditorOffsetYPercent(clampAvatarOffset(dragStateRef.current.startOffsetY + deltaYPercent, -40, 40));
+    };
+
+    const handlePointerUp = () => {
+      dragStateRef.current = null;
+      setIsDragging(false);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [editorOpen, isDragging]);
+
+  function openFilePicker() {
+    fileInputRef.current?.click();
+  }
+
+  function openEditor(file: File) {
+    setEditorSource(file);
+    setEditorZoom(AVATAR_DEFAULT_ZOOM);
+    setEditorOffsetXPercent(0);
+    setEditorOffsetYPercent(0);
+    setEditorOpen(true);
+  }
+
+  function closeEditor() {
+    if (isSaving) {
+      return;
+    }
+
+    setEditorOpen(false);
+  }
+
+  async function applyEditorChanges() {
+    if (!editorSource) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      if (!editorUrl || !previewDimensions) {
+        return;
+      }
+
+      const croppedFile = await cropAvatarFile(
+        editorSource,
+        editorUrl,
+        previewDimensions,
+        editorZoom,
+        editorOffsetXPercent * AVATAR_VIEWPORT_SIZE / 100,
+        editorOffsetYPercent * AVATAR_VIEWPORT_SIZE / 100,
+      );
+      onChange(croppedFile);
+      setEditorOpen(false);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function handleAvatarClick() {
+    if (value) {
+      openEditor(value);
+      return;
+    }
+
+    openFilePicker();
+  }
+
+  function handleFileSelection(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    openEditor(file);
+  }
+
+  function handleCropPointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (!cropViewportRef.current) {
+      return;
+    }
+
+    dragStateRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startOffsetX: editorOffsetXPercent,
+      startOffsetY: editorOffsetYPercent,
+    };
+    setIsDragging(true);
+  }
+
+  return (
+    <div className="grid gap-4 rounded-3xl border p-4 sm:grid-cols-[auto_1fr] sm:items-start sm:p-5" style={{ borderColor: theme.cardBorder }}>
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={handleAvatarClick}
+          aria-label={value ? "Change profile photo" : "Choose profile photo"}
+          title={value ? "Change profile photo" : "Choose profile photo"}
+          className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border text-center transition hover:opacity-90"
+          style={{
+            borderColor: theme.cardBorder,
+            background: theme.tileBackground,
+            color: theme.tileValueColor,
+          }}
+        >
+          {previewUrl ? (
+            <img src={previewUrl} alt="Selected avatar preview" className="h-full w-full object-cover" />
+          ) : (
+            <div className="space-y-1">
+              <span className="block text-sm font-semibold">Avatar</span>
+              <span className="block text-[11px] uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                Optional
+              </span>
+            </div>
+          )}
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            aria-label={value ? "Change profile photo" : "Choose profile photo"}
+            title={value ? "Change profile photo" : "Choose profile photo"}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:opacity-80"
+            style={{
+              background: theme.level1,
+              color: "#ffffff",
+            }}
+          >
+            <CameraIcon />
+          </button>
+
+          {value ? (
+            <button
+              type="button"
+              onClick={() => {
+                onChange(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = "";
+                }
+              }}
+              aria-label="Remove profile photo"
+              title="Remove profile photo"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border transition hover:opacity-80"
+              style={{
+                borderColor: theme.cardBorder,
+                color: theme.tileValueColor,
+                background: theme.cardBackground,
+              }}
+            >
+              <TrashIcon />
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+            Profile Photo / Avatar
+          </p>
+          <p className="text-sm" style={{ color: theme.bodyColor }}>
+            Upload a photo to personalize the account. PNG, JPG, JPEG, or WEBP up to 10 MB.
+          </p>
+        </div>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => handleFileSelection(event.target.files?.[0] ?? null)}
+      />
+
+      {editorOpen && editorUrl && editorSource ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            aria-label="Close avatar editor"
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            onClick={closeEditor}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit avatar"
+            className="relative z-10 w-full max-w-4xl overflow-hidden rounded-[2rem] border bg-white p-0 shadow-2xl"
+            style={{
+              borderColor: "rgba(59, 130, 246, 0.15)",
+              boxShadow: `0 30px 80px -30px ${theme.cardShadow}`,
+            }}
+          >
+            <div className="border-b border-blue-50 bg-blue-50/60 px-6 py-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: theme.level1 }}>
+                Profile Photo
+              </div>
+              <h3 className="mt-1 text-2xl font-semibold" style={{ color: theme.titleColor }}>
+                Adjust Avatar Crop
+              </h3>
+              <p className="mt-2 text-sm" style={{ color: theme.bodyColor }}>
+                Choose the square area you want to use as your avatar before saving.
+              </p>
+            </div>
+
+            <div className="grid gap-6 px-6 py-6 md:grid-cols-[280px_1fr]">
+              <div className="flex items-center justify-center">
+                <div className="rounded-[2rem] border border-blue-50 bg-blue-50/50 p-5">
+                  <div
+                    ref={cropViewportRef}
+                    className={`relative h-[240px] w-[240px] overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-inner ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                    onPointerDown={handleCropPointerDown}
+                  >
+                    <img
+                      src={editorUrl}
+                      alt="Avatar editor preview"
+                      draggable={false}
+                      className="pointer-events-none absolute left-1/2 top-1/2 max-w-none select-none"
+                      style={{
+                        width: previewDimensions
+                          ? previewDimensions.width * Math.max(AVATAR_VIEWPORT_SIZE / previewDimensions.width, AVATAR_VIEWPORT_SIZE / previewDimensions.height) * editorZoom
+                          : 0,
+                        height: previewDimensions
+                          ? previewDimensions.height * Math.max(AVATAR_VIEWPORT_SIZE / previewDimensions.width, AVATAR_VIEWPORT_SIZE / previewDimensions.height) * editorZoom
+                          : 0,
+                        transform: `translate(calc(-50% + ${editorOffsetXPercent}px), calc(-50% + ${editorOffsetYPercent}px))`,
+                        userSelect: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-sm font-medium" style={{ color: theme.tileValueColor }}>
+                    <span>Zoom</span>
+                    <span style={{ color: theme.bodyColor }}>{editorZoom.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={AVATAR_MIN_ZOOM}
+                    max={AVATAR_MAX_ZOOM}
+                    step="0.01"
+                    value={editorZoom}
+                    onChange={(event) => setEditorZoom(Number(event.target.value))}
+                    className="w-full"
+                  />
+                </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm" style={{ color: theme.bodyColor }}>
+                    Drag the image inside the circle to choose what stays visible in your avatar.
+                  </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-5">
+              <button
+                type="button"
+                onClick={closeEditor}
+                className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void applyEditorChanges()}
+                disabled={isSaving}
+                className="rounded-md bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSaving ? "Saving..." : "Use This Avatar"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1735,47 +2185,6 @@ function YourInformationStep({
       <div className="mt-5 space-y-6">
         <div className="space-y-4">
           <SectionTitle
-            title="User Login"
-            description="Use these details to sign in after registration."
-            theme={theme}
-          />
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <WizardField label="Email" theme={theme} error={errors.email} required>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => setField("email", event.target.value)}
-                placeholder="name@example.com"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-              />
-            </WizardField>
-
-            <WizardField label="Password" theme={theme} error={errors.password} required>
-              <PasswordInput
-                value={form.password}
-                onChange={(event) => setField("password", event.target.value)}
-                placeholder="Create password"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-              />
-            </WizardField>
-
-            <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
-              <PasswordInput
-                value={form.confirmPassword}
-                onChange={(event) => setField("confirmPassword", event.target.value)}
-                placeholder="Confirm password"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-              />
-            </WizardField>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <SectionTitle
             title="Contact Info"
             description="Share the contact details we need for your membership record."
             theme={theme}
@@ -1864,6 +2273,53 @@ function YourInformationStep({
                 value={form.zipCode}
                 onChange={(event) => setField("zipCode", event.target.value)}
                 placeholder="Zip code"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <SectionTitle
+            title="User Login"
+            description="Use these details to sign in after registration."
+            theme={theme}
+          />
+
+          <ProfilePhotoField
+            value={form.profilePhotoFile}
+            onChange={(value) => setField("profilePhotoFile", value)}
+            theme={theme}
+          />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <WizardField label="Email" theme={theme} error={errors.email} required>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setField("email", event.target.value)}
+                placeholder="name@example.com"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Password" theme={theme} error={errors.password} required>
+              <PasswordInput
+                value={form.password}
+                onChange={(event) => setField("password", event.target.value)}
+                placeholder="Create password"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
+              <PasswordInput
+                value={form.confirmPassword}
+                onChange={(event) => setField("confirmPassword", event.target.value)}
+                placeholder="Confirm password"
                 className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
