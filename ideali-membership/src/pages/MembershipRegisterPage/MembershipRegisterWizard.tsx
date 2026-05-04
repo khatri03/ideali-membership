@@ -52,7 +52,11 @@ const STEPS = [
   },
   {
     title: "Your Information",
-    description: "Complete the mapped custom forms.",
+    description: "Add your personal details.",
+  },
+  {
+    title: "Questionnaire",
+    description: "Complete the mapped custom forms and questions.",
   },
   {
     title: "Payment",
@@ -297,13 +301,6 @@ function isPricingStepComplete(
   const requiresPaymentMethod = !isFreeMembership || donationAmount > 0;
 
   return requiresPaymentMethod ? Boolean(form.paymentMethod.trim()) : true;
-}
-
-function isInformationStepComplete(
-  customForms: MembershipRegistrationCustomFormSummary[],
-  values: CustomFormValues,
-) {
-  return Object.keys(validateCustomForms(customForms, values)).length === 0;
 }
 
 function MembershipDescriptionPanel({
@@ -1689,7 +1686,38 @@ function PricingStep({
   );
 }
 
-function InformationStep({
+function YourInformationStep({
+  theme,
+  showBorders,
+}: {
+  theme: MembershipTheme;
+  showBorders: boolean;
+}) {
+  return (
+    <section
+      className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
+      style={{
+        borderColor: theme.cardBorder,
+        background: theme.cardBackground,
+      }}
+    >
+      <SectionTitle
+        title="Your Information"
+        description="This section is ready for the personal information fields we will add next."
+        theme={theme}
+      />
+
+      <div
+        className={`mt-5 rounded-3xl border border-dashed px-4 py-5 text-sm sm:px-5 ${getFieldBorderClass(showBorders)}`.trim()}
+        style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}
+      >
+        Your information inputs will appear here soon.
+      </div>
+    </section>
+  );
+}
+
+function QuestionnaireStep({
   customForms,
   customQuestions,
   values,
@@ -1697,67 +1725,79 @@ function InformationStep({
   onFieldChange,
   customQuestionValues,
     customQuestionErrors,
-    onCustomQuestionFieldChange,
-    onCustomQuestionFieldBlur,
-    theme,
-    showBorders,
-  }: {
-  customForms: MembershipRegistrationCustomFormSummary[]; 
+  onCustomQuestionFieldChange,
+  onCustomQuestionFieldBlur,
+  theme,
+  showBorders,
+}: {
+  customForms: MembershipRegistrationCustomFormSummary[];
   customQuestions: MembershipRegistrationCustomQuestion[];
   values: CustomFormValues;
   errors: CustomFormErrors;
   onFieldChange: (key: string, value: CustomFormValue) => void;
-    customQuestionValues: CustomQuestionValues;
-    customQuestionErrors: CustomQuestionErrors;
-    onCustomQuestionFieldChange: (key: string, value: CustomQuestionValue) => void;
-    onCustomQuestionFieldBlur: (key: string, value: CustomQuestionValue) => void;
-    theme: MembershipTheme;
-    showBorders: boolean;
-  }) {
-    const hasCustomForms = customForms.length > 0;
-    const hasCustomQuestions = customQuestions.length > 0;
+  customQuestionValues: CustomQuestionValues;
+  customQuestionErrors: CustomQuestionErrors;
+  onCustomQuestionFieldChange: (key: string, value: CustomQuestionValue) => void;
+  onCustomQuestionFieldBlur: (key: string, value: CustomQuestionValue) => void;
+  theme: MembershipTheme;
+  showBorders: boolean;
+}) {
+  const hasCustomForms = customForms.length > 0;
+  const hasCustomQuestions = customQuestions.length > 0;
 
-    return (
-      <>
-        {hasCustomForms ? (
-          <div className="space-y-5">
-            {customForms.map((form) => (
-              <CustomFormSection
-                key={form.uniqueId}
-                form={form}
-                values={values}
-                errors={errors}
-                onFieldChange={onFieldChange}
-                theme={theme}
-                showBorders={showBorders}
-              />
-            ))}
-          </div>
-        ) : null}
+  return (
+    <section
+      className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
+      style={{
+        borderColor: theme.cardBorder,
+        background: theme.cardBackground,
+      }}
+    >
+      <SectionTitle
+        title="Questionnaire"
+        description="Complete the mapped custom forms and questions below."
+        theme={theme}
+      />
 
-        {hasCustomQuestions ? (
-          <CustomQuestionsSection
-            questions={customQuestions}
-            values={customQuestionValues}
-            errors={customQuestionErrors}
-            onFieldChange={onCustomQuestionFieldChange}
-            onFieldBlur={onCustomQuestionFieldBlur}
-            theme={theme}
-            showBorders={showBorders}
-          />
-        ) : null}
+      {hasCustomForms ? (
+        <div className="space-y-5">
+          {customForms.map((form) => (
+            <CustomFormSection
+              key={form.uniqueId}
+              form={form}
+              values={values}
+              errors={errors}
+              onFieldChange={onFieldChange}
+              theme={theme}
+              showBorders={showBorders}
+            />
+          ))}
+        </div>
+      ) : null}
 
-        {!hasCustomForms && !hasCustomQuestions ? (
-          <div
-            className="rounded-3xl border border-dashed px-4 py-5 text-sm"
-            style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}
-          >
-            No additional information required.
-          </div>
-        ) : null}
-      </>
-    );
-  }
+      {hasCustomQuestions ? (
+        <CustomQuestionsSection
+          questions={customQuestions}
+          values={customQuestionValues}
+          errors={customQuestionErrors}
+          onFieldChange={onCustomQuestionFieldChange}
+          onFieldBlur={onCustomQuestionFieldBlur}
+          theme={theme}
+          showBorders={showBorders}
+        />
+      ) : null}
+
+      {!hasCustomForms && !hasCustomQuestions ? (
+        <div
+          className="rounded-3xl border border-dashed px-4 py-5 text-sm"
+          style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}
+        >
+          No questionnaire content mapped to this membership type.
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 function PaymentStep({
   form,
@@ -1823,8 +1863,8 @@ export function MembershipRegisterWizard({
   const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
-  const infoStepComplete = info
-    ? isInformationStepComplete(info.membershipDetail.customForms, customFormValues) &&
+  const questionnaireStepComplete = info
+    ? Object.keys(validateCustomForms(info.membershipDetail.customForms, customFormValues)).length === 0 &&
       Object.keys(validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues)).length === 0
     : true;
 
@@ -1849,7 +1889,11 @@ export function MembershipRegisterWizard({
     ...step,
     active: index === currentStep,
     completed: index < currentStep,
-    disabled: index > currentStep || (index === 1 && !pricingStepComplete) || (index === 2 && !infoStepComplete),
+    disabled:
+      index > currentStep ||
+      (index === 1 && !pricingStepComplete) ||
+      (index === 2 && !pricingStepComplete) ||
+      (index === 3 && !questionnaireStepComplete),
   }));
 
   function handleNext() {
@@ -1857,7 +1901,7 @@ export function MembershipRegisterWizard({
       return;
     }
 
-    if (currentStep === 1 && info) {
+    if (currentStep === 2 && info) {
       const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
       const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
       setCustomFormErrors(nextErrors);
@@ -1995,7 +2039,9 @@ export function MembershipRegisterWizard({
       </div>
 
         {currentStep === 1 ? (
-          <InformationStep
+          <YourInformationStep theme={theme} showBorders={showBorders} />
+        ) : currentStep === 2 ? (
+          <QuestionnaireStep
             customForms={info.membershipDetail.customForms}
             customQuestions={info.membershipDetail.customQuestions}
             values={customFormValues}
