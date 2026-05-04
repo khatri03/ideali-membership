@@ -832,14 +832,14 @@ function ProfilePhotoField({
   }
 
   return (
-    <div className="grid gap-4 rounded-3xl border p-4 sm:grid-cols-[auto_1fr] sm:items-start sm:p-5" style={{ borderColor: theme.cardBorder }}>
-      <div className="space-y-3">
+    <div className="grid h-full gap-4 p-4 sm:grid-cols-[auto_1fr] sm:items-stretch sm:p-5">
+      <div className="flex h-full flex-col items-center justify-center space-y-3 text-center">
         <button
           type="button"
           onClick={handleAvatarClick}
           aria-label={value ? "Change profile photo" : "Choose profile photo"}
           title={value ? "Change profile photo" : "Choose profile photo"}
-          className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border text-center transition hover:opacity-90"
+          className="mx-auto flex aspect-square w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border text-center transition hover:opacity-90 sm:max-w-[18rem] lg:max-w-[20rem]"
           style={{
             borderColor: theme.cardBorder,
             background: theme.tileBackground,
@@ -850,29 +850,15 @@ function ProfilePhotoField({
             <img src={previewUrl} alt="Selected avatar preview" className="h-full w-full object-cover" />
           ) : (
             <div className="space-y-1">
-              <span className="block text-sm font-semibold">Avatar</span>
+              <span className="block text-sm font-semibold">Optional</span>
               <span className="block text-[11px] uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-                Optional
+                Click to select
               </span>
             </div>
           )}
         </button>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label={value ? "Change profile photo" : "Choose profile photo"}
-            title={value ? "Change profile photo" : "Choose profile photo"}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:opacity-80"
-            style={{
-              background: theme.level1,
-              color: "#ffffff",
-            }}
-          >
-            <CameraIcon />
-          </button>
-
           {value ? (
             <button
               type="button"
@@ -895,17 +881,10 @@ function ProfilePhotoField({
             </button>
           ) : null}
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
-            Profile Photo / Avatar
-          </p>
-          <p className="text-sm" style={{ color: theme.bodyColor }}>
-            Upload a photo to personalize the account. PNG, JPG, JPEG, or WEBP up to 10 MB.
-          </p>
-        </div>
+        <p className="text-center text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+          Profile Photo / Avatar
+        </p>
       </div>
 
       <input
@@ -928,7 +907,7 @@ function ProfilePhotoField({
             role="dialog"
             aria-modal="true"
             aria-label="Edit avatar"
-            className="relative z-10 w-full max-w-4xl overflow-hidden rounded-[2rem] border bg-white p-0 shadow-2xl"
+            className="relative z-10 w-full max-w-2xl overflow-hidden rounded-[2rem] border bg-white p-0 shadow-2xl"
             style={{
               borderColor: "rgba(59, 130, 246, 0.15)",
               boxShadow: `0 30px 80px -30px ${theme.cardShadow}`,
@@ -946,8 +925,8 @@ function ProfilePhotoField({
               </p>
             </div>
 
-            <div className="grid gap-6 px-6 py-6 md:grid-cols-[280px_1fr]">
-              <div className="flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4 px-6 py-6">
+              <div className="flex w-full items-center justify-center">
                 <div className="rounded-[2rem] border border-blue-50 bg-blue-50/50 p-5">
                   <div
                     ref={cropViewportRef}
@@ -974,7 +953,7 @@ function ProfilePhotoField({
                 </div>
               </div>
 
-              <div className="space-y-5">
+              <div className="w-full max-w-sm space-y-3">
                 <div>
                   <div className="mb-2 flex items-center justify-between text-sm font-medium" style={{ color: theme.tileValueColor }}>
                     <span>Zoom</span>
@@ -991,9 +970,9 @@ function ProfilePhotoField({
                   />
                 </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm" style={{ color: theme.bodyColor }}>
-                    Drag the image inside the circle to choose what stays visible in your avatar.
-                  </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm" style={{ color: theme.bodyColor }}>
+                  Drag the image inside the circle to choose what stays visible in your avatar.
+                </div>
               </div>
             </div>
 
@@ -2287,43 +2266,49 @@ function YourInformationStep({
             theme={theme}
           />
 
-          <ProfilePhotoField
-            value={form.profilePhotoFile}
-            onChange={(value) => setField("profilePhotoFile", value)}
-            theme={theme}
-          />
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <WizardField label="Email" theme={theme} error={errors.email} required>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => setField("email", event.target.value)}
-                placeholder="name@example.com"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,8fr)]">
+            <div className="lg:row-span-2 lg:h-full">
+              <ProfilePhotoField
+                value={form.profilePhotoFile}
+                onChange={(value) => setField("profilePhotoFile", value)}
+                theme={theme}
               />
-            </WizardField>
+            </div>
 
-            <WizardField label="Password" theme={theme} error={errors.password} required>
-              <PasswordInput
-                value={form.password}
-                onChange={(event) => setField("password", event.target.value)}
-                placeholder="Create password"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-              />
-            </WizardField>
+            <div className="grid h-full gap-4">
+              <WizardField label="Email" theme={theme} error={errors.email} required>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => setField("email", event.target.value)}
+                  placeholder="name@example.com"
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+                />
+              </WizardField>
 
-            <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
-              <PasswordInput
-                value={form.confirmPassword}
-                onChange={(event) => setField("confirmPassword", event.target.value)}
-                placeholder="Confirm password"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-              />
-            </WizardField>
+              <div className="grid gap-4 md:grid-cols-2">
+                <WizardField label="Password" theme={theme} error={errors.password} required>
+                  <PasswordInput
+                    value={form.password}
+                    onChange={(event) => setField("password", event.target.value)}
+                    placeholder="Create password"
+                    className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                    style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+                  />
+                </WizardField>
+
+                <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
+                  <PasswordInput
+                    value={form.confirmPassword}
+                    onChange={(event) => setField("confirmPassword", event.target.value)}
+                    placeholder="Confirm password"
+                    className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                    style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+                  />
+                </WizardField>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2623,7 +2608,7 @@ export function MembershipRegisterWizard({
 
     return (
       <form
-        className="w-full max-w-[100rem] space-y-6"
+      className="w-full max-w-[100rem] space-y-6"
         onSubmit={(event) => {
           if (info) {
             const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
