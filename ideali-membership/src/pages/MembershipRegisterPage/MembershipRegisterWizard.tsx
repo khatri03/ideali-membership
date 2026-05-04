@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from "react";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
@@ -671,6 +672,7 @@ function ProfilePhotoField({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
+  const dropCounterRef = useRef(0);
   const cropViewportRef = useRef<HTMLDivElement | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewDimensions, setPreviewDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -681,6 +683,7 @@ function ProfilePhotoField({
   const [editorOffsetXPercent, setEditorOffsetXPercent] = useState(0);
   const [editorOffsetYPercent, setEditorOffsetYPercent] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDropActive, setIsDropActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -779,6 +782,9 @@ function ProfilePhotoField({
     }
 
     setEditorOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   async function applyEditorChanges() {
@@ -825,6 +831,71 @@ function ProfilePhotoField({
     openEditor(file);
   }
 
+  function handleAvatarRemove() {
+    const shouldRemove = window.confirm("Remove the selected avatar?");
+    if (!shouldRemove) {
+      return;
+    }
+
+    onChange(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function isImageFile(file: File | null) {
+    return Boolean(file && file.type.startsWith("image/"));
+  }
+
+  function resetDropState() {
+    dropCounterRef.current = 0;
+    setIsDropActive(false);
+  }
+
+  function handleAvatarDragEnter(event: React.DragEvent<HTMLButtonElement>) {
+    if (![...event.dataTransfer.types].includes("Files")) {
+      return;
+    }
+
+    event.preventDefault();
+    dropCounterRef.current += 1;
+    setIsDropActive(true);
+  }
+
+  function handleAvatarDragOver(event: React.DragEvent<HTMLButtonElement>) {
+    if (![...event.dataTransfer.types].includes("Files")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsDropActive(true);
+  }
+
+  function handleAvatarDragLeave(event: React.DragEvent<HTMLButtonElement>) {
+    if (![...event.dataTransfer.types].includes("Files")) {
+      return;
+    }
+
+    event.preventDefault();
+    dropCounterRef.current = Math.max(0, dropCounterRef.current - 1);
+    if (dropCounterRef.current === 0) {
+      setIsDropActive(false);
+    }
+  }
+
+  function handleAvatarDrop(event: React.DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0] ?? null;
+    resetDropState();
+
+    if (!isImageFile(file)) {
+      return;
+    }
+
+    handleFileSelection(file);
+  }
+
   function handleCropPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (!cropViewportRef.current) {
       return;
@@ -840,56 +911,60 @@ function ProfilePhotoField({
   }
 
   return (
-    <div className="grid h-full w-full justify-items-center gap-4 p-4 sm:p-5">
+    <div className="relative isolate grid h-full w-full justify-items-center gap-4 p-4 sm:p-5">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-8 top-8 h-48 rounded-full bg-cyan-100/40 blur-3xl"
+      />
       <div className="flex h-full flex-col items-center justify-center space-y-3 text-center">
-        <button
-          type="button"
-          onClick={handleAvatarClick}
-          aria-label={value ? "Change profile photo" : "Choose profile photo"}
-          title={value ? "Change profile photo" : "Choose profile photo"}
-          className="mx-auto flex aspect-square w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border text-center transition hover:opacity-90 sm:max-w-[18rem] lg:max-w-[20rem]"
-          style={{
-            borderColor: theme.cardBorder,
-            background: theme.tileBackground,
-            color: theme.tileValueColor,
-          }}
-        >
-          {previewUrl ? (
-            <img src={previewUrl} alt="Selected avatar preview" className="h-full w-full object-cover" />
-          ) : (
-            <div className="space-y-2">
-              <span
-                className="mx-auto flex items-center justify-center"
-                style={{
-                  color: theme.tileLabelColor,
-                }}
-              >
-                <AvatarSilhouetteIcon className="h-12 w-12" />
-              </span>
-              <span className="block text-[11px] uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-                Click to select
-              </span>
+        <div className="relative mx-auto">
+          <button
+            type="button"
+            onClick={handleAvatarClick}
+            onDragEnter={handleAvatarDragEnter}
+            onDragOver={handleAvatarDragOver}
+            onDragLeave={handleAvatarDragLeave}
+            onDrop={handleAvatarDrop}
+            aria-label={value ? "Change profile photo" : "Choose profile photo"}
+            title={value ? "Change profile photo" : "Choose profile photo"}
+            className={`mx-auto flex aspect-square w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border text-center shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] hover:opacity-95 sm:max-w-[18rem] lg:max-w-[20rem] ${isDropActive ? "scale-[1.01] ring-4 ring-cyan-200/70" : ""}`}
+            style={{
+              borderColor: theme.cardBorder,
+              background: theme.tileBackground,
+              color: theme.tileValueColor,
+            }}
+          >
+            <div className="flex h-full w-full items-center justify-center p-4">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Selected avatar preview" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <div className="space-y-2">
+                  <span
+                    className="mx-auto flex items-center justify-center"
+                    style={{
+                      color: theme.tileLabelColor,
+                    }}
+                  >
+                    <AvatarSilhouetteIcon className="h-12 w-12" />
+                  </span>
+                  <span className="block text-[11px] uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                    Click to select
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </button>
+          </button>
 
-        <div className="flex items-center gap-2">
           {value ? (
             <button
               type="button"
-              onClick={() => {
-                onChange(null);
-                if (fileInputRef.current) {
-                  fileInputRef.current.value = "";
-                }
-              }}
+              onClick={handleAvatarRemove}
               aria-label="Remove profile photo"
               title="Remove profile photo"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border transition hover:opacity-80"
+              className="absolute left-1/2 top-1/2 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-white/90 shadow-lg transition hover:scale-105 hover:bg-white"
               style={{
                 borderColor: theme.cardBorder,
                 color: theme.tileValueColor,
-                background: theme.cardBackground,
               }}
             >
               <TrashIcon />
@@ -910,8 +985,8 @@ function ProfilePhotoField({
         onChange={(event) => handleFileSelection(event.target.files?.[0] ?? null)}
       />
 
-      {editorOpen && editorUrl && editorSource ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+      {editorOpen && editorUrl && editorSource ? createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
           <button
             type="button"
             aria-label="Close avatar editor"
@@ -1009,7 +1084,8 @@ function ProfilePhotoField({
               </button>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );
