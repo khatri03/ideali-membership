@@ -303,6 +303,30 @@ function isPricingStepComplete(
   return requiresPaymentMethod ? Boolean(form.paymentMethod.trim()) : true;
 }
 
+function validateUserLoginStep(form: MembershipRegistrationFormState) {
+  const errors: Partial<Record<keyof MembershipRegistrationFormState, string>> = {};
+
+  if (!form.email.trim()) {
+    errors.email = "Email address is required.";
+  } else if (!isEmailValid(form.email)) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!form.password) {
+    errors.password = "Password is required.";
+  } else if (form.password.length < 6) {
+    errors.password = "Password must be at least 6 characters.";
+  }
+
+  if (!form.confirmPassword) {
+    errors.confirmPassword = "Confirm your password.";
+  } else if (form.confirmPassword !== form.password) {
+    errors.confirmPassword = "Passwords do not match.";
+  }
+
+  return errors;
+}
+
 function MembershipDescriptionPanel({
   description,
   theme,
@@ -536,7 +560,7 @@ function WizardField({
 }) {
   return (
     <label className="block space-y-2">
-        <span className="text-base font-semibold" style={{ color: theme.labelColor }}>
+        <span className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
           {label}
           {required ? <span className="ml-1 text-rose-600">*</span> : null}
         </span>
@@ -1687,9 +1711,15 @@ function PricingStep({
 }
 
 function YourInformationStep({
+  form,
+  errors,
+  setField,
   theme,
   showBorders,
 }: {
+  form: MembershipRegistrationFormState;
+  errors: Partial<Record<keyof MembershipRegistrationFormState, string>>;
+  setField: MembershipRegisterPageViewModel["setField"];
   theme: MembershipTheme;
   showBorders: boolean;
 }) {
@@ -1703,15 +1733,150 @@ function YourInformationStep({
     >
       <SectionTitle
         title="Your Information"
-        description="This section is ready for the personal information fields we will add next."
+        description="Enter the account details you will use to sign in."
         theme={theme}
       />
 
-      <div
-        className={`mt-5 rounded-3xl border border-dashed px-4 py-5 text-sm sm:px-5 ${getFieldBorderClass(showBorders)}`.trim()}
-        style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}
-      >
-        Your information inputs will appear here soon.
+      <div className="mt-5 space-y-6">
+        <div className="space-y-4">
+          <SectionTitle
+            title="User Login"
+            description="Use these details to sign in after registration."
+            theme={theme}
+          />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <WizardField label="Email" theme={theme} error={errors.email} required>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setField("email", event.target.value)}
+                placeholder="name@example.com"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Password" theme={theme} error={errors.password} required>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(event) => setField("password", event.target.value)}
+                placeholder="Create password"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
+              <input
+                type="password"
+                value={form.confirmPassword}
+                onChange={(event) => setField("confirmPassword", event.target.value)}
+                placeholder="Confirm password"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <SectionTitle
+            title="Contact Info"
+            description="Share the contact details we need for your membership record."
+            theme={theme}
+          />
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <WizardField label="Prefix" theme={theme}>
+              <input
+                type="text"
+                value={form.prefix}
+                onChange={(event) => setField("prefix", event.target.value)}
+                placeholder="Mr, Ms, Dr"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="First Name" theme={theme} error={errors.firstName} required>
+              <input
+                type="text"
+                value={form.firstName}
+                onChange={(event) => setField("firstName", event.target.value)}
+                placeholder="First name"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Middle Name" theme={theme}>
+              <input
+                type="text"
+                value={form.middleName}
+                onChange={(event) => setField("middleName", event.target.value)}
+                placeholder="Middle name"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Last Name" theme={theme} error={errors.lastName} required>
+              <input
+                type="text"
+                value={form.lastName}
+                onChange={(event) => setField("lastName", event.target.value)}
+                placeholder="Last name"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Cell Phone" theme={theme} error={errors.cellPhone}>
+              <PhoneInput
+                value={form.cellPhone}
+                onChange={(value) => setField("cellPhone", value)}
+                placeholder="(555) 123-4567"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Street Address" theme={theme} error={errors.streetLine1} required>
+              <input
+                type="text"
+                value={form.streetLine1}
+                onChange={(event) => setField("streetLine1", event.target.value)}
+                placeholder="Street address"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Street Address 2" theme={theme}>
+              <input
+                type="text"
+                value={form.streetLine2}
+                onChange={(event) => setField("streetLine2", event.target.value)}
+                placeholder="Apt, suite, unit"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Zip Code" theme={theme} error={errors.zipCode} required>
+              <input
+                type="text"
+                value={form.zipCode}
+                onChange={(event) => setField("zipCode", event.target.value)}
+                placeholder="Zip code"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -1863,6 +2028,8 @@ export function MembershipRegisterWizard({
   const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
+  const userInfoStepErrors = validateUserLoginStep(form);
+  const userInfoStepComplete = Object.keys(userInfoStepErrors).length === 0;
   const questionnaireStepComplete = info
     ? Object.keys(validateCustomForms(info.membershipDetail.customForms, customFormValues)).length === 0 &&
       Object.keys(validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues)).length === 0
@@ -1883,7 +2050,8 @@ export function MembershipRegisterWizard({
     setCustomQuestionErrors({});
   }, [info]);
 
-  const canGoNext = currentStep === 0 ? pricingStepComplete : true;
+  const canGoNext =
+    currentStep === 0 ? pricingStepComplete : currentStep === 1 ? userInfoStepComplete : currentStep === 2 ? questionnaireStepComplete : false;
 
   const stepTitles = STEPS.map((step, index) => ({
     ...step,
@@ -1892,13 +2060,20 @@ export function MembershipRegisterWizard({
     disabled:
       index > currentStep ||
       (index === 1 && !pricingStepComplete) ||
-      (index === 2 && !pricingStepComplete) ||
-      (index === 3 && !questionnaireStepComplete),
+      (index === 2 && (!pricingStepComplete || !userInfoStepComplete)) ||
+      (index === 3 && (!pricingStepComplete || !userInfoStepComplete || !questionnaireStepComplete)),
   }));
 
   function handleNext() {
     if (currentStep === 0 && !pricingStepComplete) {
       return;
+    }
+
+    if (currentStep === 1) {
+      const nextUserInfoErrors = validateUserLoginStep(form);
+      if (Object.keys(nextUserInfoErrors).length > 0) {
+        return;
+      }
     }
 
     if (currentStep === 2 && info) {
@@ -2039,7 +2214,13 @@ export function MembershipRegisterWizard({
       </div>
 
         {currentStep === 1 ? (
-          <YourInformationStep theme={theme} showBorders={showBorders} />
+          <YourInformationStep
+            form={form}
+            errors={userInfoStepErrors}
+            setField={setField}
+            theme={theme}
+            showBorders={showBorders}
+          />
         ) : currentStep === 2 ? (
           <QuestionnaireStep
             customForms={info.membershipDetail.customForms}
