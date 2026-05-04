@@ -25,6 +25,7 @@ This file defines the working rules for agents contributing to `ideali-membershi
 - Make accessibility a baseline requirement: semantic HTML, visible focus states, good contrast, and keyboard support.
 - The registration page must be fully responsive at every breakpoint. No exceptions: verify mobile, tablet, and desktop behavior before considering it done.
 - Any required field in the registration flow should display a `*` consistently across all steps and field groups.
+- Any password field should include an embedded eye icon that toggles password visibility.
 - Avoid hardcoded magic values when a shared constant or reusable token makes more sense.
 - Frontend routes should mirror backend route paths exactly, with only the `/api` prefix removed when the route represents a backend-controlled resource or step.
 - Document any non-obvious behavior directly in code or in this file.

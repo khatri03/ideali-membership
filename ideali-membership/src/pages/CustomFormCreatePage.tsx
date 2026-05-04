@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { PasswordInput } from "../components/inputs/PasswordInput/PasswordInput";
 import {
   createCustomForm,
   fetchCustomFormControls,
@@ -505,11 +506,19 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
     case "email":
     case "number":
     case "date":
-    case "password":
     case "tel":
       return (
         <input
           type={controlType}
+          value={field.defaultValue}
+          readOnly
+          placeholder={placeholder}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+        />
+      );
+    case "password":
+      return (
+        <PasswordInput
           value={field.defaultValue}
           readOnly
           placeholder={placeholder}
@@ -629,12 +638,20 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "email":
     case "number":
     case "date":
-    case "password":
     case "tel":
       return (
         <input
           type={controlType}
           defaultValue={field.defaultValue}
+          placeholder={placeholder}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      );
+    case "password":
+      return (
+        <PasswordInput
+          value={field.defaultValue}
+          readOnly
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />

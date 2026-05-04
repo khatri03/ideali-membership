@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { PasswordInput } from "../inputs/PasswordInput/PasswordInput";
 
 export function LoginScreen() {
   const { status, loginError, pendingChallenge, signIn, verifyTwoFactor } = useAuth();
@@ -94,8 +95,7 @@ export function LoginScreen() {
                 <span className="mb-2 block text-sm font-medium text-slate-700">
                   Password
                 </span>
-                <input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required

@@ -9,6 +9,7 @@ import type {
   MembershipRegistrationCustomFormSummary,
 } from "../../types/membershipRegistration";
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
+import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
 
 type MembershipTheme = {
   accentRgb: { r: number; g: number; b: number };
@@ -1731,12 +1732,6 @@ function YourInformationStep({
         background: theme.cardBackground,
       }}
     >
-      <SectionTitle
-        title="Your Information"
-        description="Enter the account details you will use to sign in."
-        theme={theme}
-      />
-
       <div className="mt-5 space-y-6">
         <div className="space-y-4">
           <SectionTitle
@@ -1758,8 +1753,7 @@ function YourInformationStep({
             </WizardField>
 
             <WizardField label="Password" theme={theme} error={errors.password} required>
-              <input
-                type="password"
+              <PasswordInput
                 value={form.password}
                 onChange={(event) => setField("password", event.target.value)}
                 placeholder="Create password"
@@ -1769,8 +1763,7 @@ function YourInformationStep({
             </WizardField>
 
             <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
-              <input
-                type="password"
+              <PasswordInput
                 value={form.confirmPassword}
                 onChange={(event) => setField("confirmPassword", event.target.value)}
                 placeholder="Confirm password"
