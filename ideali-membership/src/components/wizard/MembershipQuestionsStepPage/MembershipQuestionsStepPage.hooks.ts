@@ -30,6 +30,16 @@ function createCustomQuestionOptionDraft(index: number): MembershipCustomQuestio
   };
 }
 
+function toSentenceCase(value: string | null | undefined) {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) {
+    return "Field";
+  }
+
+  const normalized = trimmed.toLowerCase();
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 function createCustomQuestionDraft(control: CustomFormControl): MembershipCustomQuestionDraft {
   const hasOptions = control.hasOptions;
   const options = hasOptions ? [createCustomQuestionOptionDraft(0)] : [];
@@ -44,6 +54,8 @@ function createCustomQuestionDraft(control: CustomFormControl): MembershipCustom
     placeHolder: control.canHavePlaceHolder ? control.defaultLabel : null,
     tooltip: null,
     required: false,
+    requiredMessage: `${toSentenceCase(control.defaultLabel || control.name)} is required.`,
+    acceptedFileTypes: [],
     minLength: null,
     maxLength: null,
     defaultValue: control.hasOptions ? (options[0]?.value ?? null) : null,
@@ -55,6 +67,7 @@ function createCustomQuestionDraft(control: CustomFormControl): MembershipCustom
 function cloneCustomQuestionDraft(question: MembershipCustomQuestionDraft): MembershipCustomQuestionDraft {
   return {
     ...question,
+    acceptedFileTypes: [...question.acceptedFileTypes],
     options: question.options.map((option) => ({ ...option })),
   };
 }
@@ -77,6 +90,8 @@ function sanitizeCustomQuestionDraft(draft: MembershipCustomQuestionDraft): Memb
     label: draft.label.trim(),
     placeHolder: draft.placeHolder?.trim() || null,
     tooltip: draft.tooltip?.trim() || null,
+    requiredMessage: draft.requiredMessage.trim() || `${toSentenceCase(draft.label)} is required.`,
+    acceptedFileTypes: draft.acceptedFileTypes.map((item) => item.trim()).filter((item) => item.length > 0),
     minLength: draft.minLength?.trim() || null,
     maxLength: draft.maxLength?.trim() || null,
     defaultValue: draft.defaultValue?.trim() || null,
@@ -187,6 +202,9 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
           ...question,
           placeHolder: question.placeHolder ?? null,
           tooltip: question.tooltip ?? null,
+          requiredMessage:
+            question.requiredMessage?.trim() || `${toSentenceCase(question.label)} is required.`,
+          acceptedFileTypes: [...(question.acceptedFileTypes || [])],
           minLength: question.minLength ?? null,
           maxLength: question.maxLength ?? null,
           defaultValue: question.defaultValue ?? null,

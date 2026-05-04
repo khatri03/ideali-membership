@@ -148,6 +148,8 @@ export interface MembershipCustomQuestionDraft {
   placeHolder: string | null;
   tooltip: string | null;
   required: boolean;
+  requiredMessage: string;
+  acceptedFileTypes: string[];
   minLength: string | null;
   maxLength: string | null;
   defaultValue: string | null;

@@ -47,6 +47,21 @@ function readBoolean(value: unknown) {
   return typeof value === "boolean" ? value : undefined;
 }
 
+function readStringArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => readText(item)).filter((item) => item.length > 0);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  return [];
+}
+
 function isMembershipTypePlaceholderRecord(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -973,6 +988,8 @@ export async function getMembershipQuestionsInfo(membershipTypeUniqueId: string)
               placeHolder: readText(candidate.PlaceHolder ?? candidate.placeHolder) || null,
               tooltip: readText(candidate.Tooltip ?? candidate.tooltip) || null,
               required: Boolean(candidate.Required ?? candidate.required),
+              requiredMessage: readText(candidate.RequiredMessage ?? candidate.requiredMessage) || "",
+              acceptedFileTypes: readStringArray(candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes),
               minLength: readText(candidate.MinLength ?? candidate.minLength) || null,
               maxLength: readText(candidate.MaxLength ?? candidate.maxLength) || null,
               defaultValue: readText(candidate.DefaultValue ?? candidate.defaultValue) || null,
@@ -1106,6 +1123,8 @@ export async function saveMembershipQuestionsStep(
             placeHolder: question.placeHolder,
             tooltip: question.tooltip,
             required: question.required,
+            requiredMessage: question.requiredMessage,
+            acceptedFileTypes: question.acceptedFileTypes.join(",") || null,
             minLength: question.minLength,
             maxLength: question.maxLength,
             defaultValue: question.defaultValue,

@@ -76,6 +76,7 @@ function MembershipCustomQuestionModal({
   }
 
   const selectedControl = controls.find((control) => control.id === draft.controlId) ?? controls[0];
+  const acceptedFileTypes = selectedControl?.acceptedFileTypes ?? [];
 
   const updateOption = (optionId: string, updater: (option: MembershipCustomQuestionDraft["options"][number]) => MembershipCustomQuestionDraft["options"][number]) => {
     onUpdateDraft((current) => ({
@@ -189,6 +190,10 @@ function MembershipCustomQuestionModal({
                         onUpdateDraft((current) => ({
                           ...current,
                           required: !current.required,
+                          requiredMessage:
+                            !current.required && !current.requiredMessage.trim()
+                              ? `${toSentenceCase(current.label)} is required.`
+                              : current.requiredMessage,
                         }))
                       }
                       className={[
@@ -205,6 +210,67 @@ function MembershipCustomQuestionModal({
                         ].join(" ")}
                       />
                     </button>
+                  </div>
+                ) : null}
+
+                {selectedControl?.canBeRequired ? (
+                  <label className="block">
+                    <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                      Required message
+                    </span>
+                    <input
+                      type="text"
+                      value={draft.requiredMessage}
+                      onChange={(event) =>
+                        onUpdateDraft((current) => ({
+                          ...current,
+                          requiredMessage: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                      placeholder={`${toSentenceCase(draft.label)} is required.`}
+                    />
+                  </label>
+                ) : null}
+
+                {selectedControl?.controlType?.toLowerCase() === "file" ? (
+                  <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Accepted file types</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Leave all unchecked to allow any file.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      {acceptedFileTypes.map((item) => {
+                        const isChecked = draft.acceptedFileTypes.includes(item.value);
+
+                        return (
+                          <label
+                            key={item.value}
+                            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(event) =>
+                                onUpdateDraft((current) => ({
+                                  ...current,
+                                  acceptedFileTypes: toggleAcceptedFileType(
+                                    current.acceptedFileTypes,
+                                    item.value,
+                                    event.target.checked,
+                                  ),
+                                }))
+                              }
+                              className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                            />
+                            <span className="font-medium">{item.text}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : null}
 
@@ -651,6 +717,22 @@ function SortableCustomQuestionCard({
 
 function getPreviewDefaultOptionValue(options: Array<{ value: string }>, defaultValue: string | null) {
   return defaultValue || options[0]?.value || "";
+}
+
+function toSentenceCase(value: string | null | undefined) {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) {
+    return "Field";
+  }
+
+  const normalized = trimmed.toLowerCase();
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function toggleAcceptedFileType(acceptedFileTypes: string[], fileType: string, checked: boolean) {
+  return checked
+    ? Array.from(new Set([...acceptedFileTypes, fileType]))
+    : acceptedFileTypes.filter((value) => value !== fileType);
 }
 
 function PhonePreviewInput({

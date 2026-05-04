@@ -50,6 +50,7 @@ export interface MembershipRegistrationCustomQuestion {
   placeHolder: string | null;
   tooltip: string | null;
   required: boolean;
+  requiredMessage: string | null;
   minLength: string | null;
   maxLength: string | null;
   acceptedFileTypes: string | null;

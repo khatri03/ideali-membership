@@ -712,7 +712,7 @@ function getCustomQuestionFileValidationError(
   question: MembershipRegistrationCustomQuestion,
   value: CustomQuestionValue,
 ) {
-  const requiredMessage = `${toSentenceCase(question.label)} is required.`;
+  const requiredMessage = question.requiredMessage?.trim() || `${toSentenceCase(question.label)} is required.`;
 
   if (!value) {
     return question.required ? requiredMessage : "";
@@ -820,7 +820,7 @@ function validateCustomQuestionField(
   const controlType = getCustomQuestionControlType(question.controlType);
   const textValue = typeof value === "string" ? value.trim() : "";
   const normalizedString = typeof value === "string" ? value : "";
-  const requiredMessage = `${toSentenceCase(question.label)} is required.`;
+  const requiredMessage = question.requiredMessage?.trim() || `${toSentenceCase(question.label)} is required.`;
 
   if (controlType === "checkbox") {
     if (question.required && value !== true) {
