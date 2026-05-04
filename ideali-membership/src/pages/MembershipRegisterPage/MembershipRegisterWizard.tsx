@@ -579,6 +579,14 @@ function CameraIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
+function AvatarSilhouetteIcon({ className = "h-10 w-10" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.79-8 6.23V21h16v-.77C20 16.79 16.42 14 12 14Z" />
+    </svg>
+  );
+}
+
 function TrashIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
@@ -849,8 +857,15 @@ function ProfilePhotoField({
           {previewUrl ? (
             <img src={previewUrl} alt="Selected avatar preview" className="h-full w-full object-cover" />
           ) : (
-            <div className="space-y-1">
-              <span className="block text-sm font-semibold">Optional</span>
+            <div className="space-y-2">
+              <span
+                className="mx-auto flex items-center justify-center"
+                style={{
+                  color: theme.tileLabelColor,
+                }}
+              >
+                <AvatarSilhouetteIcon className="h-12 w-12" />
+              </span>
               <span className="block text-[11px] uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
                 Click to select
               </span>
