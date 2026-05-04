@@ -621,18 +621,18 @@ export function MembershipReviewStepPage() {
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span
-                      className={[
+                          className={[
                             "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
                             reviewInfo.setupState === "Published"
                               ? "bg-emerald-50 text-emerald-700"
-                              : reviewInfo.setupState === "Ready For Review" || reviewInfo.setupState === "Ready To Go Live"
+                              : reviewInfo.setupState === "Ready For Review" || reviewInfo.setupState === "ReadyForReview"
                                 ? "bg-amber-50 text-amber-700"
                                 : "bg-slate-100 text-slate-600",
                           ].join(" ")}
                         >
                           {formatSetupStateLabel(reviewInfo.setupState)}
                         </span>
-                        {reviewInfo.publishedAtUtc ? (
+                        {reviewInfo.setupState === "Published" && reviewInfo.publishedAtUtc ? (
                           <span className="text-xs font-medium text-slate-500">
                             Published at {new Intl.DateTimeFormat(undefined, {
                               day: "2-digit",
