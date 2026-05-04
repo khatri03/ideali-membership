@@ -1241,13 +1241,13 @@ function getCustomFormGridClass(layoutColumn: number) {
     case 1:
       return "grid gap-4";
     case 2:
-      return "grid gap-4 sm:grid-cols-2";
+      return "grid gap-4 md:grid-cols-2";
     case 3:
-      return "grid gap-4 sm:grid-cols-2 lg:grid-cols-3";
+      return "grid gap-4 md:grid-cols-2 lg:grid-cols-3";
     case 4:
-      return "grid gap-4 sm:grid-cols-2 lg:grid-cols-4";
+      return "grid gap-4 md:grid-cols-2 lg:grid-cols-4";
     default:
-      return "grid gap-4 sm:grid-cols-2";
+      return "grid gap-4 md:grid-cols-2";
   }
 }
 
@@ -1590,17 +1590,21 @@ function PricingStep({
         className="space-y-5 rounded-3xl p-4 sm:p-5"
         style={{ background: theme.cardBackground }}
       >
-        <div className="space-y-2 lg:flex lg:items-center lg:justify-between lg:gap-6">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: theme.titleColor }}>
-              {info.membershipDetail.name}
-              {info.organizerName ? (
-                <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
-                  by <span className="font-extrabold uppercase">{info.organizerName}</span>
-                </span>
-              ) : null}
-              {tenureInfo.expiryLabel ? (
-                <span className="ml-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
+        <div className="space-y-3 lg:flex lg:items-start lg:justify-between lg:gap-6">
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: theme.titleColor }}>
+                {info.membershipDetail.name}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-2 text-base font-semibold leading-6" style={{ color: theme.bodyColor }}>
+                {info.organizerName ? (
+                  <span>
+                    by <span className="font-extrabold uppercase">{info.organizerName}</span>
+                  </span>
+                ) : null}
+
+                {tenureInfo.expiryLabel ? (
                   <span
                     className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold leading-5"
                     style={{
@@ -1611,16 +1615,17 @@ function PricingStep({
                   >
                     {renderRenewalDueLabel(tenureInfo.expiryLabel)}
                   </span>
-                </span>
-              ) : null}
-            </h1>
+                ) : null}
+              </div>
+            </div>
+
             <p className="text-base leading-6" style={{ color: theme.bodyColor }}>
               Review the membership charge before moving ahead.
             </p>
           </div>
           {donationCampaignName ? (
             <div
-              className="rounded-2xl px-4 py-3 text-center sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
+              className="w-full rounded-2xl px-4 py-3 text-center sm:max-w-sm sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
               style={{ background: theme.tileBackground }}
             >
               <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
@@ -2028,13 +2033,13 @@ export function MembershipRegisterWizard({
 
         <div className="mt-6 h-px w-full" style={{ background: theme.cardBorder, opacity: 0.7 }} />
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             {currentStep > 0 ? (
               <button
                 type="button"
                 onClick={handleBack}
-                className="rounded-2xl border px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-2xl border px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 style={{
                   borderColor: theme.cardBorder,
                   color: theme.titleColor,
@@ -2050,7 +2055,7 @@ export function MembershipRegisterWizard({
               type="button"
               onClick={handleNext}
               disabled={!canGoNext}
-              className="rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               style={{ background: theme.level1 }}
             >
               Continue
@@ -2059,7 +2064,7 @@ export function MembershipRegisterWizard({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               style={{ background: theme.level1 }}
             >
               {isSubmitting ? "Submitting..." : "Submit Registration"}
