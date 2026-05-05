@@ -71,6 +71,11 @@ type ActiveDragItem =
   | { kind: "field"; field: CustomFormFieldDraft }
   | null;
 
+type ActiveDragRect = {
+  width: number;
+  height: number;
+} | null;
+
 const CONTROL_ICON_MAP: Record<string, string> = {
   "fas fa-font": "Aa",
   "fas fa-envelope": "@",
@@ -426,6 +431,7 @@ function SortableFieldCard({
   selected,
   onSelect,
   onOpenLayoutMenu,
+  onClearLayout,
   onRemove,
   showDragHandle,
 }: {
@@ -435,6 +441,7 @@ function SortableFieldCard({
   selected: boolean;
   onSelect: (id: string) => void;
   onOpenLayoutMenu: (fieldId: string, position: { x: number; y: number }) => void;
+  onClearLayout: (fieldId: string) => void;
   onRemove: (id: string) => void;
   showDragHandle: boolean;
 }) {
@@ -457,6 +464,7 @@ function SortableFieldCard({
   return (
     <article
       ref={setNodeRef}
+      data-field-id={field.id}
       className={[
         "rounded-3xl border bg-white p-4 shadow-sm transition cursor-default hover:cursor-default",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
@@ -464,20 +472,28 @@ function SortableFieldCard({
       ].join(" ")}
       style={combinedStyle}
       onClick={() => onSelect(field.id)}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onSelect(field.id);
-        onOpenLayoutMenu(field.id, { x: event.clientX, y: event.clientY });
-      }}
       title="Click to select"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{field.label}</h3>
-            <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+            <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
               {getLayoutPresetLabel(layoutColumn)}
+              {field.layoutColumn === null ? null : (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onClearLayout(field.id);
+                  }}
+                  className="ml-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-[10px] font-bold leading-none text-rose-600 transition hover:bg-rose-100 hover:text-rose-700"
+                  aria-label="Remove layout override"
+                  title="Remove layout override"
+                >
+                  x
+                </button>
+              )}
             </span>
             {field.required ? (
               <span
@@ -520,8 +536,8 @@ function SortableFieldCard({
 
           <button
             type="button"
-            title="Layout preset"
-            aria-label="Layout preset"
+            title="Change Layout"
+            aria-label="Change Layout"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-100 bg-cyan-50 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800"
             onClick={(event) => {
               event.stopPropagation();
@@ -547,7 +563,6 @@ function SortableFieldCard({
               <rect x="3.5" y="16.5" width="8.25" height="4.5" rx="1.2" />
             </svg>
           </button>
-
           <button
             type="button"
             onClick={(event) => {
@@ -934,14 +949,24 @@ function SelectFieldPreview({
   );
 }
 
-function DragGhost({ item }: { item: ActiveDragItem }) {
+function DragGhost({ item, rect }: { item: ActiveDragItem; rect: ActiveDragRect }) {
   if (!item) {
     return null;
   }
 
+  const style = rect
+    ? {
+        width: rect.width,
+        height: rect.height,
+      }
+    : undefined;
+
   if (item.kind === "palette") {
     return (
-      <div className="flex w-72 cursor-grabbing items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10">
+      <div
+        className="flex cursor-grabbing items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10"
+        style={style}
+      >
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700">
           {getControlGlyph(item.control.iconClass, item.control.controlType, item.control.name)}
         </div>
@@ -953,7 +978,10 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
   }
 
   return (
-    <div className="w-[min(20rem,calc(100vw-2rem))] cursor-grabbing rounded-3xl border border-cyan-200 bg-white p-4 shadow-2xl shadow-slate-900/10">
+    <div
+      className="cursor-grabbing rounded-3xl border border-cyan-200 bg-white p-4 shadow-2xl shadow-slate-900/10"
+      style={style}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -980,6 +1008,23 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
       </div>
     </div>
   );
+}
+
+function measureDragSourceRect(sourceId: string) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const element = document.querySelector<HTMLElement>(`[data-field-id="${sourceId}"]`);
+  if (!element) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+  return {
+    width: rect.width,
+    height: rect.height,
+  };
 }
 
 function ToggleField({
@@ -1019,6 +1064,7 @@ export function CustomFormCreatePage() {
   const [isCanvasTargeted, setIsCanvasTargeted] = useState(false);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [activeDragRect, setActiveDragRect] = useState<ActiveDragRect>(null);
   const [fieldLayoutMenu, setFieldLayoutMenu] = useState<{
     fieldId: string;
     x: number;
@@ -1033,6 +1079,7 @@ export function CustomFormCreatePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreateValidation, setShowCreateValidation] = useState(false);
   const lastDropTargetIdRef = useRef<string | null>(null);
+  const dragFieldOrderSnapshotRef = useRef<CustomFormFieldDraft[] | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const canvasDropRef = useRef<HTMLDivElement | null>(null);
@@ -1337,6 +1384,23 @@ export function CustomFormCreatePage() {
     setFieldLayoutMenu(null);
   }
 
+  function clearFieldLayoutPreset(fieldId: string) {
+    setFields((current) =>
+      normalizeFields(
+        current.map((field) =>
+          field.id === fieldId
+            ? {
+                ...field,
+                layoutColumn: null,
+              }
+            : field,
+        ),
+      ),
+    );
+    setSelectedFieldId(fieldId);
+    setFieldLayoutMenu((current) => (current?.fieldId === fieldId ? null : current));
+  }
+
   function deleteField(fieldId: string) {
     setFields((current) => {
       const next = current.filter((field) => field.id !== fieldId);
@@ -1462,6 +1526,7 @@ export function CustomFormCreatePage() {
 
   function onDragStart(event: DragStartEvent) {
     setActiveDragId(String(event.active.id));
+    setActiveDragRect(null);
     lastDropTargetIdRef.current = null;
     setIsCanvasTargeted(false);
     const activatorEvent = event.activatorEvent as PointerEvent | MouseEvent | undefined;
@@ -1479,16 +1544,26 @@ export function CustomFormCreatePage() {
 
     if (activeData?.source === "palette" && activeData.control) {
       setActiveDragItem({ kind: "palette", control: activeData.control });
+      dragFieldOrderSnapshotRef.current = null;
       return;
     }
 
     if (activeData?.source === "field") {
+      dragFieldOrderSnapshotRef.current = fields;
+      const measuredRect = measureDragSourceRect(String(event.active.id));
+      setActiveDragRect(
+        measuredRect ?? {
+          width: event.active.rect.current.initial?.width ?? 0,
+          height: event.active.rect.current.initial?.height ?? 0,
+        },
+      );
       const field = fields.find((current) => current.id === event.active.id);
       setActiveDragItem(field ? { kind: "field", field } : null);
       return;
     }
 
     setActiveDragItem(null);
+    dragFieldOrderSnapshotRef.current = null;
   }
 
   function onDragMove(event: DragMoveEvent) {
@@ -1510,11 +1585,37 @@ export function CustomFormCreatePage() {
     if (targetId && targetId === CANVAS_ID) {
       lastDropTargetIdRef.current = targetId;
     }
+
+    const activeData = event.active.data.current as
+      | { source?: "palette"; control?: CustomFormControl }
+      | { source?: "field" }
+      | undefined;
+
+    if (activeData?.source !== "field" || !event.over || event.over.id === event.active.id) {
+      return;
+    }
+
+    const overId = String(event.over.id);
+    if (overId === CANVAS_ID) {
+      return;
+    }
+
+    const oldIndex = fields.findIndex((field) => field.id === event.active.id);
+    const newIndex = fields.findIndex((field) => field.id === overId);
+
+    if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
+      setFields((current) => normalizeFields(arrayMove(current, oldIndex, newIndex)));
+    }
   }
 
   function onDragCancel(_event: DragCancelEvent) {
+    if (dragFieldOrderSnapshotRef.current) {
+      setFields(normalizeFields(dragFieldOrderSnapshotRef.current));
+    }
+    dragFieldOrderSnapshotRef.current = null;
     setActiveDragId(null);
     setActiveDragItem(null);
+    setActiveDragRect(null);
     setIsCanvasTargeted(false);
     lastDropTargetIdRef.current = null;
   }
@@ -1525,6 +1626,7 @@ export function CustomFormCreatePage() {
 
     setActiveDragId(null);
     setActiveDragItem(null);
+    setActiveDragRect(null);
     setIsCanvasTargeted(false);
     lastDropTargetIdRef.current = null;
     dragStartPointRef.current = null;
@@ -1542,18 +1644,15 @@ export function CustomFormCreatePage() {
       return;
     }
 
-    if (activeData?.source === "field") {
-      if (!over) {
-        return;
+    if (activeData?.source === "field" && !over) {
+      if (dragFieldOrderSnapshotRef.current) {
+        setFields(normalizeFields(dragFieldOrderSnapshotRef.current));
       }
-
-      const oldIndex = fields.findIndex((field) => field.id === active.id);
-      const newIndex = fields.findIndex((field) => field.id === String(over.id));
-
-      if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
-        setFields((current) => normalizeFields(arrayMove(current, oldIndex, newIndex)));
-      }
+      dragFieldOrderSnapshotRef.current = null;
+      return;
     }
+
+    dragFieldOrderSnapshotRef.current = null;
   }
 
   function addOption() {
@@ -1822,7 +1921,7 @@ export function CustomFormCreatePage() {
             </div>
           </aside>
           <DragOverlay dropAnimation={null}>
-            <DragGhost item={activeDragItem} />
+            <DragGhost item={activeDragItem} rect={activeDragRect} />
           </DragOverlay>
 
             <main
@@ -1899,6 +1998,7 @@ export function CustomFormCreatePage() {
                         selected={field.id === selectedFieldId}
                         onSelect={setSelectedFieldId}
                         onOpenLayoutMenu={openFieldLayoutMenu}
+                        onClearLayout={clearFieldLayoutPreset}
                         onRemove={removeField}
                         showDragHandle={fields.length > 1}
                       />
