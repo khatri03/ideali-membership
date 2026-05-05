@@ -448,7 +448,7 @@ function MembershipDescriptionPanel({
             role="dialog"
             aria-modal="true"
             aria-label="About This Membership"
-            className="relative z-10 w-full max-w-3xl overflow-hidden rounded-[2rem] border p-5 shadow-2xl sm:p-6"
+            className="relative z-10 w-full max-w-3xl overflow-hidden rounded-4xl border p-5 shadow-2xl sm:p-6"
             style={{
               borderColor: theme.cardBorder,
               background: "rgba(255, 255, 255, 0.98)",
@@ -513,7 +513,7 @@ function StepBadge({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "relative flex min-w-[7.5rem] flex-1 flex-col items-center gap-1.5 rounded-none border-0 px-2 py-2 text-center transition sm:min-w-[10rem] sm:gap-2 sm:px-3",
+        "relative flex min-w-30 flex-1 flex-col items-center gap-1.5 rounded-none border-0 px-2 py-2 text-center transition sm:min-w-40 sm:gap-2 sm:px-3",
         disabled ? "cursor-not-allowed opacity-50" : "hover:opacity-100",
       ].join(" ")}
       style={{
@@ -614,6 +614,14 @@ function TrashIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
       <path d="M7 3a1 1 0 0 0-1 1v1H3.5a.5.5 0 0 0 0 1H4l.7 9.1A2 2 0 0 0 6.7 17h6.6a2 2 0 0 0 2-1.9L16 6h.5a.5.5 0 0 0 0-1H14V4a1 1 0 0 0-1-1H7Zm1 2V4h4v1H8Zm-1.2 2h6.4L12.7 15H7.3L6.8 7Zm2 2.2a.8.8 0 0 0-.8.8v2.8a.8.8 0 0 0 1.6 0v-2.8a.8.8 0 0 0-.8-.8Zm3 0a.8.8 0 0 0-.8.8v2.8a.8.8 0 0 0 1.6 0v-2.8a.8.8 0 0 0-.8-.8Z" />
+    </svg>
+  );
+}
+
+function DragHintIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M7 3.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2ZM7 13.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />
     </svg>
   );
 }
@@ -955,7 +963,7 @@ function ProfilePhotoField({
             onDrop={handleAvatarDrop}
             aria-label={value ? "Change profile photo" : "Choose profile photo"}
             title={value ? "Change profile photo" : "Choose profile photo"}
-            className={`mx-auto flex aspect-square w-[6rem] items-center justify-center overflow-hidden rounded-full border text-center shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] hover:opacity-95 sm:w-[7rem] lg:w-[8rem] ${isDropActive ? "scale-[1.01] ring-4 ring-cyan-200/70" : ""}`}
+            className={`mx-auto flex aspect-square w-24 items-center justify-center overflow-hidden rounded-full border text-center shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] hover:opacity-95 sm:w-28 lg:w-32 ${isDropActive ? "scale-[1.01] ring-4 ring-cyan-200/70" : ""}`}
             style={{
               borderColor: theme.cardBorder,
               background: theme.tileBackground,
@@ -1014,7 +1022,7 @@ function ProfilePhotoField({
       />
 
       {editorOpen && editorUrl && editorSource ? createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center px-4 py-6">
           <button
             type="button"
             aria-label="Close avatar editor"
@@ -1025,7 +1033,7 @@ function ProfilePhotoField({
             role="dialog"
             aria-modal="true"
             aria-label="Edit avatar"
-            className="relative z-10 w-full max-w-2xl overflow-hidden rounded-[2rem] border bg-white p-0 shadow-2xl"
+            className="relative z-10 w-full max-w-2xl overflow-hidden rounded-4xl border bg-white p-0 shadow-2xl"
             style={{
               borderColor: "rgba(59, 130, 246, 0.15)",
               boxShadow: `0 30px 80px -30px ${theme.cardShadow}`,
@@ -1045,10 +1053,10 @@ function ProfilePhotoField({
 
             <div className="flex flex-col items-center gap-4 px-6 py-6">
               <div className="flex w-full items-center justify-center">
-                <div className="rounded-[2rem] border border-blue-50 bg-blue-50/50 p-5">
+                <div className="rounded-4xl border border-blue-50 bg-blue-50/50 p-5">
                   <div
                     ref={cropViewportRef}
-                    className={`relative h-[240px] w-[240px] overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-inner ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                    className={`relative h-60 w-60 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-inner ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
                     onPointerDown={handleCropPointerDown}
                   >
                     <img
@@ -1067,6 +1075,12 @@ function ProfilePhotoField({
                         userSelect: "none",
                       }}
                     />
+                    {!isDragging ? (
+                      <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/70 bg-slate-950/55 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-sm">
+                        <DragHintIcon className="h-3.5 w-3.5" />
+                        Drag to reposition
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -1117,7 +1131,7 @@ function ProfilePhotoField({
       ) : null}
 
       {isRemoveConfirmOpen ? createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-10000 flex items-center justify-center px-4 py-6">
           <button
             type="button"
             aria-label="Close remove avatar dialog"
@@ -1128,7 +1142,7 @@ function ProfilePhotoField({
             role="dialog"
             aria-modal="true"
             aria-label="Remove profile photo"
-            className="relative z-10 w-full max-w-md overflow-hidden rounded-[1.75rem] border bg-white shadow-2xl"
+            className="relative z-10 w-full max-w-md overflow-hidden rounded-3xl border bg-white shadow-2xl"
             style={{
               borderColor: theme.cardBorder,
               boxShadow: `0 24px 70px -28px ${theme.cardShadow}`,
@@ -2565,7 +2579,7 @@ function YourInformationStep({
 }) {
   return (
     <section
-      className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
+      className="rounded-4xl border p-4 sm:p-5 lg:p-6"
       style={{
         borderColor: theme.cardBorder,
         background: theme.cardBackground,
@@ -3007,7 +3021,7 @@ export function MembershipRegisterWizard({
 
     return (
       <form
-        className="w-full max-w-[100rem] space-y-6"
+        className="w-full max-w-400 space-y-6"
         onSubmit={(event) => {
           if (info) {
             const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
@@ -3025,7 +3039,7 @@ export function MembershipRegisterWizard({
         }}
       >
       {submitError ? (
-        <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
+        <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
           {submitError}
         </div>
       ) : null}
@@ -3052,7 +3066,7 @@ export function MembershipRegisterWizard({
         </div>
       </div>
       <section
-        className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
+      className="rounded-4xl border p-4 sm:p-5 lg:p-6"
         style={{
           borderColor: theme.cardBorder,
           background: theme.cardBackground,
