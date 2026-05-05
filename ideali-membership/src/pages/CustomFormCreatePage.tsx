@@ -416,12 +416,14 @@ function ControlIcon({
 
 function SortableFieldCard({
   field,
+  span,
   selected,
   onSelect,
   onRemove,
   showDragHandle,
 }: {
   field: CustomFormFieldDraft;
+  span: number;
   selected: boolean;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
@@ -438,16 +440,20 @@ function SortableFieldCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const combinedStyle = {
+    ...(isDragging ? { transition, opacity: 0 } : style),
+    gridColumn: `span ${span} / span ${span}`,
+  };
 
   return (
     <article
       ref={setNodeRef}
-      style={isDragging ? { transition, opacity: 0 } : style}
       className={[
         "rounded-3xl border bg-white p-4 shadow-sm transition cursor-default hover:cursor-default",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
         isDragging ? "opacity-70" : "",
       ].join(" ")}
+      style={combinedStyle}
       onClick={() => onSelect(field.id)}
       title="Click to select"
     >
@@ -1754,20 +1760,26 @@ export function CustomFormCreatePage() {
                   </div>
                 ) : null}
                 <SortableContext items={fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
-                  {fields.length > 0 ? (
-                    <div className="space-y-4">
-                      {fields.map((field) => (
-                        <SortableFieldCard
-                          key={field.id}
-                          field={field}
-                          selected={field.id === selectedFieldId}
-                          onSelect={setSelectedFieldId}
-                          onRemove={removeField}
-                          showDragHandle={fields.length > 1}
-                        />
-                      ))}
-                    </div>
-                  ) : (
+                {fields.length > 0 ? (
+                  <div
+                    className="grid gap-4"
+                    style={{
+                      gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+                    }}
+                  >
+                    {fields.map((field) => (
+                      <SortableFieldCard
+                        key={field.id}
+                        field={field}
+                        span={getPreviewColumnSpan(field, previewColumnCount)}
+                        selected={field.id === selectedFieldId}
+                        onSelect={setSelectedFieldId}
+                        onRemove={removeField}
+                        showDragHandle={fields.length > 1}
+                      />
+                    ))}
+                  </div>
+                ) : (
                     <div className="flex min-h-[20rem] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-4 text-center sm:min-h-[24rem] sm:px-6 lg:min-h-[28rem]">
                       <div className="max-w-md">
                         <p className="text-lg font-semibold text-slate-900">Drop your first field here</p>
