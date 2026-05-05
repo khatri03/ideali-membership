@@ -22,6 +22,27 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  AlignLeft,
+  CalendarDays,
+  CheckSquare2,
+  ChevronDown,
+  CircleDot,
+  CircleHelp,
+  Globe2,
+  Hash,
+  LockKeyhole,
+  Mail,
+  MapPinned,
+  Paperclip,
+  Palette,
+  Phone,
+  Send,
+  SlidersHorizontal,
+  type LucideIcon,
+  Type,
+  ListChecks,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { MultiSelectInput } from "../components/inputs/MultiSelectInput/MultiSelectInput";
 import { PasswordInput } from "../components/inputs/PasswordInput/PasswordInput";
@@ -77,22 +98,25 @@ type ActiveDragRect = {
   height: number;
 } | null;
 
-const CONTROL_ICON_MAP: Record<string, string> = {
-  "fas fa-font": "Aa",
-  "fas fa-envelope": "@",
-  "fas fa-hashtag": "#",
-  "fas fa-calendar": "31",
-  "fas fa-caret-down": "v",
-  "fas fa-check-square": "[]",
-  "fas fa-dot-circle": "o",
-  "fas fa-align-left": "|||",
-  "fas fa-paperclip": "+",
-  "fas fa-lock": "*",
-  "fas fa-list": "LS",
-  "fas fa-palette": "~",
-  "fas fa-sliders-h": "=",
-  "fas fa-paper-plane": ">",
-  "fas fa-square-phone": "T",
+const CONTROL_ICON_MAP: Record<string, LucideIcon> = {
+  text: Type,
+  email: Mail,
+  number: Hash,
+  date: CalendarDays,
+  select: ChevronDown,
+  checkbox: CheckSquare2,
+  radio: CircleDot,
+  textarea: AlignLeft,
+  file: Paperclip,
+  password: LockKeyhole,
+  tel: Phone,
+  phone: Phone,
+  multiselect: ListChecks,
+  country: Globe2,
+  state: MapPinned,
+  color: Palette,
+  range: SlidersHorizontal,
+  submit: Send,
 };
 
 function createFieldId() {
@@ -354,12 +378,8 @@ function readResponseData(payload: unknown) {
   return payload;
 }
 
-function getControlGlyph(iconClass: string, controlType: string, label: string) {
-  return (
-    CONTROL_ICON_MAP[iconClass] ??
-    CONTROL_ICON_MAP[`fas fa-${controlType}`] ??
-    label.slice(0, 1).toUpperCase()
-  );
+function getControlIcon(controlType: string) {
+  return CONTROL_ICON_MAP[controlType.trim().toLowerCase()] ?? CircleHelp;
 }
 
 function getControlTooltip(control: CustomFormControl) {
@@ -420,6 +440,8 @@ function ControlPaletteItem({
   count: number;
   onDoubleClick: (control: CustomFormControl) => void;
 }) {
+  const Icon = getControlIcon(control.controlType);
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `palette-${control.id}`,
     data: {
@@ -446,7 +468,7 @@ function ControlPaletteItem({
       ].join(" ")}
     >
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700 cursor-pointer hover:cursor-pointer select-none touch-none">
-        {getControlGlyph(control.iconClass, control.controlType, control.name)}
+        <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
       <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
         {control.name}
@@ -465,23 +487,21 @@ function ControlPaletteItem({
 }
 
 function ControlIcon({
-  iconClass,
   controlType,
   label,
 }: {
-  iconClass: string;
   controlType: string;
   label: string;
 }) {
+  const Icon = getControlIcon(controlType);
+
   return (
     <div
       className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-cyan-700 cursor-grab hover:cursor-grab select-none touch-none"
       title={label}
       aria-hidden="true"
     >
-      <span className="text-sm font-bold">
-        {getControlGlyph(iconClass, controlType, label)}
-      </span>
+      <Icon className="h-5 w-5" aria-hidden="true" />
     </div>
   );
 }
@@ -1074,9 +1094,7 @@ function DragGhost({ item, rect }: { item: ActiveDragItem; rect: ActiveDragRect 
         className="flex cursor-grabbing items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10"
         style={style}
       >
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700">
-          {getControlGlyph(item.control.iconClass, item.control.controlType, item.control.name)}
-        </div>
+        <ControlIcon controlType={item.control.controlType} label={item.control.name} />
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
           {item.control.name}
         </p>
