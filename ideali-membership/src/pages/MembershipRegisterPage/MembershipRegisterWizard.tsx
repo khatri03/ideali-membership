@@ -3060,9 +3060,8 @@ export function MembershipRegisterWizard({
         </div>
       </div>
       <section
-      className="rounded-4xl border p-4 sm:p-5 lg:p-6"
+        className="rounded-4xl p-4 sm:p-5 lg:p-6"
         style={{
-          borderColor: theme.cardBorder,
           background: theme.cardBackground,
         }}
       >
