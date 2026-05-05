@@ -9,6 +9,7 @@ import type {
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
 } from "../../types/membershipRegistration";
+import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
 
@@ -1092,7 +1093,7 @@ function ProfilePhotoField({
   );
 }
 
-type CustomFormValue = string | boolean | File | null;
+type CustomFormValue = string | string[] | boolean | File | null;
 type CustomFormValues = Record<string, CustomFormValue>;
 type CustomFormErrors = Record<string, string>;
 type CustomQuestionValue = CustomFormValue;
@@ -1131,9 +1132,31 @@ function getCustomFormControlType(controlTypeId: number) {
       return "password";
     case 14:
       return "phone";
+    case 15:
+      return "multiselect";
     default:
       return "text";
   }
+}
+
+function parseDelimitedValues(value: string | null | undefined) {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function getCustomFormMultiSelectDefaultValue(field: MembershipRegistrationCustomFormField) {
+  const selectedValues = field.options.filter((option) => option.isDefault).map((option) => option.value);
+  if (selectedValues.length > 0) {
+    return Array.from(new Set(selectedValues));
+  }
+
+  return parseDelimitedValues(field.defaultValue);
 }
 
 function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField) {
@@ -1145,6 +1168,10 @@ function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField)
 
   if (controlType === "file") {
     return null;
+  }
+
+  if (controlType === "multiselect") {
+    return getCustomFormMultiSelectDefaultValue(field);
   }
 
   if (controlType === "select" || controlType === "radio") {
@@ -1296,6 +1323,7 @@ function validateCustomFormField(
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const textValue = typeof value === "string" ? value.trim() : "";
   const normalizedString = typeof value === "string" ? value : "";
+  const selectedValues = Array.isArray(value) ? value.map((item) => item.trim()).filter(Boolean) : [];
   const requiredMessage = field.requiredMessage?.trim() || `${toSentenceCase(field.controlLabel)} is required.`;
 
   if (controlType === "checkbox") {
@@ -1308,6 +1336,21 @@ function validateCustomFormField(
 
   if (controlType === "file") {
     return getFileValidationError(field, value);
+  }
+
+  if (controlType === "multiselect") {
+    if (field.isMandatory && selectedValues.length === 0) {
+      return requiredMessage;
+    }
+
+    if (selectedValues.length > 0 && field.options.length > 0) {
+      const allowedValues = new Set(field.options.map((option) => option.value));
+      if (selectedValues.some((item) => !allowedValues.has(item))) {
+        return "Select a valid option.";
+      }
+    }
+
+    return "";
   }
 
   if (controlType === "email" && textValue) {
@@ -1825,6 +1868,7 @@ function CustomFormFieldCard({
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const label = field.placeHolder || field.controlLabel;
   const defaultOptionValue = typeof value === "string" ? value : "";
+  const multiSelectValue = Array.isArray(value) ? value : [];
   const checkboxValue = typeof value === "boolean" ? value : false;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -1873,6 +1917,16 @@ function CustomFormFieldCard({
             </option>
           ))}
         </select>
+      ) : controlType === "multiselect" ? (
+        <MultiSelectInput
+          value={multiSelectValue}
+          onChange={onChange}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={label || "Select one or more"}
+        />
       ) : controlType === "radio" && field.options.length > 0 ? (
         <div className="space-y-2">
           {field.options.map((option) => (

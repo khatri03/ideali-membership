@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { MultiSelectInput } from "../components/inputs/MultiSelectInput/MultiSelectInput";
 import { PasswordInput } from "../components/inputs/PasswordInput/PasswordInput";
 import {
   createCustomForm,
@@ -87,6 +88,7 @@ const CONTROL_ICON_MAP: Record<string, string> = {
   "fas fa-align-left": "|||",
   "fas fa-paperclip": "+",
   "fas fa-lock": "*",
+  "fas fa-list": "LS",
   "fas fa-palette": "~",
   "fas fa-sliders-h": "=",
   "fas fa-paper-plane": ">",
@@ -118,6 +120,22 @@ function clearDefaultOption(options: CustomFormOptionDraft[], optionId: string) 
     ...option,
     isDefault: option.id === optionId,
   }));
+}
+
+function parseDelimitedDefaultValues(value: string | null | undefined) {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function getSelectedOptionValues(field: CustomFormFieldDraft) {
+  const selectedByFlag = field.options.filter((option) => option.isDefault).map((option) => option.value);
+  return selectedByFlag.length > 0 ? Array.from(new Set(selectedByFlag)) : parseDelimitedDefaultValues(field.defaultValue);
 }
 
 function toSentenceCase(value: string | null | undefined) {
@@ -172,6 +190,41 @@ function normalizeFields(fields: CustomFormFieldDraft[]) {
     ...field,
     displayOrder: index + 1,
   }));
+}
+
+function useCompactViewport() {
+  const [isCompactViewport, setIsCompactViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia("(max-width: 639px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const legacyMediaQuery = mediaQuery as MediaQueryList & {
+      addListener: (listener: () => void) => void;
+      removeListener: (listener: () => void) => void;
+    };
+    const updateViewport = () => setIsCompactViewport(mediaQuery.matches);
+
+    updateViewport();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateViewport);
+      return () => mediaQuery.removeEventListener("change", updateViewport);
+    }
+
+    legacyMediaQuery.addListener(updateViewport);
+    return () => legacyMediaQuery.removeListener(updateViewport);
+  }, []);
+
+  return isCompactViewport;
 }
 
 function createFieldDraft(control: CustomFormControl, displayOrder: number): CustomFormFieldDraft {
@@ -239,6 +292,14 @@ function mapPreviewFieldToDraft(field: {
   } | null;
 }): CustomFormFieldDraft {
   const fallbackRequiredMessage = field.isMandatory ? `${toSentenceCase(field.controlLabel)} is required.` : "";
+  const controlType = field.formControl?.controlType?.toLowerCase() ?? "";
+  const defaultValues = controlType === "multiselect" ? parseDelimitedDefaultValues(field.defaultValue) : [];
+  const resolvedDefaultValue =
+    controlType === "checkbox"
+      ? getCheckboxDefaultValue(field.defaultValue)
+      : controlType === "multiselect"
+        ? defaultValues.join(", ")
+        : field.defaultValue ?? "";
 
   return {
     id: createFieldId(),
@@ -256,17 +317,14 @@ function mapPreviewFieldToDraft(field: {
     acceptedFileTypes: normalizeAcceptedFileTypes(field.acceptedFileTypes),
     minLength: field.minLength === null ? "" : String(field.minLength),
     maxLength: field.maxLength === null ? "" : String(field.maxLength),
-    defaultValue:
-      field.formControl?.controlType?.toLowerCase() === "checkbox"
-        ? getCheckboxDefaultValue(field.defaultValue)
-        : field.defaultValue ?? "",
+    defaultValue: resolvedDefaultValue,
     displayOrder: field.displayOrder,
     layoutColumn: normalizeFieldLayoutColumn(field.layoutColumn),
     options: field.options.map((option) => ({
       id: createOptionId(),
       displayText: option.displayText,
       value: option.value,
-      isDefault: field.defaultValue === option.value,
+      isDefault: controlType === "multiselect" ? defaultValues.includes(option.value) : field.defaultValue === option.value,
     })),
   };
 }
@@ -349,6 +407,10 @@ function getDefaultOptionValue(field: CustomFormFieldDraft) {
   );
 }
 
+function getDefaultMultiSelectValues(field: CustomFormFieldDraft) {
+  return getSelectedOptionValues(field);
+}
+
 function ControlPaletteItem({
   control,
   count,
@@ -428,6 +490,7 @@ function SortableFieldCard({
   field,
   span,
   layoutColumn,
+  isCompactViewport,
   selected,
   onSelect,
   onOpenLayoutMenu,
@@ -438,6 +501,7 @@ function SortableFieldCard({
   field: CustomFormFieldDraft;
   span: number;
   layoutColumn: number;
+  isCompactViewport: boolean;
   selected: boolean;
   onSelect: (id: string) => void;
   onOpenLayoutMenu: (fieldId: string, position: { x: number; y: number }) => void;
@@ -458,7 +522,7 @@ function SortableFieldCard({
   };
   const combinedStyle = {
     ...(isDragging ? { transition, opacity: 0 } : style),
-    gridColumn: `span ${span} / span ${span}`,
+    gridColumn: isCompactViewport ? "1 / -1" : `span ${span} / span ${span}`,
   };
 
   return (
@@ -474,7 +538,7 @@ function SortableFieldCard({
       onClick={() => onSelect(field.id)}
       title="Click to select"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{field.label}</h3>
@@ -507,7 +571,7 @@ function SortableFieldCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
           {showDragHandle ? (
             <button
               type="button"
@@ -604,6 +668,13 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
   const controlType = field.controlType.toLowerCase();
   const placeholder = field.placeholder || field.label;
   const defaultOptionValue = getDefaultOptionValue(field);
+  const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => getDefaultMultiSelectValues(field));
+
+  useEffect(() => {
+    if (controlType === "multiselect") {
+      setPreviewMultiSelectValue(getDefaultMultiSelectValues(field));
+    }
+  }, [controlType, field.defaultValue, field.options, field.id]);
 
   switch (controlType) {
     case "text":
@@ -655,6 +726,18 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
             </option>
           ))}
         </select>
+      );
+    case "multiselect":
+      return (
+        <MultiSelectInput
+          value={previewMultiSelectValue}
+          onChange={setPreviewMultiSelectValue}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={field.placeholder || "Select one or more"}
+        />
       );
     case "checkbox":
       return (
@@ -736,6 +819,13 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
   const controlType = field.controlType.toLowerCase();
   const placeholder = field.placeholder || field.label;
   const defaultOptionValue = getDefaultOptionValue(field);
+  const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => getDefaultMultiSelectValues(field));
+
+  useEffect(() => {
+    if (controlType === "multiselect") {
+      setPreviewMultiSelectValue(getDefaultMultiSelectValues(field));
+    }
+  }, [controlType, field.defaultValue, field.options, field.id]);
 
   switch (controlType) {
     case "text":
@@ -785,6 +875,18 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
             </option>
           ))}
         </select>
+      );
+    case "multiselect":
+      return (
+        <MultiSelectInput
+          value={previewMultiSelectValue}
+          onChange={setPreviewMultiSelectValue}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={field.placeholder || "Select one or more"}
+        />
       );
     case "checkbox":
       return (
@@ -844,12 +946,17 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
 function FormPreviewField({
   field,
   span,
+  isCompactViewport,
 }: {
   field: CustomFormFieldDraft;
   span: number;
+  isCompactViewport: boolean;
 }) {
   return (
-    <div className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4" style={{ gridColumn: `span ${span} / span ${span}` }}>
+    <div
+      className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4"
+      style={{ gridColumn: isCompactViewport ? "1 / -1" : `span ${span} / span ${span}` }}
+    >
       <div className="space-y-3">
         <PreviewFieldLabel field={field} />
         <PreviewFieldRenderer field={field} />
@@ -1052,6 +1159,7 @@ function ToggleField({
 export function CustomFormCreatePage() {
   const { customFormUniqueId } = useParams<{ customFormUniqueId?: string }>();
   const isEditMode = Boolean(customFormUniqueId);
+  const isCompactViewport = useCompactViewport();
   const [controls, setControls] = useState<CustomFormControl[]>([]);
   const [isLoadingControls, setIsLoadingControls] = useState(true);
   const [controlsError, setControlsError] = useState<string | null>(null);
@@ -1681,6 +1789,19 @@ export function CustomFormCreatePage() {
 
   function setDefaultOption(optionId: string) {
     updateSelectedField((field) => {
+      if (field.controlType.toLowerCase() === "multiselect") {
+        const nextOptions = field.options.map((option) =>
+          option.id === optionId ? { ...option, isDefault: !option.isDefault } : option,
+        );
+        const nextDefaultValues = nextOptions.filter((option) => option.isDefault).map((option) => option.value);
+
+        return {
+          ...field,
+          defaultValue: nextDefaultValues.join(", "),
+          options: nextOptions,
+        };
+      }
+
       const nextOptions = clearDefaultOption(field.options, optionId);
       const nextDefault = nextOptions.find((option) => option.id === optionId);
 
@@ -1707,7 +1828,7 @@ export function CustomFormCreatePage() {
       options: (() => {
         const next = field.options.filter((option) => option.id !== optionToRemoveId);
 
-        if (next.length > 0 && !next.some((option) => option.isDefault)) {
+        if (field.controlType.toLowerCase() !== "multiselect" && next.length > 0 && !next.some((option) => option.isDefault)) {
           const firstOption = next[0];
           if (firstOption) {
             next[0] = { ...firstOption, isDefault: true };
@@ -1721,6 +1842,13 @@ export function CustomFormCreatePage() {
 
         if (next.length === 0) {
           return "";
+        }
+
+        if (field.controlType.toLowerCase() === "multiselect") {
+          return next
+            .filter((option) => option.isDefault)
+            .map((option) => option.value)
+            .join(", ");
         }
 
         const nextDefault = next.find((option) => option.isDefault) ?? next[0];
@@ -1746,10 +1874,10 @@ export function CustomFormCreatePage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-              Custom Forms
+              Custom Form Designer
             </p>
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
-              {isEditMode ? "Edit custom form" : "Build a new custom form"}
+              {isEditMode ? "Edit custom form" : "Design a custom form"}
             </h1>
             <p className="mt-3 text-slate-600">
               {isEditMode
@@ -1762,7 +1890,7 @@ export function CustomFormCreatePage() {
             to={APP_ROUTES.customForms}
             className="inline-flex items-center justify-center rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
           >
-            Back to forms
+            Back to forms list
           </Link>
         </div>
 
@@ -1983,18 +2111,14 @@ export function CustomFormCreatePage() {
                 ) : null}
                 <SortableContext items={fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
                 {fields.length > 0 ? (
-                  <div
-                    className="grid gap-4"
-                    style={{
-                      gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
-                    }}
-                  >
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
                     {fields.map((field) => (
                       <SortableFieldCard
                         key={field.id}
                         field={field}
                         span={getPreviewColumnSpan(field, previewColumnCount)}
                         layoutColumn={normalizeLayoutColumn(field.layoutColumn ?? previewColumnCount)}
+                        isCompactViewport={isCompactViewport}
                         selected={field.id === selectedFieldId}
                         onSelect={setSelectedFieldId}
                         onOpenLayoutMenu={openFieldLayoutMenu}
@@ -2074,6 +2198,30 @@ export function CustomFormCreatePage() {
                         { label: "Checked", value: "true" },
                       ]}
                     />
+                  ) : selectedControl?.controlType.toLowerCase() === "multiselect" ? (
+                    <div className="space-y-3">
+                      <MultiSelectInput
+                        value={getDefaultMultiSelectValues(selectedField)}
+                        onChange={(nextValues) =>
+                          updateSelectedField((field) => ({
+                            ...field,
+                            defaultValue: nextValues.join(", "),
+                            options: field.options.map((option) => ({
+                              ...option,
+                              isDefault: nextValues.includes(option.value),
+                            })),
+                          }))
+                        }
+                        options={selectedField.options.map((option) => ({
+                          label: option.displayText,
+                          value: option.value,
+                        }))}
+                        placeholder="Choose default selections"
+                      />
+                      <p className="text-xs leading-5 text-slate-500">
+                        Select one or more defaults from the dropdown.
+                      </p>
+                    </div>
                   ) : selectedControl?.controlType.toLowerCase() === "file" ? null : (
                     <FieldPreview
                       title="Default value"
@@ -2421,7 +2569,7 @@ export function CustomFormCreatePage() {
       {isPreviewOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
           <div className="flex max-h-[92vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+            <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
                   Preview
@@ -2446,17 +2594,13 @@ export function CustomFormCreatePage() {
                 ) : null}
 
                 {fields.length > 0 ? (
-                  <div
-                    className="grid gap-5"
-                    style={{
-                      gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
-                    }}
-                  >
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
                     {fields.map((field) => (
                       <FormPreviewField
                         key={field.id}
                         field={field}
                         span={getPreviewColumnSpan(field, previewColumnCount)}
+                        isCompactViewport={isCompactViewport}
                       />
                     ))}
                   </div>
@@ -2481,7 +2625,7 @@ export function CustomFormCreatePage() {
           onContextMenu={(event) => event.preventDefault()}
         >
           <div
-            className="absolute w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/20"
+            className="absolute w-48 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/20"
             style={fieldLayoutMenuStyle}
             onMouseDown={(event) => event.stopPropagation()}
           >
