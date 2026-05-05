@@ -89,30 +89,17 @@ function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
 
 function FieldTooltip({ text, theme }: { text: string; theme: MembershipTheme }) {
   return (
-    <span className="group/tooltip relative inline-flex shrink-0 align-middle text-current" style={{ color: theme.bodyColor }}>
+    <span className="inline-flex shrink-0 align-middle text-current" style={{ color: theme.bodyColor }}>
       <button
         type="button"
         aria-label="Show additional field help"
+        title={text}
         className="inline-flex h-5 w-5 items-center justify-center rounded-full text-current transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
       >
         <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current opacity-70">
           <path d="M10 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm0 2a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13Zm0 2.25A1.25 1.25 0 1 0 10 8a1.25 1.25 0 0 0 0-2.5Zm-1 4.1h2V14h-2V9.85Z" />
         </svg>
       </button>
-
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-max max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border px-3 py-2 text-left text-xs leading-5 shadow-lg opacity-0 scale-95 transition duration-150 group-hover/tooltip:opacity-100 group-hover/tooltip:scale-100 group-focus-within/tooltip:opacity-100 group-focus-within/tooltip:scale-100"
-        style={{
-          backgroundColor: "rgba(255, 255, 255, 0.98)",
-          borderColor: theme.cardBorder,
-          color: theme.titleColor,
-          boxShadow: "0 14px 32px rgba(15, 23, 42, 0.14)",
-          backdropFilter: "blur(8px)",
-        }}
-      >
-        {text}
-      </span>
     </span>
   );
 }
@@ -1653,6 +1640,7 @@ function CustomQuestionFieldCard({
     <div
       className={`group relative space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
       style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
+      title={tooltipText || undefined}
     >
       <div className="space-y-1">
         <div className="flex items-start gap-2">
@@ -1954,7 +1942,7 @@ function CustomQuestionsSection({
 
 function getCustomFormGridClass(layoutColumn: number) {
   void layoutColumn;
-  return "grid grid-cols-12 gap-4";
+  return "grid grid-cols-1 gap-4 md:grid-cols-12";
 }
 
 function getCustomFormFieldGridSpanClass(layoutColumn: number) {
@@ -1962,11 +1950,11 @@ function getCustomFormFieldGridSpanClass(layoutColumn: number) {
     case 1:
       return "col-span-12";
     case 2:
-      return "col-span-6";
+      return "col-span-12 md:col-span-6";
     case 3:
-      return "col-span-4";
+      return "col-span-12 md:col-span-6 lg:col-span-4";
     case 4:
-      return "col-span-3";
+      return "col-span-12 md:col-span-6 lg:col-span-3";
     default:
       return "col-span-12";
   }
@@ -2014,6 +2002,7 @@ function CustomFormFieldCard({
     <div
       className={`group relative space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass} ${spanClass}`.trim()}
       style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
+      title={tooltipText || undefined}
     >
       <div className="space-y-1">
         <div className="flex items-start gap-2">
