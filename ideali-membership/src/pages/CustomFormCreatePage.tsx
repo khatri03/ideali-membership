@@ -763,14 +763,19 @@ function FormPreviewField({
   field: CustomFormFieldDraft;
   maxColumns: number;
 }) {
-  const span = Math.max(1, Math.min(normalizeLayoutColumn(field.layoutColumn ?? maxColumns), normalizeLayoutColumn(maxColumns)));
+  const displayColumns = field.layoutColumn ?? maxColumns;
+  const layoutLabel = `1x${Math.max(1, Math.min(4, displayColumns))}`;
 
   return (
     <div
-      className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4"
-      style={{ gridColumn: `span ${span} / span ${span}` }}
+      className="col-span-full h-full rounded-3xl border border-slate-200 bg-slate-50 p-4"
     >
-      <PreviewFieldLabel field={field} />
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <PreviewFieldLabel field={field} />
+        <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
+          {layoutLabel}
+        </span>
+      </div>
       <PreviewFieldRenderer field={field} />
       {field.tooltip ? <p className="mt-2 text-xs text-slate-500">{field.tooltip}</p> : null}
     </div>

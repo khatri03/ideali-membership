@@ -788,12 +788,18 @@ function CustomFormPreviewField({
   const defaultOptionValue = getPreviewDefaultOptionValue(field.options, field.defaultValue);
   const label = field.placeHolder || field.controlLabel;
   const layoutColumn = normalizePreviewLayoutColumn(field.layoutColumn ?? formLayoutColumn);
+  const layoutLabel = `1x${layoutColumn}`;
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4" style={{ gridColumn: `span ${layoutColumn} / span ${layoutColumn}` }}>
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-sm font-semibold text-slate-800">{field.controlLabel}</span>
-        {field.isMandatory ? <span className="text-base font-bold leading-none text-rose-600">*</span> : null}
+    <div className="col-span-full rounded-3xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-800">{field.controlLabel}</span>
+          {field.isMandatory ? <span className="text-base font-bold leading-none text-rose-600">*</span> : null}
+        </div>
+        <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
+          {layoutLabel}
+        </span>
       </div>
 
       {controlType === "textarea" ? (
