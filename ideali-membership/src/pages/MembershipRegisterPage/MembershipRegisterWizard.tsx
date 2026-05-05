@@ -707,6 +707,7 @@ function ProfilePhotoField({
   const [isDragging, setIsDragging] = useState(false);
   const [isDropActive, setIsDropActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!value) {
@@ -853,16 +854,21 @@ function ProfilePhotoField({
     openEditor(file);
   }
 
-  function handleAvatarRemove() {
-    const shouldRemove = window.confirm("Remove the selected avatar?");
-    if (!shouldRemove) {
-      return;
-    }
+  function openRemoveConfirm() {
+    setIsRemoveConfirmOpen(true);
+  }
 
+  function closeRemoveConfirm() {
+    setIsRemoveConfirmOpen(false);
+  }
+
+  function confirmAvatarRemove() {
     onChange(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+
+    setIsRemoveConfirmOpen(false);
   }
 
   function isImageFile(file: File | null) {
@@ -949,14 +955,14 @@ function ProfilePhotoField({
             onDrop={handleAvatarDrop}
             aria-label={value ? "Change profile photo" : "Choose profile photo"}
             title={value ? "Change profile photo" : "Choose profile photo"}
-            className={`mx-auto flex aspect-square w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border text-center shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] hover:opacity-95 sm:max-w-[18rem] lg:max-w-[20rem] ${isDropActive ? "scale-[1.01] ring-4 ring-cyan-200/70" : ""}`}
+            className={`mx-auto flex aspect-square w-[6rem] items-center justify-center overflow-hidden rounded-full border text-center shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] hover:opacity-95 sm:w-[7rem] lg:w-[8rem] ${isDropActive ? "scale-[1.01] ring-4 ring-cyan-200/70" : ""}`}
             style={{
               borderColor: theme.cardBorder,
               background: theme.tileBackground,
               color: theme.tileValueColor,
             }}
           >
-            <div className="flex h-full w-full items-center justify-center p-4">
+            <div className={`flex h-full w-full items-center justify-center ${previewUrl ? "p-0" : "p-4"}`}>
               {previewUrl ? (
                 <img src={previewUrl} alt="Selected avatar preview" className="h-full w-full rounded-full object-cover" />
               ) : (
@@ -980,7 +986,7 @@ function ProfilePhotoField({
           {value ? (
             <button
               type="button"
-              onClick={handleAvatarRemove}
+              onClick={openRemoveConfirm}
               aria-label="Remove profile photo"
               title="Remove profile photo"
               className="absolute left-1/2 top-1/2 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-white/90 shadow-lg transition hover:scale-105 hover:bg-white"
@@ -1109,7 +1115,62 @@ function ProfilePhotoField({
         </div>,
         document.body,
       ) : null}
-    </div>
+
+      {isRemoveConfirmOpen ? createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            aria-label="Close remove avatar dialog"
+            className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"
+            onClick={closeRemoveConfirm}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Remove profile photo"
+            className="relative z-10 w-full max-w-md overflow-hidden rounded-[1.75rem] border bg-white shadow-2xl"
+            style={{
+              borderColor: theme.cardBorder,
+              boxShadow: `0 24px 70px -28px ${theme.cardShadow}`,
+            }}
+          >
+            <div className="space-y-3 px-6 py-6">
+              <div className="space-y-1">
+                <h3 className="text-xl font-semibold" style={{ color: theme.titleColor }}>
+                  Remove profile photo?
+                </h3>
+                <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+                  This will clear the selected avatar. You can add a new one anytime.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeRemoveConfirm}
+                  className="rounded-2xl border px-4 py-2.5 text-sm font-semibold transition hover:bg-black/5"
+                  style={{
+                    borderColor: theme.cardBorder,
+                    color: theme.titleColor,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAvatarRemove}
+                  className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                  style={{ background: theme.level1 }}
+                >
+                  Remove photo
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>,
+        document.body,
+      ) : null}
+  </div>
   );
 }
 
@@ -2820,9 +2881,10 @@ export function MembershipRegisterWizard({
     setCustomQuestionErrors({});
   }, [info]);
 
-  const visibleSteps = STEPS.filter((step) => !("hidden" in step && step.hidden));
+  const visibleSteps = STEPS;
 
   const canGoNext = currentStep === 0 ? pricingStepComplete : true;
+  const userInformationStepComplete = Object.keys(validateUserLoginStep(form)).length === 0;
 
   const stepTitles = visibleSteps.map((step, index) => ({
     ...step,
@@ -2830,8 +2892,9 @@ export function MembershipRegisterWizard({
     completed: index < currentStep,
     disabled:
       index > currentStep ||
-      (index === 1 && (!pricingStepComplete || !questionnaireStepComplete)) ||
-      (index === 2 && (!pricingStepComplete || !questionnaireStepComplete)),
+      (index === 1 && !pricingStepComplete) ||
+      (index === 2 && (!pricingStepComplete || !userInformationStepComplete)) ||
+      (index === 3 && (!pricingStepComplete || !userInformationStepComplete || !questionnaireStepComplete)),
   }));
 
   function handleNext() {
@@ -2839,7 +2902,14 @@ export function MembershipRegisterWizard({
       return;
     }
 
-    if (currentStep === 1 && info) {
+    if (currentStep === 1) {
+      const nextErrors = validateUserLoginStep(form);
+      if (Object.keys(nextErrors).length > 0) {
+        return;
+      }
+    }
+
+    if (currentStep === 2 && info) {
       const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
       const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
       setCustomFormErrors(nextErrors);
@@ -2981,8 +3051,23 @@ export function MembershipRegisterWizard({
           ))}
         </div>
       </div>
-
-        {currentStep === -1 ? (
+      <section
+        className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
+        style={{
+          borderColor: theme.cardBorder,
+          background: theme.cardBackground,
+        }}
+      >
+        {currentStep === 0 ? (
+          <PricingStep
+            info={info}
+            formattedMembershipCharges={formattedMembershipCharges}
+            theme={theme}
+            membershipDescription={membershipDescription}
+            form={form}
+            setField={setField}
+          />
+        ) : currentStep === 1 ? (
           <YourInformationStep
             form={form}
             errors={validateUserLoginStep(form)}
@@ -2990,9 +3075,7 @@ export function MembershipRegisterWizard({
             theme={theme}
             showBorders={showBorders}
           />
-        ) : null}
-
-        {currentStep === 1 ? (
+        ) : currentStep === 2 ? (
           <QuestionnaireStep
             customForms={info.membershipDetail.customForms}
             customQuestions={info.membershipDetail.customQuestions}
@@ -3007,27 +3090,9 @@ export function MembershipRegisterWizard({
             showBorders={showBorders}
           />
         ) : (
-          <section
-            className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
-            style={{
-              borderColor: theme.cardBorder,
-              background: theme.cardBackground,
-            }}
-          >
-              {currentStep === 0 ? (
-                <PricingStep
-                  info={info}
-                  formattedMembershipCharges={formattedMembershipCharges}
-                  theme={theme}
-                  membershipDescription={membershipDescription}
-                  form={form}
-                  setField={setField}
-                />
-              ) : (
-                <PaymentStep form={form} setField={setField} theme={theme} />
-              )}
-            </section>
-          )}
+          <PaymentStep form={form} setField={setField} theme={theme} />
+        )}
+      </section>
 
         <div className="mt-6 h-px w-full" style={{ background: theme.cardBorder, opacity: 0.7 }} />
 
