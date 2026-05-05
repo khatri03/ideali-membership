@@ -2658,7 +2658,7 @@ function YourInformationStep({
             theme={theme}
           />
 
-          <div className="grid gap-4">
+          <div className="grid gap-4 lg:grid-cols-3">
             <WizardField label="Email" theme={theme} error={errors.email} required>
               <input
                 type="email"
@@ -2670,7 +2670,7 @@ function YourInformationStep({
               />
             </WizardField>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:col-span-2">
               <WizardField label="Password" theme={theme} error={errors.password} required>
                 <PasswordInput
                   value={form.password}
