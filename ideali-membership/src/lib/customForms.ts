@@ -36,6 +36,11 @@ function asOptionalNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function normalizeFieldLayoutColumn(value: unknown) {
+  const normalized = asOptionalNumber(value);
+  return normalized === null ? null : Math.max(1, Math.min(4, normalized));
+}
+
 function asString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -193,28 +198,29 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
         uniqueId: asString(candidate.UniqueId ?? candidate.uniqueId),
         formId: asNumber(candidate.FormId ?? candidate.formId),
         formControlTypeId: asNumber(candidate.FormControlTypeId ?? candidate.formControlTypeId),
-          controlUniqueId: asString(candidate.ControlUniqueId ?? candidate.controlUniqueId) || null,
-          displayOrder: asNumber(candidate.DisplayOrder ?? candidate.displayOrder),
-          controlLabel: asString(candidate.ControlLabel ?? candidate.controlLabel),
-          placeHolder: asString(candidate.PlaceHolder ?? candidate.placeHolder) || null,
-          tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
-          isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
-          requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
-          acceptedFileTypes: resolveAcceptedFileTypes(
-            candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes,
-            controlAcceptedFileTypes,
-          ),
-          minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
-          maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
-          defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
-          options,
-          formControl: controlCandidate
-            ? {
-                id: asNumber(controlCandidate.Id ?? controlCandidate.id),
-                name: asString(controlCandidate.Name ?? controlCandidate.name),
-                canBeRequired: asBoolean(controlCandidate.CanBeRequired ?? controlCandidate.canBeRequired),
-                canHaveMaxLength: asBoolean(controlCandidate.CanHaveMaxLength ?? controlCandidate.canHaveMaxLength),
-                canHaveMinLength: asBoolean(controlCandidate.CanHaveMinLength ?? controlCandidate.canHaveMinLength),
+        controlUniqueId: asString(candidate.ControlUniqueId ?? candidate.controlUniqueId) || null,
+        displayOrder: asNumber(candidate.DisplayOrder ?? candidate.displayOrder),
+        layoutColumn: normalizeFieldLayoutColumn(candidate.LayoutColumn ?? candidate.layoutColumn),
+        controlLabel: asString(candidate.ControlLabel ?? candidate.controlLabel),
+        placeHolder: asString(candidate.PlaceHolder ?? candidate.placeHolder) || null,
+        tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
+        isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
+        requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
+        acceptedFileTypes: resolveAcceptedFileTypes(
+          candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes,
+          controlAcceptedFileTypes,
+        ),
+        minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
+        maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
+        defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
+        options,
+        formControl: controlCandidate
+          ? {
+              id: asNumber(controlCandidate.Id ?? controlCandidate.id),
+              name: asString(controlCandidate.Name ?? controlCandidate.name),
+              canBeRequired: asBoolean(controlCandidate.CanBeRequired ?? controlCandidate.canBeRequired),
+              canHaveMaxLength: asBoolean(controlCandidate.CanHaveMaxLength ?? controlCandidate.canHaveMaxLength),
+              canHaveMinLength: asBoolean(controlCandidate.CanHaveMinLength ?? controlCandidate.canHaveMinLength),
               canHavePlaceHolder: asBoolean(controlCandidate.CanHavePlaceHolder ?? controlCandidate.canHavePlaceHolder),
               controlType: asString(controlCandidate.ControlType ?? controlCandidate.controlType),
               defaultLabel: asString(controlCandidate.DefaultLabel ?? controlCandidate.defaultLabel),
@@ -222,9 +228,9 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
               iconClass: asString(controlCandidate.IconClass ?? controlCandidate.iconClass),
               acceptedFileTypes: controlAcceptedFileTypes,
             }
-            : null,
-        };
-      })
+          : null,
+      };
+    })
     : [];
 
   return {
@@ -232,7 +238,7 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
     name: asString(data.Name ?? data.name),
     headerText: asString(data.HeaderText ?? data.headerText),
     description: asString(data.Description ?? data.description) || null,
-    layoutColumn: Math.max(1, Math.min(4, asNumber(data.LayoutColumn ?? data.layoutColumn) || 1)),
+    layoutColumn: asOptionalNumber(data.LayoutColumn ?? data.layoutColumn),
     fields,
   } satisfies CustomFormPreview;
 }
@@ -248,6 +254,7 @@ interface CustomFormFieldPayload {
   ControlUniqueId: string;
   FormControlTypeId: number;
   DisplayOrder: number;
+  LayoutColumn: number | null;
   ControlLabel: string;
   PlaceHolder: string | null;
   Tooltip: string | null;
@@ -300,6 +307,7 @@ function mapFields(fields: CustomFormFieldDraft[]): CustomFormFieldPayload[] {
     ControlUniqueId: field.controlUniqueId,
     FormControlTypeId: field.controlId,
     DisplayOrder: field.displayOrder,
+    LayoutColumn: field.layoutColumn,
     ControlLabel: field.label,
     PlaceHolder: asNullableString(field.placeholder),
     Tooltip: asNullableString(field.tooltip),

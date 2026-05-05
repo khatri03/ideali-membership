@@ -18,6 +18,7 @@ export interface MembershipQuestionsStepState {
   previewCustomFormFields: Array<{
     id: number;
     displayOrder: number;
+    layoutColumn: number | null;
     controlLabel: string;
     placeHolder: string | null;
     tooltip: string | null;

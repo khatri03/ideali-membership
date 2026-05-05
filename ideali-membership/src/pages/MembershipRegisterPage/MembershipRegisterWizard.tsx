@@ -1793,6 +1793,25 @@ function getCustomFormGridClass(layoutColumn: number) {
   }
 }
 
+function getCustomFormFieldSpanClass(formLayoutColumn: number, fieldLayoutColumn: number | null) {
+  const maxColumns = Math.max(1, Math.min(4, formLayoutColumn));
+  const span = Math.max(1, Math.min(maxColumns, fieldLayoutColumn ?? maxColumns));
+
+  if (span <= 1) {
+    return "";
+  }
+
+  if (maxColumns === 2 || span === 2) {
+    return "md:col-span-2";
+  }
+
+  if (maxColumns === 3 || span === 3) {
+    return "md:col-span-2 lg:col-span-3";
+  }
+
+  return "md:col-span-2 lg:col-span-4";
+}
+
 function CustomFormFieldCard({
   field,
   value,
@@ -1800,6 +1819,7 @@ function CustomFormFieldCard({
   onChange,
   theme,
   showBorders,
+  formLayoutColumn,
 }: {
   field: MembershipRegistrationCustomFormField;
   value: CustomFormValue;
@@ -1807,6 +1827,7 @@ function CustomFormFieldCard({
   onChange: (value: CustomFormValue) => void;
   theme: MembershipTheme;
   showBorders: boolean;
+  formLayoutColumn: number;
 }) {
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const label = field.placeHolder || field.controlLabel;
@@ -1817,10 +1838,11 @@ function CustomFormFieldCard({
   const selectedFile = value instanceof File ? value : null;
   const controlBorderClass = getFieldBorderClass(showBorders);
   const dashedBorderClass = getFieldDashedBorderClass(showBorders);
+  const spanClass = getCustomFormFieldSpanClass(formLayoutColumn, field.layoutColumn);
 
   return (
     <div
-      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
+      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass} ${spanClass}`.trim()}
       style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
     >
       <div className="space-y-1">
@@ -2084,6 +2106,7 @@ function CustomFormSection({
               onChange={(nextValue) => onFieldChange(buildCustomFormFieldKey(form.uniqueId, field.uniqueId), nextValue)}
               theme={theme}
               showBorders={showBorders}
+              formLayoutColumn={layoutColumn}
             />
           ))}
         </div>

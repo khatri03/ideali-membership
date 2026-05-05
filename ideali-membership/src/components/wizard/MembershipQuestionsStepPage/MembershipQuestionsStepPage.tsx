@@ -756,8 +756,17 @@ function PhonePreviewInput({
   );
 }
 
+function normalizePreviewLayoutColumn(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.min(4, Math.floor(value)));
+}
+
 function CustomFormPreviewField({
   field,
+  formLayoutColumn,
 }: {
   field: {
     controlLabel: string;
@@ -771,14 +780,17 @@ function CustomFormPreviewField({
       value: string;
     }>;
     controlType: string;
+    layoutColumn: number | null;
   };
+  formLayoutColumn: number;
 }) {
   const controlType = field.controlType.toLowerCase();
   const defaultOptionValue = getPreviewDefaultOptionValue(field.options, field.defaultValue);
   const label = field.placeHolder || field.controlLabel;
+  const layoutColumn = normalizePreviewLayoutColumn(field.layoutColumn ?? formLayoutColumn);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4" style={{ gridColumn: `span ${layoutColumn} / span ${layoutColumn}` }}>
       <div className="mb-2 flex items-center gap-2">
         <span className="text-sm font-semibold text-slate-800">{field.controlLabel}</span>
         {field.isMandatory ? <span className="text-base font-bold leading-none text-rose-600">*</span> : null}
@@ -883,6 +895,7 @@ function CustomFormPreviewModal({
     }>;
     controlType: string;
     iconClass: string;
+    layoutColumn: number | null;
   }>;
   onClose: () => void;
 }) {
@@ -926,7 +939,7 @@ function CustomFormPreviewModal({
                 }}
               >
                 {fields.map((field) => (
-                  <CustomFormPreviewField key={field.id} field={field} />
+                  <CustomFormPreviewField key={field.id} field={field} formLayoutColumn={layoutColumn} />
                 ))}
               </div>
             ) : (

@@ -125,6 +125,22 @@ function toSentenceCase(value: string | null | undefined) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function normalizeLayoutColumn(value: number | null | undefined) {
+  if (!Number.isFinite(value ?? NaN)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.min(4, Math.trunc(value ?? 1)));
+}
+
+function normalizeFieldLayoutColumn(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(1, Math.min(4, Math.trunc(value)));
+}
+
 function normalizeFields(fields: CustomFormFieldDraft[]) {
   return fields.map((field, index) => ({
     ...field,
@@ -156,6 +172,7 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
     maxLength: "",
     defaultValue,
     displayOrder,
+    layoutColumn: null,
     options: hasOptions
       ? [
           {
@@ -183,6 +200,7 @@ function mapPreviewFieldToDraft(field: {
   minLength: number | null;
   maxLength: number | null;
   defaultValue: string | null;
+  layoutColumn: number | null;
   options: { value: string; displayText: string; id: number }[];
   formControl: {
     id: number;
@@ -217,6 +235,7 @@ function mapPreviewFieldToDraft(field: {
         ? getCheckboxDefaultValue(field.defaultValue)
         : field.defaultValue ?? "",
     displayOrder: field.displayOrder,
+    layoutColumn: normalizeFieldLayoutColumn(field.layoutColumn),
     options: field.options.map((option) => ({
       id: createOptionId(),
       displayText: option.displayText,
@@ -737,9 +756,20 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
   }
 }
 
-function FormPreviewField({ field }: { field: CustomFormFieldDraft }) {
+function FormPreviewField({
+  field,
+  maxColumns,
+}: {
+  field: CustomFormFieldDraft;
+  maxColumns: number;
+}) {
+  const span = Math.max(1, Math.min(normalizeLayoutColumn(field.layoutColumn ?? maxColumns), normalizeLayoutColumn(maxColumns)));
+
   return (
-    <div className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4">
+    <div
+      className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4"
+      style={{ gridColumn: `span ${span} / span ${span}` }}
+    >
       <PreviewFieldLabel field={field} />
       <PreviewFieldRenderer field={field} />
       {field.tooltip ? <p className="mt-2 text-xs text-slate-500">{field.tooltip}</p> : null}
@@ -990,7 +1020,7 @@ export function CustomFormCreatePage() {
           name: preview.name,
           headerText: preview.headerText,
           description: preview.description ?? "",
-          layoutColumn: preview.layoutColumn,
+          layoutColumn: preview.layoutColumn ?? 1,
         });
         setFields(preview.fields.map((field) => mapPreviewFieldToDraft(field)));
         setSelectedFieldId(null);
@@ -1830,6 +1860,25 @@ export function CustomFormCreatePage() {
                     />
                   ) : null}
 
+                  <SelectFieldPreview
+                    title="Layout columns"
+                    value={selectedField.layoutColumn === null ? "" : String(selectedField.layoutColumn)}
+                    onChange={(value) =>
+                      updateSelectedField((field) => ({
+                        ...field,
+                        layoutColumn: value ? Math.max(1, Math.min(4, Number(value) || 1)) : null,
+                      }))
+                    }
+                    options={[
+                      { label: "Inherit form layout", value: "" },
+                      { label: "1 column", value: "1" },
+                      { label: "2 columns", value: "2" },
+                      { label: "3 columns", value: "3" },
+                      { label: "4 columns", value: "4" },
+                    ]}
+                    placeholder="Choose a span"
+                  />
+
                   {selectedControl?.controlType.toLowerCase() === "file" ? (
                     <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
                       <div>
@@ -2147,7 +2196,9 @@ export function CustomFormCreatePage() {
                   }}
                 >
                   {fields.length > 0 ? (
-                    fields.map((field) => <FormPreviewField key={field.id} field={field} />)
+                    fields.map((field) => (
+                      <FormPreviewField key={field.id} field={field} maxColumns={previewColumnCount} />
+                    ))
                   ) : (
                     <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
                       <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>

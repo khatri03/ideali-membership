@@ -151,6 +151,10 @@ function readCustomForms(value: unknown) {
             formControlTypeId: readNumber(fieldRecord.FormControlTypeId ?? fieldRecord.formControlTypeId) ?? 0,
             controlUniqueId: readText(fieldRecord.ControlUniqueId ?? fieldRecord.controlUniqueId) || null,
             displayOrder: readNumber(fieldRecord.DisplayOrder ?? fieldRecord.displayOrder) ?? 0,
+            layoutColumn: (() => {
+              const fieldLayoutColumn = readNumber(fieldRecord.LayoutColumn ?? fieldRecord.layoutColumn);
+              return fieldLayoutColumn === null ? null : Math.max(1, Math.min(4, fieldLayoutColumn));
+            })(),
             controlLabel: readText(fieldRecord.ControlLabel ?? fieldRecord.controlLabel),
             placeHolder: readText(fieldRecord.PlaceHolder ?? fieldRecord.placeHolder) || null,
             tooltip: readText(fieldRecord.Tooltip ?? fieldRecord.tooltip) || null,
@@ -172,6 +176,7 @@ function readCustomForms(value: unknown) {
             formControlTypeId: number;
             controlUniqueId: string | null;
             displayOrder: number;
+            layoutColumn: number | null;
             controlLabel: string;
             placeHolder: string | null;
             tooltip: string | null;
@@ -195,7 +200,10 @@ function readCustomForms(value: unknown) {
         name: readText(record.Name ?? record.name),
         description: readText(record.Description ?? record.description),
         headerText: readText(record.HeaderText ?? record.headerText),
-        layoutColumn: readNumber(record.LayoutColumn ?? record.layoutColumn),
+        layoutColumn: (() => {
+          const layoutColumn = readNumber(record.LayoutColumn ?? record.layoutColumn);
+          return layoutColumn === null ? null : Math.max(1, Math.min(4, layoutColumn));
+        })(),
         fieldCount: parsedFields.length,
         fields: parsedFields,
       };
@@ -213,6 +221,7 @@ function readCustomForms(value: unknown) {
         formControlTypeId: number;
         controlUniqueId: string | null;
         displayOrder: number;
+        layoutColumn: number | null;
         controlLabel: string;
         placeHolder: string | null;
         tooltip: string | null;

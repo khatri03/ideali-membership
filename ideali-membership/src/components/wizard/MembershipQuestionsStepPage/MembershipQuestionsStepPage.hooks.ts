@@ -337,6 +337,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
         (preview.fields || []).map((field) => ({
           id: field.id,
           displayOrder: field.displayOrder,
+          layoutColumn: field.layoutColumn,
           controlLabel: field.controlLabel,
           placeHolder: field.placeHolder,
           tooltip: field.tooltip,
