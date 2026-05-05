@@ -55,6 +55,7 @@ const STEPS = [
   {
     title: "Your Information",
     description: "Add your personal details.",
+    hidden: true,
   },
   {
     title: "Questionnaire",
@@ -1779,37 +1780,29 @@ function CustomQuestionsSection({
 }
 
 function getCustomFormGridClass(layoutColumn: number) {
+  void layoutColumn;
+  return "grid grid-cols-12 gap-4";
+}
+
+function getCustomFormFieldGridSpanClass(layoutColumn: number) {
   switch (layoutColumn) {
     case 1:
-      return "grid gap-4";
+      return "col-span-12";
     case 2:
-      return "grid gap-4 md:grid-cols-2";
+      return "col-span-6";
     case 3:
-      return "grid gap-4 md:grid-cols-2 lg:grid-cols-3";
+      return "col-span-4";
     case 4:
-      return "grid gap-4 md:grid-cols-2 lg:grid-cols-4";
+      return "col-span-3";
     default:
-      return "grid gap-4 md:grid-cols-2";
+      return "col-span-12";
   }
 }
 
 function getCustomFormFieldSpanClass(formLayoutColumn: number, fieldLayoutColumn: number | null) {
-  const maxColumns = Math.max(1, Math.min(4, formLayoutColumn));
-  const span = Math.max(1, Math.min(maxColumns, fieldLayoutColumn ?? maxColumns));
-
-  if (span <= 1) {
-    return "";
-  }
-
-  if (maxColumns === 2 || span === 2) {
-    return "md:col-span-2";
-  }
-
-  if (maxColumns === 3 || span === 3) {
-    return "md:col-span-2 lg:col-span-3";
-  }
-
-  return "md:col-span-2 lg:col-span-4";
+  const resolvedLayoutColumn = Math.max(1, Math.min(4, fieldLayoutColumn ?? formLayoutColumn));
+  const span = resolvedLayoutColumn;
+  return getCustomFormFieldGridSpanClass(span);
 }
 
 function CustomFormFieldCard({
@@ -2569,15 +2562,13 @@ export function MembershipRegisterWizard({
   membershipName,
   membershipDescription,
 }: MembershipRegisterWizardProps) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [customFormValues, setCustomFormValues] = useState<CustomFormValues>({});
   const [customFormErrors, setCustomFormErrors] = useState<CustomFormErrors>({});
   const [customQuestionValues, setCustomQuestionValues] = useState<CustomQuestionValues>({});
   const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
-  const userInfoStepErrors = validateUserLoginStep(form);
-  const userInfoStepComplete = Object.keys(userInfoStepErrors).length === 0;
   const questionnaireStepComplete = info
     ? Object.keys(validateCustomForms(info.membershipDetail.customForms, customFormValues)).length === 0 &&
       Object.keys(validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues)).length === 0
@@ -2598,18 +2589,18 @@ export function MembershipRegisterWizard({
     setCustomQuestionErrors({});
   }, [info]);
 
-  const canGoNext =
-    currentStep === 0 ? pricingStepComplete : currentStep === 1 ? userInfoStepComplete : currentStep === 2 ? questionnaireStepComplete : false;
+  const visibleSteps = STEPS.filter((step) => !("hidden" in step && step.hidden));
 
-  const stepTitles = STEPS.map((step, index) => ({
+  const canGoNext = currentStep === 0 ? pricingStepComplete : currentStep === 1 ? questionnaireStepComplete : false;
+
+  const stepTitles = visibleSteps.map((step, index) => ({
     ...step,
     active: index === currentStep,
     completed: index < currentStep,
     disabled:
       index > currentStep ||
-      (index === 1 && !pricingStepComplete) ||
-      (index === 2 && (!pricingStepComplete || !userInfoStepComplete)) ||
-      (index === 3 && (!pricingStepComplete || !userInfoStepComplete || !questionnaireStepComplete)),
+      (index === 1 && (!pricingStepComplete || !questionnaireStepComplete)) ||
+      (index === 2 && (!pricingStepComplete || !questionnaireStepComplete)),
   }));
 
   function handleNext() {
@@ -2617,14 +2608,7 @@ export function MembershipRegisterWizard({
       return;
     }
 
-    if (currentStep === 1) {
-      const nextUserInfoErrors = validateUserLoginStep(form);
-      if (Object.keys(nextUserInfoErrors).length > 0) {
-        return;
-      }
-    }
-
-    if (currentStep === 2 && info) {
+    if (currentStep === 1 && info) {
       const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
       const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
       setCustomFormErrors(nextErrors);
@@ -2635,7 +2619,7 @@ export function MembershipRegisterWizard({
       }
     }
 
-    setCurrentStep((value) => Math.min(value + 1, STEPS.length - 1));
+    setCurrentStep((value) => Math.min(value + 1, visibleSteps.length - 1));
   }
 
   function handleBack() {
@@ -2761,15 +2745,17 @@ export function MembershipRegisterWizard({
         </div>
       </div>
 
-        {currentStep === 1 ? (
+        {currentStep === -1 ? (
           <YourInformationStep
             form={form}
-            errors={userInfoStepErrors}
+            errors={validateUserLoginStep(form)}
             setField={setField}
             theme={theme}
             showBorders={showBorders}
           />
-        ) : currentStep === 2 ? (
+        ) : null}
+
+        {currentStep === 1 ? (
           <QuestionnaireStep
             customForms={info.membershipDetail.customForms}
             customQuestions={info.membershipDetail.customQuestions}
@@ -2791,20 +2777,20 @@ export function MembershipRegisterWizard({
               background: theme.cardBackground,
             }}
           >
-            {currentStep === 0 ? (
-              <PricingStep
-                info={info}
-                formattedMembershipCharges={formattedMembershipCharges}
-                theme={theme}
-                membershipDescription={membershipDescription}
-                form={form}
-                setField={setField}
-              />
-            ) : (
-              <PaymentStep form={form} setField={setField} theme={theme} />
-            )}
-          </section>
-        )}
+              {currentStep === 0 ? (
+                <PricingStep
+                  info={info}
+                  formattedMembershipCharges={formattedMembershipCharges}
+                  theme={theme}
+                  membershipDescription={membershipDescription}
+                  form={form}
+                  setField={setField}
+                />
+              ) : (
+                <PaymentStep form={form} setField={setField} theme={theme} />
+              )}
+            </section>
+          )}
 
         <div className="mt-6 h-px w-full" style={{ background: theme.cardBorder, opacity: 0.7 }} />
 
@@ -2825,7 +2811,7 @@ export function MembershipRegisterWizard({
             ) : null}
           </div>
 
-          {currentStep < STEPS.length - 1 ? (
+          {currentStep < visibleSteps.length - 1 ? (
             <button
               type="button"
               onClick={handleNext}
