@@ -55,20 +55,16 @@ type MembershipRegisterWizardProps = Pick<
 const STEPS = [
   {
     title: "Membership Info",
-    description: "Review the price and choose a payment method.",
   },
   {
     title: "Your Information",
-    description: "Add your personal details.",
     hidden: true,
   },
   {
     title: "Questionnaire",
-    description: "Complete the mapped custom forms and questions.",
   },
   {
     title: "Payment",
-    description: "Confirm the final payment details and submit.",
   },
 ] as const;
 
@@ -514,7 +510,6 @@ function MembershipDescriptionPanel({
 function StepBadge({
   index,
   title,
-  description,
   active,
   completed,
   disabled,
@@ -523,7 +518,6 @@ function StepBadge({
 }: {
   index: number;
   title: string;
-  description: string;
   active: boolean;
   completed: boolean;
   disabled: boolean;
@@ -556,9 +550,6 @@ function StepBadge({
       <div className="min-w-0 space-y-0.5">
         <p className="text-sm font-semibold leading-5 sm:text-base" style={{ color: active ? theme.level1 : theme.titleColor }}>
           {title}
-        </p>
-        <p className="text-xs leading-4 sm:text-sm sm:leading-5" style={{ color: theme.bodyColor }}>
-          {description}
         </p>
       </div>
       <div
@@ -3220,7 +3211,6 @@ export function MembershipRegisterWizard({
               key={step.title}
               index={index}
               title={step.title}
-              description={step.description}
               active={step.active}
               completed={step.completed}
               disabled={step.disabled}
