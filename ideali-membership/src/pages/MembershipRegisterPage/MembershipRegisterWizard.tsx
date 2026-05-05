@@ -1139,6 +1139,8 @@ function getCustomFormControlType(controlTypeId: number): string {
       return "multiselect";
     case 16:
       return "country";
+    case 17:
+      return "state";
     default:
       return "text";
   }
@@ -1560,6 +1562,28 @@ function validateCustomQuestions(
   return errors;
 }
 
+function getNearestCountryQuestionValue(
+  questions: MembershipRegistrationCustomQuestion[],
+  values: CustomQuestionValues,
+  targetIndex: number,
+) {
+  for (let index = targetIndex - 1; index >= 0; index -= 1) {
+    const candidate = questions[index];
+    if (!candidate) {
+      continue;
+    }
+
+    if (getCustomQuestionControlType(candidate.controlType) !== "country") {
+      continue;
+    }
+
+    const candidateValue = values[buildCustomQuestionKey(candidate.uniqueId)];
+    return typeof candidateValue === "string" && candidateValue.trim().length > 0 ? candidateValue : null;
+  }
+
+  return null;
+}
+
 function getCustomQuestionGridClass() {
   return "grid gap-4";
 }
@@ -1572,6 +1596,7 @@ function CustomQuestionFieldCard({
   onBlur,
   theme,
   showBorders,
+  countryId,
 }: {
   question: MembershipRegistrationCustomQuestion;
   value: CustomQuestionValue;
@@ -1580,6 +1605,7 @@ function CustomQuestionFieldCard({
   onBlur: (value: CustomQuestionValue) => void;
   theme: MembershipTheme;
   showBorders: boolean;
+  countryId?: string | null;
 }) {
   const controlType = getCustomQuestionControlType(question.controlType);
   const label = question.placeHolder || question.label;
@@ -1860,8 +1886,35 @@ function CustomQuestionsSection({
         {questions
           .slice()
           .sort((left, right) => left.displayOrder - right.displayOrder)
-          .map((question) => {
+          .map((question, index, sortedQuestions) => {
             const key = buildCustomQuestionKey(question.uniqueId);
+            const countryId = getNearestCountryQuestionValue(sortedQuestions, values, index);
+            const controlType = getCustomQuestionControlType(question.controlType);
+
+            function handleFieldChange(nextValue: CustomQuestionValue) {
+              onFieldChange(key, nextValue);
+
+              if (controlType !== "country") {
+                return;
+              }
+
+              for (let nextIndex = index + 1; nextIndex < sortedQuestions.length; nextIndex += 1) {
+                const nextQuestion = sortedQuestions[nextIndex];
+                if (!nextQuestion) {
+                  continue;
+                }
+
+                const nextType = getCustomQuestionControlType(nextQuestion.controlType);
+
+                if (nextType === "country") {
+                  break;
+                }
+
+                if (nextType === "state") {
+                  onFieldChange(buildCustomQuestionKey(nextQuestion.uniqueId), "");
+                }
+              }
+            }
 
             return (
               <CustomQuestionFieldCard
@@ -1869,10 +1922,11 @@ function CustomQuestionsSection({
                 question={question}
                 value={values[key] ?? ""}
                 error={errors[key] ?? ""}
-                onChange={(nextValue) => onFieldChange(key, nextValue)}
+                onChange={handleFieldChange}
                 onBlur={(nextValue) => onFieldBlur(key, nextValue)}
                 theme={theme}
                 showBorders={showBorders}
+                countryId={countryId}
               />
             );
           })}
@@ -2025,6 +2079,23 @@ function CustomFormFieldCard({
             </label>
           ))}
         </div>
+      ) : controlType === "country" ? (
+        <CountrySelectInput
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
+          placeholder={label || "Select country"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "state" ? (
+        <StateSelectInput
+          countryId={countryId}
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
+          placeholder={label || "Select state"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
       ) : controlType === "checkbox" ? (
         <label className="inline-flex items-center gap-3">
           <input
@@ -2217,6 +2288,25 @@ function CustomFormSection({
     return typeof countryValue === "string" && countryValue.trim().length > 0 ? countryValue : null;
   }
 
+  function handleFieldChange(targetField: MembershipRegistrationCustomFormField, nextValue: CustomFormValue) {
+    const key = buildCustomFormFieldKey(form.uniqueId, targetField.uniqueId);
+    onFieldChange(key, nextValue);
+
+    if (getCustomFormControlType(targetField.formControlTypeId) !== "country") {
+      return;
+    }
+
+    fields.forEach((candidate) => {
+      if (candidate.displayOrder <= targetField.displayOrder) {
+        return;
+      }
+
+      if (getCustomFormControlType(candidate.formControlTypeId) === "state") {
+        onFieldChange(buildCustomFormFieldKey(form.uniqueId, candidate.uniqueId), "");
+      }
+    });
+  }
+
   return (
     <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <div className="space-y-1">
@@ -2237,17 +2327,17 @@ function CustomFormSection({
       ) : (
         <div className={getCustomFormGridClass(layoutColumn)}>
           {fields.map((field) => (
-            <CustomFormFieldCard
-              key={field.uniqueId || `${field.formId}-${field.displayOrder}`}
-              field={field}
-              value={values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
-              error={errors[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
-              onChange={(nextValue) => onFieldChange(buildCustomFormFieldKey(form.uniqueId, field.uniqueId), nextValue)}
-              countryId={getNearestCountryValue(field)}
-              theme={theme}
-              showBorders={showBorders}
-              formLayoutColumn={layoutColumn}
-            />
+          <CustomFormFieldCard
+            key={field.uniqueId || `${field.formId}-${field.displayOrder}`}
+            field={field}
+            value={values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
+            error={errors[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
+            onChange={(nextValue) => handleFieldChange(field, nextValue)}
+            countryId={getNearestCountryValue(field)}
+            theme={theme}
+            showBorders={showBorders}
+            formLayoutColumn={layoutColumn}
+          />
           ))}
         </div>
       )}
