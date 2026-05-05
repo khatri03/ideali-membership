@@ -2829,7 +2829,7 @@ export function MembershipRegisterWizard({
 
   const visibleSteps = STEPS.filter((step) => !("hidden" in step && step.hidden));
 
-  const canGoNext = currentStep === 0 ? pricingStepComplete : currentStep === 1 ? questionnaireStepComplete : false;
+  const canGoNext = currentStep === 0 ? pricingStepComplete : true;
 
   const stepTitles = visibleSteps.map((step, index) => ({
     ...step,
