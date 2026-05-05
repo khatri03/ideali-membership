@@ -46,6 +46,7 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CountrySelectInput } from "../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../components/inputs/MultiSelectInput/MultiSelectInput";
+import { StateSelectInput } from "../components/inputs/StateSelectInput/StateSelectInput";
 import { PasswordInput } from "../components/inputs/PasswordInput/PasswordInput";
 import {
   createCustomForm,
@@ -432,6 +433,41 @@ function getDefaultMultiSelectValues(field: CustomFormFieldDraft) {
   return getSelectedOptionValues(field);
 }
 
+type PreviewValue = string | string[] | boolean | null;
+
+function getPreviewDefaultValue(field: CustomFormFieldDraft): PreviewValue {
+  const controlType = field.controlType.toLowerCase();
+
+  if (controlType === "checkbox") {
+    return isTruthyValue(field.defaultValue);
+  }
+
+  if (controlType === "multiselect") {
+    return getDefaultMultiSelectValues(field);
+  }
+
+  if (controlType === "country" || controlType === "state") {
+    return field.defaultValue || "";
+  }
+
+  if (controlType === "file") {
+    return null;
+  }
+
+  if (controlType === "select" || controlType === "radio") {
+    return getDefaultOptionValue(field);
+  }
+
+  return field.defaultValue || "";
+}
+
+function buildPreviewValues(fields: CustomFormFieldDraft[]) {
+  return fields.reduce<Record<string, PreviewValue>>((accumulator, field) => {
+    accumulator[field.id] = getPreviewDefaultValue(field);
+    return accumulator;
+  }, {});
+}
+
 function ControlPaletteItem({
   control,
   count,
@@ -776,6 +812,16 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
       );
+    case "state":
+      return (
+        <StateSelectInput
+          countryId={null}
+          value={field.defaultValue}
+          onChange={() => undefined}
+          placeholder={field.placeholder || "Select state"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      );
     case "checkbox":
       return (
         <label className="inline-flex items-center gap-3">
@@ -852,24 +898,21 @@ function PreviewFieldLabel({ field }: { field: CustomFormFieldDraft }) {
   );
 }
 
-function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
+function PreviewFieldRenderer({
+  field,
+  value,
+  onChange,
+  countryId,
+}: {
+  field: CustomFormFieldDraft;
+  value: PreviewValue;
+  onChange: (value: PreviewValue) => void;
+  countryId?: string | null;
+}) {
   const controlType = field.controlType.toLowerCase();
   const placeholder = field.placeholder || field.label;
   const defaultOptionValue = getDefaultOptionValue(field);
-  const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => getDefaultMultiSelectValues(field));
-  const [previewCountryValue, setPreviewCountryValue] = useState(() => field.defaultValue || "");
-
-  useEffect(() => {
-    if (controlType === "multiselect") {
-      setPreviewMultiSelectValue(getDefaultMultiSelectValues(field));
-    }
-  }, [controlType, field.defaultValue, field.options, field.id]);
-
-  useEffect(() => {
-    if (controlType === "country") {
-      setPreviewCountryValue(field.defaultValue || "");
-    }
-  }, [controlType, field.defaultValue, field.id]);
+  const multiSelectValue = Array.isArray(value) ? value : getDefaultMultiSelectValues(field);
 
   switch (controlType) {
     case "text":
@@ -880,7 +923,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type={controlType}
-          defaultValue={field.defaultValue}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -888,8 +932,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "password":
       return (
         <PasswordInput
-          value={field.defaultValue}
-          readOnly
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -898,7 +942,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <textarea
           rows={4}
-          defaultValue={field.defaultValue}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -906,13 +951,11 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "select":
       return (
         <select
-          defaultValue={defaultOptionValue}
-          onChange={() => undefined}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         >
-          <option value="">
-            {field.placeholder || "Select one"}
-          </option>
+          <option value="">{field.placeholder || "Select one"}</option>
           {field.options.map((option) => (
             <option key={option.id} value={option.value}>
               {option.displayText}
@@ -923,8 +966,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "multiselect":
       return (
         <MultiSelectInput
-          value={previewMultiSelectValue}
-          onChange={setPreviewMultiSelectValue}
+          value={multiSelectValue}
+          onChange={(nextValue) => onChange(nextValue)}
           options={field.options.map((option) => ({
             label: option.displayText,
             value: option.value,
@@ -935,16 +978,31 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "country":
       return (
         <CountrySelectInput
-          value={previewCountryValue}
-          onChange={setPreviewCountryValue}
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
           placeholder={field.placeholder || "Select country"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      );
+    case "state":
+      return (
+        <StateSelectInput
+          countryId={countryId}
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
+          placeholder={field.placeholder || "Select state"}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
       );
     case "checkbox":
       return (
         <label className="inline-flex items-center gap-3">
-          <input type="checkbox" defaultChecked={isTruthyValue(field.defaultValue)} className="h-4 w-4 accent-cyan-600" />
+          <input
+            type="checkbox"
+            checked={typeof value === "boolean" ? value : isTruthyValue(field.defaultValue)}
+            onChange={(event) => onChange(event.target.checked)}
+            className="h-4 w-4 accent-cyan-600"
+          />
           <span className="text-sm font-medium text-slate-800">{field.label}</span>
         </label>
       );
@@ -956,7 +1014,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
               <input
                 type="radio"
                 name={`preview-${field.id}`}
-                defaultChecked={getDefaultOptionValue(field) === option.value}
+                checked={typeof value === "string" ? value === option.value : defaultOptionValue === option.value}
+                onChange={() => onChange(option.value)}
                 className="h-4 w-4 accent-cyan-600"
               />
               <span>{option.displayText}</span>
@@ -969,13 +1028,28 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
         <input
           type="file"
           accept={field.acceptedFileTypes.length > 0 ? field.acceptedFileTypes.join(",") : undefined}
+          onChange={() => onChange(null)}
           className="block w-full text-sm text-slate-500"
         />
       );
     case "range":
-      return <input type="range" defaultValue={field.defaultValue || undefined} className="w-full accent-cyan-600" />;
+      return (
+        <input
+          type="range"
+          value={typeof value === "string" ? value : field.defaultValue || ""}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full accent-cyan-600"
+        />
+      );
     case "color":
-      return <input type="color" defaultValue={field.defaultValue || "#0ea5e9"} className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
+      return (
+        <input
+          type="color"
+          value={typeof value === "string" ? value : field.defaultValue || "#0ea5e9"}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1"
+        />
+      );
     case "submit":
       return (
         <button
@@ -989,6 +1063,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type="text"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -1000,10 +1076,16 @@ function FormPreviewField({
   field,
   span,
   isCompactViewport,
+  value,
+  onChange,
+  countryId,
 }: {
   field: CustomFormFieldDraft;
   span: number;
   isCompactViewport: boolean;
+  value: PreviewValue;
+  onChange: (value: PreviewValue) => void;
+  countryId?: string | null;
 }) {
   return (
     <div
@@ -1012,9 +1094,58 @@ function FormPreviewField({
     >
       <div className="space-y-3">
         <PreviewFieldLabel field={field} />
-        <PreviewFieldRenderer field={field} />
+        <PreviewFieldRenderer field={field} value={value} onChange={onChange} countryId={countryId} />
         {field.tooltip ? <p className="text-xs text-slate-500">{field.tooltip}</p> : null}
       </div>
+    </div>
+  );
+}
+
+function PreviewFormCanvas({
+  fields,
+  spanCount,
+  isCompactViewport,
+}: {
+  fields: CustomFormFieldDraft[];
+  spanCount: number;
+  isCompactViewport: boolean;
+}) {
+  const [previewValues, setPreviewValues] = useState<Record<string, PreviewValue>>(() => buildPreviewValues(fields));
+
+  useEffect(() => {
+    setPreviewValues(buildPreviewValues(fields));
+  }, [fields]);
+
+  return (
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
+      {fields.map((field) => {
+        const countryField = fields
+          .filter((candidate) => candidate.displayOrder < field.displayOrder)
+          .filter((candidate) => candidate.controlType.toLowerCase() === "country")
+          .pop();
+
+        const countryId =
+          countryField && typeof previewValues[countryField.id] === "string"
+            ? (previewValues[countryField.id] as string)
+            : null;
+
+        return (
+          <FormPreviewField
+            key={field.id}
+            field={field}
+            span={getPreviewColumnSpan(field, spanCount)}
+            isCompactViewport={isCompactViewport}
+            value={previewValues[field.id] ?? getPreviewDefaultValue(field)}
+            countryId={countryId}
+            onChange={(nextValue) =>
+              setPreviewValues((current) => ({
+                ...current,
+                [field.id]: nextValue,
+              }))
+            }
+          />
+        );
+      })}
     </div>
   );
 }
@@ -2645,16 +2776,11 @@ export function CustomFormCreatePage() {
                 ) : null}
 
                 {fields.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
-                    {fields.map((field) => (
-                      <FormPreviewField
-                        key={field.id}
-                        field={field}
-                        span={getPreviewColumnSpan(field, previewColumnCount)}
-                        isCompactViewport={isCompactViewport}
-                      />
-                    ))}
-                  </div>
+                  <PreviewFormCanvas
+                    fields={fields}
+                    spanCount={previewColumnCount}
+                    isCompactViewport={isCompactViewport}
+                  />
                 ) : (
                   <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
                     <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>

@@ -11,6 +11,7 @@ import type {
 } from "../../types/membershipRegistration";
 import { CountrySelectInput } from "../../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
+import { StateSelectInput } from "../../components/inputs/StateSelectInput/StateSelectInput";
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
 
@@ -1109,7 +1110,7 @@ function buildCustomQuestionKey(questionUniqueId: string) {
   return questionUniqueId;
 }
 
-function getCustomFormControlType(controlTypeId: number) {
+function getCustomFormControlType(controlTypeId: number): string {
   switch (controlTypeId) {
     case 1:
       return "text";
@@ -1178,6 +1179,10 @@ function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField)
   }
 
   if (controlType === "country") {
+    return field.defaultValue || "";
+  }
+
+  if (controlType === "state") {
     return field.defaultValue || "";
   }
 
@@ -1361,6 +1366,14 @@ function validateCustomFormField(
   }
 
   if (controlType === "country") {
+    if (field.isMandatory && !textValue) {
+      return requiredMessage;
+    }
+
+    return "";
+  }
+
+  if (controlType === "state") {
     if (field.isMandatory && !textValue) {
       return requiredMessage;
     }
@@ -1868,6 +1881,7 @@ function CustomFormFieldCard({
   value,
   error,
   onChange,
+  countryId,
   theme,
   showBorders,
   formLayoutColumn,
@@ -1876,6 +1890,7 @@ function CustomFormFieldCard({
   value: CustomFormValue;
   error: string;
   onChange: (value: CustomFormValue) => void;
+  countryId?: string | null;
   theme: MembershipTheme;
   showBorders: boolean;
   formLayoutColumn: number;
@@ -1947,6 +1962,14 @@ function CustomFormFieldCard({
           value={typeof value === "string" ? value : ""}
           onChange={onChange}
           placeholder={label || "Select country"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+        />
+      ) : controlType === "state" ? (
+        <StateSelectInput
+          countryId={countryId}
+          value={typeof value === "string" ? value : ""}
+          onChange={onChange}
+          placeholder={label || "Select state"}
           className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
         />
       ) : controlType === "radio" && field.options.length > 0 ? (
@@ -2147,6 +2170,20 @@ function CustomFormSection({
   const layoutColumn = form.layoutColumn || 1;
   const fields = [...(form.fields || [])].sort((left, right) => left.displayOrder - right.displayOrder);
 
+  function getNearestCountryValue(targetField: MembershipRegistrationCustomFormField) {
+    const countryField = fields
+      .filter((candidate) => candidate.displayOrder < targetField.displayOrder)
+      .filter((candidate) => getCustomFormControlType(candidate.formControlTypeId) === "country")
+      .pop();
+
+    if (!countryField) {
+      return null;
+    }
+
+    const countryValue = values[buildCustomFormFieldKey(form.uniqueId, countryField.uniqueId)];
+    return typeof countryValue === "string" && countryValue.trim().length > 0 ? countryValue : null;
+  }
+
   return (
     <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <div className="space-y-1">
@@ -2173,6 +2210,7 @@ function CustomFormSection({
               value={values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
               error={errors[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
               onChange={(nextValue) => onFieldChange(buildCustomFormFieldKey(form.uniqueId, field.uniqueId), nextValue)}
+              countryId={getNearestCountryValue(field)}
               theme={theme}
               showBorders={showBorders}
               formLayoutColumn={layoutColumn}

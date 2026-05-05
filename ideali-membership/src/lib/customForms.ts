@@ -88,6 +88,8 @@ function resolveAcceptedFileTypes(
 
 let countryOptionsCache: Array<{ label: string; value: string }> | null = null;
 let countryOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
+const countryStateOptionsCache = new Map<string, Array<{ label: string; value: string }>>();
+const countryStateOptionsRequest = new Map<string, Promise<Array<{ label: string; value: string }>>>();
 
 export async function fetchCustomFormListItems() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/list-items");
@@ -144,6 +146,61 @@ export async function fetchCountryOptions() {
     return await countryOptionsRequest;
   } finally {
     countryOptionsRequest = null;
+  }
+}
+
+export async function fetchStateOptions(countryId: string) {
+  const trimmedCountryId = countryId.trim();
+  if (!trimmedCountryId) {
+    return [];
+  }
+
+  const cachedOptions = countryStateOptionsCache.get(trimmedCountryId);
+  if (cachedOptions) {
+    return cachedOptions;
+  }
+
+  const existingRequest = countryStateOptionsRequest.get(trimmedCountryId);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = (async () => {
+    const payload = await getJson<unknown>(`/api/geo/public/country/${encodeURIComponent(trimmedCountryId)}/states`);
+    const data = getResponseData(payload);
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    const options = data
+      .flatMap((item) => {
+        const candidate = item as Record<string, unknown>;
+        const states = Array.isArray(candidate.States ?? candidate.states) ? (candidate.States ?? candidate.states) as unknown[] : [];
+
+        return states.map((state) => {
+          const stateCandidate = state as Record<string, unknown>;
+          const stateId = stateCandidate.StateId ?? stateCandidate.stateId ?? stateCandidate.id;
+          const name = stateCandidate.Name ?? stateCandidate.name;
+
+          return {
+            value: stateId == null ? "" : String(stateId),
+            label: name == null ? "" : String(name),
+          };
+        });
+      })
+      .filter((item) => item.value && item.label);
+
+    countryStateOptionsCache.set(trimmedCountryId, options);
+    return options;
+  })();
+
+  countryStateOptionsRequest.set(trimmedCountryId, request);
+
+  try {
+    return await request;
+  } finally {
+    countryStateOptionsRequest.delete(trimmedCountryId);
   }
 }
 
