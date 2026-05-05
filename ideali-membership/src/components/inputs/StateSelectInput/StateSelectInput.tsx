@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import Select, { type StylesConfig } from "react-select";
+import { useEffect, useState } from "react";
 import { fetchStateOptions } from "../../../lib/customForms";
 
 type StateSelectInputProps = {
@@ -9,6 +8,7 @@ type StateSelectInputProps = {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  style?: React.CSSProperties;
 };
 
 export function StateSelectInput({
@@ -18,15 +18,11 @@ export function StateSelectInput({
   placeholder = "Select state",
   className,
   disabled = false,
+  style,
 }: StateSelectInputProps) {
   const [options, setOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const trimmedCountryId = countryId?.trim() ?? "";
-
-  const selectedValue = useMemo(
-    () => options.find((option) => option.value === value) ?? null,
-    [options, value],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -59,81 +55,33 @@ export function StateSelectInput({
     };
   }, [trimmedCountryId]);
 
-  const selectStyles: StylesConfig<{ label: string; value: string }, false> = {
-    control: (base, state) => ({
-      ...base,
-      minHeight: "3.25rem",
-      borderRadius: "1rem",
-      borderColor: state.isFocused ? "#22d3ee" : "#e2e8f0",
-      backgroundColor: "#ffffff",
-      boxShadow: state.isFocused ? "0 0 0 4px rgba(34, 211, 238, 0.12)" : "none",
-      ":hover": {
-        borderColor: state.isFocused ? "#22d3ee" : "#cbd5e1",
-      },
-    }),
-    valueContainer: (base) => ({
-      ...base,
-      padding: "0.5rem 0.75rem",
-    }),
-    input: (base) => ({
-      ...base,
-      margin: 0,
-      padding: 0,
-    }),
-    placeholder: (base) => ({
-      ...base,
-      color: "#94a3b8",
-    }),
-    menu: (base) => ({
-      ...base,
-      zIndex: 30,
-      borderRadius: "1rem",
-      overflow: "hidden",
-    }),
-    option: (base, state) => ({
-      ...base,
-      backgroundColor: state.isFocused ? "#ecfeff" : "#ffffff",
-      color: "#0f172a",
-    }),
-  };
-
   if (!trimmedCountryId) {
     return (
-      <Select<{ label: string; value: string }, false>
-        value={null}
-        options={[]}
-        isDisabled
-        placeholder="Select a country first"
+      <select
+        value=""
+        disabled
         className={className}
-        styles={selectStyles}
-      />
+        style={style}
+      >
+        <option value="">Select a country first</option>
+      </select>
     );
   }
 
   return (
-    <Select<{ label: string; value: string }, false>
-      value={selectedValue}
-      onChange={(nextValue) => onChange(nextValue?.value ?? "")}
-      options={options}
-      isDisabled={disabled || isLoading}
-      isLoading={isLoading}
-      isClearable
-      isSearchable
-      placeholder={isLoading ? "Loading states..." : placeholder}
-      noOptionsMessage={({ inputValue }) =>
-        inputValue.trim().length > 0 ? "No states match your search." : "No states available."
-      }
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      disabled={disabled || isLoading}
       className={className}
-      styles={selectStyles}
-      filterOption={(candidate, inputValue) => {
-        const search = inputValue.trim().toLowerCase();
-        if (!search) {
-          return true;
-        }
-
-        const label = String(candidate.label ?? "").toLowerCase();
-        return label.includes(search);
-      }}
-    />
+      style={style}
+    >
+      <option value="">{isLoading ? "Loading states..." : placeholder}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   );
 }

@@ -1994,6 +1994,7 @@ function CustomFormFieldCard({
           onChange={onChange}
           placeholder={label || "Select country"}
           className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "state" ? (
         <StateSelectInput
@@ -2002,6 +2003,7 @@ function CustomFormFieldCard({
           onChange={onChange}
           placeholder={label || "Select state"}
           className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
         />
       ) : controlType === "radio" && field.options.length > 0 ? (
         <div className="space-y-2">
