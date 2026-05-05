@@ -150,6 +150,7 @@ function getPreviewColumnSpan(field: CustomFormFieldDraft, fallbackLayoutColumn:
     case 2:
       return 6;
     case 3:
+      return 4;
     case 4:
       return 3;
     default:
