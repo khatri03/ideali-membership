@@ -157,6 +157,10 @@ function getPreviewColumnSpan(field: CustomFormFieldDraft, fallbackLayoutColumn:
   }
 }
 
+function getLayoutPresetLabel(layoutColumn: number) {
+  return `1x${layoutColumn}`;
+}
+
 function normalizeFields(fields: CustomFormFieldDraft[]) {
   return fields.map((field, index) => ({
     ...field,
@@ -417,15 +421,19 @@ function ControlIcon({
 function SortableFieldCard({
   field,
   span,
+  layoutColumn,
   selected,
   onSelect,
+  onOpenLayoutMenu,
   onRemove,
   showDragHandle,
 }: {
   field: CustomFormFieldDraft;
   span: number;
+  layoutColumn: number;
   selected: boolean;
   onSelect: (id: string) => void;
+  onOpenLayoutMenu: (fieldId: string, position: { x: number; y: number }) => void;
   onRemove: (id: string) => void;
   showDragHandle: boolean;
 }) {
@@ -455,12 +463,21 @@ function SortableFieldCard({
       ].join(" ")}
       style={combinedStyle}
       onClick={() => onSelect(field.id)}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect(field.id);
+        onOpenLayoutMenu(field.id, { x: event.clientX, y: event.clientY });
+      }}
       title="Click to select"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{field.label}</h3>
+            <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+              {getLayoutPresetLabel(layoutColumn)}
+            </span>
             {field.required ? (
               <span
                 className="text-sm font-bold leading-none text-rose-600"
@@ -499,6 +516,36 @@ function SortableFieldCard({
               </svg>
             </button>
           ) : null}
+
+          <button
+            type="button"
+            title="Layout preset"
+            aria-label="Layout preset"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-100 bg-cyan-50 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800"
+            onClick={(event) => {
+              event.stopPropagation();
+              const rect = event.currentTarget.getBoundingClientRect();
+              onOpenLayoutMenu(field.id, {
+                x: rect.right,
+                y: rect.bottom + 8,
+              });
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <rect x="3.5" y="5" width="17" height="4.5" rx="1.2" />
+              <rect x="3.5" y="10.75" width="11.5" height="4.5" rx="1.2" />
+              <rect x="3.5" y="16.5" width="8.25" height="4.5" rx="1.2" />
+            </svg>
+          </button>
 
           <button
             type="button"
@@ -971,6 +1018,11 @@ export function CustomFormCreatePage() {
   const [isCanvasTargeted, setIsCanvasTargeted] = useState(false);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [fieldLayoutMenu, setFieldLayoutMenu] = useState<{
+    fieldId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [fieldToRemoveId, setFieldToRemoveId] = useState<string | null>(null);
   const [optionToRemoveId, setOptionToRemoveId] = useState<string | null>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -1103,6 +1155,31 @@ export function CustomFormCreatePage() {
     return () => window.cancelAnimationFrame(focusHandle);
   }, [selectedFieldId]);
 
+  useEffect(() => {
+    if (!fieldLayoutMenu) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFieldLayoutMenu(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fieldLayoutMenu]);
+
+  useEffect(() => {
+    if (!fieldLayoutMenu) {
+      return;
+    }
+
+    if (!fields.some((field) => field.id === fieldLayoutMenu.fieldId)) {
+      setFieldLayoutMenu(null);
+    }
+  }, [fieldLayoutMenu, fields]);
+
   const createFormIssues = useMemo(() => {
     const issues: string[] = [];
 
@@ -1166,6 +1243,19 @@ export function CustomFormCreatePage() {
   }, [selectedField, selectedOptionId]);
 
   const previewColumnCount = Math.max(1, Math.min(4, Number(draft.layoutColumn) || 1));
+  const fieldLayoutMenuStyle = useMemo(() => {
+    if (!fieldLayoutMenu || typeof window === "undefined") {
+      return null;
+    }
+
+    const estimatedWidth = 172;
+    const estimatedHeight = 228;
+
+    return {
+      left: Math.max(16, Math.min(fieldLayoutMenu.x, window.innerWidth - estimatedWidth - 16)),
+      top: Math.max(16, Math.min(fieldLayoutMenu.y, window.innerHeight - estimatedHeight - 16)),
+    };
+  }, [fieldLayoutMenu]);
 
   const controlUsageCounts = useMemo(() => {
     const counts = new Map<number, number>();
@@ -1229,11 +1319,29 @@ export function CustomFormCreatePage() {
     );
   }
 
+  function setFieldLayoutPreset(fieldId: string, layoutColumn: number) {
+    setFields((current) =>
+      normalizeFields(
+        current.map((field) =>
+          field.id === fieldId
+            ? {
+                ...field,
+                layoutColumn,
+              }
+            : field,
+        ),
+      ),
+    );
+    setSelectedFieldId(fieldId);
+    setFieldLayoutMenu(null);
+  }
+
   function deleteField(fieldId: string) {
     setFields((current) => {
       const next = current.filter((field) => field.id !== fieldId);
       return normalizeFields(next);
     });
+    setFieldLayoutMenu((current) => (current?.fieldId === fieldId ? null : current));
 
     setSelectedFieldId((current) => {
       if (current !== fieldId) {
@@ -1246,6 +1354,7 @@ export function CustomFormCreatePage() {
 
   function removeField(fieldId: string) {
     setFieldToRemoveId(fieldId);
+    setFieldLayoutMenu(null);
   }
 
   function confirmRemoveField() {
@@ -1281,6 +1390,7 @@ export function CustomFormCreatePage() {
   function clearAllCanvasFields() {
     setFields([]);
     setSelectedFieldId(null);
+    setFieldLayoutMenu(null);
     setIsClearConfirmOpen(false);
     setFieldToRemoveId(null);
     setOptionToRemoveId(null);
@@ -1289,6 +1399,18 @@ export function CustomFormCreatePage() {
 
   function closePreview() {
     setIsPreviewOpen(false);
+  }
+
+  function openFieldLayoutMenu(fieldId: string, position: { x: number; y: number }) {
+    setFieldLayoutMenu({
+      fieldId,
+      x: position.x,
+      y: position.y,
+    });
+  }
+
+  function closeFieldLayoutMenu() {
+    setFieldLayoutMenu(null);
   }
 
   function openPreview() {
@@ -1772,8 +1894,10 @@ export function CustomFormCreatePage() {
                         key={field.id}
                         field={field}
                         span={getPreviewColumnSpan(field, previewColumnCount)}
+                        layoutColumn={normalizeLayoutColumn(field.layoutColumn ?? previewColumnCount)}
                         selected={field.id === selectedFieldId}
                         onSelect={setSelectedFieldId}
+                        onOpenLayoutMenu={openFieldLayoutMenu}
                         onRemove={removeField}
                         showDragHandle={fields.length > 1}
                       />
@@ -2245,6 +2369,38 @@ export function CustomFormCreatePage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {fieldLayoutMenu && fieldLayoutMenuStyle ? (
+        <div
+          className="fixed inset-0 z-[60]"
+          onMouseDown={closeFieldLayoutMenu}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <div
+            className="absolute w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/20"
+            style={fieldLayoutMenuStyle}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              Layout
+            </p>
+            {[1, 2, 3, 4].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFieldLayoutPreset(fieldLayoutMenu.fieldId, value)}
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800"
+              >
+                <span>{getLayoutPresetLabel(value)}</span>
+                {fieldLayoutMenu &&
+                normalizeLayoutColumn(fields.find((field) => field.id === fieldLayoutMenu.fieldId)?.layoutColumn ?? previewColumnCount) === value ? (
+                  <span className="text-cyan-700">✓</span>
+                ) : null}
+              </button>
+            ))}
           </div>
         </div>
       ) : null}
