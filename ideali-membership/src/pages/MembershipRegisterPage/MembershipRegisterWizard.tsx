@@ -364,7 +364,7 @@ function validateYourInformationStep(form: MembershipRegistrationFormState) {
   }
 
   if (!form.streetLine1.trim()) {
-    errors.streetLine1 = "Street line 1 is required.";
+    errors.streetLine1 = "Line 1 is required.";
   }
 
   return errors;
@@ -2658,48 +2658,38 @@ function YourInformationStep({
             theme={theme}
           />
 
-          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,8fr)]">
-            <div className="lg:row-span-2 lg:h-full">
-              <ProfilePhotoField
-                value={form.profilePhotoFile}
-                onChange={(value) => setField("profilePhotoFile", value)}
-                theme={theme}
+          <div className="grid gap-4">
+            <WizardField label="Email" theme={theme} error={errors.email} required>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setField("email", event.target.value)}
+                placeholder="name@example.com"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
-            </div>
+            </WizardField>
 
-            <div className="grid h-full gap-4">
-              <WizardField label="Email" theme={theme} error={errors.email} required>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => setField("email", event.target.value)}
-                  placeholder="name@example.com"
+            <div className="grid gap-4 md:grid-cols-2">
+              <WizardField label="Password" theme={theme} error={errors.password} required>
+                <PasswordInput
+                  value={form.password}
+                  onChange={(event) => setField("password", event.target.value)}
+                  placeholder="Create password"
                   className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
                 />
               </WizardField>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <WizardField label="Password" theme={theme} error={errors.password} required>
-                  <PasswordInput
-                    value={form.password}
-                    onChange={(event) => setField("password", event.target.value)}
-                    placeholder="Create password"
-                    className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                    style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-                  />
-                </WizardField>
-
-                <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
-                  <PasswordInput
-                    value={form.confirmPassword}
-                    onChange={(event) => setField("confirmPassword", event.target.value)}
-                    placeholder="Confirm password"
-                    className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                    style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-                  />
-                </WizardField>
-              </div>
+              <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
+                <PasswordInput
+                  value={form.confirmPassword}
+                  onChange={(event) => setField("confirmPassword", event.target.value)}
+                  placeholder="Confirm password"
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+                />
+              </WizardField>
             </div>
           </div>
         </div>
@@ -2713,7 +2703,16 @@ function YourInformationStep({
             theme={theme}
           />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,8fr)]">
+            <div className="lg:row-span-2 lg:h-full">
+              <ProfilePhotoField
+                value={form.profilePhotoFile}
+                onChange={(value) => setField("profilePhotoFile", value)}
+                theme={theme}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <WizardField label="Prefix" theme={theme}>
               <select
                 value={form.prefix}
@@ -2775,6 +2774,7 @@ function YourInformationStep({
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
             </WizardField>
+            </div>
           </div>
         </div>
 
@@ -2835,23 +2835,23 @@ function YourInformationStep({
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <WizardField label="Street Line 1" theme={theme} error={errors.streetLine1} required>
+            <WizardField label="Line 1" theme={theme} error={errors.streetLine1} required>
               <input
                 type="text"
                 value={form.streetLine1}
                 onChange={(event) => setField("streetLine1", event.target.value)}
-                placeholder="Street line 1"
+                placeholder="Line 1"
                 className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
             </WizardField>
 
-            <WizardField label="Street Line 2" theme={theme}>
+            <WizardField label="Line 2" theme={theme}>
               <input
                 type="text"
                 value={form.streetLine2}
                 onChange={(event) => setField("streetLine2", event.target.value)}
-                placeholder="Street line 2"
+                placeholder="Line 2"
                 className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
