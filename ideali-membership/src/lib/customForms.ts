@@ -86,6 +86,9 @@ function resolveAcceptedFileTypes(
     });
 }
 
+let countryOptionsCache: Array<{ label: string; value: string }> | null = null;
+let countryOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
+
 export async function fetchCustomFormListItems() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/list-items");
   const data = getResponseData(payload);
@@ -101,6 +104,47 @@ export async function fetchCustomFormListItems() {
       value: asString(candidate.Value ?? candidate.value),
     };
   }).filter((item) => item.text && item.value);
+}
+
+export async function fetchCountryOptions() {
+  if (countryOptionsCache) {
+    return countryOptionsCache;
+  }
+
+  if (countryOptionsRequest) {
+    return countryOptionsRequest;
+  }
+
+  countryOptionsRequest = (async () => {
+    const payload = await getJson<unknown>("/api/geo/public/country/list");
+    const data = getResponseData(payload);
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    const options = data
+      .map((item) => {
+        const candidate = item as Record<string, unknown>;
+        const countryId = candidate.CountryId ?? candidate.countryId ?? candidate.id;
+        const name = candidate.Name ?? candidate.name;
+
+        return {
+          value: countryId == null ? "" : String(countryId),
+          label: name == null ? "" : String(name),
+        };
+      })
+      .filter((item) => item.value && item.label);
+
+    countryOptionsCache = options;
+    return options;
+  })();
+
+  try {
+    return await countryOptionsRequest;
+  } finally {
+    countryOptionsRequest = null;
+  }
 }
 
 export async function fetchCustomForms() {

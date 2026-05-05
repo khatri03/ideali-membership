@@ -9,6 +9,7 @@ import type {
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
 } from "../../types/membershipRegistration";
+import { CountrySelectInput } from "../../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
@@ -1134,6 +1135,8 @@ function getCustomFormControlType(controlTypeId: number) {
       return "phone";
     case 15:
       return "multiselect";
+    case 16:
+      return "country";
     default:
       return "text";
   }
@@ -1172,6 +1175,10 @@ function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField)
 
   if (controlType === "multiselect") {
     return getCustomFormMultiSelectDefaultValue(field);
+  }
+
+  if (controlType === "country") {
+    return field.defaultValue || "";
   }
 
   if (controlType === "select" || controlType === "radio") {
@@ -1348,6 +1355,14 @@ function validateCustomFormField(
       if (selectedValues.some((item) => !allowedValues.has(item))) {
         return "Select a valid option.";
       }
+    }
+
+    return "";
+  }
+
+  if (controlType === "country") {
+    if (field.isMandatory && !textValue) {
+      return requiredMessage;
     }
 
     return "";
@@ -1926,6 +1941,13 @@ function CustomFormFieldCard({
             value: option.value,
           }))}
           placeholder={label || "Select one or more"}
+        />
+      ) : controlType === "country" ? (
+        <CountrySelectInput
+          value={typeof value === "string" ? value : ""}
+          onChange={onChange}
+          placeholder={label || "Select country"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
         />
       ) : controlType === "radio" && field.options.length > 0 ? (
         <div className="space-y-2">

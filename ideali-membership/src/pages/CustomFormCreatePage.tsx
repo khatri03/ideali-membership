@@ -44,6 +44,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { CountrySelectInput } from "../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../components/inputs/MultiSelectInput/MultiSelectInput";
 import { PasswordInput } from "../components/inputs/PasswordInput/PasswordInput";
 import {
@@ -689,12 +690,19 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
   const placeholder = field.placeholder || field.label;
   const defaultOptionValue = getDefaultOptionValue(field);
   const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => getDefaultMultiSelectValues(field));
+  const [previewCountryValue, setPreviewCountryValue] = useState(() => field.defaultValue || "");
 
   useEffect(() => {
     if (controlType === "multiselect") {
       setPreviewMultiSelectValue(getDefaultMultiSelectValues(field));
     }
   }, [controlType, field.defaultValue, field.options, field.id]);
+
+  useEffect(() => {
+    if (controlType === "country") {
+      setPreviewCountryValue(field.defaultValue || "");
+    }
+  }, [controlType, field.defaultValue, field.id]);
 
   switch (controlType) {
     case "text":
@@ -757,6 +765,15 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
             value: option.value,
           }))}
           placeholder={field.placeholder || "Select one or more"}
+        />
+      );
+    case "country":
+      return (
+        <CountrySelectInput
+          value={previewCountryValue}
+          onChange={setPreviewCountryValue}
+          placeholder={field.placeholder || "Select country"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
       );
     case "checkbox":
@@ -840,12 +857,19 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
   const placeholder = field.placeholder || field.label;
   const defaultOptionValue = getDefaultOptionValue(field);
   const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => getDefaultMultiSelectValues(field));
+  const [previewCountryValue, setPreviewCountryValue] = useState(() => field.defaultValue || "");
 
   useEffect(() => {
     if (controlType === "multiselect") {
       setPreviewMultiSelectValue(getDefaultMultiSelectValues(field));
     }
   }, [controlType, field.defaultValue, field.options, field.id]);
+
+  useEffect(() => {
+    if (controlType === "country") {
+      setPreviewCountryValue(field.defaultValue || "");
+    }
+  }, [controlType, field.defaultValue, field.id]);
 
   switch (controlType) {
     case "text":
@@ -906,6 +930,15 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
             value: option.value,
           }))}
           placeholder={field.placeholder || "Select one or more"}
+        />
+      );
+    case "country":
+      return (
+        <CountrySelectInput
+          value={previewCountryValue}
+          onChange={setPreviewCountryValue}
+          placeholder={field.placeholder || "Select country"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
       );
     case "checkbox":
