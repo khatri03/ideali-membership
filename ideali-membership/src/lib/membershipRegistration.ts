@@ -15,6 +15,9 @@ const PAYMENT_PRODUCT_NAME_TO_ID: Record<string, number> = {
   WalletPay: 7,
 };
 
+let contactPrefixOptionsCache: Array<{ label: string; value: string }> | null = null;
+let contactPrefixOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
+
 function readResponseData(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return payload;
@@ -95,6 +98,79 @@ function readPaymentProducts(value: unknown) {
       return Number.isFinite(numberValue) ? numberValue : null;
     })
     .filter((item): item is number => item !== null);
+}
+
+export async function fetchContactPrefixOptions() {
+  if (contactPrefixOptionsCache) {
+    return contactPrefixOptionsCache;
+  }
+
+  if (contactPrefixOptionsRequest) {
+    return contactPrefixOptionsRequest;
+  }
+
+  contactPrefixOptionsRequest = (async () => {
+    const payload = await getJson<unknown>("/api/admin/list-items/contact-prefixes");
+    const data = readResponseData(payload);
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    const options = data
+      .map((item) => {
+        if (typeof item === "string") {
+          const value = item.trim();
+          return value ? { value, label: value } : null;
+        }
+
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+
+        const candidate = item as Record<string, unknown>;
+        const value =
+          candidate.Value ??
+          candidate.value ??
+          candidate.Id ??
+          candidate.id ??
+          candidate.Code ??
+          candidate.code ??
+          candidate.Enum ??
+          candidate.enum ??
+          candidate.Prefix ??
+          candidate.prefix ??
+          candidate.Name ??
+          candidate.name;
+        const label =
+          candidate.Text ??
+          candidate.text ??
+          candidate.DisplayText ??
+          candidate.displayText ??
+          candidate.Label ??
+          candidate.label ??
+          candidate.prefix_name ??
+          candidate.prefixName ??
+          candidate.Name ??
+          candidate.name ??
+          value;
+
+        const resolvedValue = value == null ? "" : String(value).trim();
+        const resolvedLabel = label == null ? "" : String(label).trim();
+
+        return resolvedValue && resolvedLabel ? { value: resolvedValue, label: resolvedLabel } : null;
+      })
+      .filter((item): item is { label: string; value: string } => item !== null);
+
+    contactPrefixOptionsCache = options;
+    return options;
+  })();
+
+  try {
+    return await contactPrefixOptionsRequest;
+  } finally {
+    contactPrefixOptionsRequest = null;
+  }
 }
 
 function readCustomForms(value: unknown) {

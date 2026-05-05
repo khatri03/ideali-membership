@@ -9,6 +9,7 @@ import type {
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
 } from "../../types/membershipRegistration";
+import { fetchContactPrefixOptions } from "../../lib/membershipRegistration";
 import { CountrySelectInput } from "../../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
 import { StateSelectInput } from "../../components/inputs/StateSelectInput/StateSelectInput";
@@ -346,6 +347,28 @@ function validateUserLoginStep(form: MembershipRegistrationFormState) {
     errors.confirmPassword = "Confirm your password.";
   } else if (form.confirmPassword !== form.password) {
     errors.confirmPassword = "Passwords do not match.";
+  }
+
+  return errors;
+}
+
+function validateYourInformationStep(form: MembershipRegistrationFormState) {
+  const errors = validateUserLoginStep(form);
+
+  if (!form.firstName.trim()) {
+    errors.firstName = "First name is required.";
+  }
+
+  if (!form.lastName.trim()) {
+    errors.lastName = "Last name is required.";
+  }
+
+  if (!form.streetLine1.trim()) {
+    errors.streetLine1 = "Street address is required.";
+  }
+
+  if (!form.zipCode.trim()) {
+    errors.zipCode = "Zip code is required.";
   }
 
   return errors;
@@ -2577,6 +2600,35 @@ function YourInformationStep({
   theme: MembershipTheme;
   showBorders: boolean;
 }) {
+  const [prefixOptions, setPrefixOptions] = useState<Array<{ label: string; value: string }>>([]);
+  const [isLoadingPrefixOptions, setIsLoadingPrefixOptions] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingPrefixOptions(true);
+
+    void fetchContactPrefixOptions()
+      .then((options) => {
+        if (isMounted) {
+          setPrefixOptions(options);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setPrefixOptions([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingPrefixOptions(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <>
       <div className="space-y-6">
@@ -2648,14 +2700,22 @@ function YourInformationStep({
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <WizardField label="Prefix" theme={theme}>
-              <input
-                type="text"
+              <select
                 value={form.prefix}
                 onChange={(event) => setField("prefix", event.target.value)}
-                placeholder="Mr, Ms, Dr"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                disabled={isLoadingPrefixOptions && prefixOptions.length === 0}
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-              />
+              >
+                <option value="">
+                  {isLoadingPrefixOptions && prefixOptions.length === 0 ? "Loading prefixes..." : "Select prefix"}
+                </option>
+                {prefixOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </WizardField>
 
             <WizardField label="First Name" theme={theme} error={errors.firstName} required>
@@ -2868,7 +2928,10 @@ export function MembershipRegisterWizard({
   membershipDescription,
   submitError,
 }: MembershipRegisterWizardProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [userLoginErrors, setUserLoginErrors] = useState<Partial<Record<keyof MembershipRegistrationFormState, string>>>(
+    {},
+  );
   const [customFormValues, setCustomFormValues] = useState<CustomFormValues>({});
   const [customFormErrors, setCustomFormErrors] = useState<CustomFormErrors>({});
   const [customQuestionValues, setCustomQuestionValues] = useState<CustomQuestionValues>({});
@@ -2898,7 +2961,7 @@ export function MembershipRegisterWizard({
   const visibleSteps = STEPS;
 
   const canGoNext = currentStep === 0 ? pricingStepComplete : true;
-  const userInformationStepComplete = Object.keys(validateUserLoginStep(form)).length === 0;
+  const userInformationStepComplete = Object.keys(validateYourInformationStep(form)).length === 0;
 
   const stepTitles = visibleSteps.map((step, index) => ({
     ...step,
@@ -2917,7 +2980,8 @@ export function MembershipRegisterWizard({
     }
 
     if (currentStep === 1) {
-      const nextErrors = validateUserLoginStep(form);
+      const nextErrors = validateYourInformationStep(form);
+      setUserLoginErrors(nextErrors);
       if (Object.keys(nextErrors).length > 0) {
         return;
       }
@@ -2939,6 +3003,17 @@ export function MembershipRegisterWizard({
 
   function handleBack() {
     setCurrentStep((value) => Math.max(value - 1, 0));
+  }
+
+  function handleUserLoginFieldChange<T extends keyof MembershipRegistrationFormState>(
+    field: T,
+    value: MembershipRegistrationFormState[T],
+  ) {
+    setField(field, value);
+    setUserLoginErrors((current) => ({
+      ...current,
+      [field]: "",
+    }));
   }
 
   function handleCustomFormFieldChange(key: string, value: CustomFormValue) {
@@ -3083,8 +3158,8 @@ export function MembershipRegisterWizard({
         ) : currentStep === 1 ? (
           <YourInformationStep
             form={form}
-            errors={validateUserLoginStep(form)}
-            setField={setField}
+            errors={userLoginErrors}
+            setField={handleUserLoginFieldChange}
             theme={theme}
             showBorders={showBorders}
           />
