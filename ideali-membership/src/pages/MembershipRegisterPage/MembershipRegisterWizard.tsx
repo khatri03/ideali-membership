@@ -2578,14 +2578,8 @@ function YourInformationStep({
   showBorders: boolean;
 }) {
   return (
-    <section
-      className="rounded-4xl border p-4 sm:p-5 lg:p-6"
-      style={{
-        borderColor: theme.cardBorder,
-        background: theme.cardBackground,
-      }}
-    >
-      <div className="mt-5 space-y-6">
+    <>
+      <div className="space-y-6">
         <div className="space-y-4">
           <SectionTitle
             title="Contact Info"
@@ -2736,7 +2730,7 @@ function YourInformationStep({
           </div>
         </div>
       </div>
-    </section>
+    </>
   );
 }
 
