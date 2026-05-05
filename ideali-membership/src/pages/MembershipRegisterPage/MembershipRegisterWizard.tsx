@@ -1869,19 +1869,7 @@ function CustomQuestionsSection({
   }
 
   return (
-    <section
-      className="mt-5 space-y-4 rounded-3xl border p-4 sm:p-5"
-      style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
-    >
-      <div className="space-y-1">
-        <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
-          Custom Questions
-        </h3>
-        <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
-          Complete the membership questions below.
-        </p>
-      </div>
-
+    <div className="mt-5 space-y-4">
       <div className={getCustomQuestionGridClass()}>
         {questions
           .slice()
@@ -1931,7 +1919,7 @@ function CustomQuestionsSection({
             );
           })}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -2308,7 +2296,7 @@ function CustomFormSection({
   }
 
   return (
-    <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <div className="space-y-4">
       <div className="space-y-1">
         <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
           {displayTitle}
@@ -2341,7 +2329,7 @@ function CustomFormSection({
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -2689,19 +2677,7 @@ function QuestionnaireStep({
   const hasCustomQuestions = customQuestions.length > 0;
 
   return (
-    <section
-      className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
-      style={{
-        borderColor: theme.cardBorder,
-        background: theme.cardBackground,
-      }}
-    >
-      <SectionTitle
-        title="Questionnaire"
-        description="Complete the mapped custom forms and questions below."
-        theme={theme}
-      />
-
+    <>
       {hasCustomForms ? (
         <div className="space-y-5">
           {customForms.map((form) => (
@@ -2738,7 +2714,7 @@ function QuestionnaireStep({
           No questionnaire content mapped to this membership type.
         </div>
       ) : null}
-    </section>
+    </>
   );
 }
 
