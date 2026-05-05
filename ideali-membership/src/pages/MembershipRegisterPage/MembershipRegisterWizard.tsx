@@ -48,6 +48,7 @@ type MembershipRegisterWizardProps = Pick<
   theme: MembershipTheme;
   membershipName: string;
   membershipDescription: string;
+  submitError: string;
 };
 
 const STEPS = [
@@ -1209,12 +1210,25 @@ function getCustomQuestionDefaultValue(question: MembershipRegistrationCustomQue
     return null;
   }
 
+  if (controlType === "multiselect") {
+    return getCustomQuestionMultiSelectDefaultValue(question);
+  }
+
   if (controlType === "select" || controlType === "radio") {
     const selectedOption = question.options.find((option) => option.isDefault)?.value || question.defaultValue || "";
     return selectedOption;
   }
 
   return question.defaultValue || "";
+}
+
+function getCustomQuestionMultiSelectDefaultValue(question: MembershipRegistrationCustomQuestion) {
+  const selectedValues = question.options.filter((option) => option.isDefault).map((option) => option.value);
+  if (selectedValues.length > 0) {
+    return Array.from(new Set(selectedValues));
+  }
+
+  return parseDelimitedValues(question.defaultValue);
 }
 
 function toSentenceCase(value: string | null | undefined) {
@@ -1434,6 +1448,7 @@ function validateCustomQuestionField(
   const controlType = getCustomQuestionControlType(question.controlType);
   const textValue = typeof value === "string" ? value.trim() : "";
   const normalizedString = typeof value === "string" ? value : "";
+  const selectedValues = Array.isArray(value) ? value.map((item) => item.trim()).filter(Boolean) : [];
   const requiredMessage = question.requiredMessage?.trim() || `${toSentenceCase(question.label)} is required.`;
 
   if (controlType === "checkbox") {
@@ -1446,6 +1461,21 @@ function validateCustomQuestionField(
 
   if (controlType === "file") {
     return getCustomQuestionFileValidationError(question, value);
+  }
+
+  if (controlType === "multiselect") {
+    if (question.required && selectedValues.length === 0) {
+      return requiredMessage;
+    }
+
+    if (selectedValues.length > 0 && question.options.length > 0) {
+      const allowedValues = new Set(question.options.map((option) => option.value));
+      if (selectedValues.some((item) => !allowedValues.has(item))) {
+        return "Select a valid option.";
+      }
+    }
+
+    return "";
   }
 
   if (controlType === "email" && textValue) {
@@ -1554,6 +1584,7 @@ function CustomQuestionFieldCard({
   const controlType = getCustomQuestionControlType(question.controlType);
   const label = question.placeHolder || question.label;
   const defaultOptionValue = typeof value === "string" ? value : "";
+  const multiSelectValue = Array.isArray(value) ? value : getCustomQuestionMultiSelectDefaultValue(question);
   const checkboxValue = typeof value === "boolean" ? value : false;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -2675,6 +2706,7 @@ export function MembershipRegisterWizard({
   theme,
   membershipName,
   membershipDescription,
+  submitError,
 }: MembershipRegisterWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [customFormValues, setCustomFormValues] = useState<CustomFormValues>({});
@@ -2820,7 +2852,7 @@ export function MembershipRegisterWizard({
 
     return (
       <form
-      className="w-full max-w-[100rem] space-y-6"
+        className="w-full max-w-[100rem] space-y-6"
         onSubmit={(event) => {
           if (info) {
             const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
@@ -2828,15 +2860,21 @@ export function MembershipRegisterWizard({
             setCustomFormErrors(nextErrors);
             setCustomQuestionErrors(nextQuestionErrors);
 
-          if (Object.keys(nextErrors).length > 0 || Object.keys(nextQuestionErrors).length > 0) {
-            event.preventDefault();
-            return;
+            if (Object.keys(nextErrors).length > 0 || Object.keys(nextQuestionErrors).length > 0) {
+              event.preventDefault();
+              return;
+            }
           }
-        }
 
-        void onSubmit(event);
-      }}
-    >
+          void onSubmit(event);
+        }}
+      >
+      {submitError ? (
+        <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
+          {submitError}
+        </div>
+      ) : null}
+
       <div className="relative -mx-4 overflow-x-auto pb-2 px-4 sm:mx-0 sm:px-0">
         <div className="relative z-10 flex min-w-full flex-nowrap gap-3 sm:min-w-max sm:gap-4">
           {stepTitles.map((step, index) => (

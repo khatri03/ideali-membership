@@ -13,6 +13,7 @@ type MultiSelectInputProps = {
   isDisabled?: boolean;
   className?: string;
   inputId?: string;
+  onBlur?: () => void;
 };
 
 const selectStyles: StylesConfig<MultiSelectOption, true> = {
@@ -116,6 +117,7 @@ export function MultiSelectInput({
   isDisabled = false,
   className,
   inputId,
+  onBlur,
 }: MultiSelectInputProps) {
   const selectedOptions = options.filter((option) => value.includes(option.value));
 
@@ -136,6 +138,7 @@ export function MultiSelectInput({
       components={{
         Option: CheckboxOption,
       }}
+      onBlur={() => onBlur?.()}
       onChange={(nextValue: MultiValue<MultiSelectOption>) => {
         onChange(nextValue.map((option) => option.value));
       }}
