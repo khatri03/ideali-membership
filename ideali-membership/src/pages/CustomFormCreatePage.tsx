@@ -22,7 +22,31 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  AlignLeft,
+  CalendarDays,
+  CheckSquare2,
+  ChevronDown,
+  CircleDot,
+  CircleHelp,
+  Globe2,
+  Hash,
+  LockKeyhole,
+  Mail,
+  MapPinned,
+  Paperclip,
+  Palette,
+  Phone,
+  Send,
+  SlidersHorizontal,
+  type LucideIcon,
+  Type,
+  ListChecks,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { CountrySelectInput } from "../components/inputs/CountrySelectInput/CountrySelectInput";
+import { MultiSelectInput } from "../components/inputs/MultiSelectInput/MultiSelectInput";
+import { StateSelectInput } from "../components/inputs/StateSelectInput/StateSelectInput";
 import { PasswordInput } from "../components/inputs/PasswordInput/PasswordInput";
 import {
   createCustomForm,
@@ -71,21 +95,30 @@ type ActiveDragItem =
   | { kind: "field"; field: CustomFormFieldDraft }
   | null;
 
-const CONTROL_ICON_MAP: Record<string, string> = {
-  "fas fa-font": "Aa",
-  "fas fa-envelope": "@",
-  "fas fa-hashtag": "#",
-  "fas fa-calendar": "31",
-  "fas fa-caret-down": "v",
-  "fas fa-check-square": "[]",
-  "fas fa-dot-circle": "o",
-  "fas fa-align-left": "|||",
-  "fas fa-paperclip": "+",
-  "fas fa-lock": "*",
-  "fas fa-palette": "~",
-  "fas fa-sliders-h": "=",
-  "fas fa-paper-plane": ">",
-  "fas fa-square-phone": "T",
+type ActiveDragRect = {
+  width: number;
+  height: number;
+} | null;
+
+const CONTROL_ICON_MAP: Record<string, LucideIcon> = {
+  text: Type,
+  email: Mail,
+  number: Hash,
+  date: CalendarDays,
+  select: ChevronDown,
+  checkbox: CheckSquare2,
+  radio: CircleDot,
+  textarea: AlignLeft,
+  file: Paperclip,
+  password: LockKeyhole,
+  tel: Phone,
+  phone: Phone,
+  multiselect: ListChecks,
+  country: Globe2,
+  state: MapPinned,
+  color: Palette,
+  range: SlidersHorizontal,
+  submit: Send,
 };
 
 function createFieldId() {
@@ -115,6 +148,22 @@ function clearDefaultOption(options: CustomFormOptionDraft[], optionId: string) 
   }));
 }
 
+function parseDelimitedDefaultValues(value: string | null | undefined) {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function getSelectedOptionValues(field: CustomFormFieldDraft) {
+  const selectedByFlag = field.options.filter((option) => option.isDefault).map((option) => option.value);
+  return selectedByFlag.length > 0 ? Array.from(new Set(selectedByFlag)) : parseDelimitedDefaultValues(field.defaultValue);
+}
+
 function toSentenceCase(value: string | null | undefined) {
   const trimmed = value?.trim() || "";
   if (!trimmed) {
@@ -125,11 +174,83 @@ function toSentenceCase(value: string | null | undefined) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function normalizeLayoutColumn(value: number | null | undefined) {
+  if (!Number.isFinite(value ?? NaN)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.min(4, Math.trunc(value ?? 1)));
+}
+
+function normalizeFieldLayoutColumn(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(1, Math.min(4, Math.trunc(value)));
+}
+
+function getPreviewColumnSpan(field: CustomFormFieldDraft, fallbackLayoutColumn: number) {
+  const layoutColumn = normalizeLayoutColumn(field.layoutColumn ?? fallbackLayoutColumn);
+
+  switch (layoutColumn) {
+    case 1:
+      return 12;
+    case 2:
+      return 6;
+    case 3:
+      return 4;
+    case 4:
+      return 3;
+    default:
+      return 12;
+  }
+}
+
+function getLayoutPresetLabel(layoutColumn: number) {
+  return `1x${layoutColumn}`;
+}
+
 function normalizeFields(fields: CustomFormFieldDraft[]) {
   return fields.map((field, index) => ({
     ...field,
     displayOrder: index + 1,
   }));
+}
+
+function useCompactViewport() {
+  const [isCompactViewport, setIsCompactViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia("(max-width: 639px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const legacyMediaQuery = mediaQuery as MediaQueryList & {
+      addListener: (listener: () => void) => void;
+      removeListener: (listener: () => void) => void;
+    };
+    const updateViewport = () => setIsCompactViewport(mediaQuery.matches);
+
+    updateViewport();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateViewport);
+      return () => mediaQuery.removeEventListener("change", updateViewport);
+    }
+
+    legacyMediaQuery.addListener(updateViewport);
+    return () => legacyMediaQuery.removeListener(updateViewport);
+  }, []);
+
+  return isCompactViewport;
 }
 
 function createFieldDraft(control: CustomFormControl, displayOrder: number): CustomFormFieldDraft {
@@ -156,6 +277,7 @@ function createFieldDraft(control: CustomFormControl, displayOrder: number): Cus
     maxLength: "",
     defaultValue,
     displayOrder,
+    layoutColumn: null,
     options: hasOptions
       ? [
           {
@@ -183,6 +305,7 @@ function mapPreviewFieldToDraft(field: {
   minLength: number | null;
   maxLength: number | null;
   defaultValue: string | null;
+  layoutColumn: number | null;
   options: { value: string; displayText: string; id: number }[];
   formControl: {
     id: number;
@@ -195,6 +318,14 @@ function mapPreviewFieldToDraft(field: {
   } | null;
 }): CustomFormFieldDraft {
   const fallbackRequiredMessage = field.isMandatory ? `${toSentenceCase(field.controlLabel)} is required.` : "";
+  const controlType = field.formControl?.controlType?.toLowerCase() ?? "";
+  const defaultValues = controlType === "multiselect" ? parseDelimitedDefaultValues(field.defaultValue) : [];
+  const resolvedDefaultValue =
+    controlType === "checkbox"
+      ? getCheckboxDefaultValue(field.defaultValue)
+      : controlType === "multiselect"
+        ? defaultValues.join(", ")
+        : field.defaultValue ?? "";
 
   return {
     id: createFieldId(),
@@ -212,16 +343,14 @@ function mapPreviewFieldToDraft(field: {
     acceptedFileTypes: normalizeAcceptedFileTypes(field.acceptedFileTypes),
     minLength: field.minLength === null ? "" : String(field.minLength),
     maxLength: field.maxLength === null ? "" : String(field.maxLength),
-    defaultValue:
-      field.formControl?.controlType?.toLowerCase() === "checkbox"
-        ? getCheckboxDefaultValue(field.defaultValue)
-        : field.defaultValue ?? "",
+    defaultValue: resolvedDefaultValue,
     displayOrder: field.displayOrder,
+    layoutColumn: normalizeFieldLayoutColumn(field.layoutColumn),
     options: field.options.map((option) => ({
       id: createOptionId(),
       displayText: option.displayText,
       value: option.value,
-      isDefault: field.defaultValue === option.value,
+      isDefault: controlType === "multiselect" ? defaultValues.includes(option.value) : field.defaultValue === option.value,
     })),
   };
 }
@@ -251,12 +380,8 @@ function readResponseData(payload: unknown) {
   return payload;
 }
 
-function getControlGlyph(iconClass: string, controlType: string, label: string) {
-  return (
-    CONTROL_ICON_MAP[iconClass] ??
-    CONTROL_ICON_MAP[`fas fa-${controlType}`] ??
-    label.slice(0, 1).toUpperCase()
-  );
+function getControlIcon(controlType: string) {
+  return CONTROL_ICON_MAP[controlType.trim().toLowerCase()] ?? CircleHelp;
 }
 
 function getControlTooltip(control: CustomFormControl) {
@@ -304,6 +429,45 @@ function getDefaultOptionValue(field: CustomFormFieldDraft) {
   );
 }
 
+function getDefaultMultiSelectValues(field: CustomFormFieldDraft) {
+  return getSelectedOptionValues(field);
+}
+
+type PreviewValue = string | string[] | boolean | null;
+
+function getPreviewDefaultValue(field: CustomFormFieldDraft): PreviewValue {
+  const controlType = field.controlType.toLowerCase();
+
+  if (controlType === "checkbox") {
+    return isTruthyValue(field.defaultValue);
+  }
+
+  if (controlType === "multiselect") {
+    return getDefaultMultiSelectValues(field);
+  }
+
+  if (controlType === "country" || controlType === "state") {
+    return field.defaultValue || "";
+  }
+
+  if (controlType === "file") {
+    return null;
+  }
+
+  if (controlType === "select" || controlType === "radio") {
+    return getDefaultOptionValue(field);
+  }
+
+  return field.defaultValue || "";
+}
+
+function buildPreviewValues(fields: CustomFormFieldDraft[]) {
+  return fields.reduce<Record<string, PreviewValue>>((accumulator, field) => {
+    accumulator[field.id] = getPreviewDefaultValue(field);
+    return accumulator;
+  }, {});
+}
+
 function ControlPaletteItem({
   control,
   count,
@@ -313,6 +477,8 @@ function ControlPaletteItem({
   count: number;
   onDoubleClick: (control: CustomFormControl) => void;
 }) {
+  const Icon = getControlIcon(control.controlType);
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `palette-${control.id}`,
     data: {
@@ -339,7 +505,7 @@ function ControlPaletteItem({
       ].join(" ")}
     >
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700 cursor-pointer hover:cursor-pointer select-none touch-none">
-        {getControlGlyph(control.iconClass, control.controlType, control.name)}
+        <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
       <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
         {control.name}
@@ -358,37 +524,45 @@ function ControlPaletteItem({
 }
 
 function ControlIcon({
-  iconClass,
   controlType,
   label,
 }: {
-  iconClass: string;
   controlType: string;
   label: string;
 }) {
+  const Icon = getControlIcon(controlType);
+
   return (
     <div
       className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-cyan-700 cursor-grab hover:cursor-grab select-none touch-none"
       title={label}
       aria-hidden="true"
     >
-      <span className="text-sm font-bold">
-        {getControlGlyph(iconClass, controlType, label)}
-      </span>
+      <Icon className="h-5 w-5" aria-hidden="true" />
     </div>
   );
 }
 
 function SortableFieldCard({
   field,
+  span,
+  layoutColumn,
+  isCompactViewport,
   selected,
   onSelect,
+  onOpenLayoutMenu,
+  onClearLayout,
   onRemove,
   showDragHandle,
 }: {
   field: CustomFormFieldDraft;
+  span: number;
+  layoutColumn: number;
+  isCompactViewport: boolean;
   selected: boolean;
   onSelect: (id: string) => void;
+  onOpenLayoutMenu: (fieldId: string, position: { x: number; y: number }) => void;
+  onClearLayout: (fieldId: string) => void;
   onRemove: (id: string) => void;
   showDragHandle: boolean;
 }) {
@@ -403,23 +577,45 @@ function SortableFieldCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const combinedStyle = {
+    ...(isDragging ? { transition, opacity: 0 } : style),
+    gridColumn: isCompactViewport ? "1 / -1" : `span ${span} / span ${span}`,
+  };
 
   return (
     <article
       ref={setNodeRef}
-      style={isDragging ? { transition, opacity: 0 } : style}
+      data-field-id={field.id}
       className={[
         "rounded-3xl border bg-white p-4 shadow-sm transition cursor-default hover:cursor-default",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
         isDragging ? "opacity-70" : "",
       ].join(" ")}
+      style={combinedStyle}
       onClick={() => onSelect(field.id)}
       title="Click to select"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{field.label}</h3>
+            <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+              {getLayoutPresetLabel(layoutColumn)}
+              {field.layoutColumn === null ? null : (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onClearLayout(field.id);
+                  }}
+                  className="ml-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-[10px] font-bold leading-none text-rose-600 transition hover:bg-rose-100 hover:text-rose-700"
+                  aria-label="Remove layout override"
+                  title="Remove layout override"
+                >
+                  x
+                </button>
+              )}
+            </span>
             {field.required ? (
               <span
                 className="text-sm font-bold leading-none text-rose-600"
@@ -432,7 +628,7 @@ function SortableFieldCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
           {showDragHandle ? (
             <button
               type="button"
@@ -459,6 +655,35 @@ function SortableFieldCard({
             </button>
           ) : null}
 
+          <button
+            type="button"
+            title="Change Layout"
+            aria-label="Change Layout"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-100 bg-cyan-50 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800"
+            onClick={(event) => {
+              event.stopPropagation();
+              const rect = event.currentTarget.getBoundingClientRect();
+              onOpenLayoutMenu(field.id, {
+                x: rect.right,
+                y: rect.bottom + 8,
+              });
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <rect x="3.5" y="5" width="17" height="4.5" rx="1.2" />
+              <rect x="3.5" y="10.75" width="11.5" height="4.5" rx="1.2" />
+              <rect x="3.5" y="16.5" width="8.25" height="4.5" rx="1.2" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={(event) => {
@@ -500,6 +725,20 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
   const controlType = field.controlType.toLowerCase();
   const placeholder = field.placeholder || field.label;
   const defaultOptionValue = getDefaultOptionValue(field);
+  const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => getDefaultMultiSelectValues(field));
+  const [previewCountryValue, setPreviewCountryValue] = useState(() => field.defaultValue || "");
+
+  useEffect(() => {
+    if (controlType === "multiselect") {
+      setPreviewMultiSelectValue(getDefaultMultiSelectValues(field));
+    }
+  }, [controlType, field.defaultValue, field.options, field.id]);
+
+  useEffect(() => {
+    if (controlType === "country") {
+      setPreviewCountryValue(field.defaultValue || "");
+    }
+  }, [controlType, field.defaultValue, field.id]);
 
   switch (controlType) {
     case "text":
@@ -551,6 +790,37 @@ function FieldCanvasPreview({ field }: { field: CustomFormFieldDraft }) {
             </option>
           ))}
         </select>
+      );
+    case "multiselect":
+      return (
+        <MultiSelectInput
+          value={previewMultiSelectValue}
+          onChange={setPreviewMultiSelectValue}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={field.placeholder || "Select one or more"}
+        />
+      );
+    case "country":
+      return (
+        <CountrySelectInput
+          value={previewCountryValue}
+          onChange={setPreviewCountryValue}
+          placeholder={field.placeholder || "Select country"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      );
+    case "state":
+      return (
+        <StateSelectInput
+          countryId={null}
+          value={field.defaultValue}
+          onChange={() => undefined}
+          placeholder={field.placeholder || "Select state"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
       );
     case "checkbox":
       return (
@@ -628,10 +898,21 @@ function PreviewFieldLabel({ field }: { field: CustomFormFieldDraft }) {
   );
 }
 
-function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
+function PreviewFieldRenderer({
+  field,
+  value,
+  onChange,
+  countryId,
+}: {
+  field: CustomFormFieldDraft;
+  value: PreviewValue;
+  onChange: (value: PreviewValue) => void;
+  countryId?: string | null;
+}) {
   const controlType = field.controlType.toLowerCase();
   const placeholder = field.placeholder || field.label;
   const defaultOptionValue = getDefaultOptionValue(field);
+  const multiSelectValue = Array.isArray(value) ? value : getDefaultMultiSelectValues(field);
 
   switch (controlType) {
     case "text":
@@ -642,7 +923,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type={controlType}
-          defaultValue={field.defaultValue}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -650,8 +932,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "password":
       return (
         <PasswordInput
-          value={field.defaultValue}
-          readOnly
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -660,7 +942,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <textarea
           rows={4}
-          defaultValue={field.defaultValue}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -668,13 +951,11 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
     case "select":
       return (
         <select
-          defaultValue={defaultOptionValue}
-          onChange={() => undefined}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         >
-          <option value="">
-            {field.placeholder || "Select one"}
-          </option>
+          <option value="">{field.placeholder || "Select one"}</option>
           {field.options.map((option) => (
             <option key={option.id} value={option.value}>
               {option.displayText}
@@ -682,10 +963,46 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
           ))}
         </select>
       );
+    case "multiselect":
+      return (
+        <MultiSelectInput
+          value={multiSelectValue}
+          onChange={(nextValue) => onChange(nextValue)}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={field.placeholder || "Select one or more"}
+        />
+      );
+    case "country":
+      return (
+        <CountrySelectInput
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
+          placeholder={field.placeholder || "Select country"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      );
+    case "state":
+      return (
+        <StateSelectInput
+          countryId={countryId}
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
+          placeholder={field.placeholder || "Select state"}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+        />
+      );
     case "checkbox":
       return (
         <label className="inline-flex items-center gap-3">
-          <input type="checkbox" defaultChecked={isTruthyValue(field.defaultValue)} className="h-4 w-4 accent-cyan-600" />
+          <input
+            type="checkbox"
+            checked={typeof value === "boolean" ? value : isTruthyValue(field.defaultValue)}
+            onChange={(event) => onChange(event.target.checked)}
+            className="h-4 w-4 accent-cyan-600"
+          />
           <span className="text-sm font-medium text-slate-800">{field.label}</span>
         </label>
       );
@@ -697,7 +1014,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
               <input
                 type="radio"
                 name={`preview-${field.id}`}
-                defaultChecked={getDefaultOptionValue(field) === option.value}
+                checked={typeof value === "string" ? value === option.value : defaultOptionValue === option.value}
+                onChange={() => onChange(option.value)}
                 className="h-4 w-4 accent-cyan-600"
               />
               <span>{option.displayText}</span>
@@ -710,13 +1028,28 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
         <input
           type="file"
           accept={field.acceptedFileTypes.length > 0 ? field.acceptedFileTypes.join(",") : undefined}
+          onChange={() => onChange(null)}
           className="block w-full text-sm text-slate-500"
         />
       );
     case "range":
-      return <input type="range" defaultValue={field.defaultValue || undefined} className="w-full accent-cyan-600" />;
+      return (
+        <input
+          type="range"
+          value={typeof value === "string" ? value : field.defaultValue || ""}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full accent-cyan-600"
+        />
+      );
     case "color":
-      return <input type="color" defaultValue={field.defaultValue || "#0ea5e9"} className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1" />;
+      return (
+        <input
+          type="color"
+          value={typeof value === "string" ? value : field.defaultValue || "#0ea5e9"}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-12 w-16 rounded-xl border border-slate-200 bg-white p-1"
+        />
+      );
     case "submit":
       return (
         <button
@@ -730,6 +1063,8 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
       return (
         <input
           type="text"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none shadow-sm transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
         />
@@ -737,12 +1072,80 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
   }
 }
 
-function FormPreviewField({ field }: { field: CustomFormFieldDraft }) {
+function FormPreviewField({
+  field,
+  span,
+  isCompactViewport,
+  value,
+  onChange,
+  countryId,
+}: {
+  field: CustomFormFieldDraft;
+  span: number;
+  isCompactViewport: boolean;
+  value: PreviewValue;
+  onChange: (value: PreviewValue) => void;
+  countryId?: string | null;
+}) {
   return (
-    <div className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4">
-      <PreviewFieldLabel field={field} />
-      <PreviewFieldRenderer field={field} />
-      {field.tooltip ? <p className="mt-2 text-xs text-slate-500">{field.tooltip}</p> : null}
+    <div
+      className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4"
+      style={{ gridColumn: isCompactViewport ? "1 / -1" : `span ${span} / span ${span}` }}
+    >
+      <div className="space-y-3">
+        <PreviewFieldLabel field={field} />
+        <PreviewFieldRenderer field={field} value={value} onChange={onChange} countryId={countryId} />
+        {field.tooltip ? <p className="text-xs text-slate-500">{field.tooltip}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+function PreviewFormCanvas({
+  fields,
+  spanCount,
+  isCompactViewport,
+}: {
+  fields: CustomFormFieldDraft[];
+  spanCount: number;
+  isCompactViewport: boolean;
+}) {
+  const [previewValues, setPreviewValues] = useState<Record<string, PreviewValue>>(() => buildPreviewValues(fields));
+
+  useEffect(() => {
+    setPreviewValues(buildPreviewValues(fields));
+  }, [fields]);
+
+  return (
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
+      {fields.map((field) => {
+        const countryField = fields
+          .filter((candidate) => candidate.displayOrder < field.displayOrder)
+          .filter((candidate) => candidate.controlType.toLowerCase() === "country")
+          .pop();
+
+        const countryId =
+          countryField && typeof previewValues[countryField.id] === "string"
+            ? (previewValues[countryField.id] as string)
+            : null;
+
+        return (
+          <FormPreviewField
+            key={field.id}
+            field={field}
+            span={getPreviewColumnSpan(field, spanCount)}
+            isCompactViewport={isCompactViewport}
+            value={previewValues[field.id] ?? getPreviewDefaultValue(field)}
+            countryId={countryId}
+            onChange={(nextValue) =>
+              setPreviewValues((current) => ({
+                ...current,
+                [field.id]: nextValue,
+              }))
+            }
+          />
+        );
+      })}
     </div>
   );
 }
@@ -837,17 +1240,25 @@ function SelectFieldPreview({
   );
 }
 
-function DragGhost({ item }: { item: ActiveDragItem }) {
+function DragGhost({ item, rect }: { item: ActiveDragItem; rect: ActiveDragRect }) {
   if (!item) {
     return null;
   }
 
+  const style = rect
+    ? {
+        width: rect.width,
+        height: rect.height,
+      }
+    : undefined;
+
   if (item.kind === "palette") {
     return (
-      <div className="flex w-72 cursor-grabbing items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700">
-          {getControlGlyph(item.control.iconClass, item.control.controlType, item.control.name)}
-        </div>
+      <div
+        className="flex cursor-grabbing items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10"
+        style={style}
+      >
+        <ControlIcon controlType={item.control.controlType} label={item.control.name} />
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
           {item.control.name}
         </p>
@@ -856,7 +1267,10 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
   }
 
   return (
-    <div className="w-[min(20rem,calc(100vw-2rem))] cursor-grabbing rounded-3xl border border-cyan-200 bg-white p-4 shadow-2xl shadow-slate-900/10">
+    <div
+      className="cursor-grabbing rounded-3xl border border-cyan-200 bg-white p-4 shadow-2xl shadow-slate-900/10"
+      style={style}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -885,6 +1299,23 @@ function DragGhost({ item }: { item: ActiveDragItem }) {
   );
 }
 
+function measureDragSourceRect(sourceId: string) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const element = document.querySelector<HTMLElement>(`[data-field-id="${sourceId}"]`);
+  if (!element) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+  return {
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
 function ToggleField({
   title,
   checked,
@@ -910,6 +1341,7 @@ function ToggleField({
 export function CustomFormCreatePage() {
   const { customFormUniqueId } = useParams<{ customFormUniqueId?: string }>();
   const isEditMode = Boolean(customFormUniqueId);
+  const isCompactViewport = useCompactViewport();
   const [controls, setControls] = useState<CustomFormControl[]>([]);
   const [isLoadingControls, setIsLoadingControls] = useState(true);
   const [controlsError, setControlsError] = useState<string | null>(null);
@@ -922,6 +1354,12 @@ export function CustomFormCreatePage() {
   const [isCanvasTargeted, setIsCanvasTargeted] = useState(false);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [activeDragRect, setActiveDragRect] = useState<ActiveDragRect>(null);
+  const [fieldLayoutMenu, setFieldLayoutMenu] = useState<{
+    fieldId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [fieldToRemoveId, setFieldToRemoveId] = useState<string | null>(null);
   const [optionToRemoveId, setOptionToRemoveId] = useState<string | null>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -931,6 +1369,7 @@ export function CustomFormCreatePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreateValidation, setShowCreateValidation] = useState(false);
   const lastDropTargetIdRef = useRef<string | null>(null);
+  const dragFieldOrderSnapshotRef = useRef<CustomFormFieldDraft[] | null>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastPointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const canvasDropRef = useRef<HTMLDivElement | null>(null);
@@ -990,7 +1429,7 @@ export function CustomFormCreatePage() {
           name: preview.name,
           headerText: preview.headerText,
           description: preview.description ?? "",
-          layoutColumn: preview.layoutColumn,
+          layoutColumn: preview.layoutColumn ?? 1,
         });
         setFields(preview.fields.map((field) => mapPreviewFieldToDraft(field)));
         setSelectedFieldId(null);
@@ -1053,6 +1492,31 @@ export function CustomFormCreatePage() {
 
     return () => window.cancelAnimationFrame(focusHandle);
   }, [selectedFieldId]);
+
+  useEffect(() => {
+    if (!fieldLayoutMenu) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFieldLayoutMenu(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fieldLayoutMenu]);
+
+  useEffect(() => {
+    if (!fieldLayoutMenu) {
+      return;
+    }
+
+    if (!fields.some((field) => field.id === fieldLayoutMenu.fieldId)) {
+      setFieldLayoutMenu(null);
+    }
+  }, [fieldLayoutMenu, fields]);
 
   const createFormIssues = useMemo(() => {
     const issues: string[] = [];
@@ -1117,6 +1581,19 @@ export function CustomFormCreatePage() {
   }, [selectedField, selectedOptionId]);
 
   const previewColumnCount = Math.max(1, Math.min(4, Number(draft.layoutColumn) || 1));
+  const fieldLayoutMenuStyle = useMemo(() => {
+    if (!fieldLayoutMenu || typeof window === "undefined") {
+      return null;
+    }
+
+    const estimatedWidth = 172;
+    const estimatedHeight = 228;
+
+    return {
+      left: Math.max(16, Math.min(fieldLayoutMenu.x, window.innerWidth - estimatedWidth - 16)),
+      top: Math.max(16, Math.min(fieldLayoutMenu.y, window.innerHeight - estimatedHeight - 16)),
+    };
+  }, [fieldLayoutMenu]);
 
   const controlUsageCounts = useMemo(() => {
     const counts = new Map<number, number>();
@@ -1180,11 +1657,46 @@ export function CustomFormCreatePage() {
     );
   }
 
+  function setFieldLayoutPreset(fieldId: string, layoutColumn: number) {
+    setFields((current) =>
+      normalizeFields(
+        current.map((field) =>
+          field.id === fieldId
+            ? {
+                ...field,
+                layoutColumn,
+              }
+            : field,
+        ),
+      ),
+    );
+    setSelectedFieldId(fieldId);
+    setFieldLayoutMenu(null);
+  }
+
+  function clearFieldLayoutPreset(fieldId: string) {
+    setFields((current) =>
+      normalizeFields(
+        current.map((field) =>
+          field.id === fieldId
+            ? {
+                ...field,
+                layoutColumn: null,
+              }
+            : field,
+        ),
+      ),
+    );
+    setSelectedFieldId(fieldId);
+    setFieldLayoutMenu((current) => (current?.fieldId === fieldId ? null : current));
+  }
+
   function deleteField(fieldId: string) {
     setFields((current) => {
       const next = current.filter((field) => field.id !== fieldId);
       return normalizeFields(next);
     });
+    setFieldLayoutMenu((current) => (current?.fieldId === fieldId ? null : current));
 
     setSelectedFieldId((current) => {
       if (current !== fieldId) {
@@ -1197,6 +1709,7 @@ export function CustomFormCreatePage() {
 
   function removeField(fieldId: string) {
     setFieldToRemoveId(fieldId);
+    setFieldLayoutMenu(null);
   }
 
   function confirmRemoveField() {
@@ -1232,6 +1745,7 @@ export function CustomFormCreatePage() {
   function clearAllCanvasFields() {
     setFields([]);
     setSelectedFieldId(null);
+    setFieldLayoutMenu(null);
     setIsClearConfirmOpen(false);
     setFieldToRemoveId(null);
     setOptionToRemoveId(null);
@@ -1242,10 +1756,28 @@ export function CustomFormCreatePage() {
     setIsPreviewOpen(false);
   }
 
+  function openFieldLayoutMenu(fieldId: string, position: { x: number; y: number }) {
+    setFieldLayoutMenu({
+      fieldId,
+      x: position.x,
+      y: position.y,
+    });
+  }
+
+  function closeFieldLayoutMenu() {
+    setFieldLayoutMenu(null);
+  }
+
   function openPreview() {
     if (fields.length === 0) {
       return;
     }
+
+    console.log("[CustomForm][Preview]", {
+      draft,
+      previewColumnCount,
+      fields,
+    });
 
     setIsPreviewOpen(true);
   }
@@ -1284,6 +1816,7 @@ export function CustomFormCreatePage() {
 
   function onDragStart(event: DragStartEvent) {
     setActiveDragId(String(event.active.id));
+    setActiveDragRect(null);
     lastDropTargetIdRef.current = null;
     setIsCanvasTargeted(false);
     const activatorEvent = event.activatorEvent as PointerEvent | MouseEvent | undefined;
@@ -1301,16 +1834,26 @@ export function CustomFormCreatePage() {
 
     if (activeData?.source === "palette" && activeData.control) {
       setActiveDragItem({ kind: "palette", control: activeData.control });
+      dragFieldOrderSnapshotRef.current = null;
       return;
     }
 
     if (activeData?.source === "field") {
+      dragFieldOrderSnapshotRef.current = fields;
+      const measuredRect = measureDragSourceRect(String(event.active.id));
+      setActiveDragRect(
+        measuredRect ?? {
+          width: event.active.rect.current.initial?.width ?? 0,
+          height: event.active.rect.current.initial?.height ?? 0,
+        },
+      );
       const field = fields.find((current) => current.id === event.active.id);
       setActiveDragItem(field ? { kind: "field", field } : null);
       return;
     }
 
     setActiveDragItem(null);
+    dragFieldOrderSnapshotRef.current = null;
   }
 
   function onDragMove(event: DragMoveEvent) {
@@ -1332,11 +1875,37 @@ export function CustomFormCreatePage() {
     if (targetId && targetId === CANVAS_ID) {
       lastDropTargetIdRef.current = targetId;
     }
+
+    const activeData = event.active.data.current as
+      | { source?: "palette"; control?: CustomFormControl }
+      | { source?: "field" }
+      | undefined;
+
+    if (activeData?.source !== "field" || !event.over || event.over.id === event.active.id) {
+      return;
+    }
+
+    const overId = String(event.over.id);
+    if (overId === CANVAS_ID) {
+      return;
+    }
+
+    const oldIndex = fields.findIndex((field) => field.id === event.active.id);
+    const newIndex = fields.findIndex((field) => field.id === overId);
+
+    if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
+      setFields((current) => normalizeFields(arrayMove(current, oldIndex, newIndex)));
+    }
   }
 
   function onDragCancel(_event: DragCancelEvent) {
+    if (dragFieldOrderSnapshotRef.current) {
+      setFields(normalizeFields(dragFieldOrderSnapshotRef.current));
+    }
+    dragFieldOrderSnapshotRef.current = null;
     setActiveDragId(null);
     setActiveDragItem(null);
+    setActiveDragRect(null);
     setIsCanvasTargeted(false);
     lastDropTargetIdRef.current = null;
   }
@@ -1347,6 +1916,7 @@ export function CustomFormCreatePage() {
 
     setActiveDragId(null);
     setActiveDragItem(null);
+    setActiveDragRect(null);
     setIsCanvasTargeted(false);
     lastDropTargetIdRef.current = null;
     dragStartPointRef.current = null;
@@ -1364,18 +1934,15 @@ export function CustomFormCreatePage() {
       return;
     }
 
-    if (activeData?.source === "field") {
-      if (!over) {
-        return;
+    if (activeData?.source === "field" && !over) {
+      if (dragFieldOrderSnapshotRef.current) {
+        setFields(normalizeFields(dragFieldOrderSnapshotRef.current));
       }
-
-      const oldIndex = fields.findIndex((field) => field.id === active.id);
-      const newIndex = fields.findIndex((field) => field.id === String(over.id));
-
-      if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
-        setFields((current) => normalizeFields(arrayMove(current, oldIndex, newIndex)));
-      }
+      dragFieldOrderSnapshotRef.current = null;
+      return;
     }
+
+    dragFieldOrderSnapshotRef.current = null;
   }
 
   function addOption() {
@@ -1404,6 +1971,19 @@ export function CustomFormCreatePage() {
 
   function setDefaultOption(optionId: string) {
     updateSelectedField((field) => {
+      if (field.controlType.toLowerCase() === "multiselect") {
+        const nextOptions = field.options.map((option) =>
+          option.id === optionId ? { ...option, isDefault: !option.isDefault } : option,
+        );
+        const nextDefaultValues = nextOptions.filter((option) => option.isDefault).map((option) => option.value);
+
+        return {
+          ...field,
+          defaultValue: nextDefaultValues.join(", "),
+          options: nextOptions,
+        };
+      }
+
       const nextOptions = clearDefaultOption(field.options, optionId);
       const nextDefault = nextOptions.find((option) => option.id === optionId);
 
@@ -1430,7 +2010,7 @@ export function CustomFormCreatePage() {
       options: (() => {
         const next = field.options.filter((option) => option.id !== optionToRemoveId);
 
-        if (next.length > 0 && !next.some((option) => option.isDefault)) {
+        if (field.controlType.toLowerCase() !== "multiselect" && next.length > 0 && !next.some((option) => option.isDefault)) {
           const firstOption = next[0];
           if (firstOption) {
             next[0] = { ...firstOption, isDefault: true };
@@ -1444,6 +2024,13 @@ export function CustomFormCreatePage() {
 
         if (next.length === 0) {
           return "";
+        }
+
+        if (field.controlType.toLowerCase() === "multiselect") {
+          return next
+            .filter((option) => option.isDefault)
+            .map((option) => option.value)
+            .join(", ");
         }
 
         const nextDefault = next.find((option) => option.isDefault) ?? next[0];
@@ -1469,10 +2056,10 @@ export function CustomFormCreatePage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-              Custom Forms
+              Custom Form Designer
             </p>
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
-              {isEditMode ? "Edit custom form" : "Build a new custom form"}
+              {isEditMode ? "Edit custom form" : "Design a custom form"}
             </h1>
             <p className="mt-3 text-slate-600">
               {isEditMode
@@ -1485,7 +2072,7 @@ export function CustomFormCreatePage() {
             to={APP_ROUTES.customForms}
             className="inline-flex items-center justify-center rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
           >
-            Back to forms
+            Back to forms list
           </Link>
         </div>
 
@@ -1644,7 +2231,7 @@ export function CustomFormCreatePage() {
             </div>
           </aside>
           <DragOverlay dropAnimation={null}>
-            <DragGhost item={activeDragItem} />
+            <DragGhost item={activeDragItem} rect={activeDragRect} />
           </DragOverlay>
 
             <main
@@ -1705,20 +2292,25 @@ export function CustomFormCreatePage() {
                   </div>
                 ) : null}
                 <SortableContext items={fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
-                  {fields.length > 0 ? (
-                    <div className="space-y-4">
-                      {fields.map((field) => (
-                        <SortableFieldCard
-                          key={field.id}
-                          field={field}
-                          selected={field.id === selectedFieldId}
-                          onSelect={setSelectedFieldId}
-                          onRemove={removeField}
-                          showDragHandle={fields.length > 1}
-                        />
-                      ))}
-                    </div>
-                  ) : (
+                {fields.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                    {fields.map((field) => (
+                      <SortableFieldCard
+                        key={field.id}
+                        field={field}
+                        span={getPreviewColumnSpan(field, previewColumnCount)}
+                        layoutColumn={normalizeLayoutColumn(field.layoutColumn ?? previewColumnCount)}
+                        isCompactViewport={isCompactViewport}
+                        selected={field.id === selectedFieldId}
+                        onSelect={setSelectedFieldId}
+                        onOpenLayoutMenu={openFieldLayoutMenu}
+                        onClearLayout={clearFieldLayoutPreset}
+                        onRemove={removeField}
+                        showDragHandle={fields.length > 1}
+                      />
+                    ))}
+                  </div>
+                ) : (
                     <div className="flex min-h-[20rem] items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white px-4 text-center sm:min-h-[24rem] sm:px-6 lg:min-h-[28rem]">
                       <div className="max-w-md">
                         <p className="text-lg font-semibold text-slate-900">Drop your first field here</p>
@@ -1788,6 +2380,30 @@ export function CustomFormCreatePage() {
                         { label: "Checked", value: "true" },
                       ]}
                     />
+                  ) : selectedControl?.controlType.toLowerCase() === "multiselect" ? (
+                    <div className="space-y-3">
+                      <MultiSelectInput
+                        value={getDefaultMultiSelectValues(selectedField)}
+                        onChange={(nextValues) =>
+                          updateSelectedField((field) => ({
+                            ...field,
+                            defaultValue: nextValues.join(", "),
+                            options: field.options.map((option) => ({
+                              ...option,
+                              isDefault: nextValues.includes(option.value),
+                            })),
+                          }))
+                        }
+                        options={selectedField.options.map((option) => ({
+                          label: option.displayText,
+                          value: option.value,
+                        }))}
+                        placeholder="Choose default selections"
+                      />
+                      <p className="text-xs leading-5 text-slate-500">
+                        Select one or more defaults from the dropdown.
+                      </p>
+                    </div>
                   ) : selectedControl?.controlType.toLowerCase() === "file" ? null : (
                     <FieldPreview
                       title="Default value"
@@ -1829,6 +2445,25 @@ export function CustomFormCreatePage() {
                       placeholder="This field is required."
                     />
                   ) : null}
+
+                  <SelectFieldPreview
+                    title="Layout columns"
+                    value={selectedField.layoutColumn === null ? "" : String(selectedField.layoutColumn)}
+                    onChange={(value) =>
+                      updateSelectedField((field) => ({
+                        ...field,
+                        layoutColumn: value ? Math.max(1, Math.min(4, Number(value) || 1)) : null,
+                      }))
+                    }
+                    options={[
+                      { label: "Inherit form layout", value: "" },
+                      { label: "1 column", value: "1" },
+                      { label: "2 columns", value: "2" },
+                      { label: "3 columns", value: "3" },
+                      { label: "4 columns", value: "4" },
+                    ]}
+                    placeholder="Choose a span"
+                  />
 
                   {selectedControl?.controlType.toLowerCase() === "file" ? (
                     <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -2116,7 +2751,7 @@ export function CustomFormCreatePage() {
       {isPreviewOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
           <div className="flex max-h-[92vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+            <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
                   Preview
@@ -2140,25 +2775,54 @@ export function CustomFormCreatePage() {
                   <p className="mb-6 text-sm leading-6 text-slate-600">{draft.description}</p>
                 ) : null}
 
-                <div
-                  className="grid gap-5"
-                  style={{
-                    gridTemplateColumns: `repeat(${previewColumnCount}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {fields.length > 0 ? (
-                    fields.map((field) => <FormPreviewField key={field.id} field={field} />)
-                  ) : (
-                    <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                      <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Add controls to the canvas to see the rendered form here.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {fields.length > 0 ? (
+                  <PreviewFormCanvas
+                    fields={fields}
+                    spanCount={previewColumnCount}
+                    isCompactViewport={isCompactViewport}
+                  />
+                ) : (
+                  <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                    <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Add controls to the canvas to see the rendered form here.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {fieldLayoutMenu && fieldLayoutMenuStyle ? (
+        <div
+          className="fixed inset-0 z-[60]"
+          onMouseDown={closeFieldLayoutMenu}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <div
+            className="absolute w-48 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/20"
+            style={fieldLayoutMenuStyle}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              Layout
+            </p>
+            {[1, 2, 3, 4].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFieldLayoutPreset(fieldLayoutMenu.fieldId, value)}
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800"
+              >
+                <span>{getLayoutPresetLabel(value)}</span>
+                {fieldLayoutMenu &&
+                normalizeLayoutColumn(fields.find((field) => field.id === fieldLayoutMenu.fieldId)?.layoutColumn ?? previewColumnCount) === value ? (
+                  <span className="text-cyan-700">✓</span>
+                ) : null}
+              </button>
+            ))}
           </div>
         </div>
       ) : null}

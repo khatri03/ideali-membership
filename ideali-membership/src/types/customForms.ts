@@ -30,6 +30,7 @@ export interface CustomFormPreviewField {
   formControlTypeId: number;
   controlUniqueId: string | null;
   displayOrder: number;
+  layoutColumn: number | null;
   controlLabel: string;
   placeHolder: string | null;
   tooltip: string | null;
@@ -60,7 +61,7 @@ export interface CustomFormPreview {
   name: string;
   headerText: string;
   description: string | null;
-  layoutColumn: number;
+  layoutColumn: number | null;
   fields: CustomFormPreviewField[];
 }
 
@@ -98,6 +99,7 @@ export interface CustomFormFieldDraft {
   maxLength: string;
   defaultValue: string;
   displayOrder: number;
+  layoutColumn: number | null;
   options: CustomFormOptionDraft[];
 }
 

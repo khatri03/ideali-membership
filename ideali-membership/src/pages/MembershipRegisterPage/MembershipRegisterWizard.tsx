@@ -9,6 +9,9 @@ import type {
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
 } from "../../types/membershipRegistration";
+import { CountrySelectInput } from "../../components/inputs/CountrySelectInput/CountrySelectInput";
+import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
+import { StateSelectInput } from "../../components/inputs/StateSelectInput/StateSelectInput";
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
 
@@ -45,6 +48,7 @@ type MembershipRegisterWizardProps = Pick<
   theme: MembershipTheme;
   membershipName: string;
   membershipDescription: string;
+  submitError: string;
 };
 
 const STEPS = [
@@ -55,6 +59,7 @@ const STEPS = [
   {
     title: "Your Information",
     description: "Add your personal details.",
+    hidden: true,
   },
   {
     title: "Questionnaire",
@@ -1091,7 +1096,7 @@ function ProfilePhotoField({
   );
 }
 
-type CustomFormValue = string | boolean | File | null;
+type CustomFormValue = string | string[] | boolean | File | null;
 type CustomFormValues = Record<string, CustomFormValue>;
 type CustomFormErrors = Record<string, string>;
 type CustomQuestionValue = CustomFormValue;
@@ -1106,7 +1111,7 @@ function buildCustomQuestionKey(questionUniqueId: string) {
   return questionUniqueId;
 }
 
-function getCustomFormControlType(controlTypeId: number) {
+function getCustomFormControlType(controlTypeId: number): string {
   switch (controlTypeId) {
     case 1:
       return "text";
@@ -1130,9 +1135,35 @@ function getCustomFormControlType(controlTypeId: number) {
       return "password";
     case 14:
       return "phone";
+    case 15:
+      return "multiselect";
+    case 16:
+      return "country";
+    case 17:
+      return "state";
     default:
       return "text";
   }
+}
+
+function parseDelimitedValues(value: string | null | undefined) {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function getCustomFormMultiSelectDefaultValue(field: MembershipRegistrationCustomFormField) {
+  const selectedValues = field.options.filter((option) => option.isDefault).map((option) => option.value);
+  if (selectedValues.length > 0) {
+    return Array.from(new Set(selectedValues));
+  }
+
+  return parseDelimitedValues(field.defaultValue);
 }
 
 function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField) {
@@ -1144,6 +1175,18 @@ function getCustomFormDefaultValue(field: MembershipRegistrationCustomFormField)
 
   if (controlType === "file") {
     return null;
+  }
+
+  if (controlType === "multiselect") {
+    return getCustomFormMultiSelectDefaultValue(field);
+  }
+
+  if (controlType === "country") {
+    return field.defaultValue || "";
+  }
+
+  if (controlType === "state") {
+    return field.defaultValue || "";
   }
 
   if (controlType === "select" || controlType === "radio") {
@@ -1169,12 +1212,25 @@ function getCustomQuestionDefaultValue(question: MembershipRegistrationCustomQue
     return null;
   }
 
+  if (controlType === "multiselect") {
+    return getCustomQuestionMultiSelectDefaultValue(question);
+  }
+
   if (controlType === "select" || controlType === "radio") {
     const selectedOption = question.options.find((option) => option.isDefault)?.value || question.defaultValue || "";
     return selectedOption;
   }
 
   return question.defaultValue || "";
+}
+
+function getCustomQuestionMultiSelectDefaultValue(question: MembershipRegistrationCustomQuestion) {
+  const selectedValues = question.options.filter((option) => option.isDefault).map((option) => option.value);
+  if (selectedValues.length > 0) {
+    return Array.from(new Set(selectedValues));
+  }
+
+  return parseDelimitedValues(question.defaultValue);
 }
 
 function toSentenceCase(value: string | null | undefined) {
@@ -1295,6 +1351,7 @@ function validateCustomFormField(
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const textValue = typeof value === "string" ? value.trim() : "";
   const normalizedString = typeof value === "string" ? value : "";
+  const selectedValues = Array.isArray(value) ? value.map((item) => item.trim()).filter(Boolean) : [];
   const requiredMessage = field.requiredMessage?.trim() || `${toSentenceCase(field.controlLabel)} is required.`;
 
   if (controlType === "checkbox") {
@@ -1307,6 +1364,37 @@ function validateCustomFormField(
 
   if (controlType === "file") {
     return getFileValidationError(field, value);
+  }
+
+  if (controlType === "multiselect") {
+    if (field.isMandatory && selectedValues.length === 0) {
+      return requiredMessage;
+    }
+
+    if (selectedValues.length > 0 && field.options.length > 0) {
+      const allowedValues = new Set(field.options.map((option) => option.value));
+      if (selectedValues.some((item) => !allowedValues.has(item))) {
+        return "Select a valid option.";
+      }
+    }
+
+    return "";
+  }
+
+  if (controlType === "country") {
+    if (field.isMandatory && !textValue) {
+      return requiredMessage;
+    }
+
+    return "";
+  }
+
+  if (controlType === "state") {
+    if (field.isMandatory && !textValue) {
+      return requiredMessage;
+    }
+
+    return "";
   }
 
   if (controlType === "email" && textValue) {
@@ -1362,6 +1450,7 @@ function validateCustomQuestionField(
   const controlType = getCustomQuestionControlType(question.controlType);
   const textValue = typeof value === "string" ? value.trim() : "";
   const normalizedString = typeof value === "string" ? value : "";
+  const selectedValues = Array.isArray(value) ? value.map((item) => item.trim()).filter(Boolean) : [];
   const requiredMessage = question.requiredMessage?.trim() || `${toSentenceCase(question.label)} is required.`;
 
   if (controlType === "checkbox") {
@@ -1374,6 +1463,21 @@ function validateCustomQuestionField(
 
   if (controlType === "file") {
     return getCustomQuestionFileValidationError(question, value);
+  }
+
+  if (controlType === "multiselect") {
+    if (question.required && selectedValues.length === 0) {
+      return requiredMessage;
+    }
+
+    if (selectedValues.length > 0 && question.options.length > 0) {
+      const allowedValues = new Set(question.options.map((option) => option.value));
+      if (selectedValues.some((item) => !allowedValues.has(item))) {
+        return "Select a valid option.";
+      }
+    }
+
+    return "";
   }
 
   if (controlType === "email" && textValue) {
@@ -1458,6 +1562,28 @@ function validateCustomQuestions(
   return errors;
 }
 
+function getNearestCountryQuestionValue(
+  questions: MembershipRegistrationCustomQuestion[],
+  values: CustomQuestionValues,
+  targetIndex: number,
+) {
+  for (let index = targetIndex - 1; index >= 0; index -= 1) {
+    const candidate = questions[index];
+    if (!candidate) {
+      continue;
+    }
+
+    if (getCustomQuestionControlType(candidate.controlType) !== "country") {
+      continue;
+    }
+
+    const candidateValue = values[buildCustomQuestionKey(candidate.uniqueId)];
+    return typeof candidateValue === "string" && candidateValue.trim().length > 0 ? candidateValue : null;
+  }
+
+  return null;
+}
+
 function getCustomQuestionGridClass() {
   return "grid gap-4";
 }
@@ -1470,6 +1596,7 @@ function CustomQuestionFieldCard({
   onBlur,
   theme,
   showBorders,
+  countryId,
 }: {
   question: MembershipRegistrationCustomQuestion;
   value: CustomQuestionValue;
@@ -1478,10 +1605,12 @@ function CustomQuestionFieldCard({
   onBlur: (value: CustomQuestionValue) => void;
   theme: MembershipTheme;
   showBorders: boolean;
+  countryId?: string | null;
 }) {
   const controlType = getCustomQuestionControlType(question.controlType);
   const label = question.placeHolder || question.label;
   const defaultOptionValue = typeof value === "string" ? value : "";
+  const multiSelectValue = Array.isArray(value) ? value : getCustomQuestionMultiSelectDefaultValue(question);
   const checkboxValue = typeof value === "boolean" ? value : false;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -1757,8 +1886,35 @@ function CustomQuestionsSection({
         {questions
           .slice()
           .sort((left, right) => left.displayOrder - right.displayOrder)
-          .map((question) => {
+          .map((question, index, sortedQuestions) => {
             const key = buildCustomQuestionKey(question.uniqueId);
+            const countryId = getNearestCountryQuestionValue(sortedQuestions, values, index);
+            const controlType = getCustomQuestionControlType(question.controlType);
+
+            function handleFieldChange(nextValue: CustomQuestionValue) {
+              onFieldChange(key, nextValue);
+
+              if (controlType !== "country") {
+                return;
+              }
+
+              for (let nextIndex = index + 1; nextIndex < sortedQuestions.length; nextIndex += 1) {
+                const nextQuestion = sortedQuestions[nextIndex];
+                if (!nextQuestion) {
+                  continue;
+                }
+
+                const nextType = getCustomQuestionControlType(nextQuestion.controlType);
+
+                if (nextType === "country") {
+                  break;
+                }
+
+                if (nextType === "state") {
+                  onFieldChange(buildCustomQuestionKey(nextQuestion.uniqueId), "");
+                }
+              }
+            }
 
             return (
               <CustomQuestionFieldCard
@@ -1766,10 +1922,11 @@ function CustomQuestionsSection({
                 question={question}
                 value={values[key] ?? ""}
                 error={errors[key] ?? ""}
-                onChange={(nextValue) => onFieldChange(key, nextValue)}
+                onChange={handleFieldChange}
                 onBlur={(nextValue) => onFieldBlur(key, nextValue)}
                 theme={theme}
                 showBorders={showBorders}
+                countryId={countryId}
               />
             );
           })}
@@ -1779,18 +1936,29 @@ function CustomQuestionsSection({
 }
 
 function getCustomFormGridClass(layoutColumn: number) {
+  void layoutColumn;
+  return "grid grid-cols-12 gap-4";
+}
+
+function getCustomFormFieldGridSpanClass(layoutColumn: number) {
   switch (layoutColumn) {
     case 1:
-      return "grid gap-4";
+      return "col-span-12";
     case 2:
-      return "grid gap-4 md:grid-cols-2";
+      return "col-span-6";
     case 3:
-      return "grid gap-4 md:grid-cols-2 lg:grid-cols-3";
+      return "col-span-4";
     case 4:
-      return "grid gap-4 md:grid-cols-2 lg:grid-cols-4";
+      return "col-span-3";
     default:
-      return "grid gap-4 md:grid-cols-2";
+      return "col-span-12";
   }
+}
+
+function getCustomFormFieldSpanClass(formLayoutColumn: number, fieldLayoutColumn: number | null) {
+  const resolvedLayoutColumn = Math.max(1, Math.min(4, fieldLayoutColumn ?? formLayoutColumn));
+  const span = resolvedLayoutColumn;
+  return getCustomFormFieldGridSpanClass(span);
 }
 
 function CustomFormFieldCard({
@@ -1798,29 +1966,35 @@ function CustomFormFieldCard({
   value,
   error,
   onChange,
+  countryId,
   theme,
   showBorders,
+  formLayoutColumn,
 }: {
   field: MembershipRegistrationCustomFormField;
   value: CustomFormValue;
   error: string;
   onChange: (value: CustomFormValue) => void;
+  countryId?: string | null;
   theme: MembershipTheme;
   showBorders: boolean;
+  formLayoutColumn: number;
 }) {
   const controlType = getCustomFormControlType(field.formControlTypeId);
   const label = field.placeHolder || field.controlLabel;
   const defaultOptionValue = typeof value === "string" ? value : "";
+  const multiSelectValue = Array.isArray(value) ? value : [];
   const checkboxValue = typeof value === "boolean" ? value : false;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const selectedFile = value instanceof File ? value : null;
   const controlBorderClass = getFieldBorderClass(showBorders);
   const dashedBorderClass = getFieldDashedBorderClass(showBorders);
+  const spanClass = getCustomFormFieldSpanClass(formLayoutColumn, field.layoutColumn);
 
   return (
     <div
-      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
+      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass} ${spanClass}`.trim()}
       style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
     >
       <div className="space-y-1">
@@ -1858,6 +2032,33 @@ function CustomFormFieldCard({
             </option>
           ))}
         </select>
+      ) : controlType === "multiselect" ? (
+        <MultiSelectInput
+          value={multiSelectValue}
+          onChange={onChange}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={label || "Select one or more"}
+        />
+      ) : controlType === "country" ? (
+        <CountrySelectInput
+          value={typeof value === "string" ? value : ""}
+          onChange={onChange}
+          placeholder={label || "Select country"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "state" ? (
+        <StateSelectInput
+          countryId={countryId}
+          value={typeof value === "string" ? value : ""}
+          onChange={onChange}
+          placeholder={label || "Select state"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
       ) : controlType === "radio" && field.options.length > 0 ? (
         <div className="space-y-2">
           {field.options.map((option) => (
@@ -1878,6 +2079,23 @@ function CustomFormFieldCard({
             </label>
           ))}
         </div>
+      ) : controlType === "country" ? (
+        <CountrySelectInput
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
+          placeholder={label || "Select country"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
+      ) : controlType === "state" ? (
+        <StateSelectInput
+          countryId={countryId}
+          value={typeof value === "string" ? value : ""}
+          onChange={(nextValue) => onChange(nextValue)}
+          placeholder={label || "Select state"}
+          className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${controlBorderClass}`.trim()}
+          style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+        />
       ) : controlType === "checkbox" ? (
         <label className="inline-flex items-center gap-3">
           <input
@@ -2056,6 +2274,39 @@ function CustomFormSection({
   const layoutColumn = form.layoutColumn || 1;
   const fields = [...(form.fields || [])].sort((left, right) => left.displayOrder - right.displayOrder);
 
+  function getNearestCountryValue(targetField: MembershipRegistrationCustomFormField) {
+    const countryField = fields
+      .filter((candidate) => candidate.displayOrder < targetField.displayOrder)
+      .filter((candidate) => getCustomFormControlType(candidate.formControlTypeId) === "country")
+      .pop();
+
+    if (!countryField) {
+      return null;
+    }
+
+    const countryValue = values[buildCustomFormFieldKey(form.uniqueId, countryField.uniqueId)];
+    return typeof countryValue === "string" && countryValue.trim().length > 0 ? countryValue : null;
+  }
+
+  function handleFieldChange(targetField: MembershipRegistrationCustomFormField, nextValue: CustomFormValue) {
+    const key = buildCustomFormFieldKey(form.uniqueId, targetField.uniqueId);
+    onFieldChange(key, nextValue);
+
+    if (getCustomFormControlType(targetField.formControlTypeId) !== "country") {
+      return;
+    }
+
+    fields.forEach((candidate) => {
+      if (candidate.displayOrder <= targetField.displayOrder) {
+        return;
+      }
+
+      if (getCustomFormControlType(candidate.formControlTypeId) === "state") {
+        onFieldChange(buildCustomFormFieldKey(form.uniqueId, candidate.uniqueId), "");
+      }
+    });
+  }
+
   return (
     <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
       <div className="space-y-1">
@@ -2076,15 +2327,17 @@ function CustomFormSection({
       ) : (
         <div className={getCustomFormGridClass(layoutColumn)}>
           {fields.map((field) => (
-            <CustomFormFieldCard
-              key={field.uniqueId || `${field.formId}-${field.displayOrder}`}
-              field={field}
-              value={values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
-              error={errors[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
-              onChange={(nextValue) => onFieldChange(buildCustomFormFieldKey(form.uniqueId, field.uniqueId), nextValue)}
-              theme={theme}
-              showBorders={showBorders}
-            />
+          <CustomFormFieldCard
+            key={field.uniqueId || `${field.formId}-${field.displayOrder}`}
+            field={field}
+            value={values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
+            error={errors[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? ""}
+            onChange={(nextValue) => handleFieldChange(field, nextValue)}
+            countryId={getNearestCountryValue(field)}
+            theme={theme}
+            showBorders={showBorders}
+            formLayoutColumn={layoutColumn}
+          />
           ))}
         </div>
       )}
@@ -2545,16 +2798,15 @@ export function MembershipRegisterWizard({
   theme,
   membershipName,
   membershipDescription,
+  submitError,
 }: MembershipRegisterWizardProps) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [customFormValues, setCustomFormValues] = useState<CustomFormValues>({});
   const [customFormErrors, setCustomFormErrors] = useState<CustomFormErrors>({});
   const [customQuestionValues, setCustomQuestionValues] = useState<CustomQuestionValues>({});
   const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
-  const userInfoStepErrors = validateUserLoginStep(form);
-  const userInfoStepComplete = Object.keys(userInfoStepErrors).length === 0;
   const questionnaireStepComplete = info
     ? Object.keys(validateCustomForms(info.membershipDetail.customForms, customFormValues)).length === 0 &&
       Object.keys(validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues)).length === 0
@@ -2575,18 +2827,18 @@ export function MembershipRegisterWizard({
     setCustomQuestionErrors({});
   }, [info]);
 
-  const canGoNext =
-    currentStep === 0 ? pricingStepComplete : currentStep === 1 ? userInfoStepComplete : currentStep === 2 ? questionnaireStepComplete : false;
+  const visibleSteps = STEPS.filter((step) => !("hidden" in step && step.hidden));
 
-  const stepTitles = STEPS.map((step, index) => ({
+  const canGoNext = currentStep === 0 ? pricingStepComplete : true;
+
+  const stepTitles = visibleSteps.map((step, index) => ({
     ...step,
     active: index === currentStep,
     completed: index < currentStep,
     disabled:
       index > currentStep ||
-      (index === 1 && !pricingStepComplete) ||
-      (index === 2 && (!pricingStepComplete || !userInfoStepComplete)) ||
-      (index === 3 && (!pricingStepComplete || !userInfoStepComplete || !questionnaireStepComplete)),
+      (index === 1 && (!pricingStepComplete || !questionnaireStepComplete)) ||
+      (index === 2 && (!pricingStepComplete || !questionnaireStepComplete)),
   }));
 
   function handleNext() {
@@ -2594,14 +2846,7 @@ export function MembershipRegisterWizard({
       return;
     }
 
-    if (currentStep === 1) {
-      const nextUserInfoErrors = validateUserLoginStep(form);
-      if (Object.keys(nextUserInfoErrors).length > 0) {
-        return;
-      }
-    }
-
-    if (currentStep === 2 && info) {
+    if (currentStep === 1 && info) {
       const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
       const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
       setCustomFormErrors(nextErrors);
@@ -2612,7 +2857,7 @@ export function MembershipRegisterWizard({
       }
     }
 
-    setCurrentStep((value) => Math.min(value + 1, STEPS.length - 1));
+    setCurrentStep((value) => Math.min(value + 1, visibleSteps.length - 1));
   }
 
   function handleBack() {
@@ -2699,7 +2944,7 @@ export function MembershipRegisterWizard({
 
     return (
       <form
-      className="w-full max-w-[100rem] space-y-6"
+        className="w-full max-w-[100rem] space-y-6"
         onSubmit={(event) => {
           if (info) {
             const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
@@ -2707,15 +2952,21 @@ export function MembershipRegisterWizard({
             setCustomFormErrors(nextErrors);
             setCustomQuestionErrors(nextQuestionErrors);
 
-          if (Object.keys(nextErrors).length > 0 || Object.keys(nextQuestionErrors).length > 0) {
-            event.preventDefault();
-            return;
+            if (Object.keys(nextErrors).length > 0 || Object.keys(nextQuestionErrors).length > 0) {
+              event.preventDefault();
+              return;
+            }
           }
-        }
 
-        void onSubmit(event);
-      }}
-    >
+          void onSubmit(event);
+        }}
+      >
+      {submitError ? (
+        <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
+          {submitError}
+        </div>
+      ) : null}
+
       <div className="relative -mx-4 overflow-x-auto pb-2 px-4 sm:mx-0 sm:px-0">
         <div className="relative z-10 flex min-w-full flex-nowrap gap-3 sm:min-w-max sm:gap-4">
           {stepTitles.map((step, index) => (
@@ -2738,15 +2989,17 @@ export function MembershipRegisterWizard({
         </div>
       </div>
 
-        {currentStep === 1 ? (
+        {currentStep === -1 ? (
           <YourInformationStep
             form={form}
-            errors={userInfoStepErrors}
+            errors={validateUserLoginStep(form)}
             setField={setField}
             theme={theme}
             showBorders={showBorders}
           />
-        ) : currentStep === 2 ? (
+        ) : null}
+
+        {currentStep === 1 ? (
           <QuestionnaireStep
             customForms={info.membershipDetail.customForms}
             customQuestions={info.membershipDetail.customQuestions}
@@ -2768,20 +3021,20 @@ export function MembershipRegisterWizard({
               background: theme.cardBackground,
             }}
           >
-            {currentStep === 0 ? (
-              <PricingStep
-                info={info}
-                formattedMembershipCharges={formattedMembershipCharges}
-                theme={theme}
-                membershipDescription={membershipDescription}
-                form={form}
-                setField={setField}
-              />
-            ) : (
-              <PaymentStep form={form} setField={setField} theme={theme} />
-            )}
-          </section>
-        )}
+              {currentStep === 0 ? (
+                <PricingStep
+                  info={info}
+                  formattedMembershipCharges={formattedMembershipCharges}
+                  theme={theme}
+                  membershipDescription={membershipDescription}
+                  form={form}
+                  setField={setField}
+                />
+              ) : (
+                <PaymentStep form={form} setField={setField} theme={theme} />
+              )}
+            </section>
+          )}
 
         <div className="mt-6 h-px w-full" style={{ background: theme.cardBorder, opacity: 0.7 }} />
 
@@ -2802,7 +3055,7 @@ export function MembershipRegisterWizard({
             ) : null}
           </div>
 
-          {currentStep < STEPS.length - 1 ? (
+          {currentStep < visibleSteps.length - 1 ? (
             <button
               type="button"
               onClick={handleNext}

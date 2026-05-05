@@ -267,10 +267,55 @@ function UnavailableCard() {
   );
 }
 
+function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <section className="w-full max-w-lg rounded-[2rem] border border-rose-200 bg-rose-50/95 p-8 text-center shadow-xl shadow-rose-200/30 backdrop-blur-sm">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200 bg-white text-rose-600">
+        <WarningIcon />
+      </div>
+      <h1 className="mt-5 text-3xl font-bold tracking-tight text-rose-950">We could not load registration</h1>
+      <p className="mt-3 text-sm leading-6 text-rose-900/80">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-6 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-500"
+      >
+        Try again
+      </button>
+    </section>
+  );
+}
+
+function SuccessCard({ message }: { message: string }) {
+  return (
+    <section className="w-full max-w-lg rounded-[2rem] border border-emerald-200 bg-emerald-50/95 p-8 text-center shadow-xl shadow-emerald-200/30 backdrop-blur-sm">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-200 bg-white text-emerald-600">
+        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-7 w-7 fill-current">
+          <path d="M7.8 13.7 4.6 10.5l-1.5 1.5 4.7 4.7 9.2-9.2-1.5-1.5z" />
+        </svg>
+      </div>
+      <h1 className="mt-5 text-3xl font-bold tracking-tight text-emerald-950">Registration submitted</h1>
+      <p className="mt-3 text-sm leading-6 text-emerald-900/80">{message}</p>
+      <div className="mt-6 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm text-emerald-900">
+        The organizer can now review the registration details.
+      </div>
+    </section>
+  );
+}
+
 export function MembershipRegisterPage() {
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const registration = useMembershipRegisterPage();
-  const { isLoading, registrationState, registrationStartDateUtc, membershipColor } = registration;
+  const {
+    isLoading,
+    registrationState,
+    registrationStartDateUtc,
+    membershipColor,
+    loadError,
+    submitError,
+    submitMessage,
+    onRetry,
+  } = registration;
   const theme = useMemo(() => buildMembershipTheme(membershipColor), [membershipColor]);
   const showBackgroundIcons = isEnabledFlag(import.meta.env.VITE_SHOW_REGISTRATION_BACKGROUND_ICONS);
   const decorativeIcons = useMemo(
@@ -335,6 +380,10 @@ export function MembershipRegisterPage() {
             </p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">Registration details</h1>
           </section>
+        ) : loadError ? (
+          <ErrorCard message={loadError} onRetry={onRetry} />
+        ) : submitMessage ? (
+          <SuccessCard message={submitMessage} />
         ) : effectiveRegistrationState === "Upcoming" && registrationStartDateUtc && membershipTypeUniqueId ? (
           <Navigate to={buildMembershipRegisterCountdownPath(membershipTypeUniqueId)} replace />
         ) : effectiveRegistrationState === "Open" ? (
@@ -350,6 +399,7 @@ export function MembershipRegisterPage() {
             theme={theme}
             membershipName={registration.membershipName}
             membershipDescription={registration.membershipDescription}
+            submitError={submitError}
           />
         ) : (
           <UnavailableCard />

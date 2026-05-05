@@ -6,6 +6,7 @@ import { MEMBERSHIP_QUESTIONS_CONTENT } from "./MembershipQuestionsStepPage.fiel
 import { useMembershipQuestionsStep } from "./MembershipQuestionsStepPage.hooks";
 import type { CustomFormControl, CustomFormListItem } from "../../../types/customForms";
 import type { MembershipCustomQuestionDraft } from "../../../types/membership";
+import { MultiSelectInput } from "../../../components/inputs/MultiSelectInput/MultiSelectInput";
 import { PhoneInput } from "../../../components/inputs/PhoneInput/PhoneInput";
 
 function MembershipQuestionsSkeleton() {
@@ -719,6 +720,17 @@ function getPreviewDefaultOptionValue(options: Array<{ value: string }>, default
   return defaultValue || options[0]?.value || "";
 }
 
+function parseDelimitedValues(value: string | null | undefined) {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
 function toSentenceCase(value: string | null | undefined) {
   const trimmed = value?.trim() || "";
   if (!trimmed) {
@@ -756,8 +768,17 @@ function PhonePreviewInput({
   );
 }
 
+function normalizePreviewLayoutColumn(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.min(4, Math.floor(value)));
+}
+
 function CustomFormPreviewField({
   field,
+  formLayoutColumn,
 }: {
   field: {
     controlLabel: string;
@@ -771,14 +792,24 @@ function CustomFormPreviewField({
       value: string;
     }>;
     controlType: string;
+    layoutColumn: number | null;
   };
+  formLayoutColumn: number;
 }) {
   const controlType = field.controlType.toLowerCase();
   const defaultOptionValue = getPreviewDefaultOptionValue(field.options, field.defaultValue);
+  const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => parseDelimitedValues(field.defaultValue));
   const label = field.placeHolder || field.controlLabel;
+  const layoutColumn = normalizePreviewLayoutColumn(field.layoutColumn ?? formLayoutColumn);
+
+  useEffect(() => {
+    if (controlType === "multiselect") {
+      setPreviewMultiSelectValue(parseDelimitedValues(field.defaultValue));
+    }
+  }, [controlType, field.defaultValue]);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4" style={{ gridColumn: `span ${layoutColumn} / span ${layoutColumn}` }}>
       <div className="mb-2 flex items-center gap-2">
         <span className="text-sm font-semibold text-slate-800">{field.controlLabel}</span>
         {field.isMandatory ? <span className="text-base font-bold leading-none text-rose-600">*</span> : null}
@@ -817,6 +848,16 @@ function CustomFormPreviewField({
             </label>
           ))}
         </div>
+      ) : controlType === "multiselect" ? (
+        <MultiSelectInput
+          value={previewMultiSelectValue}
+          onChange={setPreviewMultiSelectValue}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={field.placeHolder || "Select one or more"}
+        />
       ) : controlType === "checkbox" ? (
         <label className="inline-flex items-center gap-3">
           <input type="checkbox" defaultChecked={field.defaultValue === "true"} className="h-4 w-4 accent-cyan-600" />
@@ -883,6 +924,7 @@ function CustomFormPreviewModal({
     }>;
     controlType: string;
     iconClass: string;
+    layoutColumn: number | null;
   }>;
   onClose: () => void;
 }) {
@@ -926,7 +968,7 @@ function CustomFormPreviewModal({
                 }}
               >
                 {fields.map((field) => (
-                  <CustomFormPreviewField key={field.id} field={field} />
+                  <CustomFormPreviewField key={field.id} field={field} formLayoutColumn={layoutColumn} />
                 ))}
               </div>
             ) : (

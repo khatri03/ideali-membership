@@ -11,6 +11,7 @@ export interface MembershipRegistrationCustomFormField {
   formControlTypeId: number;
   controlUniqueId: string | null;
   displayOrder: number;
+  layoutColumn: number | null;
   controlLabel: string;
   placeHolder: string | null;
   tooltip: string | null;

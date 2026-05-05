@@ -36,6 +36,11 @@ function asOptionalNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function normalizeFieldLayoutColumn(value: unknown) {
+  const normalized = asOptionalNumber(value);
+  return normalized === null ? null : Math.max(1, Math.min(4, normalized));
+}
+
 function asString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -81,6 +86,11 @@ function resolveAcceptedFileTypes(
     });
 }
 
+let countryOptionsCache: Array<{ label: string; value: string }> | null = null;
+let countryOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
+const countryStateOptionsCache = new Map<string, Array<{ label: string; value: string }>>();
+const countryStateOptionsRequest = new Map<string, Promise<Array<{ label: string; value: string }>>>();
+
 export async function fetchCustomFormListItems() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/list-items");
   const data = getResponseData(payload);
@@ -96,6 +106,102 @@ export async function fetchCustomFormListItems() {
       value: asString(candidate.Value ?? candidate.value),
     };
   }).filter((item) => item.text && item.value);
+}
+
+export async function fetchCountryOptions() {
+  if (countryOptionsCache) {
+    return countryOptionsCache;
+  }
+
+  if (countryOptionsRequest) {
+    return countryOptionsRequest;
+  }
+
+  countryOptionsRequest = (async () => {
+    const payload = await getJson<unknown>("/api/geo/public/country/list");
+    const data = getResponseData(payload);
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    const options = data
+      .map((item) => {
+        const candidate = item as Record<string, unknown>;
+        const countryId = candidate.CountryId ?? candidate.countryId ?? candidate.id;
+        const name = candidate.Name ?? candidate.name;
+
+        return {
+          value: countryId == null ? "" : String(countryId),
+          label: name == null ? "" : String(name),
+        };
+      })
+      .filter((item) => item.value && item.label);
+
+    countryOptionsCache = options;
+    return options;
+  })();
+
+  try {
+    return await countryOptionsRequest;
+  } finally {
+    countryOptionsRequest = null;
+  }
+}
+
+export async function fetchStateOptions(countryId: string) {
+  const trimmedCountryId = countryId.trim();
+  if (!trimmedCountryId) {
+    return [];
+  }
+
+  const cachedOptions = countryStateOptionsCache.get(trimmedCountryId);
+  if (cachedOptions) {
+    return cachedOptions;
+  }
+
+  const existingRequest = countryStateOptionsRequest.get(trimmedCountryId);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = (async () => {
+    const payload = await getJson<unknown>(`/api/geo/public/country/${encodeURIComponent(trimmedCountryId)}/states`);
+    const data = getResponseData(payload);
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    const options = data
+      .flatMap((item) => {
+        const candidate = item as Record<string, unknown>;
+        const states = Array.isArray(candidate.States ?? candidate.states) ? (candidate.States ?? candidate.states) as unknown[] : [];
+
+        return states.map((state) => {
+          const stateCandidate = state as Record<string, unknown>;
+          const stateId = stateCandidate.StateId ?? stateCandidate.stateId ?? stateCandidate.id;
+          const name = stateCandidate.Name ?? stateCandidate.name;
+
+          return {
+            value: stateId == null ? "" : String(stateId),
+            label: name == null ? "" : String(name),
+          };
+        });
+      })
+      .filter((item) => item.value && item.label);
+
+    countryStateOptionsCache.set(trimmedCountryId, options);
+    return options;
+  })();
+
+  countryStateOptionsRequest.set(trimmedCountryId, request);
+
+  try {
+    return await request;
+  } finally {
+    countryStateOptionsRequest.delete(trimmedCountryId);
+  }
 }
 
 export async function fetchCustomForms() {
@@ -193,28 +299,29 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
         uniqueId: asString(candidate.UniqueId ?? candidate.uniqueId),
         formId: asNumber(candidate.FormId ?? candidate.formId),
         formControlTypeId: asNumber(candidate.FormControlTypeId ?? candidate.formControlTypeId),
-          controlUniqueId: asString(candidate.ControlUniqueId ?? candidate.controlUniqueId) || null,
-          displayOrder: asNumber(candidate.DisplayOrder ?? candidate.displayOrder),
-          controlLabel: asString(candidate.ControlLabel ?? candidate.controlLabel),
-          placeHolder: asString(candidate.PlaceHolder ?? candidate.placeHolder) || null,
-          tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
-          isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
-          requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
-          acceptedFileTypes: resolveAcceptedFileTypes(
-            candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes,
-            controlAcceptedFileTypes,
-          ),
-          minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
-          maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
-          defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
-          options,
-          formControl: controlCandidate
-            ? {
-                id: asNumber(controlCandidate.Id ?? controlCandidate.id),
-                name: asString(controlCandidate.Name ?? controlCandidate.name),
-                canBeRequired: asBoolean(controlCandidate.CanBeRequired ?? controlCandidate.canBeRequired),
-                canHaveMaxLength: asBoolean(controlCandidate.CanHaveMaxLength ?? controlCandidate.canHaveMaxLength),
-                canHaveMinLength: asBoolean(controlCandidate.CanHaveMinLength ?? controlCandidate.canHaveMinLength),
+        controlUniqueId: asString(candidate.ControlUniqueId ?? candidate.controlUniqueId) || null,
+        displayOrder: asNumber(candidate.DisplayOrder ?? candidate.displayOrder),
+        layoutColumn: normalizeFieldLayoutColumn(candidate.LayoutColumn ?? candidate.layoutColumn),
+        controlLabel: asString(candidate.ControlLabel ?? candidate.controlLabel),
+        placeHolder: asString(candidate.PlaceHolder ?? candidate.placeHolder) || null,
+        tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
+        isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
+        requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
+        acceptedFileTypes: resolveAcceptedFileTypes(
+          candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes,
+          controlAcceptedFileTypes,
+        ),
+        minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength),
+        maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength),
+        defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
+        options,
+        formControl: controlCandidate
+          ? {
+              id: asNumber(controlCandidate.Id ?? controlCandidate.id),
+              name: asString(controlCandidate.Name ?? controlCandidate.name),
+              canBeRequired: asBoolean(controlCandidate.CanBeRequired ?? controlCandidate.canBeRequired),
+              canHaveMaxLength: asBoolean(controlCandidate.CanHaveMaxLength ?? controlCandidate.canHaveMaxLength),
+              canHaveMinLength: asBoolean(controlCandidate.CanHaveMinLength ?? controlCandidate.canHaveMinLength),
               canHavePlaceHolder: asBoolean(controlCandidate.CanHavePlaceHolder ?? controlCandidate.canHavePlaceHolder),
               controlType: asString(controlCandidate.ControlType ?? controlCandidate.controlType),
               defaultLabel: asString(controlCandidate.DefaultLabel ?? controlCandidate.defaultLabel),
@@ -222,9 +329,9 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
               iconClass: asString(controlCandidate.IconClass ?? controlCandidate.iconClass),
               acceptedFileTypes: controlAcceptedFileTypes,
             }
-            : null,
-        };
-      })
+          : null,
+      };
+    })
     : [];
 
   return {
@@ -232,7 +339,7 @@ export async function fetchCustomFormPreview(customFormUniqueId: string) {
     name: asString(data.Name ?? data.name),
     headerText: asString(data.HeaderText ?? data.headerText),
     description: asString(data.Description ?? data.description) || null,
-    layoutColumn: Math.max(1, Math.min(4, asNumber(data.LayoutColumn ?? data.layoutColumn) || 1)),
+    layoutColumn: asOptionalNumber(data.LayoutColumn ?? data.layoutColumn),
     fields,
   } satisfies CustomFormPreview;
 }
@@ -248,6 +355,7 @@ interface CustomFormFieldPayload {
   ControlUniqueId: string;
   FormControlTypeId: number;
   DisplayOrder: number;
+  LayoutColumn: number | null;
   ControlLabel: string;
   PlaceHolder: string | null;
   Tooltip: string | null;
@@ -300,6 +408,7 @@ function mapFields(fields: CustomFormFieldDraft[]): CustomFormFieldPayload[] {
     ControlUniqueId: field.controlUniqueId,
     FormControlTypeId: field.controlId,
     DisplayOrder: field.displayOrder,
+    LayoutColumn: field.layoutColumn,
     ControlLabel: field.label,
     PlaceHolder: asNullableString(field.placeholder),
     Tooltip: asNullableString(field.tooltip),
