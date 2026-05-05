@@ -331,6 +331,27 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
 
     try {
       const preview = await fetchCustomFormPreview(customFormUniqueId);
+      console.log("[MembershipQuestions][Preview]", {
+        customFormUniqueId,
+        layoutColumn: preview.layoutColumn,
+        fields: (preview.fields || []).map((field) => ({
+          id: field.id,
+          uniqueId: field.uniqueId,
+          controlLabel: field.controlLabel,
+          displayOrder: field.displayOrder,
+          layoutColumn: field.layoutColumn,
+          controlType: field.formControl?.controlType,
+          defaultValue: field.defaultValue,
+          placeHolder: field.placeHolder,
+          tooltip: field.tooltip,
+          isMandatory: field.isMandatory,
+          requiredMessage: field.requiredMessage,
+          acceptedFileTypes: field.acceptedFileTypes,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
+          options: field.options,
+        })),
+      });
       setPreviewCustomFormName(preview.headerText || preview.name || formItem.text);
       setPreviewCustomFormLayoutColumn(Math.max(1, Math.min(4, preview.layoutColumn || 1)));
       setPreviewCustomFormFields(

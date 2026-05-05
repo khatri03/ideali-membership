@@ -141,6 +141,22 @@ function normalizeFieldLayoutColumn(value: number | null | undefined) {
   return Math.max(1, Math.min(4, Math.trunc(value)));
 }
 
+function getPreviewColumnSpan(field: CustomFormFieldDraft, fallbackLayoutColumn: number) {
+  const layoutColumn = normalizeLayoutColumn(field.layoutColumn ?? fallbackLayoutColumn);
+
+  switch (layoutColumn) {
+    case 1:
+      return 12;
+    case 2:
+      return 6;
+    case 3:
+    case 4:
+      return 3;
+    default:
+      return 12;
+  }
+}
+
 function normalizeFields(fields: CustomFormFieldDraft[]) {
   return fields.map((field, index) => ({
     ...field,
@@ -758,26 +774,18 @@ function PreviewFieldRenderer({ field }: { field: CustomFormFieldDraft }) {
 
 function FormPreviewField({
   field,
-  maxColumns,
+  span,
 }: {
   field: CustomFormFieldDraft;
-  maxColumns: number;
+  span: number;
 }) {
-  const displayColumns = field.layoutColumn ?? maxColumns;
-  const layoutLabel = `1x${Math.max(1, Math.min(4, displayColumns))}`;
-
   return (
-    <div
-      className="col-span-full h-full rounded-3xl border border-slate-200 bg-slate-50 p-4"
-    >
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+    <div className="h-full rounded-3xl border border-slate-200 bg-slate-50 p-4" style={{ gridColumn: `span ${span} / span ${span}` }}>
+      <div className="space-y-3">
         <PreviewFieldLabel field={field} />
-        <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
-          {layoutLabel}
-        </span>
+        <PreviewFieldRenderer field={field} />
+        {field.tooltip ? <p className="text-xs text-slate-500">{field.tooltip}</p> : null}
       </div>
-      <PreviewFieldRenderer field={field} />
-      {field.tooltip ? <p className="mt-2 text-xs text-slate-500">{field.tooltip}</p> : null}
     </div>
   );
 }
@@ -1281,6 +1289,12 @@ export function CustomFormCreatePage() {
     if (fields.length === 0) {
       return;
     }
+
+    console.log("[CustomForm][Preview]", {
+      draft,
+      previewColumnCount,
+      fields,
+    });
 
     setIsPreviewOpen(true);
   }
@@ -2194,25 +2208,29 @@ export function CustomFormCreatePage() {
                   <p className="mb-6 text-sm leading-6 text-slate-600">{draft.description}</p>
                 ) : null}
 
-                <div
-                  className="grid gap-5"
-                  style={{
-                    gridTemplateColumns: `repeat(${previewColumnCount}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {fields.length > 0 ? (
-                    fields.map((field) => (
-                      <FormPreviewField key={field.id} field={field} maxColumns={previewColumnCount} />
-                    ))
-                  ) : (
-                    <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                      <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Add controls to the canvas to see the rendered form here.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {fields.length > 0 ? (
+                  <div
+                    className="grid gap-5"
+                    style={{
+                      gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+                    }}
+                  >
+                    {fields.map((field) => (
+                      <FormPreviewField
+                        key={field.id}
+                        field={field}
+                        span={getPreviewColumnSpan(field, previewColumnCount)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                    <p className="text-lg font-semibold text-slate-900">No fields to preview yet</p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Add controls to the canvas to see the rendered form here.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
