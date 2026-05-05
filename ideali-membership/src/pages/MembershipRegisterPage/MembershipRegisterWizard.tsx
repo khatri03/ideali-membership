@@ -351,10 +351,6 @@ function validateUserLoginStep(form: MembershipRegistrationFormState) {
 function validateYourInformationStep(form: MembershipRegistrationFormState) {
   const errors = validateUserLoginStep(form);
 
-  if (!form.firstName.trim()) {
-    errors.firstName = "First name is required.";
-  }
-
   if (!form.lastName.trim()) {
     errors.lastName = "Last name is required.";
   }
@@ -967,7 +963,7 @@ function ProfilePhotoField({
         className="pointer-events-none absolute inset-x-8 top-8 h-48 rounded-full bg-cyan-100/40 blur-3xl"
       />
       <div className="flex h-full flex-col items-center justify-center space-y-3 text-center">
-        <div className="relative mx-auto">
+        <div className="group relative mx-auto">
           <button
             type="button"
             onClick={handleAvatarClick}
@@ -1011,11 +1007,7 @@ function ProfilePhotoField({
               onClick={openRemoveConfirm}
               aria-label="Remove profile photo"
               title="Remove profile photo"
-              className="absolute left-1/2 top-1/2 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-white/90 shadow-lg transition hover:scale-105 hover:bg-white"
-              style={{
-                borderColor: theme.cardBorder,
-                color: theme.tileValueColor,
-              }}
+              className="absolute left-1/2 top-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center justify-center text-slate-700 opacity-0 transition duration-200 hover:scale-110 hover:text-rose-600 group-hover:opacity-100 group-focus-within:opacity-100"
             >
               <TrashIcon />
             </button>
@@ -2732,7 +2724,7 @@ function YourInformationStep({
               </select>
             </WizardField>
 
-            <WizardField label="First Name" theme={theme} error={errors.firstName} required>
+            <WizardField label="First Name" theme={theme} error={errors.firstName}>
               <input
                 type="text"
                 value={form.firstName}
