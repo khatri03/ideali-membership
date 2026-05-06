@@ -86,6 +86,11 @@ export interface MembershipRegistrationPaymentProduct {
   displayName: string;
 }
 
+export interface MembershipRegistrationPresetTip {
+  percent: number;
+  isDefault: boolean;
+}
+
 export interface MembershipRegistrationPaymentSettings {
   paymentAccountId: number | null;
   accountName: string;
@@ -104,6 +109,7 @@ export interface MembershipRegistrationInfo {
   canRegister: boolean;
   membershipDetail: MembershipRegistrationDetail;
   paymentSettings: MembershipRegistrationPaymentSettings;
+  presetTips: MembershipRegistrationPresetTip[];
   taxSettings: Record<string, unknown> | null;
 }
 

@@ -581,6 +581,22 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   const paymentProducts = readPaymentProducts(
     paymentSettingsRecord?.PaymentProducts ?? paymentSettingsRecord?.paymentProducts,
   );
+  const presetTipsSource = responseData?.PresetTips ?? responseData?.presetTips;
+  const presetTips = Array.isArray(presetTipsSource)
+    ? presetTipsSource
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null;
+      }
+
+      const tipRecord = item as Record<string, unknown>;
+      return {
+        percent: readNumber(tipRecord.Percent ?? tipRecord.percent) ?? 0,
+        isDefault: readBoolean(tipRecord.IsDefault ?? tipRecord.isDefault),
+      };
+    })
+    .filter((item): item is { percent: number; isDefault: boolean } => item !== null)
+    : [];
 
   if (!name) {
     throw new Error("Unexpected membership registration response.");
@@ -621,6 +637,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       paymentCurrencySymbol: paymentCurrencySymbol || null,
       paymentProducts,
     },
+    presetTips,
     taxSettings: (responseData?.TaxSettings ?? responseData?.taxSettings ?? null) as Record<string, unknown> | null,
   } satisfies MembershipRegistrationInfo;
 }
