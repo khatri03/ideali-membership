@@ -3094,6 +3094,7 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
   const currencyPrefix = buildCurrencyPrefix(info);
   const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
   const donationAmount = donationCampaignName ? parseDonationAmount(form.donationAmount) : 0;
+  const presetTips = info.presetTips ?? [];
   const totalAmount = membershipAmount + donationAmount;
   const formatMoney = (amount: number) => {
     return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
@@ -3276,38 +3277,91 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
           </div>
 
           {donationCampaignName ? (
-            <div className="rounded-2xl px-4 py-3" style={{ background: theme.cardBackground }}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-3 rounded-2xl px-4 py-4" style={{ background: theme.cardBackground }}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
                     Donation
                   </p>
-                  <p className="mt-1 text-sm font-semibold leading-5">
-                    {donationCampaignName}
-                  </p>
+                  <p className="mt-1 text-sm font-semibold leading-5">{donationCampaignName}</p>
                 </div>
-                <label
-                  className="flex w-full min-w-0 items-stretch overflow-hidden rounded-2xl border sm:w-auto"
-                  style={{ borderColor: theme.cardBorder }}
-                >
-                  <span
-                    className="flex shrink-0 items-center whitespace-nowrap border-r px-3 text-sm font-semibold"
-                    style={{ borderColor: theme.cardBorder, color: theme.tileValueColor, background: theme.level3 }}
-                  >
-                    {currencyPrefix}
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={form.donationAmount}
-                    onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
-                    onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
-                    placeholder="0.00"
-                    className="w-full bg-white px-4 py-3 text-right text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 sm:w-32"
-                    style={{ color: theme.titleColor }}
-                  />
-                </label>
+                <div className="w-full sm:w-[200px]">
+                  <div className="flex min-w-0 items-stretch overflow-hidden rounded-2xl bg-white/70 shadow-sm">
+                    <span
+                      className="flex shrink-0 items-center whitespace-nowrap px-3 text-sm font-semibold"
+                      style={{ color: theme.tileValueColor, background: theme.level3 }}
+                    >
+                      {currencyPrefix}
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={form.donationAmount}
+                      onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
+                      onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
+                      placeholder="0.00"
+                      className="w-full bg-white/70 px-3 py-2.5 text-right text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+                      style={{ color: theme.titleColor }}
+                    />
+                  </div>
+                </div>
               </div>
+
+              {presetTips.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                    Tip
+                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                    <div className="min-w-0 flex-1">
+                      <select
+                        value=""
+                        onChange={(event) => {
+                          const selectedPreset = presetTips.find((presetTip) => String(presetTip.percent) === event.target.value);
+                          if (!selectedPreset) {
+                            return;
+                          }
+
+                          const presetAmount = (membershipAmount * selectedPreset.percent) / 100;
+                          setField("donationAmount", presetAmount > 0 ? presetAmount.toFixed(2) : "");
+                        }}
+                        className="w-full rounded-2xl border bg-white px-3 py-3 text-left text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+                        style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+                      >
+                        <option value="">Select a tip amount</option>
+                        {presetTips.map((presetTip) => {
+                          const presetAmount = (membershipAmount * presetTip.percent) / 100;
+                          return (
+                            <option key={presetTip.percent} value={presetTip.percent}>
+                              {presetTip.percent}% ({formatMoney(presetAmount)})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <div className="w-full sm:w-[200px]">
+                      <div className="flex min-w-0 items-stretch overflow-hidden rounded-2xl bg-white/70 shadow-sm">
+                        <span
+                          className="flex shrink-0 items-center whitespace-nowrap px-3 text-sm font-semibold"
+                          style={{ color: theme.tileValueColor, background: theme.level3 }}
+                        >
+                          {currencyPrefix}
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={form.donationAmount}
+                          onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
+                          onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
+                          placeholder="0.00"
+                          className="w-full bg-white/70 px-3 py-2.5 text-right text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+                          style={{ color: theme.titleColor }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
