@@ -23,6 +23,7 @@ import { CustomFormsPage } from "./pages/CustomFormsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { MembershipTypesPage } from "./pages/MembershipTypesPage";
 import { MembersPage } from "./pages/MembersPage";
+import { DnDGridSortExamplePage } from "./pages/DnDGridSortExamplePage";
 import { SimplePage } from "./pages/SimplePage";
 import { APP_ROUTES, buildMembershipRegisterPath } from "./routes";
 
@@ -137,6 +138,10 @@ function RouterApp() {
             <Route path="create-form" element={<CustomFormCreatePage />} />
             <Route path=":customFormUniqueId/edit" element={<CustomFormCreatePage />} />
           </Route>
+          <Route
+            path={APP_ROUTES.dndPlayground}
+            element={<DnDGridSortExamplePage />}
+          />
         </Route>
 
         <Route element={<WizardLayout />}>

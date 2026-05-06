@@ -14,6 +14,8 @@ import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/Multi
 import { StateSelectInput } from "../../components/inputs/StateSelectInput/StateSelectInput";
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
+import { fetchCountryOptions, fetchStateOptions } from "../../lib/customForms";
+import { fetchAddressTypeOptions, fetchContactPrefixOptions } from "../../lib/membershipRegistration";
 
 type MembershipTheme = {
   accentRgb: { r: number; g: number; b: number };
@@ -54,20 +56,16 @@ type MembershipRegisterWizardProps = Pick<
 const STEPS = [
   {
     title: "Membership Info",
-    description: "Review the price and choose a payment method.",
   },
   {
     title: "Your Information",
-    description: "Add your personal details.",
     hidden: true,
   },
   {
     title: "Questionnaire",
-    description: "Complete the mapped custom forms and questions.",
   },
   {
     title: "Payment",
-    description: "Confirm the final payment details and submit.",
   },
 ] as const;
 
@@ -84,6 +82,23 @@ function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
     <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
       <path d="M7.8 13.7 4.6 10.5l-1.5 1.5 4.7 4.7 9.2-9.2-1.5-1.5z" />
     </svg>
+  );
+}
+
+function FieldTooltip({ text, theme }: { text: string; theme: MembershipTheme }) {
+  return (
+    <span className="inline-flex shrink-0 align-middle text-current" style={{ color: theme.bodyColor }}>
+      <button
+        type="button"
+        aria-label="Show additional field help"
+        title={text}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-current transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
+      >
+        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current opacity-70">
+          <path d="M10 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm0 2a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13Zm0 2.25A1.25 1.25 0 1 0 10 8a1.25 1.25 0 0 0 0-2.5Zm-1 4.1h2V14h-2V9.85Z" />
+        </svg>
+      </button>
+    </span>
   );
 }
 
@@ -334,6 +349,24 @@ function validateUserLoginStep(form: MembershipRegistrationFormState) {
   return errors;
 }
 
+function validateYourInformationStep(form: MembershipRegistrationFormState) {
+  const errors = validateUserLoginStep(form);
+
+  if (!form.lastName.trim()) {
+    errors.lastName = "Last name is required.";
+  }
+
+  if (!form.addressType.trim()) {
+    errors.addressType = "Address type is required.";
+  }
+
+  if (!form.streetLine1.trim()) {
+    errors.streetLine1 = "Line 1 is required.";
+  }
+
+  return errors;
+}
+
 function MembershipDescriptionPanel({
   description,
   theme,
@@ -431,7 +464,7 @@ function MembershipDescriptionPanel({
             role="dialog"
             aria-modal="true"
             aria-label="About This Membership"
-            className="relative z-10 w-full max-w-3xl overflow-hidden rounded-[2rem] border p-5 shadow-2xl sm:p-6"
+            className="relative z-10 w-full max-w-3xl overflow-hidden rounded-4xl border p-5 shadow-2xl sm:p-6"
             style={{
               borderColor: theme.cardBorder,
               background: "rgba(255, 255, 255, 0.98)",
@@ -474,7 +507,6 @@ function MembershipDescriptionPanel({
 function StepBadge({
   index,
   title,
-  description,
   active,
   completed,
   disabled,
@@ -483,7 +515,6 @@ function StepBadge({
 }: {
   index: number;
   title: string;
-  description: string;
   active: boolean;
   completed: boolean;
   disabled: boolean;
@@ -496,7 +527,7 @@ function StepBadge({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "relative flex min-w-[7.5rem] flex-1 flex-col items-center gap-1.5 rounded-none border-0 px-2 py-2 text-center transition sm:min-w-[10rem] sm:gap-2 sm:px-3",
+        "relative flex min-w-30 flex-1 flex-col items-center gap-1.5 rounded-none border-0 px-2 py-2 text-center transition sm:min-w-40 sm:gap-2 sm:px-3",
         disabled ? "cursor-not-allowed opacity-50" : "hover:opacity-100",
       ].join(" ")}
       style={{
@@ -516,9 +547,6 @@ function StepBadge({
       <div className="min-w-0 space-y-0.5">
         <p className="text-sm font-semibold leading-5 sm:text-base" style={{ color: active ? theme.level1 : theme.titleColor }}>
           {title}
-        </p>
-        <p className="text-xs leading-4 sm:text-sm sm:leading-5" style={{ color: theme.bodyColor }}>
-          {description}
         </p>
       </div>
       <div
@@ -601,6 +629,14 @@ function TrashIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
+function DragHintIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M7 3.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2ZM7 13.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />
+    </svg>
+  );
+}
+
 const AVATAR_VIEWPORT_SIZE = 240;
 const AVATAR_OUTPUT_SIZE = 400;
 const AVATAR_DEFAULT_ZOOM = 1.15;
@@ -625,6 +661,117 @@ function buildAvatarFileName(sourceName: string, mimeType: string) {
     mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : mimeType === "image/png" ? "png" : "png";
   const baseName = sourceName.replace(/\.[^.]+$/, "") || "avatar";
   return `${baseName}-avatar.${extension}`;
+}
+
+function createDummyAvatarFile() {
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">',
+    '<rect width="320" height="320" rx="160" fill="#0ea5e9"/>',
+    '<circle cx="160" cy="120" r="52" fill="#ffffff" fill-opacity="0.96"/>',
+    '<path d="M78 268c18-46 58-72 82-72s64 26 82 72" fill="#ffffff" fill-opacity="0.96"/>',
+    '<text x="160" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#0f172a">AV</text>',
+    "</svg>",
+  ].join("");
+
+  return new File([svg], "dummy-avatar.svg", { type: "image/svg+xml" });
+}
+
+function createDummyTextFile(fileName: string, content: string, mimeType = "text/plain") {
+  return new File([content], fileName, { type: mimeType });
+}
+
+function toDummyFileName(label: string, extension: string) {
+  const baseName =
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "dummy";
+  return `${baseName}.${extension}`;
+}
+
+function createDummyFileForAcceptedTypes(acceptedFileTypes: string | null | undefined, label: string) {
+  const rules = parseAcceptedFileTypes(acceptedFileTypes).map((rule) => rule.toLowerCase());
+
+  if (
+    rules.some((rule) =>
+      rule === "*" ||
+      rule === "*/*" ||
+      rule.startsWith("image/") ||
+      rule === "image/*" ||
+      rule.endsWith(".png") ||
+      rule.endsWith(".jpg") ||
+      rule.endsWith(".jpeg") ||
+      rule.endsWith(".webp") ||
+      rule.endsWith(".gif") ||
+      rule.endsWith(".svg"),
+    )
+  ) {
+    return createDummyAvatarFile();
+  }
+
+  if (rules.some((rule) => rule === "application/pdf" || rule.endsWith(".pdf"))) {
+    return createDummyTextFile(
+      toDummyFileName(label, "pdf"),
+      "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF",
+      "application/pdf",
+    );
+  }
+
+  if (rules.some((rule) => rule === "text/plain" || rule.endsWith(".txt"))) {
+    return createDummyTextFile(toDummyFileName(label, "txt"), "Dummy file content");
+  }
+
+  if (rules.some((rule) => rule.endsWith(".csv") || rule === "text/csv")) {
+    return createDummyTextFile(toDummyFileName(label, "csv"), "header\nvalue", "text/csv");
+  }
+
+  return createDummyTextFile(toDummyFileName(label, "txt"), "Dummy file content");
+}
+
+function getFirstOptionValue(options: Array<{ label: string; value: string }>) {
+  return options.find((option) => option.value.trim())?.value || "";
+}
+
+function buildDummyValueForControlType(
+  controlType: string,
+  label: string,
+  options: Array<{ label: string; value: string }> = [],
+  acceptedFileTypes: string | null | undefined = null,
+  countryValue = "",
+  stateValue = "",
+) {
+  switch (controlType) {
+    case "checkbox":
+      return true;
+    case "multiselect":
+      return options
+        .filter((option) => option.value.trim())
+        .slice(0, 2)
+        .map((option) => option.value);
+    case "select":
+    case "radio":
+      return getFirstOptionValue(options);
+    case "country":
+      return countryValue;
+    case "state":
+      return stateValue;
+    case "file":
+      return createDummyFileForAcceptedTypes(acceptedFileTypes, label);
+    case "email":
+      return `demo.${label.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || "user"}@example.com`;
+    case "phone":
+      return "(555) 123-4567";
+    case "password":
+      return "Password123!";
+    case "number":
+      return "123";
+    case "date":
+      return "2026-01-01";
+    case "textarea":
+      return `Sample ${label || "text"}`;
+    default:
+      return `Sample ${label || "value"}`;
+  }
 }
 
 async function cropAvatarFile(
@@ -690,6 +837,7 @@ function ProfilePhotoField({
   const [isDragging, setIsDragging] = useState(false);
   const [isDropActive, setIsDropActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!value) {
@@ -836,16 +984,21 @@ function ProfilePhotoField({
     openEditor(file);
   }
 
-  function handleAvatarRemove() {
-    const shouldRemove = window.confirm("Remove the selected avatar?");
-    if (!shouldRemove) {
-      return;
-    }
+  function openRemoveConfirm() {
+    setIsRemoveConfirmOpen(true);
+  }
 
+  function closeRemoveConfirm() {
+    setIsRemoveConfirmOpen(false);
+  }
+
+  function confirmAvatarRemove() {
     onChange(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+
+    setIsRemoveConfirmOpen(false);
   }
 
   function isImageFile(file: File | null) {
@@ -922,7 +1075,7 @@ function ProfilePhotoField({
         className="pointer-events-none absolute inset-x-8 top-8 h-48 rounded-full bg-cyan-100/40 blur-3xl"
       />
       <div className="flex h-full flex-col items-center justify-center space-y-3 text-center">
-        <div className="relative mx-auto">
+        <div className="group relative mx-auto">
           <button
             type="button"
             onClick={handleAvatarClick}
@@ -932,14 +1085,14 @@ function ProfilePhotoField({
             onDrop={handleAvatarDrop}
             aria-label={value ? "Change profile photo" : "Choose profile photo"}
             title={value ? "Change profile photo" : "Choose profile photo"}
-            className={`mx-auto flex aspect-square w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border text-center shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] hover:opacity-95 sm:max-w-[18rem] lg:max-w-[20rem] ${isDropActive ? "scale-[1.01] ring-4 ring-cyan-200/70" : ""}`}
+            className={`mx-auto flex aspect-square w-24 items-center justify-center overflow-hidden rounded-full border text-center shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] hover:opacity-95 sm:w-28 lg:w-32 ${isDropActive ? "scale-[1.01] ring-4 ring-cyan-200/70" : ""}`}
             style={{
               borderColor: theme.cardBorder,
               background: theme.tileBackground,
               color: theme.tileValueColor,
             }}
           >
-            <div className="flex h-full w-full items-center justify-center p-4">
+            <div className={`flex h-full w-full items-center justify-center ${previewUrl ? "p-0" : "p-4"}`}>
               {previewUrl ? (
                 <img src={previewUrl} alt="Selected avatar preview" className="h-full w-full rounded-full object-cover" />
               ) : (
@@ -963,14 +1116,10 @@ function ProfilePhotoField({
           {value ? (
             <button
               type="button"
-              onClick={handleAvatarRemove}
+              onClick={openRemoveConfirm}
               aria-label="Remove profile photo"
               title="Remove profile photo"
-              className="absolute left-1/2 top-1/2 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-white/90 shadow-lg transition hover:scale-105 hover:bg-white"
-              style={{
-                borderColor: theme.cardBorder,
-                color: theme.tileValueColor,
-              }}
+              className="absolute left-1/2 top-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center justify-center text-slate-700 opacity-0 transition duration-200 hover:scale-110 hover:text-rose-600 group-hover:opacity-100 group-focus-within:opacity-100"
             >
               <TrashIcon />
             </button>
@@ -991,7 +1140,7 @@ function ProfilePhotoField({
       />
 
       {editorOpen && editorUrl && editorSource ? createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center px-4 py-6">
           <button
             type="button"
             aria-label="Close avatar editor"
@@ -1002,7 +1151,7 @@ function ProfilePhotoField({
             role="dialog"
             aria-modal="true"
             aria-label="Edit avatar"
-            className="relative z-10 w-full max-w-2xl overflow-hidden rounded-[2rem] border bg-white p-0 shadow-2xl"
+            className="relative z-10 w-full max-w-2xl overflow-hidden rounded-4xl border bg-white p-0 shadow-2xl"
             style={{
               borderColor: "rgba(59, 130, 246, 0.15)",
               boxShadow: `0 30px 80px -30px ${theme.cardShadow}`,
@@ -1022,10 +1171,10 @@ function ProfilePhotoField({
 
             <div className="flex flex-col items-center gap-4 px-6 py-6">
               <div className="flex w-full items-center justify-center">
-                <div className="rounded-[2rem] border border-blue-50 bg-blue-50/50 p-5">
+                <div className="rounded-4xl border border-blue-50 bg-blue-50/50 p-5">
                   <div
                     ref={cropViewportRef}
-                    className={`relative h-[240px] w-[240px] overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-inner ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                    className={`relative h-60 w-60 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-inner ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
                     onPointerDown={handleCropPointerDown}
                   >
                     <img
@@ -1044,6 +1193,12 @@ function ProfilePhotoField({
                         userSelect: "none",
                       }}
                     />
+                    {!isDragging ? (
+                      <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/70 bg-slate-950/55 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-sm">
+                        <DragHintIcon className="h-3.5 w-3.5" />
+                        Drag to reposition
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -1092,7 +1247,62 @@ function ProfilePhotoField({
         </div>,
         document.body,
       ) : null}
-    </div>
+
+      {isRemoveConfirmOpen ? createPortal(
+        <div className="fixed inset-0 z-10000 flex items-center justify-center px-4 py-6">
+          <button
+            type="button"
+            aria-label="Close remove avatar dialog"
+            className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"
+            onClick={closeRemoveConfirm}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Remove profile photo"
+            className="relative z-10 w-full max-w-md overflow-hidden rounded-3xl border bg-white shadow-2xl"
+            style={{
+              borderColor: theme.cardBorder,
+              boxShadow: `0 24px 70px -28px ${theme.cardShadow}`,
+            }}
+          >
+            <div className="space-y-3 px-6 py-6">
+              <div className="space-y-1">
+                <h3 className="text-xl font-semibold" style={{ color: theme.titleColor }}>
+                  Remove profile photo?
+                </h3>
+                <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+                  This will clear the selected avatar. You can add a new one anytime.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeRemoveConfirm}
+                  className="rounded-2xl border px-4 py-2.5 text-sm font-semibold transition hover:bg-black/5"
+                  style={{
+                    borderColor: theme.cardBorder,
+                    color: theme.titleColor,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAvatarRemove}
+                  className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                  style={{ background: theme.level1 }}
+                >
+                  Remove photo
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>,
+        document.body,
+      ) : null}
+  </div>
   );
 }
 
@@ -1617,22 +1827,22 @@ function CustomQuestionFieldCard({
   const selectedFile = value instanceof File ? value : null;
   const controlBorderClass = getFieldBorderClass(showBorders);
   const dashedBorderClass = getFieldDashedBorderClass(showBorders);
+  const tooltipText = question.tooltip?.trim() || "";
 
   return (
     <div
-      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
+      className={`group relative space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
       style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
+      title={tooltipText || undefined}
     >
       <div className="space-y-1">
-        <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
-          {question.label}
-          {question.required ? <span className="ml-1 text-rose-600">*</span> : null}
-        </p>
-        {question.tooltip ? (
-          <p className="text-xs leading-5" style={{ color: theme.bodyColor }}>
-            {question.tooltip}
+        <div className="flex items-start gap-2">
+          <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+            {question.label}
+            {question.required ? <span className="ml-1 text-rose-600">*</span> : null}
           </p>
-        ) : null}
+          {tooltipText ? <FieldTooltip text={tooltipText} theme={theme} /> : null}
+        </div>
       </div>
 
       {controlType === "textarea" ? (
@@ -1869,19 +2079,7 @@ function CustomQuestionsSection({
   }
 
   return (
-    <section
-      className="mt-5 space-y-4 rounded-3xl border p-4 sm:p-5"
-      style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}
-    >
-      <div className="space-y-1">
-        <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
-          Custom Questions
-        </h3>
-        <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
-          Complete the membership questions below.
-        </p>
-      </div>
-
+    <div className="mt-5 space-y-4">
       <div className={getCustomQuestionGridClass()}>
         {questions
           .slice()
@@ -1931,13 +2129,13 @@ function CustomQuestionsSection({
             );
           })}
       </div>
-    </section>
+    </div>
   );
 }
 
 function getCustomFormGridClass(layoutColumn: number) {
   void layoutColumn;
-  return "grid grid-cols-12 gap-4";
+  return "grid grid-cols-1 gap-4 md:grid-cols-12";
 }
 
 function getCustomFormFieldGridSpanClass(layoutColumn: number) {
@@ -1945,11 +2143,11 @@ function getCustomFormFieldGridSpanClass(layoutColumn: number) {
     case 1:
       return "col-span-12";
     case 2:
-      return "col-span-6";
+      return "col-span-12 md:col-span-6";
     case 3:
-      return "col-span-4";
+      return "col-span-12 md:col-span-6 lg:col-span-4";
     case 4:
-      return "col-span-3";
+      return "col-span-12 md:col-span-6 lg:col-span-3";
     default:
       return "col-span-12";
   }
@@ -1990,23 +2188,23 @@ function CustomFormFieldCard({
   const selectedFile = value instanceof File ? value : null;
   const controlBorderClass = getFieldBorderClass(showBorders);
   const dashedBorderClass = getFieldDashedBorderClass(showBorders);
+  const tooltipText = field.tooltip?.trim() || "";
   const spanClass = getCustomFormFieldSpanClass(formLayoutColumn, field.layoutColumn);
 
   return (
     <div
-      className={`space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass} ${spanClass}`.trim()}
+      className={`group relative space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass} ${spanClass}`.trim()}
       style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
+      title={tooltipText || undefined}
     >
       <div className="space-y-1">
-        <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
-          {field.controlLabel}
-          {field.isMandatory ? <span className="ml-1 text-rose-600">*</span> : null}
-        </p>
-        {field.tooltip ? (
-          <p className="text-xs leading-5" style={{ color: theme.bodyColor }}>
-            {field.tooltip}
+        <div className="flex items-start gap-2">
+          <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+            {field.controlLabel}
+            {field.isMandatory ? <span className="ml-1 text-rose-600">*</span> : null}
           </p>
-        ) : null}
+          {tooltipText ? <FieldTooltip text={tooltipText} theme={theme} /> : null}
+        </div>
       </div>
 
       {controlType === "textarea" ? (
@@ -2308,7 +2506,7 @@ function CustomFormSection({
   }
 
   return (
-    <section className="space-y-4 rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <div className="space-y-4">
       <div className="space-y-1">
         <h3 className="text-xl font-bold tracking-tight" style={{ color: theme.titleColor }}>
           {displayTitle}
@@ -2341,7 +2539,7 @@ function CustomFormSection({
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -2497,15 +2695,111 @@ function YourInformationStep({
   theme: MembershipTheme;
   showBorders: boolean;
 }) {
+  const [prefixOptions, setPrefixOptions] = useState<Array<{ label: string; value: string }>>([]);
+  const [isLoadingPrefixOptions, setIsLoadingPrefixOptions] = useState(false);
+  const [addressTypeOptions, setAddressTypeOptions] = useState<Array<{ label: string; value: string }>>([]);
+  const [isLoadingAddressTypeOptions, setIsLoadingAddressTypeOptions] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingPrefixOptions(true);
+
+    void fetchContactPrefixOptions()
+      .then((options) => {
+        if (isMounted) {
+          setPrefixOptions(options);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setPrefixOptions([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingPrefixOptions(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingAddressTypeOptions(true);
+
+    void fetchAddressTypeOptions()
+      .then((options) => {
+        if (isMounted) {
+          setAddressTypeOptions(options);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAddressTypeOptions([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingAddressTypeOptions(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
-    <section
-      className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
-      style={{
-        borderColor: theme.cardBorder,
-        background: theme.cardBackground,
-      }}
-    >
-      <div className="mt-5 space-y-6">
+    <>
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <SectionTitle
+            title="User Login"
+            description="Use these details to sign in after registration."
+            theme={theme}
+          />
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <WizardField label="Email" theme={theme} error={errors.email} required>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setField("email", event.target.value)}
+                placeholder="name@example.com"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:col-span-2">
+              <WizardField label="Password" theme={theme} error={errors.password} required>
+                <PasswordInput
+                  value={form.password}
+                  onChange={(event) => setField("password", event.target.value)}
+                  placeholder="Create password"
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+                />
+              </WizardField>
+
+              <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
+                <PasswordInput
+                  value={form.confirmPassword}
+                  onChange={(event) => setField("confirmPassword", event.target.value)}
+                  placeholder="Confirm password"
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+                />
+              </WizardField>
+            </div>
+          </div>
+        </div>
+
+        <div className="my-6 w-full border-t border-solid" style={{ borderColor: theme.cardBorder }} aria-hidden="true" />
+
         <div className="space-y-4">
           <SectionTitle
             title="Contact Info"
@@ -2513,19 +2807,36 @@ function YourInformationStep({
             theme={theme}
           />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,8fr)]">
+            <div className="lg:row-span-2 lg:h-full">
+              <ProfilePhotoField
+                value={form.profilePhotoFile}
+                onChange={(value) => setField("profilePhotoFile", value)}
+                theme={theme}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <WizardField label="Prefix" theme={theme}>
-              <input
-                type="text"
+              <select
                 value={form.prefix}
                 onChange={(event) => setField("prefix", event.target.value)}
-                placeholder="Mr, Ms, Dr"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                disabled={isLoadingPrefixOptions && prefixOptions.length === 0}
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-              />
+              >
+                <option value="">
+                  {isLoadingPrefixOptions && prefixOptions.length === 0 ? "Loading prefixes..." : "Select prefix"}
+                </option>
+                {prefixOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </WizardField>
 
-            <WizardField label="First Name" theme={theme} error={errors.firstName} required>
+            <WizardField label="First Name" theme={theme} error={errors.firstName}>
               <input
                 type="text"
                 value={form.firstName}
@@ -2567,96 +2878,114 @@ function YourInformationStep({
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
             </WizardField>
+            </div>
+          </div>
+        </div>
 
-            <WizardField label="Street Address" theme={theme} error={errors.streetLine1} required>
+        <div className="my-6 w-full border-t border-solid" style={{ borderColor: theme.cardBorder }} aria-hidden="true" />
+
+        <div className="space-y-4">
+          <SectionTitle
+            title="Address"
+            description="Add an address if you want one attached to your membership record."
+            theme={theme}
+          />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <WizardField label="Address Type" theme={theme} error={errors.addressType} required>
+              <select
+                value={form.addressType}
+                onChange={(event) => setField("addressType", event.target.value)}
+                disabled={isLoadingAddressTypeOptions && addressTypeOptions.length === 0}
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              >
+                <option value="">
+                  {isLoadingAddressTypeOptions && addressTypeOptions.length === 0
+                    ? "Loading address types..."
+                    : "Select address type"}
+                </option>
+                {addressTypeOptions.map((option) => (
+                  <option key={option.value || "placeholder"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </WizardField>
+
+            <WizardField label="Country List" theme={theme}>
+              <CountrySelectInput
+                value={form.countryId}
+                onChange={(value) => {
+                  setField("countryId", value);
+                  setField("stateId", "");
+                }}
+                placeholder="Select country"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="State List" theme={theme}>
+              <StateSelectInput
+                countryId={form.countryId}
+                value={form.stateId}
+                onChange={(value) => setField("stateId", value)}
+                placeholder="Select state"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <WizardField label="Line 1" theme={theme} error={errors.streetLine1} required>
               <input
                 type="text"
                 value={form.streetLine1}
                 onChange={(event) => setField("streetLine1", event.target.value)}
-                placeholder="Street address"
+                placeholder="Line 1"
                 className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
             </WizardField>
 
-            <WizardField label="Street Address 2" theme={theme}>
+            <WizardField label="Line 2" theme={theme}>
               <input
                 type="text"
                 value={form.streetLine2}
                 onChange={(event) => setField("streetLine2", event.target.value)}
-                placeholder="Apt, suite, unit"
+                placeholder="Line 2"
                 className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
             </WizardField>
 
-            <WizardField label="Zip Code" theme={theme} error={errors.zipCode} required>
+            <WizardField label="City" theme={theme}>
+              <input
+                type="text"
+                value={form.cityName}
+                onChange={(event) => setField("cityName", event.target.value)}
+                placeholder="City"
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
+              />
+            </WizardField>
+
+            <WizardField label="Zip/Postal Code" theme={theme}>
               <input
                 type="text"
                 value={form.zipCode}
                 onChange={(event) => setField("zipCode", event.target.value)}
-                placeholder="Zip code"
+                placeholder="Zip / postal code"
                 className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
               />
             </WizardField>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <SectionTitle
-            title="User Login"
-            description="Use these details to sign in after registration."
-            theme={theme}
-          />
-
-          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,8fr)]">
-            <div className="lg:row-span-2 lg:h-full">
-              <ProfilePhotoField
-                value={form.profilePhotoFile}
-                onChange={(value) => setField("profilePhotoFile", value)}
-                theme={theme}
-              />
-            </div>
-
-            <div className="grid h-full gap-4">
-              <WizardField label="Email" theme={theme} error={errors.email} required>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => setField("email", event.target.value)}
-                  placeholder="name@example.com"
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                  style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-                />
-              </WizardField>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <WizardField label="Password" theme={theme} error={errors.password} required>
-                  <PasswordInput
-                    value={form.password}
-                    onChange={(event) => setField("password", event.target.value)}
-                    placeholder="Create password"
-                    className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                    style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-                  />
-                </WizardField>
-
-                <WizardField label="Confirm Password" theme={theme} error={errors.confirmPassword} required>
-                  <PasswordInput
-                    value={form.confirmPassword}
-                    onChange={(event) => setField("confirmPassword", event.target.value)}
-                    placeholder="Confirm password"
-                    className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
-                    style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-                  />
-                </WizardField>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -2689,19 +3018,7 @@ function QuestionnaireStep({
   const hasCustomQuestions = customQuestions.length > 0;
 
   return (
-    <section
-      className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
-      style={{
-        borderColor: theme.cardBorder,
-        background: theme.cardBackground,
-      }}
-    >
-      <SectionTitle
-        title="Questionnaire"
-        description="Complete the mapped custom forms and questions below."
-        theme={theme}
-      />
-
+    <>
       {hasCustomForms ? (
         <div className="space-y-5">
           {customForms.map((form) => (
@@ -2738,7 +3055,7 @@ function QuestionnaireStep({
           No questionnaire content mapped to this membership type.
         </div>
       ) : null}
-    </section>
+    </>
   );
 }
 
@@ -2752,15 +3069,15 @@ function PaymentStep({
   theme: MembershipTheme;
 }) {
   return (
-    <div className="rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <div className="space-y-5">
       <SectionTitle
         title="Payment"
         description="Confirm your payment note and final review before submitting."
         theme={theme}
       />
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-2xl border p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
+      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-2xl p-4" style={{ background: theme.tileBackground }}>
           <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
             Selected Method
           </p>
@@ -2800,13 +3117,29 @@ export function MembershipRegisterWizard({
   membershipDescription,
   submitError,
 }: MembershipRegisterWizardProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const allowSubmitRef = useRef(false);
+  const hasAutoFilledDummyDataRef = useRef(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isFillingDummyData, setIsFillingDummyData] = useState(false);
+  const [userLoginErrors, setUserLoginErrors] = useState<Partial<Record<keyof MembershipRegistrationFormState, string>>>(
+    {},
+  );
   const [customFormValues, setCustomFormValues] = useState<CustomFormValues>({});
   const [customFormErrors, setCustomFormErrors] = useState<CustomFormErrors>({});
   const [customQuestionValues, setCustomQuestionValues] = useState<CustomQuestionValues>({});
   const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
+  const hasQuestionnaireContent = Boolean(
+    info && (info.membershipDetail.customForms.length > 0 || info.membershipDetail.customQuestions.length > 0),
+  );
+  const visibleSteps = [
+    STEPS[0],
+    STEPS[1],
+    ...(hasQuestionnaireContent ? [STEPS[2]] : []),
+    STEPS[3],
+  ] as const;
   const questionnaireStepComplete = info
     ? Object.keys(validateCustomForms(info.membershipDetail.customForms, customFormValues)).length === 0 &&
       Object.keys(validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues)).length === 0
@@ -2827,9 +3160,12 @@ export function MembershipRegisterWizard({
     setCustomQuestionErrors({});
   }, [info]);
 
-  const visibleSteps = STEPS.filter((step) => !("hidden" in step && step.hidden));
+  useEffect(() => {
+    setCurrentStep((value) => Math.min(value, visibleSteps.length - 1));
+  }, [visibleSteps.length]);
 
   const canGoNext = currentStep === 0 ? pricingStepComplete : true;
+  const userInformationStepComplete = Object.keys(validateYourInformationStep(form)).length === 0;
 
   const stepTitles = visibleSteps.map((step, index) => ({
     ...step,
@@ -2837,16 +3173,123 @@ export function MembershipRegisterWizard({
     completed: index < currentStep,
     disabled:
       index > currentStep ||
-      (index === 1 && (!pricingStepComplete || !questionnaireStepComplete)) ||
-      (index === 2 && (!pricingStepComplete || !questionnaireStepComplete)),
+      (index === 1 && !pricingStepComplete) ||
+      (hasQuestionnaireContent && index === 2 && (!pricingStepComplete || !userInformationStepComplete)) ||
+    (index === visibleSteps.length - 1 &&
+        (!pricingStepComplete ||
+          !userInformationStepComplete ||
+          (hasQuestionnaireContent && !questionnaireStepComplete))),
   }));
+
+  async function fillDummyData() {
+    if (!info || isFillingDummyData) {
+      return;
+    }
+
+    setIsFillingDummyData(true);
+
+    try {
+      const [nextPrefixOptions, nextAddressTypeOptions, nextCountryOptions] = await Promise.all([
+        fetchContactPrefixOptions(),
+        fetchAddressTypeOptions(),
+        fetchCountryOptions(),
+      ]);
+
+      const nextCountryValue = getFirstOptionValue(nextCountryOptions);
+      const nextStateOptions = nextCountryValue ? await fetchStateOptions(nextCountryValue) : [];
+      const nextStateValue = getFirstOptionValue(nextStateOptions);
+
+      setField("profilePhotoFile", createDummyAvatarFile());
+      setField("prefix", getFirstOptionValue(nextPrefixOptions));
+      setField("firstName", "John");
+      setField("middleName", "A");
+      setField("lastName", "Doe");
+      setField("email", "john.doe@example.com");
+      setField("password", "Password123!");
+      setField("confirmPassword", "Password123!");
+      setField("cellPhone", "(555) 123-4567");
+      setField("addressType", getFirstOptionValue(nextAddressTypeOptions));
+      setField("countryId", nextCountryValue);
+      setField("stateId", nextStateValue);
+      setField("streetLine1", "123 Main Street");
+      setField("streetLine2", "Suite 200");
+      setField("zipCode", "10001");
+      setField("cityName", "Sample City");
+      setField("donationAmount", isFreeMembership ? "" : "25.00");
+      setField("notes", "Filled by the dummy data helper.");
+
+      if (hasQuestionnaireContent) {
+        const nextCustomFormValues = info.membershipDetail.customForms.reduce<CustomFormValues>((accumulator, form) => {
+          const fields = [...form.fields].sort((left, right) => left.displayOrder - right.displayOrder);
+
+          fields.forEach((field) => {
+            const controlType = getCustomFormControlType(field.formControlTypeId);
+            const key = buildCustomFormFieldKey(form.uniqueId, field.uniqueId);
+            accumulator[key] = buildDummyValueForControlType(
+              controlType,
+              field.controlLabel,
+              field.options.map((option) => ({ label: option.displayText, value: option.value })),
+              field.acceptedFileTypes,
+              nextCountryValue,
+              nextStateValue,
+            );
+          });
+
+          return accumulator;
+        }, {});
+
+        const nextCustomQuestionValues = info.membershipDetail.customQuestions.reduce<CustomQuestionValues>(
+          (accumulator, question) => {
+            const controlType = getCustomQuestionControlType(question.controlType);
+            accumulator[buildCustomQuestionKey(question.uniqueId)] = buildDummyValueForControlType(
+              controlType,
+              question.label,
+              question.options.map((option) => ({ label: option.displayText, value: option.value })),
+              question.acceptedFileTypes,
+              nextCountryValue,
+              nextStateValue,
+            );
+            return accumulator;
+          },
+          {},
+        );
+
+        setCustomFormValues(nextCustomFormValues);
+        setCustomQuestionValues(nextCustomQuestionValues);
+        setCustomFormErrors({});
+        setCustomQuestionErrors({});
+      }
+
+      setUserLoginErrors({});
+      setCurrentStep(visibleSteps.length - 1);
+    } finally {
+      setIsFillingDummyData(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !info || currentStep !== 1 || hasAutoFilledDummyDataRef.current) {
+      return;
+    }
+
+    hasAutoFilledDummyDataRef.current = true;
+    void fillDummyData();
+  }, [currentStep, fillDummyData, info]);
 
   function handleNext() {
     if (currentStep === 0 && !pricingStepComplete) {
       return;
     }
 
-    if (currentStep === 1 && info) {
+    if (currentStep === 1) {
+      const nextErrors = validateYourInformationStep(form);
+      setUserLoginErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
+        return;
+      }
+    }
+
+    if (hasQuestionnaireContent && currentStep === 2 && info) {
       const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
       const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
       setCustomFormErrors(nextErrors);
@@ -2862,6 +3305,17 @@ export function MembershipRegisterWizard({
 
   function handleBack() {
     setCurrentStep((value) => Math.max(value - 1, 0));
+  }
+
+  function handleUserLoginFieldChange<T extends keyof MembershipRegistrationFormState>(
+    field: T,
+    value: MembershipRegistrationFormState[T],
+  ) {
+    setField(field, value);
+    setUserLoginErrors((current) => ({
+      ...current,
+      [field]: "",
+    }));
   }
 
   function handleCustomFormFieldChange(key: string, value: CustomFormValue) {
@@ -2944,8 +3398,21 @@ export function MembershipRegisterWizard({
 
     return (
       <form
-        className="w-full max-w-[100rem] space-y-6"
+        ref={formRef}
+        className="w-full max-w-400 space-y-6"
         onSubmit={(event) => {
+          if (!allowSubmitRef.current) {
+            event.preventDefault();
+            return;
+          }
+
+          allowSubmitRef.current = false;
+
+          if (currentStep < visibleSteps.length - 1) {
+            event.preventDefault();
+            return;
+          }
+
           if (info) {
             const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
             const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
@@ -2962,7 +3429,7 @@ export function MembershipRegisterWizard({
         }}
       >
       {submitError ? (
-        <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
+        <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
           {submitError}
         </div>
       ) : null}
@@ -2974,7 +3441,6 @@ export function MembershipRegisterWizard({
               key={step.title}
               index={index}
               title={step.title}
-              description={step.description}
               active={step.active}
               completed={step.completed}
               disabled={step.disabled}
@@ -2988,18 +3454,30 @@ export function MembershipRegisterWizard({
           ))}
         </div>
       </div>
-
-        {currentStep === -1 ? (
+      <section
+        className="rounded-4xl p-4 sm:p-5 lg:p-6"
+        style={{
+          background: theme.cardBackground,
+        }}
+      >
+        {currentStep === 0 ? (
+          <PricingStep
+            info={info}
+            formattedMembershipCharges={formattedMembershipCharges}
+            theme={theme}
+            membershipDescription={membershipDescription}
+            form={form}
+            setField={setField}
+          />
+        ) : currentStep === 1 ? (
           <YourInformationStep
             form={form}
-            errors={validateUserLoginStep(form)}
-            setField={setField}
+            errors={userLoginErrors}
+            setField={handleUserLoginFieldChange}
             theme={theme}
             showBorders={showBorders}
           />
-        ) : null}
-
-        {currentStep === 1 ? (
+        ) : hasQuestionnaireContent && currentStep === 2 ? (
           <QuestionnaireStep
             customForms={info.membershipDetail.customForms}
             customQuestions={info.membershipDetail.customQuestions}
@@ -3014,27 +3492,9 @@ export function MembershipRegisterWizard({
             showBorders={showBorders}
           />
         ) : (
-          <section
-            className="rounded-[2rem] border p-4 sm:p-5 lg:p-6"
-            style={{
-              borderColor: theme.cardBorder,
-              background: theme.cardBackground,
-            }}
-          >
-              {currentStep === 0 ? (
-                <PricingStep
-                  info={info}
-                  formattedMembershipCharges={formattedMembershipCharges}
-                  theme={theme}
-                  membershipDescription={membershipDescription}
-                  form={form}
-                  setField={setField}
-                />
-              ) : (
-                <PaymentStep form={form} setField={setField} theme={theme} />
-              )}
-            </section>
-          )}
+          <PaymentStep form={form} setField={setField} theme={theme} />
+        )}
+      </section>
 
         <div className="mt-6 h-px w-full" style={{ background: theme.cardBorder, opacity: 0.7 }} />
 
@@ -3067,8 +3527,12 @@ export function MembershipRegisterWizard({
             </button>
           ) : (
             <button
-              type="submit"
+              type="button"
               disabled={isSubmitting}
+              onClick={() => {
+                allowSubmitRef.current = true;
+                formRef.current?.requestSubmit();
+              }}
               className="w-full rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               style={{ background: theme.level1 }}
             >

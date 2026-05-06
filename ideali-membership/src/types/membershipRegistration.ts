@@ -103,9 +103,13 @@ export interface MembershipRegistrationInfo {
 }
 
 export interface MembershipRegistrationContactAddress {
-  streetLine1: string;
-  streetLine2: string;
-  zipCode: string;
+  addressType: string | null;
+  streetLine1: string | null;
+  streetLine2: string | null;
+  zipCode: string | null;
+  cityName: string | null;
+  countryId: number | null;
+  stateId: number | null;
 }
 
 export interface MembershipRegistrationFormState {
@@ -121,6 +125,10 @@ export interface MembershipRegistrationFormState {
   streetLine1: string;
   streetLine2: string;
   zipCode: string;
+  addressType: string;
+  cityName: string;
+  countryId: string;
+  stateId: string;
   donationAmount: string;
   paymentMethod: string;
   notes: string;

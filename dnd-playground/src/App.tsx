@@ -80,11 +80,15 @@ function SortableCard({ card }: { card: GridCard }) {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={[card.spanClassName, 'w-full', isDragging ? 'opacity-40' : ''].join(' ')}
+      className={['w-full', isDragging ? 'opacity-40' : ''].join(' ')}
       {...attributes}
       {...listeners}
     >
-      <CardView card={card} dragging={isDragging} />
+      <div className="grid grid-cols-12 gap-4">
+        <div className={card.spanClassName}>
+          <CardView card={card} dragging={isDragging} />
+        </div>
+      </div>
     </div>
   )
 }
@@ -242,7 +246,7 @@ export default function App() {
               onDragCancel={handleDragCancel}
             >
               <SortableContext items={cards.map((card) => card.id)} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-12 gap-4">
+                <div className="space-y-4">
                   {cards.length === 0 ? (
                     <div className="col-span-full rounded-[1.5rem] border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-sm text-slate-500">
                       No sortable items yet. Use Add Control to build the board.

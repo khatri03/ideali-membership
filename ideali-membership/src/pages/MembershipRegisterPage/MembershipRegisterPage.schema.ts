@@ -6,12 +6,12 @@ export function validateMembershipRegistrationForm(
 ) {
   const errors: Partial<Record<keyof MembershipRegistrationFormState, string>> = {};
 
-  if (!form.firstName.trim()) {
-    errors.firstName = "First name is required.";
-  }
-
   if (!form.lastName.trim()) {
     errors.lastName = "Last name is required.";
+  }
+
+  if (!form.addressType.trim()) {
+    errors.addressType = "Address type is required.";
   }
 
   if (!form.email.trim()) {
@@ -33,11 +33,7 @@ export function validateMembershipRegistrationForm(
   }
 
   if (!form.streetLine1.trim()) {
-    errors.streetLine1 = "Street address is required.";
-  }
-
-  if (!form.zipCode.trim()) {
-    errors.zipCode = "Zip code is required.";
+    errors.streetLine1 = "Street line 1 is required.";
   }
 
   if (form.donationAmount.trim()) {

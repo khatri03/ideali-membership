@@ -181,7 +181,7 @@ export function CustomFormsPage() {
                 Manage reusable form templates
               </h1>
               <p className="mt-3 max-w-2xl text-slate-600">
-                Keep organizer forms organized, reusable, and ready to attach to membership flows.
+                Keep organizer forms organized, reusable, and ready to open in the custom form designer.
               </p>
             </div>
             <p className="text-sm font-medium text-slate-500">{formCountLabel}</p>
@@ -191,7 +191,7 @@ export function CustomFormsPage() {
             to={APP_ROUTES.customFormsCreate}
             className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
           >
-            Create form
+            Open designer
           </Link>
         </div>
       </div>

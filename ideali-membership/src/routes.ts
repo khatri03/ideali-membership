@@ -11,6 +11,7 @@ export const APP_ROUTES = {
   membershipTypes: "/organizer/membership/type/list",
   membershipMembers: "/organizer/membership/type/members",
   membershipPendingApprovals: "/organizer/membership/type/pending-approvals",
+  dndPlayground: "/organizer/dnd-playground",
   membershipWizard: "/organizer/membership/type/wizard",
   membershipWizardTitle: "/organizer/membership/type/wizard/title",
   membershipWizardTitleWithId: "/organizer/membership/type/wizard/:membershipTypeUniqueId/title",
