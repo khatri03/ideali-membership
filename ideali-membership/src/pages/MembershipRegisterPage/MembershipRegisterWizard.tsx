@@ -3005,6 +3005,8 @@ export function MembershipRegisterWizard({
   membershipDescription,
   submitError,
 }: MembershipRegisterWizardProps) {
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const allowSubmitRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [userLoginErrors, setUserLoginErrors] = useState<Partial<Record<keyof MembershipRegistrationFormState, string>>>(
     {},
@@ -3015,6 +3017,15 @@ export function MembershipRegisterWizard({
   const [customQuestionErrors, setCustomQuestionErrors] = useState<CustomQuestionErrors>({});
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
+  const hasQuestionnaireContent = Boolean(
+    info && (info.membershipDetail.customForms.length > 0 || info.membershipDetail.customQuestions.length > 0),
+  );
+  const visibleSteps = [
+    STEPS[0],
+    STEPS[1],
+    ...(hasQuestionnaireContent ? [STEPS[2]] : []),
+    STEPS[3],
+  ] as const;
   const questionnaireStepComplete = info
     ? Object.keys(validateCustomForms(info.membershipDetail.customForms, customFormValues)).length === 0 &&
       Object.keys(validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues)).length === 0
@@ -3035,7 +3046,9 @@ export function MembershipRegisterWizard({
     setCustomQuestionErrors({});
   }, [info]);
 
-  const visibleSteps = STEPS;
+  useEffect(() => {
+    setCurrentStep((value) => Math.min(value, visibleSteps.length - 1));
+  }, [visibleSteps.length]);
 
   const canGoNext = currentStep === 0 ? pricingStepComplete : true;
   const userInformationStepComplete = Object.keys(validateYourInformationStep(form)).length === 0;
@@ -3047,8 +3060,11 @@ export function MembershipRegisterWizard({
     disabled:
       index > currentStep ||
       (index === 1 && !pricingStepComplete) ||
-      (index === 2 && (!pricingStepComplete || !userInformationStepComplete)) ||
-      (index === 3 && (!pricingStepComplete || !userInformationStepComplete || !questionnaireStepComplete)),
+      (hasQuestionnaireContent && index === 2 && (!pricingStepComplete || !userInformationStepComplete)) ||
+      (index === visibleSteps.length - 1 &&
+        (!pricingStepComplete ||
+          !userInformationStepComplete ||
+          (hasQuestionnaireContent && !questionnaireStepComplete))),
   }));
 
   function handleNext() {
@@ -3064,7 +3080,7 @@ export function MembershipRegisterWizard({
       }
     }
 
-    if (currentStep === 2 && info) {
+    if (hasQuestionnaireContent && currentStep === 2 && info) {
       const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
       const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
       setCustomFormErrors(nextErrors);
@@ -3173,8 +3189,21 @@ export function MembershipRegisterWizard({
 
     return (
       <form
+        ref={formRef}
         className="w-full max-w-400 space-y-6"
         onSubmit={(event) => {
+          if (!allowSubmitRef.current) {
+            event.preventDefault();
+            return;
+          }
+
+          allowSubmitRef.current = false;
+
+          if (currentStep < visibleSteps.length - 1) {
+            event.preventDefault();
+            return;
+          }
+
           if (info) {
             const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
             const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
@@ -3239,7 +3268,7 @@ export function MembershipRegisterWizard({
             theme={theme}
             showBorders={showBorders}
           />
-        ) : currentStep === 2 ? (
+        ) : hasQuestionnaireContent && currentStep === 2 ? (
           <QuestionnaireStep
             customForms={info.membershipDetail.customForms}
             customQuestions={info.membershipDetail.customQuestions}
@@ -3289,8 +3318,12 @@ export function MembershipRegisterWizard({
             </button>
           ) : (
             <button
-              type="submit"
+              type="button"
               disabled={isSubmitting}
+              onClick={() => {
+                allowSubmitRef.current = true;
+                formRef.current?.requestSubmit();
+              }}
               className="w-full rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               style={{ background: theme.level1 }}
             >
