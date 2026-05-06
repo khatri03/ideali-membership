@@ -3222,9 +3222,6 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                           {headerLabel}
                         </span>
                       </div>
-                      <div className="mt-1 text-sm" style={{ color: theme.mutedLabelColor }}>
-                        {isSelected ? "Selected payment method" : "Click to select this payment method"}
-                      </div>
                     </div>
 
                     <span
@@ -3259,11 +3256,6 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                         <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
                           {headerLabel} will be used for this registration. You can collapse this card after selecting it.
                         </p>
-                        {isSelected ? (
-                          <p className="mt-3 text-sm font-semibold" style={{ color: theme.titleColor }}>
-                            This payment method is selected.
-                          </p>
-                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -3397,8 +3389,11 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm leading-6" style={{ color: theme.mutedLabelColor }}>
-                    If you would like to give a little extra, your tip goes a long way in supporting the mission.
+                  <p className="text-[11px] leading-4 tracking-wide">
+                    <span aria-hidden="true" className="text-[12px] leading-none text-red-500">
+                      ♥
+                    </span>{" "}
+                    If you would like to give a little extra, your tip goes a long way in supporting us.
                   </p>
                 </div>
               ) : null}
