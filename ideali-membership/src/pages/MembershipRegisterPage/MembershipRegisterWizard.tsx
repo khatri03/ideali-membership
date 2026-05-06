@@ -3119,6 +3119,7 @@ export function MembershipRegisterWizard({
 }: MembershipRegisterWizardProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const allowSubmitRef = useRef(false);
+  const hasAutoFilledDummyDataRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isFillingDummyData, setIsFillingDummyData] = useState(false);
   const [userLoginErrors, setUserLoginErrors] = useState<Partial<Record<keyof MembershipRegistrationFormState, string>>>(
@@ -3265,6 +3266,15 @@ export function MembershipRegisterWizard({
       setIsFillingDummyData(false);
     }
   }
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !info || currentStep !== 1 || hasAutoFilledDummyDataRef.current) {
+      return;
+    }
+
+    hasAutoFilledDummyDataRef.current = true;
+    void fillDummyData();
+  }, [currentStep, fillDummyData, info]);
 
   function handleNext() {
     if (currentStep === 0 && !pricingStepComplete) {
@@ -3444,22 +3454,6 @@ export function MembershipRegisterWizard({
           ))}
         </div>
       </div>
-      {import.meta.env.DEV && currentStep === 1 ? (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => void fillDummyData()}
-            disabled={isFillingDummyData}
-            className="rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.14em] transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              borderColor: theme.cardBorder,
-              color: theme.titleColor,
-            }}
-          >
-            {isFillingDummyData ? "FILLING..." : "FILL DUMMY DATA"}
-          </button>
-        </div>
-      ) : null}
       <section
         className="rounded-4xl p-4 sm:p-5 lg:p-6"
         style={{
