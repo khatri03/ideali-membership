@@ -2674,7 +2674,7 @@ function PricingStep({
                   onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
                   onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
                   placeholder="0.00"
-                  className="w-full bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
+                  className="w-full bg-white px-4 py-3 text-right text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
                   style={{ color: theme.titleColor }}
                 />
               </label>
@@ -3303,13 +3303,15 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                     onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
                     onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
                     placeholder="0.00"
-                    className="w-full bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 sm:w-32"
+                    className="w-full bg-white px-4 py-3 text-right text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 sm:w-32"
                     style={{ color: theme.titleColor }}
                   />
                 </label>
               </div>
             </div>
           ) : null}
+
+          <div className="border-t" style={{ borderColor: theme.cardBorder }} />
 
           <div className="rounded-2xl px-4 py-3" style={{ background: theme.cardBackground }}>
             <div className="flex items-baseline justify-between gap-3">
