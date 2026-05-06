@@ -81,13 +81,18 @@ export interface MembershipRegistrationDetail {
   customQuestions: MembershipRegistrationCustomQuestion[];
 }
 
+export interface MembershipRegistrationPaymentProduct {
+  name: string;
+  displayName: string;
+}
+
 export interface MembershipRegistrationPaymentSettings {
   paymentAccountId: number | null;
   accountName: string;
   merchantName: string | number;
   paymentCurrencyCode: string | null;
   paymentCurrencySymbol: string | null;
-  paymentProducts: number[];
+  paymentProducts: MembershipRegistrationPaymentProduct[];
 }
 
 export interface MembershipRegistrationInfo {

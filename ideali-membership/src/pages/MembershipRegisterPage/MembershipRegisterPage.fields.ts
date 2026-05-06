@@ -1,12 +1,8 @@
 import type { MembershipRegistrationFormState } from "../../types/membershipRegistration";
 
 export const PAYMENT_PRODUCT_LABELS: Record<number, string> = {
-  1: "Debit / Credit Card",
-  2: "Electronic Check",
-  3: "Cheque",
-  4: "ACH - USD",
-  5: "PAD - CAD",
-  6: "Tap to Pay",
+  1: "Debit/Credit Card",
+  5: "PAD-CAD",
   7: "Wallet Pay",
 };
 

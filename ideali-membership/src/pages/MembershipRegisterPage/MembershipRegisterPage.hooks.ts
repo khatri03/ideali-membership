@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { DEFAULT_MEMBERSHIP_REGISTER_FORM, MEMBERSHIP_REGISTER_PAGE_COPY, PAYMENT_PRODUCT_LABELS } from "./MembershipRegisterPage.fields";
 import { validateMembershipRegistrationForm } from "./MembershipRegisterPage.schema";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
-import { getMembershipRegistrationInfo, submitMembershipRegistration } from "../../lib/membershipRegistration";
+import { getMembershipRegistrationInfo, resolvePaymentProductId, submitMembershipRegistration } from "../../lib/membershipRegistration";
 import type { MembershipRegistrationFormState, MembershipRegistrationInfo } from "../../types/membershipRegistration";
 
 function buildPaymentCurrencyPrefix(info: MembershipRegistrationInfo | null) {
@@ -39,11 +39,19 @@ function getPaymentMethodOptions(info: MembershipRegistrationInfo | null) {
   const options = [...(info?.paymentSettings.paymentProducts ?? [])];
 
   return options
-    .filter((value, index, array) => array.indexOf(value) === index)
-    .map((value) => ({
-      value,
-      label: PAYMENT_PRODUCT_LABELS[value] ?? `Payment method ${value}`,
-    }));
+    .filter((item, index, array) => array.findIndex((candidate) => candidate.name === item.name) === index)
+    .map((item) => {
+      const value = resolvePaymentProductId(item.name);
+      if (!value) {
+        return null;
+      }
+
+      return {
+        value,
+        label: item.displayName || PAYMENT_PRODUCT_LABELS[value] || item.name,
+      };
+    })
+    .filter((item): item is { value: number; label: string } => item !== null);
 }
 
 function parseDonationAmount(value: string) {

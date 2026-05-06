@@ -15,6 +15,10 @@ const PAYMENT_PRODUCT_NAME_TO_ID: Record<string, number> = {
   WalletPay: 7,
 };
 
+export function resolvePaymentProductId(name: string) {
+  return PAYMENT_PRODUCT_NAME_TO_ID[name] ?? null;
+}
+
 let contactPrefixOptionsCache: Array<{ label: string; value: string }> | null = null;
 let contactPrefixOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
 let addressTypeOptionsCache: Array<{ label: string; value: string }> | null = null;
@@ -92,14 +96,46 @@ function readPaymentProducts(value: unknown) {
 
   return value
     .map((item) => {
-      if (typeof item === "string" && item in PAYMENT_PRODUCT_NAME_TO_ID) {
-        return PAYMENT_PRODUCT_NAME_TO_ID[item];
+      if (typeof item === "string") {
+        return {
+          name: item,
+          displayName: item,
+        };
       }
 
-      const numberValue = typeof item === "number" ? item : Number(item);
-      return Number.isFinite(numberValue) ? numberValue : null;
+      if (typeof item === "number" && Number.isFinite(item)) {
+        const name = Object.keys(PAYMENT_PRODUCT_NAME_TO_ID).find((key) => PAYMENT_PRODUCT_NAME_TO_ID[key] === item) ?? String(item);
+        return {
+          name,
+          displayName: name,
+        };
+      }
+
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const name = readText((item as { name?: unknown; Name?: unknown }).name ?? (item as { name?: unknown; Name?: unknown }).Name);
+      const displayName = readText(
+        (item as { displayName?: unknown; DisplayName?: unknown }).displayName ??
+          (item as { displayName?: unknown; DisplayName?: unknown }).DisplayName
+      );
+
+      if (!name) {
+        return null;
+      }
+
+      return {
+        name,
+        displayName: displayName || name,
+      };
     })
-    .filter((item): item is number => item !== null);
+    .filter(
+      (item): item is {
+        name: string;
+        displayName: string;
+      } => item !== null
+    );
 }
 
 export async function fetchContactPrefixOptions() {
