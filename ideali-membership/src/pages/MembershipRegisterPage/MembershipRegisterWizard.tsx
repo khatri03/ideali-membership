@@ -3360,6 +3360,9 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                       </div>
                     </div>
                   </div>
+                  <p className="text-sm leading-6" style={{ color: theme.mutedLabelColor }}>
+                    If you would like to give a little extra, your tip goes a long way in supporting the mission.
+                  </p>
                 </div>
               ) : null}
             </div>
