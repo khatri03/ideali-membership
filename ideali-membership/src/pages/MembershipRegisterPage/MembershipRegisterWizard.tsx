@@ -14,6 +14,7 @@ import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/Multi
 import { StateSelectInput } from "../../components/inputs/StateSelectInput/StateSelectInput";
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
+import { fetchCountryOptions, fetchStateOptions } from "../../lib/customForms";
 import { fetchAddressTypeOptions, fetchContactPrefixOptions } from "../../lib/membershipRegistration";
 
 type MembershipTheme = {
@@ -660,6 +661,117 @@ function buildAvatarFileName(sourceName: string, mimeType: string) {
     mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : mimeType === "image/png" ? "png" : "png";
   const baseName = sourceName.replace(/\.[^.]+$/, "") || "avatar";
   return `${baseName}-avatar.${extension}`;
+}
+
+function createDummyAvatarFile() {
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">',
+    '<rect width="320" height="320" rx="160" fill="#0ea5e9"/>',
+    '<circle cx="160" cy="120" r="52" fill="#ffffff" fill-opacity="0.96"/>',
+    '<path d="M78 268c18-46 58-72 82-72s64 26 82 72" fill="#ffffff" fill-opacity="0.96"/>',
+    '<text x="160" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#0f172a">AV</text>',
+    "</svg>",
+  ].join("");
+
+  return new File([svg], "dummy-avatar.svg", { type: "image/svg+xml" });
+}
+
+function createDummyTextFile(fileName: string, content: string, mimeType = "text/plain") {
+  return new File([content], fileName, { type: mimeType });
+}
+
+function toDummyFileName(label: string, extension: string) {
+  const baseName =
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "dummy";
+  return `${baseName}.${extension}`;
+}
+
+function createDummyFileForAcceptedTypes(acceptedFileTypes: string | null | undefined, label: string) {
+  const rules = parseAcceptedFileTypes(acceptedFileTypes).map((rule) => rule.toLowerCase());
+
+  if (
+    rules.some((rule) =>
+      rule === "*" ||
+      rule === "*/*" ||
+      rule.startsWith("image/") ||
+      rule === "image/*" ||
+      rule.endsWith(".png") ||
+      rule.endsWith(".jpg") ||
+      rule.endsWith(".jpeg") ||
+      rule.endsWith(".webp") ||
+      rule.endsWith(".gif") ||
+      rule.endsWith(".svg"),
+    )
+  ) {
+    return createDummyAvatarFile();
+  }
+
+  if (rules.some((rule) => rule === "application/pdf" || rule.endsWith(".pdf"))) {
+    return createDummyTextFile(
+      toDummyFileName(label, "pdf"),
+      "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF",
+      "application/pdf",
+    );
+  }
+
+  if (rules.some((rule) => rule === "text/plain" || rule.endsWith(".txt"))) {
+    return createDummyTextFile(toDummyFileName(label, "txt"), "Dummy file content");
+  }
+
+  if (rules.some((rule) => rule.endsWith(".csv") || rule === "text/csv")) {
+    return createDummyTextFile(toDummyFileName(label, "csv"), "header\nvalue", "text/csv");
+  }
+
+  return createDummyTextFile(toDummyFileName(label, "txt"), "Dummy file content");
+}
+
+function getFirstOptionValue(options: Array<{ label: string; value: string }>) {
+  return options.find((option) => option.value.trim())?.value || "";
+}
+
+function buildDummyValueForControlType(
+  controlType: string,
+  label: string,
+  options: Array<{ label: string; value: string }> = [],
+  acceptedFileTypes: string | null | undefined = null,
+  countryValue = "",
+  stateValue = "",
+) {
+  switch (controlType) {
+    case "checkbox":
+      return true;
+    case "multiselect":
+      return options
+        .filter((option) => option.value.trim())
+        .slice(0, 2)
+        .map((option) => option.value);
+    case "select":
+    case "radio":
+      return getFirstOptionValue(options);
+    case "country":
+      return countryValue;
+    case "state":
+      return stateValue;
+    case "file":
+      return createDummyFileForAcceptedTypes(acceptedFileTypes, label);
+    case "email":
+      return `demo.${label.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || "user"}@example.com`;
+    case "phone":
+      return "(555) 123-4567";
+    case "password":
+      return "Password123!";
+    case "number":
+      return "123";
+    case "date":
+      return "2026-01-01";
+    case "textarea":
+      return `Sample ${label || "text"}`;
+    default:
+      return `Sample ${label || "value"}`;
+  }
 }
 
 async function cropAvatarFile(
@@ -3008,6 +3120,7 @@ export function MembershipRegisterWizard({
   const formRef = useRef<HTMLFormElement | null>(null);
   const allowSubmitRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isFillingDummyData, setIsFillingDummyData] = useState(false);
   const [userLoginErrors, setUserLoginErrors] = useState<Partial<Record<keyof MembershipRegistrationFormState, string>>>(
     {},
   );
@@ -3061,11 +3174,97 @@ export function MembershipRegisterWizard({
       index > currentStep ||
       (index === 1 && !pricingStepComplete) ||
       (hasQuestionnaireContent && index === 2 && (!pricingStepComplete || !userInformationStepComplete)) ||
-      (index === visibleSteps.length - 1 &&
+    (index === visibleSteps.length - 1 &&
         (!pricingStepComplete ||
           !userInformationStepComplete ||
           (hasQuestionnaireContent && !questionnaireStepComplete))),
   }));
+
+  async function fillDummyData() {
+    if (!info || isFillingDummyData) {
+      return;
+    }
+
+    setIsFillingDummyData(true);
+
+    try {
+      const [nextPrefixOptions, nextAddressTypeOptions, nextCountryOptions] = await Promise.all([
+        fetchContactPrefixOptions(),
+        fetchAddressTypeOptions(),
+        fetchCountryOptions(),
+      ]);
+
+      const nextCountryValue = getFirstOptionValue(nextCountryOptions);
+      const nextStateOptions = nextCountryValue ? await fetchStateOptions(nextCountryValue) : [];
+      const nextStateValue = getFirstOptionValue(nextStateOptions);
+
+      setField("profilePhotoFile", createDummyAvatarFile());
+      setField("prefix", getFirstOptionValue(nextPrefixOptions));
+      setField("firstName", "John");
+      setField("middleName", "A");
+      setField("lastName", "Doe");
+      setField("email", "john.doe@example.com");
+      setField("password", "Password123!");
+      setField("confirmPassword", "Password123!");
+      setField("cellPhone", "(555) 123-4567");
+      setField("addressType", getFirstOptionValue(nextAddressTypeOptions));
+      setField("countryId", nextCountryValue);
+      setField("stateId", nextStateValue);
+      setField("streetLine1", "123 Main Street");
+      setField("streetLine2", "Suite 200");
+      setField("zipCode", "10001");
+      setField("cityName", "Sample City");
+      setField("donationAmount", isFreeMembership ? "" : "25.00");
+      setField("notes", "Filled by the dummy data helper.");
+
+      if (hasQuestionnaireContent) {
+        const nextCustomFormValues = info.membershipDetail.customForms.reduce<CustomFormValues>((accumulator, form) => {
+          const fields = [...form.fields].sort((left, right) => left.displayOrder - right.displayOrder);
+
+          fields.forEach((field) => {
+            const controlType = getCustomFormControlType(field.formControlTypeId);
+            const key = buildCustomFormFieldKey(form.uniqueId, field.uniqueId);
+            accumulator[key] = buildDummyValueForControlType(
+              controlType,
+              field.controlLabel,
+              field.options.map((option) => ({ label: option.displayText, value: option.value })),
+              field.acceptedFileTypes,
+              nextCountryValue,
+              nextStateValue,
+            );
+          });
+
+          return accumulator;
+        }, {});
+
+        const nextCustomQuestionValues = info.membershipDetail.customQuestions.reduce<CustomQuestionValues>(
+          (accumulator, question) => {
+            const controlType = getCustomQuestionControlType(question.controlType);
+            accumulator[buildCustomQuestionKey(question.uniqueId)] = buildDummyValueForControlType(
+              controlType,
+              question.label,
+              question.options.map((option) => ({ label: option.displayText, value: option.value })),
+              question.acceptedFileTypes,
+              nextCountryValue,
+              nextStateValue,
+            );
+            return accumulator;
+          },
+          {},
+        );
+
+        setCustomFormValues(nextCustomFormValues);
+        setCustomQuestionValues(nextCustomQuestionValues);
+        setCustomFormErrors({});
+        setCustomQuestionErrors({});
+      }
+
+      setUserLoginErrors({});
+      setCurrentStep(visibleSteps.length - 1);
+    } finally {
+      setIsFillingDummyData(false);
+    }
+  }
 
   function handleNext() {
     if (currentStep === 0 && !pricingStepComplete) {
@@ -3245,6 +3444,22 @@ export function MembershipRegisterWizard({
           ))}
         </div>
       </div>
+      {import.meta.env.DEV ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => void fillDummyData()}
+            disabled={isFillingDummyData}
+            className="rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.14em] transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{
+              borderColor: theme.cardBorder,
+              color: theme.titleColor,
+            }}
+          >
+            {isFillingDummyData ? "FILLING..." : "FILL DUMMY DATA"}
+          </button>
+        </div>
+      ) : null}
       <section
         className="rounded-4xl p-4 sm:p-5 lg:p-6"
         style={{
