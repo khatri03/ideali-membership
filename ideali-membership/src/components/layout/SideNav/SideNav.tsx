@@ -132,6 +132,32 @@ export function SideNav({ onNavigate }: SideNavProps) {
             )}
           </NavLink>
         </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+          <NavLink
+            to={APP_ROUTES.dndPlayground}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              [
+                "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
+                isActive
+                  ? "bg-cyan-500/10 text-cyan-800"
+                  : "text-slate-700 hover:bg-slate-100",
+              ].join(" ")
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span>Dnd Playground</span>
+                {isActive ? (
+                  <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                    Active
+                  </span>
+                ) : null}
+              </>
+            )}
+          </NavLink>
+        </div>
       </nav>
 
       <div className="mt-8 rounded-3xl border border-cyan-100 bg-cyan-50 p-4">

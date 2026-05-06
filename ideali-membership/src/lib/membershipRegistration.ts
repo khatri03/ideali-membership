@@ -17,6 +17,8 @@ const PAYMENT_PRODUCT_NAME_TO_ID: Record<string, number> = {
 
 let contactPrefixOptionsCache: Array<{ label: string; value: string }> | null = null;
 let contactPrefixOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
+let addressTypeOptionsCache: Array<{ label: string; value: string }> | null = null;
+let addressTypeOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
 
 function readResponseData(payload: unknown) {
   if (!payload || typeof payload !== "object") {
@@ -170,6 +172,77 @@ export async function fetchContactPrefixOptions() {
     return await contactPrefixOptionsRequest;
   } finally {
     contactPrefixOptionsRequest = null;
+  }
+}
+
+export async function fetchAddressTypeOptions() {
+  if (addressTypeOptionsCache) {
+    return addressTypeOptionsCache;
+  }
+
+  if (addressTypeOptionsRequest) {
+    return addressTypeOptionsRequest;
+  }
+
+  addressTypeOptionsRequest = (async () => {
+    const payload = await getJson<unknown>("/api/admin/list-items/address-types");
+    const data = readResponseData(payload);
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    const options = data
+      .map((item) => {
+        if (typeof item === "string") {
+          const value = item.trim();
+          return value ? { value, label: value } : null;
+        }
+
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+
+        const candidate = item as Record<string, unknown>;
+        const value =
+          candidate.Value ??
+          candidate.value ??
+          candidate.Id ??
+          candidate.id ??
+          candidate.Code ??
+          candidate.code ??
+          candidate.Enum ??
+          candidate.enum ??
+          candidate.Type ??
+          candidate.type ??
+          candidate.Name ??
+          candidate.name;
+        const label =
+          candidate.Text ??
+          candidate.text ??
+          candidate.DisplayText ??
+          candidate.displayText ??
+          candidate.Label ??
+          candidate.label ??
+          candidate.Name ??
+          candidate.name ??
+          value;
+
+        const resolvedValue = value == null ? "" : String(value).trim();
+        const resolvedLabel = label == null ? "" : String(label).trim();
+
+        return resolvedValue && resolvedLabel ? { value: resolvedValue, label: resolvedLabel } : null;
+      })
+      .filter((item): item is { label: string; value: string } => item !== null);
+
+    addressTypeOptionsCache = options;
+    return options;
+  })();
+
+  try {
+    return await addressTypeOptionsRequest;
+  } finally {
+    addressTypeOptionsRequest = null;
   }
 }
 
@@ -531,6 +604,16 @@ export async function submitMembershipRegistration(
     membershipTypeUniqueId,
     formState.profilePhotoFile,
   );
+  const trimmedPrefix = formState.prefix.trim();
+  const trimmedStreetLine1 = formState.streetLine1.trim();
+  const trimmedStreetLine2 = formState.streetLine2.trim();
+  const trimmedZipCode = formState.zipCode.trim();
+  const trimmedCityName = formState.cityName.trim();
+  const trimmedAddressType = formState.addressType.trim();
+  const countryId = formState.countryId.trim();
+  const stateId = formState.stateId.trim();
+  const parsedCountryId = countryId && Number.isFinite(Number(countryId)) ? Number(countryId) : null;
+  const parsedStateId = stateId && Number.isFinite(Number(stateId)) ? Number(stateId) : null;
   const invoiceItems = [
     {
       description: "Membership registration",
@@ -551,16 +634,20 @@ export async function submitMembershipRegistration(
 
   const requestBody: MembershipRegistrationSubmitRequest = {
     contactInfo: {
-      prefix: formState.prefix.trim() ? formState.prefix.trim() : null,
+      prefix: trimmedPrefix || null,
       firstName: formState.firstName.trim(),
       middleName: formState.middleName.trim(),
       lastName: formState.lastName.trim(),
       primaryEmail: formState.email.trim(),
       cellPhone: formState.cellPhone.trim(),
       address: {
-        streetLine1: formState.streetLine1.trim(),
-        streetLine2: formState.streetLine2.trim(),
-        zipCode: formState.zipCode.trim(),
+        addressType: trimmedAddressType || null,
+        streetLine1: trimmedStreetLine1 || null,
+        streetLine2: trimmedStreetLine2 || null,
+        zipCode: trimmedZipCode || null,
+        cityName: trimmedCityName || null,
+        countryId: parsedCountryId,
+        stateId: parsedStateId,
       },
     },
     userInfo: {
@@ -570,9 +657,13 @@ export async function submitMembershipRegistration(
       confirmPassword: formState.confirmPassword,
     },
     addressInfo: {
-      streetLine1: formState.streetLine1.trim(),
-      streetLine2: formState.streetLine2.trim(),
-      zipCode: formState.zipCode.trim(),
+      addressType: trimmedAddressType || null,
+      streetLine1: trimmedStreetLine1 || null,
+      streetLine2: trimmedStreetLine2 || null,
+      zipCode: trimmedZipCode || null,
+      cityName: trimmedCityName || null,
+      countryId: parsedCountryId,
+      stateId: parsedStateId,
     },
     invoiceDetail: {
       invoiceAmount: amount + donationTotal,
