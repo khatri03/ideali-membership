@@ -2,6 +2,7 @@ import { getJson, postFormData, postJson } from "./api";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
+  MembershipRegistrationStripeCredentials,
   MembershipRegistrationSubmitRequest,
 } from "../types/membershipRegistration";
 
@@ -136,6 +137,25 @@ function readPaymentProducts(value: unknown) {
         displayName: string;
       } => item !== null
     );
+}
+
+function readStripeCredentials(value: unknown): MembershipRegistrationStripeCredentials | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const publishableKey = readText(candidate.PublishableKey ?? candidate.publishableKey);
+  const stripeAccount = readText(candidate.StripeAccount ?? candidate.stripeAccount);
+
+  if (!publishableKey || !stripeAccount) {
+    return null;
+  }
+
+  return {
+    publishableKey,
+    stripeAccount,
+  };
 }
 
 export async function fetchContactPrefixOptions() {
@@ -570,6 +590,9 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   const paymentAccountId = readNumber(
     paymentSettingsRecord?.PaymentAccountId ?? paymentSettingsRecord?.paymentAccountId,
   );
+  const paymentAccountUniqueId = readText(
+    paymentSettingsRecord?.PaymentAccountUniqueId ?? paymentSettingsRecord?.paymentAccountUniqueId,
+  );
   const accountName = readText(paymentSettingsRecord?.AccountName ?? paymentSettingsRecord?.accountName);
   const merchantName = readScalar(paymentSettingsRecord?.MerchantName ?? paymentSettingsRecord?.merchantName) ?? "";
   const paymentCurrencyCode = readText(
@@ -631,6 +654,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     },
     paymentSettings: {
       paymentAccountId,
+      paymentAccountUniqueId: paymentAccountUniqueId || null,
       accountName,
       merchantName,
       paymentCurrencyCode: paymentCurrencyCode || null,
@@ -640,6 +664,18 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     presetTips,
     taxSettings: (responseData?.TaxSettings ?? responseData?.taxSettings ?? null) as Record<string, unknown> | null,
   } satisfies MembershipRegistrationInfo;
+}
+
+export async function fetchStripePublicCredentials(paymentAccountUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/public/stripe/${paymentAccountUniqueId}/credentials`);
+  const responseData = readResponseData(payload);
+  const credentials = readStripeCredentials(responseData);
+
+  if (!credentials) {
+    throw new Error("Unable to load Stripe credentials.");
+  }
+
+  return credentials;
 }
 
 export async function submitMembershipRegistration(

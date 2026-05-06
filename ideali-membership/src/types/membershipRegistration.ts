@@ -93,11 +93,17 @@ export interface MembershipRegistrationPresetTip {
 
 export interface MembershipRegistrationPaymentSettings {
   paymentAccountId: number | null;
+  paymentAccountUniqueId: string | null;
   accountName: string;
   merchantName: string | number;
   paymentCurrencyCode: string | null;
   paymentCurrencySymbol: string | null;
   paymentProducts: MembershipRegistrationPaymentProduct[];
+}
+
+export interface MembershipRegistrationStripeCredentials {
+  publishableKey: string;
+  stripeAccount: string;
 }
 
 export interface MembershipRegistrationInfo {

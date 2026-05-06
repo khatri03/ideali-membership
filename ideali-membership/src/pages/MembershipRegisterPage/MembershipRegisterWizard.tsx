@@ -9,6 +9,8 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
+import { CardElement, Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
@@ -17,6 +19,7 @@ import type {
   MembershipRegistrationCustomFormField,
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
+  MembershipRegistrationStripeCredentials,
 } from "../../types/membershipRegistration";
 import { CountrySelectInput } from "../../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
@@ -24,7 +27,12 @@ import { StateSelectInput } from "../../components/inputs/StateSelectInput/State
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
 import { fetchCountryOptions, fetchStateOptions } from "../../lib/customForms";
-import { fetchAddressTypeOptions, fetchContactPrefixOptions, resolvePaymentProductId } from "../../lib/membershipRegistration";
+import {
+  fetchAddressTypeOptions,
+  fetchContactPrefixOptions,
+  fetchStripePublicCredentials,
+  resolvePaymentProductId,
+} from "../../lib/membershipRegistration";
 
 type MembershipTheme = {
   accentRgb: { r: number; g: number; b: number };
@@ -3084,12 +3092,48 @@ function ChevronDownIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+function StripeCardFields({ theme }: { theme: MembershipTheme }) {
+  return (
+    <div className="space-y-3 rounded-2xl border px-4 py-4" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+          Debit / Credit Card
+        </p>
+        <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+          Enter your card details below to complete this payment method.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border bg-white px-4 py-4 shadow-sm" style={{ borderColor: theme.cardBorder }}>
+        <CardElement
+          options={{
+            hidePostalCode: true,
+            style: {
+              base: {
+                color: theme.titleColor,
+                fontSize: "16px",
+                "::placeholder": {
+                  color: theme.mutedLabelColor,
+                },
+              },
+              invalid: {
+                color: "#dc2626",
+              },
+            },
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function PaymentStep({ info, form, paymentMethodError, setField, theme }: PaymentStepProps) {
   const paymentProducts = useMemo(() => {
     return info.paymentSettings.paymentProducts.filter(
       (product, index, array) => array.findIndex((candidate) => candidate.name === product.name) === index,
     );
   }, [info.paymentSettings.paymentProducts]);
+  const paymentAccountUniqueId = info.paymentSettings.paymentAccountUniqueId?.trim();
   const donationCampaignName = info.membershipDetail.donationCampaignName?.trim();
   const currencyPrefix = buildCurrencyPrefix(info);
   const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
@@ -3099,6 +3143,9 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
   const selectedTipPercent = presetTips.length > 0 ? Number(form.tipPresetPercent) : 0;
   const tipAmountInputRef = useRef<HTMLInputElement | null>(null);
   const totalAmount = membershipAmount + donationAmount + tipAmount;
+  const [stripeCredentials, setStripeCredentials] = useState<MembershipRegistrationStripeCredentials | null>(null);
+  const [stripeCredentialsLoading, setStripeCredentialsLoading] = useState(false);
+  const [stripeCredentialsError, setStripeCredentialsError] = useState("");
   const formatMoney = (amount: number) => {
     return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
@@ -3106,6 +3153,15 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
     }).format(amount)}`;
   };
   const totalAmountLabel = totalAmount > 0 ? formatMoney(totalAmount) : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel;
+  const stripePromise = useMemo(() => {
+    if (!stripeCredentials) {
+      return null;
+    }
+
+    return loadStripe(stripeCredentials.publishableKey, {
+      stripeAccount: stripeCredentials.stripeAccount,
+    });
+  }, [stripeCredentials]);
 
   useEffect(() => {
     if (!selectedTipPercent || !presetTips.length) {
@@ -3141,6 +3197,45 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
 
   const [openPaymentProduct, setOpenPaymentProduct] = useState<string | null>(null);
   const didInitializeOpenStateRef = useRef(false);
+
+  useEffect(() => {
+    if (!paymentAccountUniqueId || selectedPaymentProduct?.name !== "CreditCard") {
+      setStripeCredentials(null);
+      setStripeCredentialsError("");
+      setStripeCredentialsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setStripeCredentialsLoading(true);
+    setStripeCredentialsError("");
+
+    void (async () => {
+      try {
+        const credentials = await fetchStripePublicCredentials(paymentAccountUniqueId);
+        if (!isMounted) {
+          return;
+        }
+
+        setStripeCredentials(credentials);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setStripeCredentials(null);
+        setStripeCredentialsError(error instanceof Error ? error.message : "Unable to load Stripe credentials.");
+      } finally {
+        if (isMounted) {
+          setStripeCredentialsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [paymentAccountUniqueId, selectedPaymentProduct?.name]);
 
   useEffect(() => {
     if (didInitializeOpenStateRef.current || paymentProducts.length === 0) {
@@ -3256,6 +3351,23 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                         <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
                           {headerLabel} will be used for this registration. You can collapse this card after selecting it.
                         </p>
+                        {product.name === "CreditCard" && isSelected ? (
+                          <div className="mt-4">
+                            {stripeCredentialsLoading ? (
+                              <div className="rounded-2xl border px-4 py-4 text-sm" style={{ borderColor: theme.cardBorder }}>
+                                Loading card fields...
+                              </div>
+                            ) : stripeCredentialsError ? (
+                              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+                                {stripeCredentialsError}
+                              </div>
+                            ) : stripePromise ? (
+                              <Elements stripe={stripePromise}>
+                                <StripeCardFields theme={theme} />
+                              </Elements>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
