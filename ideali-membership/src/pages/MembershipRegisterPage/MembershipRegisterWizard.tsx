@@ -3095,7 +3095,10 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
   const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
   const donationAmount = donationCampaignName ? parseDonationAmount(form.donationAmount) : 0;
   const presetTips = info.presetTips ?? [];
-  const totalAmount = membershipAmount + donationAmount;
+  const tipAmount = presetTips.length > 0 ? parseDonationAmount(form.tipAmount) : 0;
+  const selectedTipPercent = presetTips.length > 0 ? Number(form.tipPresetPercent) : 0;
+  const tipAmountInputRef = useRef<HTMLInputElement | null>(null);
+  const totalAmount = membershipAmount + donationAmount + tipAmount;
   const formatMoney = (amount: number) => {
     return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
@@ -3103,6 +3106,24 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
     }).format(amount)}`;
   };
   const totalAmountLabel = totalAmount > 0 ? formatMoney(totalAmount) : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel;
+
+  useEffect(() => {
+    if (!selectedTipPercent || !presetTips.length) {
+      return;
+    }
+
+    const matchingPreset = presetTips.find((presetTip) => presetTip.percent === selectedTipPercent);
+    if (!matchingPreset) {
+      return;
+    }
+
+    const presetBaseAmount = membershipAmount + donationAmount;
+    const nextTipAmount = ((presetBaseAmount * matchingPreset.percent) / 100).toFixed(2);
+
+    if (form.tipAmount !== nextTipAmount) {
+      setField("tipAmount", nextTipAmount);
+    }
+  }, [donationAmount, form.tipAmount, membershipAmount, presetTips, selectedTipPercent, setField]);
 
   const selectedPaymentProduct = useMemo(() => {
     const selectedProductId = form.paymentMethod.trim();
@@ -3315,28 +3336,37 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                     <div className="min-w-0 flex-1">
                       <select
-                        value=""
+                        value={form.tipPresetPercent}
                         onChange={(event) => {
-                          const selectedPreset = presetTips.find((presetTip) => String(presetTip.percent) === event.target.value);
-                          if (!selectedPreset) {
+                          if (event.target.value === "other") {
+                            setField("tipPresetPercent", "other");
+                            setField("tipAmount", "");
+                            window.setTimeout(() => {
+                              tipAmountInputRef.current?.focus();
+                            }, 0);
                             return;
                           }
 
-                          const presetAmount = (membershipAmount * selectedPreset.percent) / 100;
-                          setField("donationAmount", presetAmount > 0 ? presetAmount.toFixed(2) : "");
+                          const selectedPreset = presetTips.find((presetTip) => String(presetTip.percent) === event.target.value);
+                          if (!selectedPreset) {
+                            setField("tipPresetPercent", "");
+                            return;
+                          }
+
+                          const presetBaseAmount = membershipAmount + donationAmount;
+                          const presetAmount = (presetBaseAmount * selectedPreset.percent) / 100;
+                          setField("tipPresetPercent", event.target.value);
+                          setField("tipAmount", presetAmount > 0 ? presetAmount.toFixed(2) : "");
                         }}
                         className="w-full rounded-2xl border bg-white px-3 py-3 text-left text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
                         style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
                       >
-                        <option value="">Select a tip amount</option>
-                        {presetTips.map((presetTip) => {
-                          const presetAmount = (membershipAmount * presetTip.percent) / 100;
-                          return (
-                            <option key={presetTip.percent} value={presetTip.percent}>
-                              {presetTip.percent}% ({formatMoney(presetAmount)})
-                            </option>
-                          );
-                        })}
+                        {presetTips.map((presetTip) => (
+                          <option key={presetTip.percent} value={presetTip.percent}>
+                            {presetTip.percent}%
+                          </option>
+                        ))}
+                        <option value="other">Other</option>
                       </select>
                     </div>
                     <div className="w-full sm:w-[200px]">
@@ -3348,11 +3378,18 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                           {currencyPrefix}
                         </span>
                         <input
+                          ref={tipAmountInputRef}
                           type="text"
                           inputMode="decimal"
-                          value={form.donationAmount}
-                          onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
-                          onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
+                          value={form.tipAmount}
+                          onChange={(event) => {
+                            setField("tipPresetPercent", "other");
+                            setField("tipAmount", formatDonationAmountInput(event.target.value));
+                          }}
+                          onBlur={(event) => {
+                            setField("tipPresetPercent", "other");
+                            setField("tipAmount", normalizeDonationAmountInput(event.target.value));
+                          }}
                           placeholder="0.00"
                           className="w-full bg-white/70 px-3 py-2.5 text-right text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
                           style={{ color: theme.titleColor }}
@@ -3482,6 +3519,9 @@ export function MembershipRegisterWizard({
       const nextCountryValue = getFirstOptionValue(nextCountryOptions);
       const nextStateOptions = nextCountryValue ? await fetchStateOptions(nextCountryValue) : [];
       const nextStateValue = getFirstOptionValue(nextStateOptions);
+      const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
+      const presetTips = info.presetTips ?? [];
+      const seedDonationAmount = isFreeMembership ? 0 : 25;
 
       setField("profilePhotoFile", createDummyAvatarFile());
       setField("prefix", getFirstOptionValue(nextPrefixOptions));
@@ -3499,7 +3539,12 @@ export function MembershipRegisterWizard({
       setField("streetLine2", "Suite 200");
       setField("zipCode", "10001");
       setField("cityName", "Sample City");
-      setField("donationAmount", isFreeMembership ? "" : "25.00");
+      setField("donationAmount", seedDonationAmount > 0 ? seedDonationAmount.toFixed(2) : "");
+      setField("tipPresetPercent", presetTips.length > 0 ? String(presetTips[0].percent) : "");
+      setField(
+        "tipAmount",
+        presetTips.length > 0 ? (((membershipAmount + seedDonationAmount) * presetTips[0].percent) / 100).toFixed(2) : "",
+      );
       setField("notes", "Filled by the dummy data helper.");
 
       if (hasQuestionnaireContent) {

@@ -648,10 +648,12 @@ export async function submitMembershipRegistration(
   membershipCharges: number,
   paymentMethod: number | null,
   donationAmount: number,
+  tipAmount: number,
   donationCampaignName: string | null,
 ) {
   const amount = Number.isFinite(membershipCharges) ? membershipCharges : 0;
   const donationTotal = Number.isFinite(donationAmount) && donationAmount > 0 ? donationAmount : 0;
+  const tipTotal = Number.isFinite(tipAmount) && tipAmount > 0 ? tipAmount : 0;
   const campaignLabel = donationCampaignName?.trim() || "campaign";
   const profilePhotoFileStorageId = await uploadMembershipProfilePhoto(
     membershipTypeUniqueId,
@@ -681,6 +683,15 @@ export async function submitMembershipRegistration(
       description: `Donation to ${campaignLabel}`,
       quantity: 1,
       unitPrice: donationTotal,
+      itemType: 1,
+    });
+  }
+
+  if (tipTotal > 0) {
+    invoiceItems.push({
+      description: "Tip",
+      quantity: 1,
+      unitPrice: tipTotal,
       itemType: 1,
     });
   }
@@ -719,8 +730,8 @@ export async function submitMembershipRegistration(
       stateId: parsedStateId,
     },
     invoiceDetail: {
-      invoiceAmount: amount + donationTotal,
-      amountPaid: amount + donationTotal,
+      invoiceAmount: amount + donationTotal + tipTotal,
+      amountPaid: amount + donationTotal + tipTotal,
       paymentMethod,
       notes: formState.notes.trim(),
       paymentMethodDetail: null,

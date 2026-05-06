@@ -141,6 +141,8 @@ export interface MembershipRegistrationFormState {
   countryId: string;
   stateId: string;
   donationAmount: string;
+  tipAmount: string;
+  tipPresetPercent: string;
   paymentMethod: string;
   notes: string;
 }

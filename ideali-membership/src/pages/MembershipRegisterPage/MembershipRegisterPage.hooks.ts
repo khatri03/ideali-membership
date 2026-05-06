@@ -140,7 +140,8 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
 
       const firstPaymentMethod = getPaymentMethodOptions(info)[0];
       const donationAmount = parseDonationAmount(current.donationAmount);
-      const requiresPaymentMethod = !info.membershipDetail.isFree || donationAmount > 0;
+      const tipAmount = parseDonationAmount(current.tipAmount);
+      const requiresPaymentMethod = !info.membershipDetail.isFree || donationAmount > 0 || tipAmount > 0;
       const nextPaymentMethod = requiresPaymentMethod && firstPaymentMethod ? String(firstPaymentMethod.value) : "";
 
       return {
@@ -148,7 +149,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
         paymentMethod: nextPaymentMethod,
       };
     });
-  }, [info, form.donationAmount]);
+  }, [info, form.donationAmount, form.tipAmount]);
 
   const paymentMethodOptions = useMemo(() => getPaymentMethodOptions(info), [info]);
 
@@ -191,12 +192,14 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     try {
       const selectedPaymentMethod = form.paymentMethod.trim() ? Number(form.paymentMethod) : null;
       const donationAmount = parseDonationAmount(form.donationAmount);
+      const tipAmount = parseDonationAmount(form.tipAmount);
       const result = await submitMembershipRegistration(
         currentMembershipTypeUniqueId,
         form,
         info.membershipDetail.membershipCharges ?? 0,
         selectedPaymentMethod,
         donationAmount,
+        tipAmount,
         info.membershipDetail.donationCampaignName,
       );
 
