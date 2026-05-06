@@ -1,5 +1,14 @@
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
@@ -15,7 +24,7 @@ import { StateSelectInput } from "../../components/inputs/StateSelectInput/State
 import { PhoneInput } from "../../components/inputs/PhoneInput/PhoneInput";
 import { PasswordInput } from "../../components/inputs/PasswordInput/PasswordInput";
 import { fetchCountryOptions, fetchStateOptions } from "../../lib/customForms";
-import { fetchAddressTypeOptions, fetchContactPrefixOptions } from "../../lib/membershipRegistration";
+import { fetchAddressTypeOptions, fetchContactPrefixOptions, resolvePaymentProductId } from "../../lib/membershipRegistration";
 
 type MembershipTheme = {
   accentRgb: { r: number; g: number; b: number };
@@ -3059,45 +3068,258 @@ function QuestionnaireStep({
   );
 }
 
-function PaymentStep({
-  form,
-  setField,
-  theme,
-}: {
+type PaymentStepProps = {
+  info: MembershipRegistrationInfo;
   form: MembershipRegistrationFormState;
-  setField: MembershipRegisterPageViewModel["setField"];
+  paymentMethodError?: string;
+  setField: MembershipRegisterWizardProps["setField"];
   theme: MembershipTheme;
-}) {
-  return (
-    <div className="space-y-5">
-      <SectionTitle
-        title="Payment"
-        description="Confirm your payment note and final review before submitting."
-        theme={theme}
-      />
+};
 
-      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-2xl p-4" style={{ background: theme.tileBackground }}>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-            Selected Method
-          </p>
-          <p className="mt-2 text-lg font-bold" style={{ color: theme.tileValueColor }}>
-            {form.paymentMethod || "Not selected"}
-          </p>
-          <p className="mt-2 text-sm" style={{ color: theme.bodyColor }}>
-            Your selected payment method will be used for this registration.
-          </p>
+function ChevronDownIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.59l3.3-3.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.41Z" />
+    </svg>
+  );
+}
+
+function PaymentStep({ info, form, paymentMethodError, setField, theme }: PaymentStepProps) {
+  const paymentProducts = useMemo(() => {
+    return info.paymentSettings.paymentProducts.filter(
+      (product, index, array) => array.findIndex((candidate) => candidate.name === product.name) === index,
+    );
+  }, [info.paymentSettings.paymentProducts]);
+  const donationCampaignName = info.membershipDetail.donationCampaignName?.trim();
+  const currencyPrefix = buildCurrencyPrefix(info);
+  const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
+  const donationAmount = donationCampaignName ? parseDonationAmount(form.donationAmount) : 0;
+  const totalAmount = membershipAmount + donationAmount;
+  const formatMoney = (amount: number) => {
+    return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)}`;
+  };
+  const totalAmountLabel = totalAmount > 0 ? formatMoney(totalAmount) : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel;
+
+  const selectedPaymentProduct = useMemo(() => {
+    const selectedProductId = form.paymentMethod.trim();
+    if (!selectedProductId) {
+      return null;
+    }
+
+    return (
+      paymentProducts.find((product) => {
+        const productId = resolvePaymentProductId(product.name);
+        return productId ? String(productId) === selectedProductId : false;
+      }) ?? null
+    );
+  }, [form.paymentMethod, paymentProducts]);
+
+  const [openPaymentProduct, setOpenPaymentProduct] = useState<string | null>(null);
+  const didInitializeOpenStateRef = useRef(false);
+
+  useEffect(() => {
+    if (didInitializeOpenStateRef.current || paymentProducts.length === 0) {
+      return;
+    }
+
+    didInitializeOpenStateRef.current = true;
+    setOpenPaymentProduct(selectedPaymentProduct?.name ?? paymentProducts[0]?.name ?? null);
+  }, [paymentProducts, selectedPaymentProduct]);
+
+  if (paymentProducts.length === 0) {
+    return (
+      <div className="rounded-3xl border px-4 py-5 text-sm leading-6" style={{ borderColor: theme.cardBorder }}>
+        No payment methods are currently available for this membership.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {paymentMethodError ? (
+        <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
+          {paymentMethodError}
+        </div>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
+        <div className="space-y-3">
+          <div className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+            Choose one payment method below. You can expand a card to review it and collapse it again if needed.
+          </div>
+
+          <div className="space-y-3">
+            {paymentProducts.map((product) => {
+              const isOpen = openPaymentProduct === product.name;
+              const productId = resolvePaymentProductId(product.name);
+              const isSelected = productId ? form.paymentMethod.trim() === String(productId) : false;
+              const panelId = `payment-method-panel-${product.name}`;
+              const buttonId = `payment-method-button-${product.name}`;
+              const headerLabel = product.displayName || product.name;
+
+              return (
+                <section
+                  key={product.name}
+                  className="overflow-hidden rounded-3xl border transition"
+                  style={{
+                    borderColor: isOpen || isSelected ? theme.level1 : theme.cardBorder,
+                    background: theme.cardBackground,
+                  }}
+                >
+                  <button
+                    id={buttonId}
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() => {
+                      if (productId) {
+                        setField("paymentMethod", String(productId));
+                      }
+
+                      setOpenPaymentProduct((current) => (current === product.name ? null : product.name));
+                    }}
+                    className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border"
+                          style={{
+                            borderColor: isSelected ? theme.level1 : theme.cardBorder,
+                            background: isSelected ? theme.level1 : "transparent",
+                            color: isSelected ? "#fff" : theme.bodyColor,
+                          }}
+                          aria-hidden="true"
+                        >
+                          {isSelected ? <CheckIcon className="h-3.5 w-3.5" /> : null}
+                        </span>
+                        <span className="truncate text-base font-semibold" style={{ color: theme.titleColor }}>
+                          {headerLabel}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-sm" style={{ color: theme.mutedLabelColor }}>
+                        {isSelected ? "Selected payment method" : "Click to select this payment method"}
+                      </div>
+                    </div>
+
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
+                      style={{
+                        borderColor: isOpen ? theme.level1 : theme.cardBorder,
+                        color: theme.titleColor,
+                      }}
+                      aria-hidden="true"
+                    >
+                      <span
+                        className={isOpen ? "rotate-180 transform transition-transform duration-300 ease-out" : "transition-transform duration-300 ease-out"}
+                      >
+                        <ChevronDownIcon />
+                      </span>
+                    </span>
+                  </button>
+
+                  <div
+                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                      isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                    }`}
+                  >
+                    <div
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={buttonId}
+                      className="overflow-hidden border-t px-4"
+                      style={{ borderColor: theme.cardBorder }}
+                    >
+                      <div className="py-4">
+                        <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+                          {headerLabel} will be used for this registration. You can collapse this card after selecting it.
+                        </p>
+                        {isSelected ? (
+                          <p className="mt-3 text-sm font-semibold" style={{ color: theme.titleColor }}>
+                            This payment method is selected.
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </div>
 
-        <WizardField label="Notes" theme={theme}>
-          <textarea
-            value={form.notes}
-            onChange={(event) => setField("notes", event.target.value)}
-            rows={8}
-            className="w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-            style={{ borderColor: theme.cardBorder, color: theme.titleColor }}
-          />
-        </WizardField>
+        <div
+          className="space-y-3 rounded-3xl border px-4 py-4 sm:px-5 sm:py-5"
+          style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+              What you will pay
+            </p>
+            <p className="mt-1 text-sm leading-6" style={{ color: theme.bodyColor }}>
+              Review the amount before selecting a payment method.
+            </p>
+          </div>
+
+          <div className="rounded-2xl px-4 py-3" style={{ background: theme.cardBackground }}>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                Membership
+              </p>
+              <p className="text-base font-semibold text-right" style={{ color: theme.tileValueColor }}>
+                {membershipAmount > 0 ? formatMoney(membershipAmount) : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel}
+              </p>
+            </div>
+          </div>
+
+          {donationCampaignName ? (
+            <div className="rounded-2xl px-4 py-3" style={{ background: theme.cardBackground }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                    Donation
+                  </p>
+                  <p className="mt-1 text-sm font-semibold leading-5">
+                    {donationCampaignName}
+                  </p>
+                </div>
+                <label className="flex min-w-0 items-stretch overflow-hidden rounded-2xl border" style={{ borderColor: theme.cardBorder }}>
+                  <span
+                    className="flex shrink-0 items-center whitespace-nowrap border-r px-3 text-sm font-semibold"
+                    style={{ borderColor: theme.cardBorder, color: theme.tileValueColor, background: theme.level3 }}
+                  >
+                    {currencyPrefix}
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={form.donationAmount}
+                    onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
+                    onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
+                    placeholder="0.00"
+                    className="w-28 bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 sm:w-32"
+                    style={{ color: theme.titleColor }}
+                  />
+                </label>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="rounded-2xl px-4 py-3" style={{ background: theme.cardBackground }}>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+                Total payable
+              </p>
+              <p className="text-2xl font-bold text-right sm:text-3xl" style={{ color: theme.level1 }}>
+                {totalAmountLabel}
+              </p>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );
@@ -3492,7 +3714,13 @@ export function MembershipRegisterWizard({
             showBorders={showBorders}
           />
         ) : (
-          <PaymentStep form={form} setField={setField} theme={theme} />
+          <PaymentStep
+            info={info}
+            form={form}
+            paymentMethodError={errors.paymentMethod}
+            setField={setField}
+            theme={theme}
+          />
         )}
       </section>
 
