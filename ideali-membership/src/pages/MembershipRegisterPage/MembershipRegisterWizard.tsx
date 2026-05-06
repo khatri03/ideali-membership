@@ -3069,15 +3069,15 @@ function PaymentStep({
   theme: MembershipTheme;
 }) {
   return (
-    <div className="rounded-3xl border p-4 sm:p-5" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
+    <div className="space-y-5">
       <SectionTitle
         title="Payment"
         description="Confirm your payment note and final review before submitting."
         theme={theme}
       />
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-2xl border p-4" style={{ borderColor: theme.tileBorder, background: theme.tileBackground }}>
+      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-2xl p-4" style={{ background: theme.tileBackground }}>
           <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
             Selected Method
           </p>
@@ -3444,7 +3444,7 @@ export function MembershipRegisterWizard({
           ))}
         </div>
       </div>
-      {import.meta.env.DEV ? (
+      {import.meta.env.DEV && currentStep === 1 ? (
         <div className="flex justify-end">
           <button
             type="button"
