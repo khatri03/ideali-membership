@@ -3112,55 +3112,44 @@ function StripeCardFields({ theme }: { theme: MembershipTheme }) {
   const cardCvcElementRef = useRef<{ focus: () => void } | null>(null);
 
   return (
-    <div className="space-y-3 rounded-2xl border px-4 py-4" style={{ borderColor: theme.cardBorder, background: theme.cardBackground }}>
-      <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-          Debit / Credit Card
-        </p>
-        <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
-          Enter your credit card details below to complete this payment method.
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <div className="grid gap-3 md:grid-cols-[3fr_1fr_1fr]">
-          <div className="space-y-2 md:col-span-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              Credit card
-            </p>
-            <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
-              <CardNumberElement options={stripeInputOptions} />
-            </div>
+    <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-[3fr_1fr_1fr]">
+        <div className="space-y-2 md:col-span-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+            Credit card
+          </p>
+          <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
+            <CardNumberElement options={stripeInputOptions} />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              Expiry
-            </p>
-            <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
-              <CardExpiryElement
-                options={stripeInputOptions}
-                onChange={(event) => {
-                  if (event.complete) {
-                    cardCvcElementRef.current?.focus();
-                  }
-                }}
-              />
-            </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+            Expiry
+          </p>
+          <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
+            <CardExpiryElement
+              options={stripeInputOptions}
+              onChange={(event) => {
+                if (event.complete) {
+                  cardCvcElementRef.current?.focus();
+                }
+              }}
+            />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-              CVV
-            </p>
-            <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
-              <CardCvcElement
-                options={stripeInputOptions}
-                onReady={(element) => {
-                  cardCvcElementRef.current = element;
-                }}
-              />
-            </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
+            CVV
+          </p>
+          <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
+            <CardCvcElement
+              options={stripeInputOptions}
+              onReady={(element) => {
+                cardCvcElementRef.current = element;
+              }}
+            />
           </div>
         </div>
       </div>
@@ -3381,17 +3370,19 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                       isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                     }`}
                   >
-                    <div
-                      id={panelId}
-                      role="region"
-                      aria-labelledby={buttonId}
-                      className="overflow-hidden border-t px-4"
-                      style={{ borderColor: theme.cardBorder }}
-                    >
-                      <div className="py-4">
-                        <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
-                          {headerLabel} will be used for this registration. You can collapse this card after selecting it.
-                        </p>
+                  <div
+                    id={panelId}
+                    role="region"
+                    aria-labelledby={buttonId}
+                    className="overflow-hidden border-t px-4"
+                    style={{ borderColor: theme.cardBorder }}
+                  >
+                    <div className="py-4">
+                      <p className="text-sm leading-6" style={{ color: theme.bodyColor }}>
+                        {product.name === "CreditCard"
+                          ? "Debit/Credit Card will be used for this registration. You can collapse this card after selecting it."
+                          : `${headerLabel} will be used for this registration. You can collapse this card after selecting it.`}
+                      </p>
                         {product.name === "CreditCard" && isSelected ? (
                           <div className="mt-4">
                             {stripeCredentialsLoading ? (
