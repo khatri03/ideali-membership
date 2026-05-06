@@ -3146,7 +3146,7 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
-        <div className="space-y-3">
+        <div className="order-2 space-y-3 lg:order-1">
           <div className="text-sm leading-6" style={{ color: theme.bodyColor }}>
             Choose one payment method below. You can expand a card to review it and collapse it again if needed.
           </div>
@@ -3252,7 +3252,7 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
         </div>
 
         <div
-          className="space-y-3 rounded-3xl border px-4 py-4 sm:px-5 sm:py-5"
+          className="order-1 space-y-3 rounded-3xl border px-4 py-4 sm:px-5 sm:py-5 lg:order-2"
           style={{ borderColor: theme.cardBorder, background: theme.tileBackground }}
         >
           <div>
@@ -3277,7 +3277,7 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
 
           {donationCampaignName ? (
             <div className="rounded-2xl px-4 py-3" style={{ background: theme.cardBackground }}>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
                     Donation
@@ -3286,7 +3286,10 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                     {donationCampaignName}
                   </p>
                 </div>
-                <label className="flex min-w-0 items-stretch overflow-hidden rounded-2xl border" style={{ borderColor: theme.cardBorder }}>
+                <label
+                  className="flex w-full min-w-0 items-stretch overflow-hidden rounded-2xl border sm:w-auto"
+                  style={{ borderColor: theme.cardBorder }}
+                >
                   <span
                     className="flex shrink-0 items-center whitespace-nowrap border-r px-3 text-sm font-semibold"
                     style={{ borderColor: theme.cardBorder, color: theme.tileValueColor, background: theme.level3 }}
@@ -3300,7 +3303,7 @@ function PaymentStep({ info, form, paymentMethodError, setField, theme }: Paymen
                     onChange={(event) => setField("donationAmount", formatDonationAmountInput(event.target.value))}
                     onBlur={(event) => setField("donationAmount", normalizeDonationAmountInput(event.target.value))}
                     placeholder="0.00"
-                    className="w-28 bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 sm:w-32"
+                    className="w-full bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 sm:w-32"
                     style={{ color: theme.titleColor }}
                   />
                 </label>
