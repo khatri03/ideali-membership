@@ -3821,6 +3821,7 @@ function PaymentStep({
   const donationAmount = donationCampaignName
     ? parseDonationAmount(form.donationAmount)
     : 0;
+  const subTotalAmount = membershipAmount + donationAmount;
   const presetTips = info.presetTips ?? [];
   const tipAmount =
     presetTips.length > 0 ? parseDonationAmount(form.tipAmount) : 0;
@@ -3833,6 +3834,7 @@ function PaymentStep({
   const [stripeCredentialsLoading, setStripeCredentialsLoading] =
     useState(false);
   const [stripeCredentialsError, setStripeCredentialsError] = useState("");
+  const [stripeElementsKey, setStripeElementsKey] = useState(0);
   const formatMoney = (amount: number) => {
     return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
@@ -3926,6 +3928,7 @@ function PaymentStep({
           return;
         }
 
+        setStripeElementsKey((current) => current + 1);
         setStripeCredentials(credentials);
       } catch (error) {
         if (!isMounted) {
@@ -4097,7 +4100,7 @@ function PaymentStep({
                                 {stripeCredentialsError}
                               </div>
                             ) : stripePromise ? (
-                              <Elements stripe={stripePromise}>
+                              <Elements key={stripeElementsKey} stripe={stripePromise}>
                                 <StripeCardFields theme={theme} />
                               </Elements>
                             ) : null}
@@ -4204,6 +4207,25 @@ function PaymentStep({
                   </div>
                 </div>
               ) : null}
+
+              <div className="border-t border-b" style={{ borderColor: theme.cardBorder }}>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-[0.2em]"
+                    style={{ color: theme.tileLabelColor }}
+                  >
+                    Sub Total
+                  </p>
+                  <p
+                    className="text-base text-right font-semibold"
+                    style={{ color: theme.tileValueColor }}
+                  >
+                    {subTotalAmount > 0
+                      ? formatMoney(subTotalAmount)
+                      : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel}
+                  </p>
+                </div>
+              </div>
 
               {presetTips.length > 0 ? (
                 <div className="space-y-2">
