@@ -4223,7 +4223,6 @@ function PaymentStep({
                         onChange={(event) => {
                           if (event.target.value === "other") {
                             setField("tipPresetPercent", "other");
-                            setField("tipAmount", "");
                             window.setTimeout(() => {
                               tipAmountInputRef.current?.focus();
                             }, 0);
