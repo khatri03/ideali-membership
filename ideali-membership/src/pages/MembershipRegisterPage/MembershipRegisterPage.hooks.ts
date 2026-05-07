@@ -30,16 +30,36 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const previousTitleRef = useRef(document.title);
   const isRegistrationUnavailable = loadError === "Membership registration is not available yet.";
 
-  useEffect(() => {
+  const loadInfo = useCallback(async () => {
     if (!currentMembershipTypeUniqueId) {
       setIsLoading(false);
       setLoadError("Membership type unique id is required.");
       return;
     }
 
+    setIsLoading(true);
+    setLoadError("");
+
+    try {
+      const result = await getMembershipRegistrationInfo(currentMembershipTypeUniqueId);
+      setInfo(result);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Unable to load membership registration.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentMembershipTypeUniqueId]);
+
+  useEffect(() => {
     let isMounted = true;
 
-    async function loadInfo() {
+    async function loadInfoSafely() {
+      if (!currentMembershipTypeUniqueId) {
+        setIsLoading(false);
+        setLoadError("Membership type unique id is required.");
+        return;
+      }
+
       setIsLoading(true);
       setLoadError("");
 
@@ -63,7 +83,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
       }
     }
 
-    void loadInfo();
+    void loadInfoSafely();
 
     return () => {
       isMounted = false;
@@ -119,66 +139,50 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     document.title = membershipName || "Membership";
   }, [membershipName]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
 
-    if (!info) {
-      return;
-    }
-
-    const nextErrors = validateMembershipRegistrationForm(form, info);
-    setErrors(nextErrors);
-    setSubmitError("");
-    setSubmitMessage("");
-
-    if (Object.keys(nextErrors).length > 0) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const selectedPaymentMethod = form.paymentMethod.trim() ? Number(form.paymentMethod) : null;
-      const donationAmount = parseDonationAmount(form.donationAmount);
-      const tipAmount = parseDonationAmount(form.tipAmount);
-      const result = await submitMembershipRegistration(
-        currentMembershipTypeUniqueId,
-        form,
-        info.membershipDetail.membershipCharges ?? 0,
-        selectedPaymentMethod,
-        donationAmount,
-        tipAmount,
-        info.membershipDetail.donationCampaignName,
-      );
-
-      setSubmitMessage(result.message);
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Unable to submit the registration.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  const onRetry = useCallback(() => {
-    setLoadError("");
-    setIsLoading(true);
-    setInfo(null);
-    setSubmitError("");
-    setSubmitMessage("");
-    setErrors({});
-    void (async () => {
-      try {
-        const result = await getMembershipRegistrationInfo(currentMembershipTypeUniqueId);
-        setInfo(result);
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Unable to load membership registration.");
-      } finally {
-        setIsLoading(false);
+      if (!info) {
+        return;
       }
-    })();
-  }, [currentMembershipTypeUniqueId]);
 
-  function setField<T extends keyof MembershipRegistrationFormState>(field: T, value: MembershipRegistrationFormState[T]) {
+      const nextErrors = validateMembershipRegistrationForm(form, info);
+      setErrors(nextErrors);
+      setSubmitError("");
+      setSubmitMessage("");
+
+      if (Object.keys(nextErrors).length > 0) {
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      try {
+        const selectedPaymentMethod = form.paymentMethod.trim() ? Number(form.paymentMethod) : null;
+        const donationAmount = parseDonationAmount(form.donationAmount);
+        const tipAmount = parseDonationAmount(form.tipAmount);
+        const result = await submitMembershipRegistration(
+          currentMembershipTypeUniqueId,
+          form,
+          info.membershipDetail.membershipCharges ?? 0,
+          selectedPaymentMethod,
+          donationAmount,
+          tipAmount,
+          info.membershipDetail.donationCampaignName,
+        );
+
+        setSubmitMessage(result.message);
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : "Unable to submit the registration.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [currentMembershipTypeUniqueId, form, info],
+  );
+
+  const setField = useCallback(<T extends keyof MembershipRegistrationFormState>(field: T, value: MembershipRegistrationFormState[T]) => {
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -187,7 +191,17 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
       ...current,
       [field]: "",
     }));
-  }
+  }, []);
+
+  const onRetry = useCallback(() => {
+    setLoadError("");
+    setIsLoading(true);
+    setInfo(null);
+    setSubmitError("");
+    setSubmitMessage("");
+    setErrors({});
+    void loadInfo();
+  }, [loadInfo]);
 
   return {
     info,

@@ -1,37 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CardCvcElement, CardExpiryElement, CardNumberElement, Elements } from "@stripe/react-stripe-js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
+import { ChevronDownIcon, PaymentCheckIcon, StripeCardFields } from "./MembershipRegisterWizardPaymentStep.cardFields";
+import type { MembershipTheme } from "./MembershipRegisterWizard.shared";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
   MembershipRegistrationStripeCredentials,
 } from "../../types/membershipRegistration";
 import { fetchStripePublicCredentials, resolvePaymentProductId } from "../../lib/membershipRegistration";
-
-type MembershipTheme = {
-  accentRgb: { r: number; g: number; b: number };
-  level1: string;
-  level2: string;
-  level3: string;
-  pageBackground: string;
-  cardBackground: string;
-  cardBorder: string;
-  cardShadow: string;
-  iconBackground: string;
-  iconBorder: string;
-  iconColor: string;
-  titleColor: string;
-  bodyColor: string;
-  labelColor: string;
-  mutedLabelColor: string;
-  tileBorder: string;
-  tileBackground: string;
-  tileLabelColor: string;
-  tileValueColor: string;
-  barBackground: string;
-};
 
 type PaymentStepProps = {
   info: MembershipRegistrationInfo;
@@ -46,87 +25,6 @@ type PaymentStepProps = {
   formatDonationAmountInput: (value: string) => string;
   normalizeDonationAmountInput: (value: string) => string;
 };
-
-function PaymentCheckIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
-      <path d="M7.8 13.7 4.6 10.5l-1.5 1.5 4.7 4.7 9.2-9.2-1.5-1.5z" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="currentColor">
-      <path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.59l3.3-3.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.41Z" />
-    </svg>
-  );
-}
-
-function StripeCardFields({ theme }: { theme: MembershipTheme }) {
-  const stripeInputClassName = "w-full rounded-2xl border bg-white px-4 py-3 text-sm shadow-sm";
-  const stripeInputOptions = {
-    disableLink: true,
-    style: {
-      base: {
-        color: theme.titleColor,
-        fontSize: "16px",
-        "::placeholder": {
-          color: theme.mutedLabelColor,
-        },
-      },
-      invalid: {
-        color: "#dc2626",
-      },
-    },
-  };
-  const cardCvcElementRef = useRef<{ focus: () => void } | null>(null);
-
-  return (
-    <div className="space-y-3">
-      <div className="grid gap-3 md:grid-cols-[3fr_1fr_1fr]">
-        <div className="space-y-2 md:col-span-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-            Credit card
-          </p>
-          <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
-            <CardNumberElement options={stripeInputOptions} />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-            Expiry
-          </p>
-          <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
-            <CardExpiryElement
-              options={stripeInputOptions}
-              onChange={(event) => {
-                if (event.complete) {
-                  cardCvcElementRef.current?.focus();
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.tileLabelColor }}>
-            CVV
-          </p>
-          <div className={stripeInputClassName} style={{ borderColor: theme.cardBorder }}>
-            <CardCvcElement
-              options={stripeInputOptions}
-              onReady={(element) => {
-                cardCvcElementRef.current = element;
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function PaymentStep({
   info,
@@ -157,12 +55,18 @@ export function PaymentStep({
   const [stripeCredentials, setStripeCredentials] = useState<MembershipRegistrationStripeCredentials | null>(null);
   const [stripeCredentialsLoading, setStripeCredentialsLoading] = useState(false);
   const [stripeCredentialsError, setStripeCredentialsError] = useState("");
-  const formatMoney = (amount: number) => {
-    return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount)}`;
-  };
+  const moneyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    [],
+  );
+  const formatMoney = useCallback((amount: number) => `${currencyPrefix}${moneyFormatter.format(amount)}`, [
+    currencyPrefix,
+    moneyFormatter,
+  ]);
   const totalAmountLabel = totalAmount > 0 ? formatMoney(totalAmount) : priceFreeLabel;
   const stripePromise = useMemo(() => {
     if (!stripeCredentials) {

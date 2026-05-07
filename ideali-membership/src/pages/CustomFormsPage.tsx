@@ -1,172 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchCustomForms } from "../lib/customForms";
-import type { CustomFormSummary } from "../types/customForms";
 import { APP_ROUTES, buildCustomFormEditPath } from "../routes";
-
-function DotsIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 fill-current">
-      <circle cx="4" cy="10" r="1.5" />
-      <circle cx="10" cy="10" r="1.5" />
-      <circle cx="16" cy="10" r="1.5" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
-      <path d="M13.586 3a2 2 0 0 1 2.828 0l.586.586a2 2 0 0 1 0 2.828l-8.95 8.95a2 2 0 0 1-.878.514l-3.18.795a1 1 0 0 1-1.212-1.212l.795-3.18a2 2 0 0 1 .515-.878zM12 4.586 4.332 12.254l-.456 1.823 1.823-.456L13.414 5.586z" />
-    </svg>
-  );
-}
-
-function CustomFormActionsMenu({
-  item,
-  onEdit,
-}: {
-  item: CustomFormSummary;
-  onEdit: (uniqueId: string) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node;
-      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
-        return;
-      }
-
-      setIsOpen(false);
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  function openMenu() {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) {
-      setIsOpen((current) => !current);
-      return;
-    }
-
-    const gap = 8;
-    const menuWidth = 220;
-    const menuHeight = 72;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
-
-    setMenuPosition({
-      top: openUpward ? Math.max(gap, rect.top - menuHeight - gap) : rect.bottom + gap,
-      left: Math.max(gap, Math.min(rect.left, window.innerWidth - menuWidth - gap)),
-    });
-    setIsOpen(true);
-  }
-
-  function handleEdit() {
-    setIsOpen(false);
-    onEdit(item.uniqueId);
-  }
-
-  return (
-    <div className="relative inline-flex">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={openMenu}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        aria-label={`Open actions for ${item.name}`}
-        title="Actions"
-      >
-        <DotsIcon />
-      </button>
-
-      {isOpen && menuPosition
-        ? createPortal(
-            <div
-              ref={menuRef}
-              className="fixed z-[1200] w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-2xl shadow-slate-900/10"
-              style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
-            >
-              <button
-                type="button"
-                onClick={handleEdit}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                <EditIcon />
-                Edit
-              </button>
-            </div>,
-            document.body,
-          )
-        : null}
-    </div>
-  );
-}
+import { useCustomFormsPageData } from "./CustomFormsPage/CustomFormsPage.hooks";
+import { CustomFormTableRow } from "./CustomFormsPage/CustomFormsPage.row";
 
 export function CustomFormsPage() {
   const navigate = useNavigate();
-  const [forms, setForms] = useState<CustomFormSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadForms() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetchCustomForms();
-        if (!cancelled) {
-          setForms(response);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load custom forms.");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadForms();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const formCountLabel = useMemo(() => {
-    if (forms.length === 0) {
-      return "No forms yet";
-    }
-
-    return `${forms.length} custom form${forms.length === 1 ? "" : "s"}`;
-  }, [forms.length]);
+  const { forms, isLoading, error, formCountLabel } = useCustomFormsPageData();
 
   return (
     <section className="space-y-6">
@@ -229,22 +68,7 @@ export function CustomFormsPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {forms.map((form) => (
-                    <tr key={form.uniqueId} className="border-b border-slate-200 last:border-b-0">
-                      <td className="px-4 py-4 align-top">
-                        <CustomFormActionsMenu item={form} onEdit={(uniqueId) => navigate(buildCustomFormEditPath(uniqueId))} />
-                      </td>
-                      <td className="px-4 py-4 align-top">
-                        <div className="space-y-2">
-                          <p className="text-sm font-semibold text-slate-900">{form.name}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 align-top text-sm font-medium text-slate-700">
-                        {form.headerText}
-                      </td>
-                      <td className="px-4 py-4 align-top text-sm font-medium text-slate-700">
-                        {form.totalFields}
-                      </td>
-                    </tr>
+                    <CustomFormTableRow key={form.uniqueId} form={form} onEdit={(uniqueId) => navigate(buildCustomFormEditPath(uniqueId))} />
                   ))}
                 </tbody>
               </table>

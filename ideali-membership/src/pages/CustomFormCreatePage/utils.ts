@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   AlignLeft,
   CalendarDays,
@@ -214,4 +215,186 @@ export function buildPreviewValues(fields: CustomFormFieldDraft[]): Record<strin
     accumulator[field.id] = getPreviewDefaultValue(field);
     return accumulator;
   }, {});
+}
+
+export function createFieldId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `field-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function createOptionId() {
+  return `option-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function createUniqueId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `unique-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function useCompactViewport() {
+  const [isCompactViewport, setIsCompactViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia("(max-width: 639px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const legacyMediaQuery = mediaQuery as MediaQueryList & {
+      addListener: (listener: () => void) => void;
+      removeListener: (listener: () => void) => void;
+    };
+    const updateViewport = () => setIsCompactViewport(mediaQuery.matches);
+
+    updateViewport();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateViewport);
+      return () => mediaQuery.removeEventListener("change", updateViewport);
+    }
+
+    legacyMediaQuery.addListener(updateViewport);
+    return () => legacyMediaQuery.removeListener(updateViewport);
+  }, []);
+
+  return isCompactViewport;
+}
+
+export function buildEmptyDraft() {
+  return {
+    name: "",
+    headerText: "",
+    description: "",
+    layoutColumn: 2,
+  };
+}
+
+export function mapPreviewFieldToDraft(field: {
+  uniqueId: string;
+  controlUniqueId: string | null;
+  formControlTypeId: number;
+  displayOrder: number;
+  controlLabel: string;
+  placeHolder: string | null;
+  tooltip: string | null;
+  isMandatory: boolean;
+  requiredMessage: string | null;
+  acceptedFileTypes: string[] | null;
+  minLength: number | null;
+  maxLength: number | null;
+  defaultValue: string | null;
+  layoutColumn: number | null;
+  options: { value: string; displayText: string; id: number }[];
+  formControl: {
+    id: number;
+    name: string;
+    controlType: string;
+    iconClass: string;
+    defaultLabel: string;
+    hasOptions: boolean;
+    acceptedFileTypes: { text: string; value: string }[];
+  } | null;
+}): CustomFormFieldDraft {
+  const fallbackRequiredMessage = field.isMandatory ? `${field.controlLabel.trim() || "Field"} is required.` : "";
+  const controlType = field.formControl?.controlType?.toLowerCase() ?? "";
+  const defaultValues = controlType === "multiselect" ? parseDelimitedDefaultValues(field.defaultValue) : [];
+  const resolvedDefaultValue =
+    controlType === "checkbox"
+      ? getCheckboxDefaultValue(field.defaultValue)
+      : controlType === "multiselect"
+        ? defaultValues.join(", ")
+        : field.defaultValue ?? "";
+
+  return {
+    id: createFieldId(),
+    uniqueId: field.uniqueId,
+    controlUniqueId: field.controlUniqueId ?? createFieldId(),
+    controlId: field.formControlTypeId,
+    controlName: field.formControl?.name ?? "",
+    controlType: field.formControl?.controlType ?? "",
+    iconClass: field.formControl?.iconClass ?? "",
+    label: field.controlLabel,
+    placeholder: field.placeHolder ?? "",
+    tooltip: field.tooltip ?? "",
+    required: field.isMandatory,
+    requiredMessage: field.requiredMessage ?? fallbackRequiredMessage,
+    acceptedFileTypes: normalizeAcceptedFileTypes(field.acceptedFileTypes),
+    minLength: field.minLength === null ? "" : String(field.minLength),
+    maxLength: field.maxLength === null ? "" : String(field.maxLength),
+    defaultValue: resolvedDefaultValue,
+    displayOrder: field.displayOrder,
+    layoutColumn: normalizeFieldLayoutColumn(field.layoutColumn),
+    options: field.options.map((option) => ({
+      id: createOptionId(),
+      displayText: option.displayText,
+      value: option.value,
+      isDefault: controlType === "multiselect" ? defaultValues.includes(option.value) : field.defaultValue === option.value,
+    })),
+  };
+}
+
+export function createFieldDraft(control: CustomFormControl, displayOrder: number): CustomFormFieldDraft {
+  const hasOptions = control.hasOptions;
+  const defaultOptionValue = hasOptions ? "option-1" : "";
+  const defaultValue = control.controlType.toLowerCase() === "checkbox" ? "false" : defaultOptionValue;
+  const label = control.defaultLabel || control.name;
+
+  return {
+    id: createFieldId(),
+    uniqueId: createUniqueId(),
+    controlUniqueId: createFieldId(),
+    controlId: control.id,
+    controlName: control.name,
+    controlType: control.controlType,
+    iconClass: control.iconClass,
+    label,
+    placeholder: "",
+    tooltip: "",
+    required: false,
+    requiredMessage: `${toSentenceCase(label)} is required.`,
+    acceptedFileTypes: [],
+    minLength: "",
+    maxLength: "",
+    defaultValue,
+    displayOrder,
+    layoutColumn: null,
+    options: hasOptions
+      ? [
+          {
+            id: createOptionId(),
+            displayText: "Option 1",
+            value: defaultOptionValue,
+            isDefault: true,
+          },
+        ]
+      : [],
+  };
+}
+
+export function readResponseData(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return payload;
+  }
+
+  if ("Data" in payload) {
+    return (payload as { Data?: unknown }).Data;
+  }
+
+  if ("data" in payload) {
+    return (payload as { data?: unknown }).data;
+  }
+
+  return payload;
 }

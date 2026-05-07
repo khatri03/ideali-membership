@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpDown, Link2, UserPlus, Users } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -8,9 +8,10 @@ import { APP_ROUTES, buildMembershipRegisterPath, buildMembershipWizardStepPath 
 import { getMembershipTypeOrderList, getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep, saveMembershipTypeOrderList } from "../lib/membershipWizard";
 import { MEMBERSHIP_WIZARD_STEPS } from "../components/wizard/membershipWizardSteps";
 import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
-import { AvailabilityBadge, MembershipMetaPill, formatCurrencyAmount, getSetupStatePillTone, getSetupStatePillValue, getTenureDisplayLabel, getTenureExpiryCaseLabel, getTenureWindowLabel, renderTenureExpiryCaseLabel } from "./MembershipTypesPage.utils";
-import { OrderConfirmModal, MembershipTypeRow } from "./MembershipTypesPage.components";
-import { showToast } from "./MembershipTypesPage.utils";
+import { AvailabilityBadge, MembershipMetaPill } from "./MembershipTypesPage/MembershipTypesPage.display";
+import { formatCurrencyAmount, getSetupStatePillTone, getSetupStatePillValue, getTenureDisplayLabel, getTenureExpiryCaseLabel, getTenureWindowLabel, renderTenureExpiryCaseLabel } from "./MembershipTypesPage/MembershipTypesPage.utils";
+import { OrderConfirmModal, MembershipTypeRow } from "./MembershipTypesPage/MembershipTypesPage.components";
+import { showToast } from "./MembershipTypesPage/MembershipTypesPage.utils";
 
 
 
@@ -25,11 +26,29 @@ export function MembershipTypesPage() {
   const [orderError, setOrderError] = useState("");
   const orderModalRef = useRef<HTMLDivElement>(null);
 
-  function openOrderModal() {
-    setIsOrderModalOpen(true);
-  }
+  const loadTypes = useCallback(async () => {
+    setIsLoading(true);
 
-  function moveOrderItem(sourceUniqueId: string, targetUniqueId: string) {
+    try {
+      const items = await getMembershipTypes();
+      setTypes(items);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load membership types.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const openOrderModal = useCallback(() => {
+    setIsOrderModalOpen(true);
+  }, []);
+
+  const closeOrderModal = useCallback(() => {
+    setIsOrderModalOpen(false);
+  }, []);
+
+  const moveOrderItem = useCallback((sourceUniqueId: string, targetUniqueId: string) => {
     setOrderItems((currentItems) => {
       const sourceIndex = currentItems.findIndex((item) => item.uniqueId === sourceUniqueId);
       const targetIndex = currentItems.findIndex((item) => item.uniqueId === targetUniqueId);
@@ -40,9 +59,9 @@ export function MembershipTypesPage() {
 
       return arrayMove(currentItems, sourceIndex, targetIndex);
     });
-  }
+  }, []);
 
-  async function saveOrder() {
+  const saveOrder = useCallback(async () => {
     if (orderItems.length === 0) {
       return;
     }
@@ -57,25 +76,11 @@ export function MembershipTypesPage() {
     } finally {
       setIsSavingOrder(false);
     }
-  }
-
-  async function loadTypes() {
-    setIsLoading(true);
-
-    try {
-      const items = await getMembershipTypes();
-      setTypes(items);
-      setError("");
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load membership types.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  }, [loadTypes, orderItems]);
 
   useEffect(() => {
     void loadTypes();
-  }, []);
+  }, [loadTypes]);
 
   useEffect(() => {
     if (!isOrderModalOpen) {
@@ -189,7 +194,7 @@ export function MembershipTypesPage() {
       </div>
       {isOrderModalOpen ? (
         <OrderConfirmModal
-          onCancel={() => setIsOrderModalOpen(false)}
+          onCancel={closeOrderModal}
           modalRef={orderModalRef}
           isLoading={isOrderModalLoading}
           items={orderItems}

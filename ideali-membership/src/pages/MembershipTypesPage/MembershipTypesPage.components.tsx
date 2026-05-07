@@ -1,23 +1,22 @@
 import { createPortal } from "react-dom";
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
+import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../../types/membership";
 import {
   OrderListSkeletonRow,
   SortableOrderItem,
   constrainOrderDragToParent,
-} from "./MembershipTypesPage.utils";
+} from "./MembershipTypesPage.order";
 import {
-  AvailabilityBadge,
-  MembershipMetaPill,
+  formatCurrencyAmount,
   getSetupStatePillTone,
   getSetupStatePillValue,
   getTenureDisplayLabel,
   getTenureExpiryCaseLabel,
   getTenureWindowLabel,
   renderTenureExpiryCaseLabel,
-  formatCurrencyAmount,
 } from "./MembershipTypesPage.utils";
+import { AvailabilityBadge, MembershipMetaPill } from "./MembershipTypesPage.display";
 import { MembershipTypeActionsMenu } from "./MembershipTypesPage.actions";
 
 export function OrderConfirmModal({
