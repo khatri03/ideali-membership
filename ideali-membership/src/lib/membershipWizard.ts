@@ -54,9 +54,8 @@ export {
   getMembershipBannerInfo,
   saveMembershipBannerStep,
   getMembershipPaymentAccountInfo,
-  getMembershipQuestionsInfo,
-  saveMembershipQuestionsStep,
 } from "./membershipWizard.stepData";
+export { getMembershipQuestionsInfo, saveMembershipQuestionsStep } from "./membershipWizard.questions";
 
 export async function getMembershipWizardProgress(membershipTypeUniqueId: string) {
   return getCachedWizardResponse(`wizard:progress:${membershipTypeUniqueId}`, async () => {

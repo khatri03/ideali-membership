@@ -17,51 +17,34 @@ import {
   buildCustomFormValues,
   buildCustomQuestionKey,
   buildCustomQuestionValues,
-  getCustomFormControlType,
-  getCustomQuestionControlType,
-  getFileValidationError,
   type CustomFormErrors,
-  type CustomFormValue,
   type CustomFormValues,
   type CustomQuestionErrors,
-  type CustomQuestionValue,
   type CustomQuestionValues,
-  validateCustomForms,
-  validateCustomQuestionField,
-  validateCustomQuestions,
 } from "./MembershipRegisterWizard.questionnaire.helpers";
+import {
+  getNearestCountryQuestionValue,
+  validateCustomForms,
+  validateCustomQuestions,
+} from "./MembershipRegisterWizard.questionnaire.runtime";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
   MembershipRegistrationStripeCredentials,
 } from "../../types/membershipRegistration";
-import { fetchCountryOptions, fetchStateOptions } from "../../lib/customForms";
-import {
-  fetchAddressTypeOptions,
-  fetchContactPrefixOptions,
-  fetchStripePublicCredentials,
-  resolvePaymentProductId,
-} from "../../lib/membershipRegistration";
+import { fetchStripePublicCredentials, resolvePaymentProductId } from "../../lib/membershipRegistration";
 import { MembershipTheme, StepBadge } from "./MembershipRegisterWizard.shared";
 import { PricingStep } from "./MembershipRegisterWizard.pricing";
 import { YourInformationStep as YourInformationStepView } from "./MembershipRegisterWizard.personalInfo";
 import { QuestionnaireStep as QuestionnaireStepView } from "./MembershipRegisterWizard.questionnaire";
+import { buildMembershipRegisterHandlers } from "./MembershipRegisterWizard.handlers";
 import {
-  buildDummyValueForControlType,
   buildCurrencyPrefix,
-  createDummyAvatarFile,
-  createDummyFileForAcceptedTypes,
-  createDummyTextFile,
-  getFirstOptionValue,
   getFieldBorderClass,
   getFieldDashedBorderClass,
   isEnabledFlag,
-  isEmailValid,
   isLifetimeTenure,
-  isPhoneLikeValue,
   isPricingStepComplete,
-  isValidDateValue,
-  isValidNumberValue,
   loadImageElement,
   formatDonationAmountInput,
   formatFileSize,
@@ -73,11 +56,16 @@ import {
   normalizeDonationAmountInput,
   parseDonationAmount,
   renderRenewalDueLabel,
+  isEmailValid,
+  isPhoneLikeValue,
+  isValidDateValue,
+  isValidNumberValue,
   toDummyFileName,
   validateUserLoginStep,
   validateYourInformationStep,
 } from "./MembershipRegisterWizard.helpers";
 import { ProfilePhotoField } from "./MembershipRegisterWizard.profilePhoto";
+import { buildMembershipRegisterDummyData } from "./MembershipRegisterWizard.dummy";
 
 interface MembershipRegisterWizardProps {
   info: MembershipRegistrationInfo;
@@ -157,6 +145,30 @@ export function MembershipRegisterWizard({
 
   const canGoNext = currentStep === 0 ? pricingStepComplete : true;
   const userInformationStepComplete = Object.keys(validateYourInformationStep(form)).length === 0;
+  const {
+    handleNext,
+    handleBack,
+    handleUserLoginFieldChange,
+    handleCustomFormFieldChange,
+    handleCustomQuestionFieldChange,
+    handleCustomQuestionFieldBlur,
+  } = buildMembershipRegisterHandlers({
+    currentStep,
+    form,
+    info,
+    pricingStepComplete,
+    hasQuestionnaireContent,
+    customFormValues,
+    customQuestionValues,
+    visibleStepCount: visibleSteps.length,
+    setField,
+    setCurrentStep,
+    setUserLoginErrors,
+    setCustomFormValues,
+    setCustomFormErrors,
+    setCustomQuestionValues,
+    setCustomQuestionErrors,
+  });
 
   const stepTitles = visibleSteps.map((step, index) => ({
     ...step,
@@ -172,229 +184,30 @@ export function MembershipRegisterWizard({
           (hasQuestionnaireContent && !questionnaireStepComplete))),
   }));
 
-  async function fillDummyData() {
-    if (!info || isFillingDummyData) {
-      return;
-    }
-
-    setIsFillingDummyData(true);
-
-    try {
-      const [nextPrefixOptions, nextAddressTypeOptions, nextCountryOptions] = await Promise.all([
-        fetchContactPrefixOptions(),
-        fetchAddressTypeOptions(),
-        fetchCountryOptions(),
-      ]);
-
-      const nextCountryValue = getFirstOptionValue(nextCountryOptions);
-      const nextStateOptions = nextCountryValue ? await fetchStateOptions(nextCountryValue) : [];
-      const nextStateValue = getFirstOptionValue(nextStateOptions);
-      const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
-      const presetTips = info.presetTips ?? [];
-      const seedDonationAmount = isFreeMembership ? 0 : 25;
-
-      setField("profilePhotoFile", createDummyAvatarFile());
-      setField("prefix", getFirstOptionValue(nextPrefixOptions));
-      setField("firstName", "John");
-      setField("middleName", "A");
-      setField("lastName", "Doe");
-      setField("email", "john.doe@example.com");
-      setField("password", "Password123!");
-      setField("confirmPassword", "Password123!");
-      setField("cellPhone", "(555) 123-4567");
-      setField("addressType", getFirstOptionValue(nextAddressTypeOptions));
-      setField("countryId", nextCountryValue);
-      setField("stateId", nextStateValue);
-      setField("streetLine1", "123 Main Street");
-      setField("streetLine2", "Suite 200");
-      setField("zipCode", "10001");
-      setField("cityName", "Sample City");
-      setField("donationAmount", seedDonationAmount > 0 ? seedDonationAmount.toFixed(2) : "");
-      const firstPresetTip = presetTips[0];
-      setField("tipPresetPercent", firstPresetTip ? String(firstPresetTip.percent) : "");
-      setField(
-        "tipAmount",
-        firstPresetTip ? (((membershipAmount + seedDonationAmount) * firstPresetTip.percent) / 100).toFixed(2) : "",
-      );
-      setField("notes", "Filled by the dummy data helper.");
-
-      if (hasQuestionnaireContent) {
-        const nextCustomFormValues = info.membershipDetail.customForms.reduce<CustomFormValues>((accumulator, form) => {
-          const fields = [...form.fields].sort((left, right) => left.displayOrder - right.displayOrder);
-
-          fields.forEach((field) => {
-            const controlType = getCustomFormControlType(field.formControlTypeId);
-            const key = buildCustomFormFieldKey(form.uniqueId, field.uniqueId);
-            accumulator[key] = buildDummyValueForControlType(
-              controlType,
-              field.controlLabel,
-              field.options.map((option) => ({ label: option.displayText, value: option.value })),
-              field.acceptedFileTypes,
-              nextCountryValue,
-              nextStateValue,
-            );
-          });
-
-          return accumulator;
-        }, {});
-
-        const nextCustomQuestionValues = info.membershipDetail.customQuestions.reduce<CustomQuestionValues>(
-          (accumulator, question) => {
-            const controlType = getCustomQuestionControlType(question.controlType);
-            accumulator[buildCustomQuestionKey(question.uniqueId)] = buildDummyValueForControlType(
-              controlType,
-              question.label,
-              question.options.map((option) => ({ label: option.displayText, value: option.value })),
-              question.acceptedFileTypes,
-              nextCountryValue,
-              nextStateValue,
-            );
-            return accumulator;
-          },
-          {},
-        );
-
-        setCustomFormValues(nextCustomFormValues);
-        setCustomQuestionValues(nextCustomQuestionValues);
-        setCustomFormErrors({});
-        setCustomQuestionErrors({});
-      }
-
-      setUserLoginErrors({});
-      setCurrentStep(visibleSteps.length - 1);
-    } finally {
-      setIsFillingDummyData(false);
-    }
-  }
-
   useEffect(() => {
     if (!import.meta.env.DEV || !info || currentStep !== 1 || hasAutoFilledDummyDataRef.current) {
       return;
     }
 
     hasAutoFilledDummyDataRef.current = true;
-    void fillDummyData();
-  }, [currentStep, fillDummyData, info]);
+    setIsFillingDummyData(true);
 
-  function handleNext() {
-    if (currentStep === 0 && !pricingStepComplete) {
-      return;
-    }
-
-    if (currentStep === 1) {
-      const nextErrors = validateYourInformationStep(form);
-      setUserLoginErrors(nextErrors);
-      if (Object.keys(nextErrors).length > 0) {
-        return;
-      }
-    }
-
-    if (hasQuestionnaireContent && currentStep === 2 && info) {
-      const nextErrors = validateCustomForms(info.membershipDetail.customForms, customFormValues);
-      const nextQuestionErrors = validateCustomQuestions(info.membershipDetail.customQuestions, customQuestionValues);
-      setCustomFormErrors(nextErrors);
-      setCustomQuestionErrors(nextQuestionErrors);
-
-      if (Object.keys(nextErrors).length > 0 || Object.keys(nextQuestionErrors).length > 0) {
-        return;
-      }
-    }
-
-    setCurrentStep((value) => Math.min(value + 1, visibleSteps.length - 1));
-  }
-
-  function handleBack() {
-    setCurrentStep((value) => Math.max(value - 1, 0));
-  }
-
-  function handleUserLoginFieldChange<T extends keyof MembershipRegistrationFormState>(
-    field: T,
-    value: MembershipRegistrationFormState[T],
-  ) {
-    setField(field, value);
-    setUserLoginErrors((current) => ({
-      ...current,
-      [field]: "",
-    }));
-  }
-
-  function handleCustomFormFieldChange(key: string, value: CustomFormValue) {
-    setCustomFormValues((current) => ({
-      ...current,
-      [key]: value,
-    }));
-
-    if (!info) {
-      return;
-    }
-
-    const separatorIndex = key.indexOf(":");
-    if (separatorIndex < 0) {
-      setCustomFormErrors((current) => ({
-        ...current,
-        [key]: "",
-      }));
-      return;
-    }
-
-    const formUniqueId = key.slice(0, separatorIndex);
-    const fieldUniqueId = key.slice(separatorIndex + 1);
-    const form = info.membershipDetail.customForms.find((candidate) => candidate.uniqueId === formUniqueId);
-    const field = form?.fields.find((candidate) => candidate.uniqueId === fieldUniqueId) ?? null;
-
-    if (field && getCustomFormControlType(field.formControlTypeId) === "file") {
-      const nextError = getFileValidationError(field, value);
-      setCustomFormErrors((current) => ({
-        ...current,
-        [key]: nextError,
-      }));
-      return;
-    }
-
-    setCustomFormErrors((current) => ({
-      ...current,
-      [key]: "",
-    }));
-  }
-
-  function handleCustomQuestionFieldChange(key: string, value: CustomQuestionValue) {
-    setCustomQuestionValues((current) => ({
-      ...current,
-      [key]: value,
-    }));
-
-    if (!info) {
-      return;
-    }
-
-    const question = info.membershipDetail.customQuestions.find((candidate) => candidate.uniqueId === key);
-    if (!question) {
-      return;
-    }
-
-    const nextError = validateCustomQuestionField(question, value);
-    setCustomQuestionErrors((current) => ({
-      ...current,
-      [key]: nextError,
-    }));
-  }
-
-  function handleCustomQuestionFieldBlur(key: string, value: CustomQuestionValue) {
-    if (!info) {
-      return;
-    }
-
-    const question = info.membershipDetail.customQuestions.find((candidate) => candidate.uniqueId === key);
-    if (!question) {
-      return;
-    }
-
-    const nextError = validateCustomQuestionField(question, value);
-    setCustomQuestionErrors((current) => ({
-      ...current,
-      [key]: nextError,
-    }));
-  }
+    void buildMembershipRegisterDummyData({
+      info,
+      isFreeMembership,
+      setField,
+      setCustomFormValues,
+      setCustomFormErrors,
+      setCustomQuestionValues,
+      setCustomQuestionErrors,
+      setUserLoginErrors,
+      setCurrentStep,
+      visibleStepCount: visibleSteps.length,
+      hasQuestionnaireContent,
+    }).finally(() => {
+      setIsFillingDummyData(false);
+    });
+  }, [currentStep, hasQuestionnaireContent, info, isFreeMembership, setField, visibleSteps.length]);
 
     return (
       <form
