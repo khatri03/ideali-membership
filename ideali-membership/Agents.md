@@ -290,3 +290,4 @@ Before finishing work:
 - Images: WebP format, responsive `srcset`, lazy-loaded below the fold.
 - Never use `useEffect` + `fetch` — use TanStack Query.
 - Avoid premature memoization — reach for `React.memo`, `useMemo`, `useCallback` only when profiling shows a real problem.
+- For folder structure, please refer .\AGENTS.folder-structure.md file
