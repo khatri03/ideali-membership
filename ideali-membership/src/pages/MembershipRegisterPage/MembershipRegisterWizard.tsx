@@ -3798,6 +3798,30 @@ function StripeCardFields({ theme }: { theme: MembershipTheme }) {
   );
 }
 
+function StripeElementsFields({
+  theme,
+  stripeCredentials,
+}: {
+  theme: MembershipTheme;
+  stripeCredentials: MembershipRegistrationStripeCredentials;
+}) {
+  const stripePromise = useMemo(() => {
+    return loadStripe(stripeCredentials.publishableKey, {
+      stripeAccount: stripeCredentials.stripeAccount,
+    });
+  }, [stripeCredentials.publishableKey, stripeCredentials.stripeAccount]);
+
+  if (!stripePromise) {
+    return null;
+  }
+
+  return (
+    <Elements stripe={stripePromise}>
+      <StripeCardFields theme={theme} />
+    </Elements>
+  );
+}
+
 function PaymentStep({
   info,
   form,
@@ -3834,7 +3858,6 @@ function PaymentStep({
   const [stripeCredentialsLoading, setStripeCredentialsLoading] =
     useState(false);
   const [stripeCredentialsError, setStripeCredentialsError] = useState("");
-  const [stripeElementsKey, setStripeElementsKey] = useState(0);
   const formatMoney = (amount: number) => {
     return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
@@ -3845,16 +3868,6 @@ function PaymentStep({
     totalAmount > 0
       ? formatMoney(totalAmount)
       : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel;
-  const stripePromise = useMemo(() => {
-    if (!stripeCredentials) {
-      return null;
-    }
-
-    return loadStripe(stripeCredentials.publishableKey, {
-      stripeAccount: stripeCredentials.stripeAccount,
-    });
-  }, [stripeCredentials]);
-
   useEffect(() => {
     if (!selectedTipPercent || !presetTips.length) {
       return;
@@ -3928,7 +3941,6 @@ function PaymentStep({
           return;
         }
 
-        setStripeElementsKey((current) => current + 1);
         setStripeCredentials(credentials);
       } catch (error) {
         if (!isMounted) {
@@ -3986,12 +3998,11 @@ function PaymentStep({
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr] lg:items-start">
         <div className="order-2 space-y-3 lg:order-1">
           <div className="text-sm leading-6" style={{ color: theme.bodyColor }}>
-            Choose one payment method below. You can expand a card to review it
-            and collapse it again if needed.
+            Select your desired payment method.
           </div>
 
           <div className="space-y-3">
-            {paymentProducts.map((product) => {
+            {paymentProducts.map((product, index) => {
               const isOpen = openPaymentProduct === product.name;
               const productId = resolvePaymentProductId(product.name);
               const isSelected = productId
@@ -4002,114 +4013,104 @@ function PaymentStep({
               const headerLabel = product.displayName || product.name;
 
               return (
-                <section
-                  key={product.name}
-                  className="overflow-hidden rounded-3xl border transition"
-                  style={{
-                    borderColor:
-                      isOpen || isSelected ? theme.level1 : theme.cardBorder,
-                    background: theme.cardBackground,
-                  }}
-                >
-                  <button
-                    id={buttonId}
-                    type="button"
-                    aria-expanded={isOpen}
-                    aria-controls={panelId}
-                    onClick={() => {
-                      if (productId) {
-                        setField("paymentMethod", String(productId));
-                      }
-
-                      setOpenPaymentProduct((current) =>
-                        current === product.name ? null : product.name,
-                      );
+                <div key={product.name}>
+                  <section
+                    className="overflow-hidden rounded-3xl border transition"
+                    style={{
+                      borderColor:
+                        isOpen || isSelected ? theme.level1 : theme.cardBorder,
+                      background: theme.cardBackground,
                     }}
-                    className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border"
-                          style={{
-                            borderColor: isSelected
-                              ? theme.level1
-                              : theme.cardBorder,
-                            background: isSelected
-                              ? theme.level1
-                              : "transparent",
-                            color: isSelected ? "#fff" : theme.bodyColor,
-                          }}
-                          aria-hidden="true"
-                        >
-                          {isSelected ? (
-                            <CheckIcon className="h-3.5 w-3.5" />
-                          ) : null}
-                        </span>
-                        <span
-                          className="truncate text-base font-semibold"
-                          style={{ color: theme.titleColor }}
-                        >
-                          {headerLabel}
-                        </span>
-                      </div>
-                    </div>
-
-                    <span
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
-                      style={{
-                        borderColor: isOpen ? theme.level1 : theme.cardBorder,
-                        color: theme.titleColor,
-                      }}
-                      aria-hidden="true"
-                    >
-                      <span
-                        className={
-                          isOpen
-                            ? "rotate-180 transform transition-transform duration-300 ease-out"
-                            : "transition-transform duration-300 ease-out"
+                    <button
+                      id={buttonId}
+                      type="button"
+                      aria-expanded={isOpen}
+                      aria-controls={panelId}
+                      onClick={() => {
+                        if (productId) {
+                          setField("paymentMethod", String(productId));
                         }
-                      >
-                        <ChevronDownIcon />
-                      </span>
-                    </span>
+
+                        setOpenPaymentProduct((current) => {
+                          if (current === product.name && isSelected) {
+                            return current;
+                          }
+
+                          return current === product.name ? null : product.name;
+                        });
+                      }}
+                      className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border"
+                            style={{
+                              borderColor: isSelected
+                                ? theme.level1
+                                : theme.cardBorder,
+                              background: isSelected
+                                ? theme.level1
+                                : "transparent",
+                              color: isSelected ? "#fff" : theme.bodyColor,
+                            }}
+                            aria-hidden="true"
+                          >
+                            {isSelected ? (
+                              <CheckIcon className="h-3.5 w-3.5" />
+                            ) : null}
+                          </span>
+                          <span
+                            className="truncate text-base font-semibold"
+                            style={{ color: theme.titleColor }}
+                          >
+                            {headerLabel}
+                          </span>
+                        </div>
+                      </div>
+
                   </button>
 
-                  <div
-                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-                  >
                     <div
-                      id={panelId}
-                      role="region"
-                      aria-labelledby={buttonId}
-                      className="overflow-hidden border-t px-4"
-                      style={{ borderColor: theme.cardBorder }}
+                      className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
                     >
-                      <div className="py-4">
-                        {product.name === "CreditCard" && isSelected ? (
-                          <div className="mt-4">
-                            {stripeCredentialsLoading ? (
-                              <div
-                                className="rounded-2xl border px-4 py-4 text-sm"
-                                style={{ borderColor: theme.cardBorder }}
-                              >
-                                Loading card fields...
-                              </div>
-                            ) : stripeCredentialsError ? (
-                              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
-                                {stripeCredentialsError}
-                              </div>
-                            ) : stripePromise ? (
-                              <Elements key={stripeElementsKey} stripe={stripePromise}>
-                                <StripeCardFields theme={theme} />
-                              </Elements>
-                            ) : null}
-                          </div>
-                        ) : null}
+                      <div
+                        id={panelId}
+                        role="region"
+                        aria-labelledby={buttonId}
+                        className="overflow-hidden border-t px-4"
+                        style={{ borderColor: theme.cardBorder }}
+                      >
+                        <div className="py-4">
+                          {product.name === "CreditCard" && isSelected ? (
+                            <div className="mt-4">
+                              {stripeCredentialsLoading ? (
+                                <div
+                                  className="rounded-2xl border px-4 py-4 text-sm"
+                                  style={{ borderColor: theme.cardBorder }}
+                                >
+                                  Loading card fields...
+                                </div>
+                              ) : stripeCredentialsError ? (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+                                  {stripeCredentialsError}
+                                </div>
+                              ) : stripeCredentials ? (
+                                <StripeElementsFields
+                                  key={`${stripeCredentials.publishableKey}:${stripeCredentials.stripeAccount ?? ""}`}
+                                  theme={theme}
+                                  stripeCredentials={stripeCredentials}
+                                />
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
+
+                </div>
               );
             })}
           </div>
