@@ -13,91 +13,18 @@ import {
   MEMBERSHIP_QUESTIONS_NEXT_STEP_NUMBER,
   MEMBERSHIP_QUESTIONS_STEP_NUMBER,
 } from "./MembershipQuestionsStepPage.fields";
-import { normalizeMembershipQuestionsCustomFormUniqueIds } from "./MembershipQuestionsStepPage.schema";
 import type { CustomFormControl } from "../../../types/customForms";
 import type {
   MembershipCustomQuestionDraft,
-  MembershipCustomQuestionOptionDraft,
 } from "../../../types/membership";
 import type { MembershipQuestionsStepState } from "./MembershipQuestionsStepPage.types";
-
-function createCustomQuestionOptionDraft(index: number): MembershipCustomQuestionOptionDraft {
-  return {
-    id: globalThis.crypto?.randomUUID?.() ?? `question-option-${Date.now()}-${index}`,
-    displayText: `Option ${index + 1}`,
-    value: `option-${index + 1}`,
-    isDefault: index === 0,
-  };
-}
-
-function toSentenceCase(value: string | null | undefined) {
-  const trimmed = value?.trim() || "";
-  if (!trimmed) {
-    return "Field";
-  }
-
-  const normalized = trimmed.toLowerCase();
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function createCustomQuestionDraft(control: CustomFormControl): MembershipCustomQuestionDraft {
-  const hasOptions = control.hasOptions;
-  const options = hasOptions ? [createCustomQuestionOptionDraft(0)] : [];
-
-  return {
-    id: globalThis.crypto?.randomUUID?.() ?? `custom-question-${Date.now()}`,
-    controlId: control.id,
-    controlName: control.name,
-    controlType: control.controlType,
-    iconClass: control.iconClass,
-    label: control.defaultLabel,
-    placeHolder: control.canHavePlaceHolder ? control.defaultLabel : null,
-    tooltip: null,
-    required: false,
-    requiredMessage: `${toSentenceCase(control.defaultLabel || control.name)} is required.`,
-    acceptedFileTypes: [],
-    minLength: null,
-    maxLength: null,
-    defaultValue: control.hasOptions ? (options[0]?.value ?? null) : null,
-    displayOrder: 0,
-    options,
-  };
-}
-
-function cloneCustomQuestionDraft(question: MembershipCustomQuestionDraft): MembershipCustomQuestionDraft {
-  return {
-    ...question,
-    acceptedFileTypes: [...question.acceptedFileTypes],
-    options: question.options.map((option) => ({ ...option })),
-  };
-}
-
-function sanitizeCustomQuestionDraft(draft: MembershipCustomQuestionDraft): MembershipCustomQuestionDraft {
-  const options = draft.options.map((option, index) => ({
-    ...option,
-    id: option.id || globalThis.crypto?.randomUUID?.() || `question-option-${Date.now()}-${index}`,
-    displayText: option.displayText.trim(),
-    value: option.value.trim(),
-    isDefault: option.isDefault,
-  }));
-
-  return {
-    ...draft,
-    id: draft.id || globalThis.crypto?.randomUUID?.() || `custom-question-${Date.now()}`,
-    controlName: draft.controlName.trim(),
-    controlType: draft.controlType.trim(),
-    iconClass: draft.iconClass.trim(),
-    label: draft.label.trim(),
-    placeHolder: draft.placeHolder?.trim() || null,
-    tooltip: draft.tooltip?.trim() || null,
-    requiredMessage: draft.requiredMessage.trim() || `${toSentenceCase(draft.label)} is required.`,
-    acceptedFileTypes: draft.acceptedFileTypes.map((item) => item.trim()).filter((item) => item.length > 0),
-    minLength: draft.minLength?.trim() || null,
-    maxLength: draft.maxLength?.trim() || null,
-    defaultValue: draft.defaultValue?.trim() || null,
-    options,
-  };
-}
+import {
+  cloneCustomQuestionDraft,
+  createCustomQuestionDraft,
+  normalizeQuestionsStepCustomFormUniqueIds,
+  sanitizeCustomQuestionDraft,
+  toSentenceCase,
+} from "./MembershipQuestionsStepPage.helpers";
 
 async function persistMembershipQuestionsStepWithFeedback({
   customFormUniqueIds,
@@ -122,8 +49,8 @@ async function persistMembershipQuestionsStepWithFeedback({
   setIsSaving(true);
 
   try {
-    const result = await saveMembershipQuestionsStep(
-      customFormUniqueIds ? normalizeMembershipQuestionsCustomFormUniqueIds(customFormUniqueIds) : null,
+        const result = await saveMembershipQuestionsStep(
+      normalizeQuestionsStepCustomFormUniqueIds(customFormUniqueIds),
       customQuestions ? customQuestions.map(sanitizeCustomQuestionDraft) : null,
       stepNumber,
       membershipTypeUniqueId,
@@ -197,7 +124,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
 
         setCustomFormControls(formControls);
         setCustomForms(formList);
-        setSelectedCustomFormUniqueIds(normalizeMembershipQuestionsCustomFormUniqueIds(info.customFormUniqueIds));
+        setSelectedCustomFormUniqueIds(normalizeQuestionsStepCustomFormUniqueIds(info.customFormUniqueIds) ?? []);
         setCustomQuestions((info.customQuestions || []).map((question) => ({
           ...question,
           placeHolder: question.placeHolder ?? null,

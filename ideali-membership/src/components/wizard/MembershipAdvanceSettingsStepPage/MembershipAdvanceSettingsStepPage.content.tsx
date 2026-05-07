@@ -1,0 +1,315 @@
+import DatePicker from "react-datepicker";
+import type { RefObject } from "react";
+import { MEMBERSHIP_ADVANCE_SETTINGS_CONTENT } from "./MembershipAdvanceSettingsStepPage.fields";
+
+const DateTimeInput = ({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement> & { ref?: never }) => (
+  <input
+    readOnly
+    inputMode="none"
+    className={[
+      "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition",
+      "focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400",
+      className,
+    ].join(" ")}
+    {...props}
+  />
+);
+
+export function MembershipAdvanceSettingsSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {Array.from({ length: 2 }).map((_, index) => (
+        <div key={index} className="space-y-2 rounded-[1.5rem] border border-slate-200 bg-slate-100 p-4">
+          <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200" />
+          <div className="h-12 animate-pulse rounded-2xl bg-slate-200" />
+          <div className="h-4 w-52 animate-pulse rounded-full bg-slate-200" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function MembershipAdvanceSettingsError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-rose-400/50 text-[10px] font-bold">
+          !
+        </div>
+        <div className="space-y-2">
+          <p>{message}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MembershipAdvanceSettingsContent({
+  donationCampaignEnabled,
+  donationCampaigns,
+  error,
+  isDonationCampaignsLoading,
+  isLoading,
+  isSaving,
+  onRetry,
+  registrationEndDateUtc,
+  registrationStartDateUtc,
+  registrationWindowEnabled,
+  requiresApproval,
+  selectedDonationCampaignUniqueId,
+  setDonationCampaignEnabled,
+  setRegistrationEndDateUtc,
+  setRegistrationStartDateUtc,
+  setRegistrationWindowEnabled,
+  setRequiresApproval,
+  setSelectedDonationCampaignUniqueId,
+  validationError,
+}: {
+  donationCampaignEnabled: boolean;
+  donationCampaigns: Array<{ uniqueId: string; name: string }>;
+  error: string;
+  isDonationCampaignsLoading: boolean;
+  isLoading: boolean;
+  isSaving: boolean;
+  onRetry: () => void;
+  registrationEndDateUtc: Date | null;
+  registrationStartDateUtc: Date | null;
+  registrationWindowEnabled: boolean;
+  requiresApproval: boolean;
+  selectedDonationCampaignUniqueId: string;
+  setDonationCampaignEnabled: (value: boolean) => void;
+  setRegistrationEndDateUtc: (value: Date | null) => void;
+  setRegistrationStartDateUtc: (value: Date | null) => void;
+  setRegistrationWindowEnabled: (value: boolean) => void;
+  setRequiresApproval: (value: boolean) => void;
+  setSelectedDonationCampaignUniqueId: (value: string) => void;
+  validationError: string;
+}) {
+  if (error) {
+    return (
+      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+        <MembershipAdvanceSettingsError message={error} onRetry={onRetry} />
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <div className="mt-5 space-y-3">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.title}</h1>
+        <p className="max-w-3xl text-base leading-7 text-slate-600">{MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.description}</p>
+      </div>
+
+      <div className="mt-8 max-w-5xl space-y-4">
+        {isLoading ? (
+          <MembershipAdvanceSettingsSkeleton />
+        ) : (
+          <>
+            <div className="inline-flex w-full flex-col items-stretch gap-4 md:w-fit">
+              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                    {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.approvalLabel}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setRequiresApproval(!requiresApproval)}
+                    data-wizard-focus="true"
+                    className={[
+                      "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                      requiresApproval ? "border-cyan-500 bg-cyan-500" : "border-slate-300 bg-slate-200",
+                    ].join(" ")}
+                    aria-pressed={requiresApproval}
+                    aria-label={requiresApproval ? "Disable approval requirement" : "Enable approval requirement"}
+                  >
+                    <span
+                      className={[
+                        "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                        requiresApproval ? "translate-x-7" : "translate-x-1",
+                      ].join(" ")}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                      Registration Window
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      If provided, subscriptions will only be available within this date range.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRegistrationWindowEnabled(!registrationWindowEnabled)}
+                    className={[
+                      "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                      registrationWindowEnabled ? "border-cyan-500 bg-cyan-500" : "border-slate-300 bg-slate-200",
+                    ].join(" ")}
+                    aria-pressed={registrationWindowEnabled}
+                    aria-label={registrationWindowEnabled ? "Disable registration window" : "Enable registration window"}
+                  >
+                    <span
+                      className={[
+                        "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                        registrationWindowEnabled ? "translate-x-7" : "translate-x-1",
+                      ].join(" ")}
+                    />
+                  </button>
+                </div>
+
+                <fieldset
+                  disabled={isSaving || !registrationWindowEnabled}
+                  className={[
+                    "mt-4 flex flex-col gap-3 md:flex-row md:justify-start md:gap-4",
+                    !registrationWindowEnabled ? "opacity-60" : "",
+                  ].join(" ")}
+                >
+                  <label className="block w-full space-y-2 md:w-[15.5rem] lg:w-[17rem]">
+                    <span className="block text-sm font-semibold text-slate-800">
+                      {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.startLabel}
+                    </span>
+                    <DatePicker
+                      selected={registrationStartDateUtc}
+                      onChange={(value: Date | null) => setRegistrationStartDateUtc(value)}
+                      showTimeSelect
+                      showMonthDropdown
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={100}
+                      timeIntervals={15}
+                      timeCaption="Time"
+                      dateFormat="MMM d, yyyy h:mm aa"
+                      placeholderText="Select start date and time"
+                      customInput={<DateTimeInput />}
+                    />
+                  </label>
+
+                  <label className="block w-full space-y-2 md:w-[15.5rem] lg:w-[17rem]">
+                    <span className="block text-sm font-semibold text-slate-800">
+                      {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.endLabel}
+                    </span>
+                    <DatePicker
+                      selected={registrationEndDateUtc}
+                      onChange={(value: Date | null) => setRegistrationEndDateUtc(value)}
+                      minDate={registrationStartDateUtc ?? undefined}
+                      showTimeSelect
+                      showMonthDropdown
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={100}
+                      timeIntervals={15}
+                      timeCaption="Time"
+                      dateFormat="MMM d, yyyy h:mm aa"
+                      placeholderText="Select end date and time"
+                      customInput={<DateTimeInput />}
+                    />
+                  </label>
+                </fieldset>
+              </div>
+
+              {!isDonationCampaignsLoading ? (
+                <div
+                  className={[
+                    "w-full rounded-[1.75rem] p-4 shadow-sm md:w-[34rem] lg:w-[38rem]",
+                    donationCampaigns.length > 0
+                      ? "border border-slate-200 bg-slate-50"
+                      : "border border-amber-200 bg-amber-50",
+                  ].join(" ")}
+                >
+                  {donationCampaigns.length > 0 ? (
+                    <>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-700">
+                            Promote Donation Campaign?
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            Pick an active campaign that should receive donations for this organizer.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDonationCampaignEnabled(!donationCampaignEnabled)}
+                          className={[
+                            "relative inline-flex h-8 w-14 items-center rounded-full border transition",
+                            donationCampaignEnabled
+                              ? "border-cyan-500 bg-cyan-500"
+                              : "border-slate-300 bg-slate-200",
+                          ].join(" ")}
+                          aria-pressed={donationCampaignEnabled}
+                          aria-label={
+                            donationCampaignEnabled
+                              ? "Disable donation campaign selection"
+                              : "Enable donation campaign selection"
+                          }
+                        >
+                          <span
+                            className={[
+                              "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
+                              donationCampaignEnabled ? "translate-x-7" : "translate-x-1",
+                            ].join(" ")}
+                          />
+                        </button>
+                      </div>
+
+                      {donationCampaigns.length > 0 ? (
+                        <label className="mt-4 block space-y-2">
+                          <span className="block text-sm font-semibold text-slate-800">
+                            Campaign
+                            {donationCampaignEnabled ? <span className="ml-1 text-rose-600">*</span> : null}
+                          </span>
+                          <select
+                            value={selectedDonationCampaignUniqueId}
+                            onChange={(event) => setSelectedDonationCampaignUniqueId(event.target.value)}
+                            disabled={!donationCampaignEnabled}
+                            aria-required={donationCampaignEnabled}
+                            className={[
+                              "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
+                              !donationCampaignEnabled ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-70" : "",
+                            ].join(" ")}
+                          >
+                            {donationCampaigns.map((campaign) => (
+                              <option key={campaign.uniqueId} value={campaign.uniqueId}>
+                                {campaign.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="inline-flex items-start gap-2 text-sm leading-5 text-amber-700">
+                      <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600">
+                        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+                          <path d="M10 2.5 18 17.5H2L10 2.5Zm0 4.1a.75.75 0 0 0-.75.75v4.3a.75.75 0 0 0 1.5 0v-4.3A.75.75 0 0 0 10 6.6Zm0 8.1a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+                        </svg>
+                      </span>
+                      <span>No active donation campaign found.</span>
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            {validationError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {validationError}
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
