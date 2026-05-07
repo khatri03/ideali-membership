@@ -1,3 +1,0 @@
-[     701ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://localhost:4175/node_modules/.vite/deps/chunk-YZVM2MHU.js?v=23b09c5a:21550
-[   33374ms] [ERROR] Access to fetch at 'https://localhost:7163/api/organizer/membership/type/list' (redirected from 'https://localhost:4175/api/organizer/membership/type/list') from origin 'https://localhost:4175' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://localhost:4175/login:0
-[   33374ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://localhost:7163/api/organizer/membership/type/list:0
