@@ -19,6 +19,12 @@ When project-specific patterns conflict with general conventions, prefer the exi
 - Treat all user-facing copy as customer-critical. Keep it concise, professional, and action-oriented.
 - When a decision affects revenue, billing, permissions, compliance, subscriptions, or customer experience, clearly explain the tradeoff before proceeding.
 - Prefer proven, boring, maintainable solutions over trendy or experimental patterns.
+- **Security is not optional.** Every feature that touches data must consider tenant isolation, auth, and input validation.
+- **Tests are not optional.** Untested code is a liability, not an asset.
+- **Correctness over speed.** A slow PR that works beats a fast one that breaks prod.
+- **Explicit over implicit.** Code should be readable without context. Name things clearly.
+- **Boundaries are sacred.** The layered architecture exists to isolate change. Never shortcut across layers.
+- Draw a thick line between "over engineered" and "well engineered".
 
 ---
 
