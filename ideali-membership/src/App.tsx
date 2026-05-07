@@ -1,31 +1,93 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { LoginScreen } from "./components/LoginScreen/LoginScreen";
 import { ProtectedShell } from "./components/ProtectedShell/ProtectedShell";
 import { AppLayout } from "./components/layout/AppLayout/AppLayout";
-import { MembershipDescriptionStepPage } from "./components/wizard/MembershipDescriptionStepPage/MembershipDescriptionStepPage";
-import { MembershipBannerStepPage } from "./components/wizard/MembershipBannerStepPage/MembershipBannerStepPage";
-import { MembershipColorStepPage } from "./components/wizard/MembershipColorStepPage/MembershipColorStepPage";
-import { MembershipPaymentAccountStepPage } from "./components/wizard/MembershipPaymentAccountStepPage/MembershipPaymentAccountStepPage";
-import { MembershipPricingStepPage } from "./components/wizard/MembershipPricingStepPage/MembershipPricingStepPage";
-import { MembershipDiscountCouponsStepPage } from "./components/wizard/MembershipDiscountCouponsStepPage/MembershipDiscountCouponsStepPage";
-import { MembershipAdvanceSettingsStepPage } from "./components/wizard/MembershipAdvanceSettingsStepPage/MembershipAdvanceSettingsStepPage";
-import { MembershipQuestionsStepPage } from "./components/wizard/MembershipQuestionsStepPage/MembershipQuestionsStepPage";
-import { MembershipThankYouEmailStepPage } from "./components/wizard/MembershipThankYouEmailStepPage/MembershipThankYouEmailStepPage";
-import { MembershipReviewStepPage } from "./components/wizard/MembershipReviewStepPage/MembershipReviewStepPage";
-import { MembershipTitleStepPage } from "./components/wizard/MembershipTitleStepPage/MembershipTitleStepPage";
-import { MembershipWizardResumePage } from "./components/wizard/MembershipWizardResumePage/MembershipWizardResumePage";
 import { WizardLayout } from "./components/wizard/WizardLayout/WizardLayout";
-import { MembershipRegisterCountdownPage } from "./pages/MembershipRegisterCountdownPage";
-import { MembershipRegisterPage } from "./pages/MembershipRegisterPage";
-import { CustomFormCreatePage } from "./pages/CustomFormCreatePage";
-import { CustomFormsPage } from "./pages/CustomFormsPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { MembershipTypesPage } from "./pages/MembershipTypesPage";
-import { MembersPage } from "./pages/MembersPage";
-import { DnDGridSortExamplePage } from "./pages/DnDGridSortExamplePage";
-import { SimplePage } from "./pages/SimplePage";
 import { APP_ROUTES, buildMembershipRegisterPath } from "./routes";
+
+const MembershipRegisterCountdownPage = lazy(() =>
+  import("./pages/MembershipRegisterCountdownPage").then((module) => ({ default: module.MembershipRegisterCountdownPage })),
+);
+const MembershipRegisterPage = lazy(() =>
+  import("./pages/MembershipRegisterPage").then((module) => ({ default: module.MembershipRegisterPage })),
+);
+const CustomFormCreatePage = lazy(() =>
+  import("./pages/CustomFormCreatePage").then((module) => ({ default: module.CustomFormCreatePage })),
+);
+const CustomFormsPage = lazy(() =>
+  import("./pages/CustomFormsPage").then((module) => ({ default: module.CustomFormsPage })),
+);
+const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
+const MembershipTypesPage = lazy(() =>
+  import("./pages/MembershipTypesPage").then((module) => ({ default: module.MembershipTypesPage })),
+);
+const MembersPage = lazy(() => import("./pages/MembersPage").then((module) => ({ default: module.MembersPage })));
+const DnDGridSortExamplePage = lazy(() =>
+  import("./pages/DnDGridSortExamplePage").then((module) => ({ default: module.DnDGridSortExamplePage })),
+);
+const SimplePage = lazy(() => import("./pages/SimplePage").then((module) => ({ default: module.SimplePage })));
+const MembershipDescriptionStepPage = lazy(() =>
+  import("./components/wizard/MembershipDescriptionStepPage/MembershipDescriptionStepPage").then((module) => ({
+    default: module.MembershipDescriptionStepPage,
+  })),
+);
+const MembershipBannerStepPage = lazy(() =>
+  import("./components/wizard/MembershipBannerStepPage/MembershipBannerStepPage").then((module) => ({
+    default: module.MembershipBannerStepPage,
+  })),
+);
+const MembershipColorStepPage = lazy(() =>
+  import("./components/wizard/MembershipColorStepPage/MembershipColorStepPage").then((module) => ({
+    default: module.MembershipColorStepPage,
+  })),
+);
+const MembershipPaymentAccountStepPage = lazy(() =>
+  import("./components/wizard/MembershipPaymentAccountStepPage/MembershipPaymentAccountStepPage").then((module) => ({
+    default: module.MembershipPaymentAccountStepPage,
+  })),
+);
+const MembershipPricingStepPage = lazy(() =>
+  import("./components/wizard/MembershipPricingStepPage/MembershipPricingStepPage").then((module) => ({
+    default: module.MembershipPricingStepPage,
+  })),
+);
+const MembershipDiscountCouponsStepPage = lazy(() =>
+  import("./components/wizard/MembershipDiscountCouponsStepPage/MembershipDiscountCouponsStepPage").then((module) => ({
+    default: module.MembershipDiscountCouponsStepPage,
+  })),
+);
+const MembershipAdvanceSettingsStepPage = lazy(() =>
+  import("./components/wizard/MembershipAdvanceSettingsStepPage/MembershipAdvanceSettingsStepPage").then((module) => ({
+    default: module.MembershipAdvanceSettingsStepPage,
+  })),
+);
+const MembershipQuestionsStepPage = lazy(() =>
+  import("./components/wizard/MembershipQuestionsStepPage/MembershipQuestionsStepPage").then((module) => ({
+    default: module.MembershipQuestionsStepPage,
+  })),
+);
+const MembershipThankYouEmailStepPage = lazy(() =>
+  import("./components/wizard/MembershipThankYouEmailStepPage/MembershipThankYouEmailStepPage").then((module) => ({
+    default: module.MembershipThankYouEmailStepPage,
+  })),
+);
+const MembershipReviewStepPage = lazy(() =>
+  import("./components/wizard/MembershipReviewStepPage/MembershipReviewStepPage").then((module) => ({
+    default: module.MembershipReviewStepPage,
+  })),
+);
+const MembershipTitleStepPage = lazy(() =>
+  import("./components/wizard/MembershipTitleStepPage/MembershipTitleStepPage").then((module) => ({
+    default: module.MembershipTitleStepPage,
+  })),
+);
+const MembershipWizardResumePage = lazy(() =>
+  import("./components/wizard/MembershipWizardResumePage/MembershipWizardResumePage").then((module) => ({
+    default: module.MembershipWizardResumePage,
+  })),
+);
 
 function AppLoading() {
   return (
@@ -89,6 +151,10 @@ function MembershipLaunchFallback() {
   );
 }
 
+function RouteFallback() {
+  return <AppLoading />;
+}
+
 function AppHome() {
   const defaultMembershipTypeUniqueId = import.meta.env.VITE_DEFAULT_MEMBERSHIP_TYPE_UNIQUE_ID?.trim();
 
@@ -101,74 +167,73 @@ function AppHome() {
 
 function RouterApp() {
   return (
-    <Routes>
-      <Route path={APP_ROUTES.membershipRegisterCountdown} element={<MembershipRegisterCountdownPage />} />
-      <Route path={APP_ROUTES.membershipRegister} element={<MembershipRegisterPage />} />
-      <Route path={APP_ROUTES.root} element={<AppHome />} />
-      <Route path={APP_ROUTES.login} element={<LoginRoute />} />
-      <Route
-        path={APP_ROUTES.root}
-        element={
-          <RequireAuth>
-            <ProtectedShell />
-          </RequireAuth>
-        }
-      >
-        <Route element={<AppLayout />}>
-          <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-          <Route path="organizer/membership/type">
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path={APP_ROUTES.membershipRegisterCountdown} element={<MembershipRegisterCountdownPage />} />
+        <Route path={APP_ROUTES.membershipRegister} element={<MembershipRegisterPage />} />
+        <Route path={APP_ROUTES.root} element={<AppHome />} />
+        <Route path={APP_ROUTES.login} element={<LoginRoute />} />
+        <Route
+          path={APP_ROUTES.root}
+          element={
+            <RequireAuth>
+              <ProtectedShell />
+            </RequireAuth>
+          }
+        >
+          <Route element={<AppLayout />}>
             <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="list" element={<MembershipTypesPage />} />
-            <Route path="types" element={<Navigate to={APP_ROUTES.membershipTypes} replace />} />
-            <Route path="members" element={<MembersPage />} />
-            <Route
-              path="pending-approvals"
-              element={
-                <SimplePage
-                  title="Pending Approvals"
-                  badgeLabel="Soon"
-                  description="Pending approvals are coming soon. This area will handle review and approval workflows."
-                />
-              }
-            />
+            <Route path="organizer/membership/type">
+              <Route index element={<Navigate to={APP_ROUTES.membershipDashboard} replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="list" element={<MembershipTypesPage />} />
+              <Route path="types" element={<Navigate to={APP_ROUTES.membershipTypes} replace />} />
+              <Route path="members" element={<MembersPage />} />
+              <Route
+                path="pending-approvals"
+                element={
+                  <SimplePage
+                    title="Pending Approvals"
+                    badgeLabel="Soon"
+                    description="Pending approvals are coming soon. This area will handle review and approval workflows."
+                  />
+                }
+              />
+            </Route>
+            <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />
+            <Route path="organizer/custom-form">
+              <Route path="create-form" element={<CustomFormCreatePage />} />
+              <Route path=":customFormUniqueId/edit" element={<CustomFormCreatePage />} />
+            </Route>
+            <Route path={APP_ROUTES.dndPlayground} element={<DnDGridSortExamplePage />} />
           </Route>
-          <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />
-          <Route path="organizer/custom-form">
-            <Route path="create-form" element={<CustomFormCreatePage />} />
-            <Route path=":customFormUniqueId/edit" element={<CustomFormCreatePage />} />
-          </Route>
-          <Route
-            path={APP_ROUTES.dndPlayground}
-            element={<DnDGridSortExamplePage />}
-          />
-        </Route>
 
-        <Route element={<WizardLayout />}>
-          <Route path="organizer/membership/type/wizard">
-            <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
+          <Route element={<WizardLayout />}>
+            <Route path="organizer/membership/type/wizard">
+              <Route index element={<Navigate to={APP_ROUTES.membershipWizardTitle} replace />} />
               <Route path="title" element={<MembershipTitleStepPage />} />
               <Route path=":membershipTypeUniqueId">
-              <Route index element={<MembershipWizardResumePage />} />
-              <Route path="title" element={<MembershipTitleStepPage />} />
-              <Route path="description" element={<MembershipDescriptionStepPage />} />
-              <Route path="tenure" element={<Navigate to="pricing" replace />} />
-              <Route path="color" element={<MembershipColorStepPage />} />
-              <Route path="banner" element={<MembershipBannerStepPage />} />
-              <Route path="payment-account" element={<MembershipPaymentAccountStepPage />} />
-              <Route path="pricing" element={<MembershipPricingStepPage />} />
-              <Route path="discount-coupons" element={<MembershipDiscountCouponsStepPage />} />
-              <Route path="questions" element={<MembershipQuestionsStepPage />} />
-              <Route path="custom-forms" element={<Navigate to="questions" replace />} />
-              <Route path="thank-you-email" element={<MembershipThankYouEmailStepPage />} />
-              <Route path="advance-settings" element={<MembershipAdvanceSettingsStepPage />} />
-              <Route path="review" element={<MembershipReviewStepPage />} />
+                <Route index element={<MembershipWizardResumePage />} />
+                <Route path="title" element={<MembershipTitleStepPage />} />
+                <Route path="description" element={<MembershipDescriptionStepPage />} />
+                <Route path="tenure" element={<Navigate to="pricing" replace />} />
+                <Route path="color" element={<MembershipColorStepPage />} />
+                <Route path="banner" element={<MembershipBannerStepPage />} />
+                <Route path="payment-account" element={<MembershipPaymentAccountStepPage />} />
+                <Route path="pricing" element={<MembershipPricingStepPage />} />
+                <Route path="discount-coupons" element={<MembershipDiscountCouponsStepPage />} />
+                <Route path="questions" element={<MembershipQuestionsStepPage />} />
+                <Route path="custom-forms" element={<Navigate to="questions" replace />} />
+                <Route path="thank-you-email" element={<MembershipThankYouEmailStepPage />} />
+                <Route path="advance-settings" element={<MembershipAdvanceSettingsStepPage />} />
+                <Route path="review" element={<MembershipReviewStepPage />} />
+              </Route>
             </Route>
           </Route>
         </Route>
-      </Route>
-      <Route path="*" element={<Navigate to={APP_ROUTES.root} replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to={APP_ROUTES.root} replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

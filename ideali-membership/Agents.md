@@ -1,54 +1,286 @@
-# Agents.md
+# AGENTS.md - ideali-membership
 
-This file defines the working rules for agents contributing to `ideali-membership`.
+This file defines the working rules for AI coding agents and developers contributing to `ideali-membership`.
 
-## Business Rules
+These rules exist to keep the application stable, maintainable, scalable, and production-ready without forcing unnecessary rewrites or overengineering.
 
+When project-specific patterns conflict with general conventions, prefer the existing project architecture unless explicitly instructed otherwise.
+
+---
+
+# 1. Project Philosophy
+
+- Treat the application as a production-grade SaaS product at all times.
 - Build for a membership-driven product first. Favor clarity, trust, and conversion over visual noise.
-- Treat all user-facing content as customer-critical. Keep copy concise, professional, and action-oriented.
-- Do not invent business logic, pricing, or policies unless the user explicitly asks for placeholders.
-- Prefer scalable patterns that support plans, subscriptions, member roles, and admin workflows.
-- Protect user trust. Never suggest storing secrets, credentials, or personal data in unsafe ways.
-- When a decision affects revenue, compliance, or customer experience, call out the tradeoff before changing it.
+- Favor maintainability, security, readability, accessibility, and reliability over clever abstractions.
+- Preserve the existing architecture and design direction unless the user explicitly requests a refactor or redesign.
+- Improve incrementally without destabilizing working systems.
+- Protect user trust. Never expose secrets, credentials, tokens, or sensitive personal data.
+- Treat all user-facing copy as customer-critical. Keep it concise, professional, and action-oriented.
+- When a decision affects revenue, billing, permissions, compliance, subscriptions, or customer experience, clearly explain the tradeoff before proceeding.
+- Prefer proven, boring, maintainable solutions over trendy or experimental patterns.
 
-## Development Rules
+---
 
-- Keep the app production-ready by default: typed, lint-friendly, responsive, and easy to extend.
-- Use React and TypeScript patterns that improve maintainability. Avoid unnecessary abstraction.
-- Prefer reusable components and small focused files over large monolith components.
-- Avoid creating long methods. Break longer logic into small helper functions or focused hooks.
-- Strictly follow SOLID, KISS, and DRY principles.
-- Preserve the existing design direction unless the user requests a redesign.
-- Use Tailwind utility classes for styling. Add custom CSS only when utility classes are not enough.
-- When backend work is needed, refer to the API project at `D:\My Projects\V4Ideas\Ideali\ideali.api` as the source backend codebase.
-- Backend routes must start with `/api/<module name>`, and frontend routes should mirror the backend path exactly with only the `/api` prefix removed.
-- Make accessibility a baseline requirement: semantic HTML, visible focus states, good contrast, and keyboard support.
-- The registration page must be fully responsive at every breakpoint. No exceptions: verify mobile, tablet, and desktop behavior before considering it done.
-- Any required field in the registration flow should display a `*` consistently across all steps and field groups.
-- Any password field should include an embedded eye icon that toggles password visibility.
-- Avoid hardcoded magic values when a shared constant or reusable token makes more sense.
-- Frontend routes should mirror backend route paths exactly, with only the `/api` prefix removed when the route represents a backend-controlled resource or step.
-- Document any non-obvious behavior directly in code or in this file.
+# 2. Non-Negotiable SaaS Rules
 
-## Quality Rules
+- MUST inspect existing project patterns before making changes.
+- MUST make the smallest safe change that fully satisfies the request.
+- MUST preserve unrelated user changes.
+- MUST maintain compatibility with the current architecture whenever possible.
+- MUST NOT rewrite working systems just to match an ideal architecture.
+- MUST NOT silently change existing business behavior without explicit confirmation.
+- MUST NOT introduce unnecessary abstractions, dependencies, frameworks, or folder structures.
+- MUST NOT invent business logic, pricing, permissions, subscription behavior, or policies.
+- MUST NOT commit, push, delete, or run destructive commands unless explicitly instructed.
+- MUST handle loading, error, empty, and success states for user-facing flows.
+- MUST maintain responsive behavior across mobile, tablet, and desktop.
+- MUST use semantic HTML, keyboard accessibility, visible focus states, and proper contrast.
+- MUST explain important assumptions, risks, and impactful changes clearly.
+- MUST prefer consistency with the existing codebase over theoretical perfection.
 
-- Before finishing, verify that changes are consistent with the app structure and naming.
-- If a change might break build or runtime behavior, test or reason through the impact explicitly.
-- Keep dependencies minimal. Add a package only when it clearly improves the project.
-- Do not remove or overwrite unrelated user changes.
-- If a task is ambiguous, choose the safest reasonable implementation and note the assumption.
+---
 
-## UI Rules
+# 3. Development Standards
 
+- Keep the application production-ready by default: typed, lint-friendly, responsive, accessible, and maintainable.
+- Use React and TypeScript patterns that improve readability and long-term maintainability.
+- Prefer reusable components and focused files over large monolithic components.
+- Avoid long methods and deeply nested logic.
+- Strictly follow SOLID, KISS, and DRY principles where practical.
+- Avoid premature optimization and unnecessary abstraction.
+- Avoid magic values when shared constants or reusable tokens make more sense.
+- Prefer existing project conventions for:
+  - state management
+  - API access
+  - validation
+  - data fetching
+  - folder structure
+  - naming conventions
+- Before introducing a new package or dependency, verify that the existing stack cannot reasonably solve the problem.
+- Keep dependencies minimal.
+
+## State & Data Management
+
+- Prefer existing project patterns for state and data management.
+- Prefer TanStack Query for server state, API data fetching, caching, mutations, and synchronization when already established in the project.
+- Prefer Zustand for lightweight client-side UI state when existing project patterns support it.
+- Avoid storing API response data in client-side state stores unless there is a clear reason.
+- Avoid duplicating backend data across multiple frontend state layers.
+
+---
+
+# 4. Frontend Standards
+
+- Preserve the existing UI direction unless explicitly asked to redesign.
 - Prefer a premium, modern, calm visual style.
 - Use spacing, hierarchy, and typography to guide attention before adding decoration.
-- Keep layouts completely responsive from mobile to desktop and make sure the UI looks modern at every breakpoint.
 - Use motion sparingly and only when it improves understanding or polish.
-- If backend schema changes are required, ensure the API project creates migrations through `dotnet ef migrations add` only; never hand-create migration files.
+- Use Tailwind utility classes for styling whenever practical.
+- Add custom CSS only when utility classes are insufficient.
+- Keep layouts fully responsive across:
+  - mobile
+  - tablet
+  - desktop
+- Verify registration and membership flows at all breakpoints before considering work complete.
 
-## Collaboration Rules
+## Components
 
-- Work incrementally and leave the codebase cleaner than you found it.
+- Keep components small, focused, and readable.
+- Avoid mixing business logic directly inside JSX.
+- Prefer extracting reusable logic into hooks, utilities, or services when appropriate.
+- Avoid deeply nested conditional rendering.
+- Prefer named exports over default exports where practical.
+- Avoid unnecessary prop drilling when cleaner alternatives already exist in the project.
+
+## Forms
+
+- Every required field must display a `*` consistently across all steps and field groups.
+- Every password field must include an embedded eye icon toggle for visibility.
+- Form validation messages should be clear, concise, and user-friendly.
+- Avoid validating aggressively on every keystroke unless the UX explicitly requires it.
+
+## User Experience
+
+Every meaningful user-facing flow should properly handle:
+
+- loading states
+- empty states
+- error states
+- success states
+
+Avoid:
+
+- layout shifts
+- flashing UI
+- broken responsive layouts
+- inaccessible interactions
+
+---
+
+# 5. Performance Standards
+
+- Prefer efficient rendering patterns and avoid unnecessary re-renders.
+- Avoid expensive operations inside render functions.
+- Avoid duplicate API requests and unnecessary data fetching.
+- Lazy-load heavy routes, pages, or components when practical.
+- Prefer responsive and smooth user interactions over excessive visual effects.
+- Avoid blocking UI interactions with heavy synchronous work.
+- Optimize images and large assets when practical.
+- Prefer maintainable performance improvements over premature micro-optimizations.
+- Avoid unnecessary state updates and deeply nested component trees.
+- Reuse existing data and UI patterns before introducing new complexity.
+- When performance problems are suspected, profile and measure before optimizing.
+
+---
+
+# 6. Backend & API Standards
+
+- Backend routes must start with `/api/<module-name>`.
+- Frontend routes should mirror backend routes where applicable, excluding the `/api` prefix.
+- Keep API logic and business logic separated where practical.
+- Validate input at the appropriate boundary.
+- Never expose internal stack traces, secrets, or implementation details in API responses.
+- Prefer centralized API access patterns when the project structure supports them.
+- Avoid duplicating backend contract logic across the frontend.
+- - **Zero business logic in controllers**
+
+## Backend Safety
+
+Treat these areas as high-risk:
+
+- authentication
+- authorization
+- registration
+- billing
+- subscriptions
+- pricing
+- member roles
+- admin workflows
+- customer data
+
+Any changes affecting these areas must prioritize safety and predictability.
+
+### Code quality rules (backend)
+
+- Follow **SOLID, KISS, and DRY** strictly.
+- Avoid long methods — break logic into small focused private methods or helper classes.
+- Keep methods under ~30 lines as a guideline; extract if you need more.
+- No magic values — use a named constant or a domain enum.
+- No `async void` — always `async Task`. Unobserved exceptions in `async void` crash the process.
+
+---
+
+# 7. Database & Migration Rules
+
+- If backend schema changes are required, use proper migration tooling only.
+- Never hand-create migration files.
+- Never modify existing applied migrations in unsafe ways.
+- Prefer additive and backward-compatible schema changes whenever possible.
+- Clearly explain risky schema changes before implementation.
+
+---
+
+# 8. Security Rules
+
+- Never expose secrets, credentials, tokens, API keys, or connection strings.
+- Never log passwords, tokens, payment information, or sensitive personal data.
+- Never trust user input without validation.
+- Never bypass authorization or permission checks.
+- Never store sensitive data in unsafe locations.
+- Sanitize or safely render user-generated content.
+- Treat multi-user and membership data boundaries carefully.
+- Prefer secure defaults over convenience shortcuts.
+
+---
+
+# 9. Accessibility Standards
+
+Accessibility is a baseline requirement, not an optional enhancement.
+
+Always ensure:
+
+- semantic HTML
+- keyboard accessibility
+- visible focus states
+- accessible labels
+- sufficient contrast
+- screen-reader-friendly interactions
+
+Avoid:
+
+- inaccessible custom controls
+- hidden focus indicators
+- click-only interactions
+
+---
+
+# 10. Quality Rules
+
+Before finishing work:
+
+- Verify consistency with the existing structure and naming conventions.
+- Reason through build/runtime impact when changes may affect stability.
+- Avoid weakening or removing existing tests to make changes pass.
+- Add or update tests when modifying meaningful business logic if the project already supports testing patterns.
+- Verify responsive behavior when changing layouts or forms.
+- Verify accessibility when changing interactive UI.
+- Verify type safety where applicable.
+- Avoid leaving dead code, unused imports, or inconsistent patterns behind.
+
+---
+
+# 11. AI Agent Workflow
+
+- Inspect existing architecture and conventions before coding.
+- Follow existing patterns before introducing new ones.
+- Prefer incremental improvements instead of broad rewrites.
+- Avoid broad refactors during feature work unless explicitly requested.
+- If existing code conflicts with these standards, improve safely and gradually.
+- When a task is ambiguous, choose the safest reasonable implementation and clearly note assumptions.
 - Explain important changes in plain language.
-- If a request has hidden risk, pause and surface the risk instead of silently guessing.
-- Treat `commit` and `push` as opt-in actions only. Do not commit or push changes unless the user explicitly asks for it.
+- Leave the codebase cleaner than you found it.
+
+---
+
+# 12. Collaboration Rules
+
+- Treat commit and push actions as opt-in only.
+- Do not commit or push unless explicitly instructed.
+- Do not overwrite or remove unrelated user changes.
+- Surface hidden risks instead of silently guessing.
+- Keep communication concise, practical, and implementation-focused.
+- Prefer collaborative and reversible changes over destructive ones.
+
+---
+
+# 13. Absolute Hard Rules
+
+- Never expose secrets, credentials, tokens, or sensitive personal data.
+- Never invent business logic, pricing, permissions, or policies.
+- Never bypass authentication, authorization, or permission checks.
+- Never rewrite working systems without explicit approval.
+- Never introduce breaking architectural rewrites during normal feature work.
+- Never overwrite unrelated user changes.
+- Never commit or push unless explicitly instructed.
+- Never add unnecessary dependencies or frameworks.
+- Never prioritize speed over stability in critical flows.
+- Never ignore accessibility, responsiveness, or security requirements.
+
+## 14. Performance Standards
+
+### Backend
+
+- Use `async/await` throughout — never block threads with `.Result` or `.Wait()`.
+- All list endpoints are **paginated** — never return unbounded result sets.
+- Index all filtered and sorted columns
+
+### Frontend
+
+- Initial page load: **< 2s on 4G**.
+- Route bundles: **< 150KB gzipped** per route.
+- **Lazy-load all routes**: `const MembershipPage = lazy(() => import('./pages/MembershipPage'))`.
+- Always define `staleTime` on every TanStack Query hook — absent `staleTime` causes redundant fetches.
+- Images: WebP format, responsive `srcset`, lazy-loaded below the fold.
+- Never use `useEffect` + `fetch` — use TanStack Query.
+- Avoid premature memoization — reach for `React.memo`, `useMemo`, `useCallback` only when profiling shows a real problem.
