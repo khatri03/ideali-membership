@@ -2,6 +2,8 @@ import { getJson, postFormData, postJson } from "./api";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
+  MembershipRegistrationPaymentProduct,
+  MembershipRegistrationStripeCredentials,
   MembershipRegistrationSubmitRequest,
 } from "../types/membershipRegistration";
 
@@ -92,14 +94,84 @@ function readPaymentProducts(value: unknown) {
 
   return value
     .map((item) => {
-      if (typeof item === "string" && item in PAYMENT_PRODUCT_NAME_TO_ID) {
-        return PAYMENT_PRODUCT_NAME_TO_ID[item];
+      if (typeof item === "string" && item.trim()) {
+        return {
+          name: item.trim(),
+          displayName: item.trim(),
+        };
       }
 
-      const numberValue = typeof item === "number" ? item : Number(item);
-      return Number.isFinite(numberValue) ? numberValue : null;
+      if (typeof item === "number" && Number.isFinite(item)) {
+        const name = Object.entries(PAYMENT_PRODUCT_NAME_TO_ID).find(([, value]) => value === item)?.[0];
+        return name
+          ? {
+              name,
+              displayName: name,
+            }
+          : null;
+      }
+
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const name = readText(record.Name ?? record.name);
+      const displayName = readText(record.DisplayName ?? record.displayName) || name;
+
+      return name
+        ? {
+            name,
+            displayName,
+          }
+        : null;
     })
-    .filter((item): item is number => item !== null);
+    .filter((item): item is MembershipRegistrationPaymentProduct => item !== null);
+}
+
+function readPresetTips(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const percent = readNumber(record.Percent ?? record.percent);
+      if (percent === null) {
+        return null;
+      }
+
+      return {
+        percent,
+        isDefault: readBoolean(record.IsDefault ?? record.isDefault),
+      };
+    })
+    .filter((item): item is MembershipRegistrationInfo["presetTips"][number] => item !== null);
+}
+
+export function resolvePaymentProductId(value: string) {
+  return PAYMENT_PRODUCT_NAME_TO_ID[value] ?? null;
+}
+
+export async function fetchStripePublicCredentials(paymentAccountUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/public/stripe/${paymentAccountUniqueId}/credentials`);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  const publishableKey = readText(responseData?.PublishableKey ?? responseData?.publishableKey);
+  const stripeAccount = readText(responseData?.StripeAccount ?? responseData?.stripeAccount);
+
+  if (!publishableKey || !stripeAccount) {
+    throw new Error("Unable to load Stripe credentials.");
+  }
+
+  return {
+    publishableKey,
+    stripeAccount,
+  } satisfies MembershipRegistrationStripeCredentials;
 }
 
 export async function fetchContactPrefixOptions() {
@@ -534,6 +606,9 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   const paymentAccountId = readNumber(
     paymentSettingsRecord?.PaymentAccountId ?? paymentSettingsRecord?.paymentAccountId,
   );
+  const paymentAccountUniqueId = readText(
+    paymentSettingsRecord?.PaymentAccountUniqueId ?? paymentSettingsRecord?.paymentAccountUniqueId,
+  );
   const accountName = readText(paymentSettingsRecord?.AccountName ?? paymentSettingsRecord?.accountName);
   const merchantName = readScalar(paymentSettingsRecord?.MerchantName ?? paymentSettingsRecord?.merchantName) ?? "";
   const paymentCurrencyCode = readText(
@@ -545,6 +620,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   const paymentProducts = readPaymentProducts(
     paymentSettingsRecord?.PaymentProducts ?? paymentSettingsRecord?.paymentProducts,
   );
+  const presetTips = readPresetTips(responseData?.PresetTips ?? responseData?.presetTips);
 
   if (!name) {
     throw new Error("Unexpected membership registration response.");
@@ -579,12 +655,14 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     },
     paymentSettings: {
       paymentAccountId,
+      paymentAccountUniqueId: paymentAccountUniqueId || null,
       accountName,
       merchantName,
       paymentCurrencyCode: paymentCurrencyCode || null,
       paymentCurrencySymbol: paymentCurrencySymbol || null,
       paymentProducts,
     },
+    presetTips,
     taxSettings: (responseData?.TaxSettings ?? responseData?.taxSettings ?? null) as Record<string, unknown> | null,
   } satisfies MembershipRegistrationInfo;
 }
@@ -599,6 +677,10 @@ export async function submitMembershipRegistration(
 ) {
   const amount = Number.isFinite(membershipCharges) ? membershipCharges : 0;
   const donationTotal = Number.isFinite(donationAmount) && donationAmount > 0 ? donationAmount : 0;
+  const tipTotal = (() => {
+    const parsedTipAmount = Number(formState.tipAmount.replace(/,/g, "").trim());
+    return Number.isFinite(parsedTipAmount) && parsedTipAmount > 0 ? parsedTipAmount : 0;
+  })();
   const campaignLabel = donationCampaignName?.trim() || "campaign";
   const profilePhotoFileStorageId = await uploadMembershipProfilePhoto(
     membershipTypeUniqueId,
@@ -628,6 +710,15 @@ export async function submitMembershipRegistration(
       description: `Donation to ${campaignLabel}`,
       quantity: 1,
       unitPrice: donationTotal,
+      itemType: 1,
+    });
+  }
+
+  if (tipTotal > 0) {
+    invoiceItems.push({
+      description: "Tip",
+      quantity: 1,
+      unitPrice: tipTotal,
       itemType: 1,
     });
   }
@@ -666,8 +757,8 @@ export async function submitMembershipRegistration(
       stateId: parsedStateId,
     },
     invoiceDetail: {
-      invoiceAmount: amount + donationTotal,
-      amountPaid: amount + donationTotal,
+      invoiceAmount: amount + donationTotal + tipTotal,
+      amountPaid: amount + donationTotal + tipTotal,
       paymentMethod,
       notes: formState.notes.trim(),
       paymentMethodDetail: null,

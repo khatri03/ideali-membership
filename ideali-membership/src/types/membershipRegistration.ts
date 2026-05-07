@@ -83,11 +83,27 @@ export interface MembershipRegistrationDetail {
 
 export interface MembershipRegistrationPaymentSettings {
   paymentAccountId: number | null;
+  paymentAccountUniqueId: string | null;
   accountName: string;
   merchantName: string | number;
   paymentCurrencyCode: string | null;
   paymentCurrencySymbol: string | null;
-  paymentProducts: number[];
+  paymentProducts: MembershipRegistrationPaymentProduct[];
+}
+
+export interface MembershipRegistrationPaymentProduct {
+  name: string;
+  displayName: string;
+}
+
+export interface MembershipRegistrationPresetTip {
+  percent: number;
+  isDefault: boolean;
+}
+
+export interface MembershipRegistrationStripeCredentials {
+  publishableKey: string;
+  stripeAccount: string;
 }
 
 export interface MembershipRegistrationInfo {
@@ -99,6 +115,7 @@ export interface MembershipRegistrationInfo {
   canRegister: boolean;
   membershipDetail: MembershipRegistrationDetail;
   paymentSettings: MembershipRegistrationPaymentSettings;
+  presetTips: MembershipRegistrationPresetTip[];
   taxSettings: Record<string, unknown> | null;
 }
 
@@ -130,6 +147,8 @@ export interface MembershipRegistrationFormState {
   countryId: string;
   stateId: string;
   donationAmount: string;
+  tipPresetPercent: string;
+  tipAmount: string;
   paymentMethod: string;
   notes: string;
 }

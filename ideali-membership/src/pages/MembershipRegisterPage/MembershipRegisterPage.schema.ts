@@ -43,6 +43,13 @@ export function validateMembershipRegistrationForm(
     }
   }
 
+  if (form.tipAmount.trim()) {
+    const parsedTipAmount = Number(form.tipAmount.replace(/,/g, ""));
+    if (!Number.isFinite(parsedTipAmount) || parsedTipAmount < 0) {
+      errors.tipAmount = "Enter a valid tip amount.";
+    }
+  }
+
   const membershipDetail = info?.membershipDetail;
   const donationAmount = form.donationAmount.trim() ? Number(form.donationAmount.replace(/,/g, "")) : 0;
   const requiresPaymentMethod = Boolean(membershipDetail && (!membershipDetail.isFree || donationAmount > 0));

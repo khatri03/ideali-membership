@@ -28,6 +28,8 @@ export const DEFAULT_MEMBERSHIP_REGISTER_FORM: MembershipRegistrationFormState =
   countryId: "",
   stateId: "",
   donationAmount: "",
+  tipPresetPercent: "",
+  tipAmount: "",
   paymentMethod: "",
   notes: "",
 };
