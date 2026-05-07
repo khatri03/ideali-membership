@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchCustomForms } from "../../lib/customForms";
+import { fetchCustomForms } from "../../services/customForms";
 import type { CustomFormSummary } from "../../types/customForms";
 
 export function useCustomFormsPageData() {

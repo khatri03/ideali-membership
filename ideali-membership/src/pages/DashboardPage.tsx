@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { APP_ROUTES } from "../routes";
+import { APP_ROUTES } from "../app/routes";
 
 const metrics = [
   { label: "Active members", value: "4,218", delta: "+12.4%" },
@@ -120,3 +120,4 @@ export function DashboardPage() {
     </section>
   );
 }
+

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { AuthSession, LoginChallenge } from "../types/auth";
-import { postForm, postJson } from "../lib/api";
+import { postForm, postJson } from "../services/api";
 import { AUTH_STORAGE_KEY } from "./authStorage";
 
 type AuthStatus = "loading" | "anonymous" | "pending-2fa" | "authenticated";

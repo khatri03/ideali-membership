@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { NavigateFunction } from "react-router-dom";
-import { APP_ROUTES } from "../../routes";
-import { createCustomForm, updateCustomForm } from "../../lib/customForms";
+import { APP_ROUTES } from "../../app/routes";
+import { createCustomForm, updateCustomForm } from "../../services/customForms";
 import type { CustomFormDraft, CustomFormFieldDraft } from "../../types/customForms";
 
 export function useCustomFormCreatePageActions({
@@ -105,3 +105,4 @@ export function useCustomFormCreatePageActions({
     openPreview,
   };
 }
+

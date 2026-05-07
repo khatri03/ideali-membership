@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchCustomFormControls, fetchCustomFormPreview } from "../../lib/customForms";
+import { fetchCustomFormControls, fetchCustomFormPreview } from "../../services/customForms";
 import type { CustomFormControl, CustomFormDraft, CustomFormFieldDraft } from "../../types/customForms";
 import { buildEmptyDraft, mapPreviewFieldToDraft } from "./index";
 

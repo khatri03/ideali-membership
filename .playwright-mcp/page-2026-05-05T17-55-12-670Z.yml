@@ -1,0 +1,29 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]: Secure access for membership operations
+    - generic [ref=e8]:
+      - heading "Sign in to manage members, billing, and operations." [level=1] [ref=e9]
+      - paragraph [ref=e10]: The rest of the application stays protected until a user is authenticated. If 2FA is enabled, we will guide them through that step before unlocking the dashboard.
+    - generic [ref=e11]:
+      - paragraph [ref=e13]: JWT + refresh token flow
+      - paragraph [ref=e15]: 2FA verification support
+      - paragraph [ref=e17]: Protected app shell
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - paragraph [ref=e21]: Welcome back
+        - heading "Sign in to continue" [level=2] [ref=e22]
+      - generic [ref=e23]: Protected
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]: Email address
+        - textbox "Email address" [ref=e27]:
+          - /placeholder: name@company.com
+      - generic [ref=e28]:
+        - generic [ref=e29]: Password
+        - generic [ref=e30]:
+          - textbox "Password Show password" [ref=e31]:
+            - /placeholder: Enter your password
+          - button "Show password" [ref=e32] [cursor=pointer]:
+            - img [ref=e33]
+      - button "Sign in" [ref=e38] [cursor=pointer]

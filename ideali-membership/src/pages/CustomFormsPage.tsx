@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { APP_ROUTES, buildCustomFormEditPath } from "../routes";
+import { APP_ROUTES, buildCustomFormEditPath } from "../app/routes";
 import { useCustomFormsPageData } from "./CustomFormsPage/CustomFormsPage.hooks";
 import { CustomFormTableRow } from "./CustomFormsPage/CustomFormsPage.row";
 
@@ -86,3 +86,4 @@ export function CustomFormsPage() {
     </section>
   );
 }
+

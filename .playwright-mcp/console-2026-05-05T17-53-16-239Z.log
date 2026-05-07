@@ -1,0 +1,4 @@
+[     497ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://localhost:4175/node_modules/.vite/deps/chunk-YZVM2MHU.js?v=23b09c5a:21550
+[    7349ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://localhost:7163/api/organizer/membership/type/list:0
+[   96397ms] [LOG] [vite] server connection lost. Polling for restart... @ https://localhost:4175/@vite/client:559
+[   97743ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ https://localhost:4175/node_modules/.vite/deps/chunk-YZVM2MHU.js?v=23b09c5a:21550
