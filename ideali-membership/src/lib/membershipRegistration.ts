@@ -887,24 +887,40 @@ export async function submitMembershipRegistration(
     CustomQuestionResponses: submissionContext.customQuestionResponses,
   };
 
-  console.groupCollapsed(
-    `[Membership Registration] Outgoing payload for ${membershipTypeUniqueId}`,
-  );
-  console.log(payloadPreview);
-  console.log(JSON.stringify(payloadPreview, null, 2));
-  console.groupEnd();
+  const shouldLogToConsole = submissionContext.submissionPreferences.logToConsole;
+  const shouldSubmitToApi = submissionContext.submissionPreferences.submitToApi;
 
-  const payload = await postFormData<unknown>(
+  if (!shouldLogToConsole && !shouldSubmitToApi) {
+    throw new Error("Select at least one submit option: log on console or submit to API.");
+  }
+
+  if (shouldLogToConsole) {
+    console.groupCollapsed(
+      `[Membership Registration] Outgoing payload for ${membershipTypeUniqueId}`,
+    );
+    console.log(payloadPreview);
+    console.log(JSON.stringify(payloadPreview, null, 2));
+    console.groupEnd();
+  }
+
+  if (!shouldSubmitToApi) {
+    return {
+      message: "Membership registration payload logged successfully.",
+      responseData: payloadPreview,
+    };
+  }
+
+  const responsePayload = await postFormData<unknown>(
     `/api/membership/${membershipTypeUniqueId}/register`,
     formData,
   );
-  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  const responseData = readResponseData(responsePayload) as Record<string, unknown> | null;
   const message =
     readText(responseData?.Message ?? responseData?.message) ||
     "Membership registration submitted successfully.";
 
   return {
     message,
-    responseData: responseData ?? payload,
+    responseData,
   };
 }

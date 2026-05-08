@@ -175,4 +175,10 @@ export interface MembershipRegistrationSubmitContext {
   paymentMethodDetail: MembershipRegistrationPaymentMethodDetail | null;
   customFormResponses: MembershipRegistrationCustomFormResponse[];
   customQuestionResponses: MembershipRegistrationCustomQuestionResponse[];
+  submissionPreferences: MembershipRegistrationSubmissionPreferences;
+}
+
+export interface MembershipRegistrationSubmissionPreferences {
+  logToConsole: boolean;
+  submitToApi: boolean;
 }

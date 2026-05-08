@@ -30,6 +30,7 @@ import type {
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
   MembershipRegistrationPaymentMethodDetail,
+  MembershipRegistrationSubmissionPreferences,
   MembershipRegistrationStripeCredentials,
   MembershipRegistrationSubmitContext,
 } from "../../types/membershipRegistration";
@@ -3908,9 +3909,6 @@ function StripeCardFields({
                 options={cardNumberElementOptions}
                 onChange={(event) => {
                   setIsCardNumberComplete(event.complete);
-                  if (event.complete) {
-                    cardExpiryElementRef.current?.focus();
-                  }
                 }}
               />
             </div>
@@ -4088,6 +4086,12 @@ function PaymentStep({
   const [stripeCredentialsLoading, setStripeCredentialsLoading] =
     useState(false);
   const [stripeCredentialsError, setStripeCredentialsError] = useState("");
+  const blurActiveElement = useCallback(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+  }, []);
   const formatMoney = (amount: number) => {
     return `${currencyPrefix}${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
@@ -4209,8 +4213,9 @@ function PaymentStep({
   useEffect(() => {
     if (selectedPaymentProduct?.name !== "CreditCard") {
       onStripeCardFieldsCompleteChange(false);
+      blurActiveElement();
     }
-  }, [onStripeCardFieldsCompleteChange, selectedPaymentProduct?.name]);
+  }, [blurActiveElement, onStripeCardFieldsCompleteChange, selectedPaymentProduct?.name]);
 
   if (paymentProducts.length === 0) {
     return (
@@ -4264,6 +4269,8 @@ function PaymentStep({
                       aria-expanded={isOpen}
                       aria-controls={panelId}
                       onClick={() => {
+                        blurActiveElement();
+
                         if (productId) {
                           setField("paymentMethod", String(productId));
                         }
@@ -4273,7 +4280,7 @@ function PaymentStep({
                             return current;
                           }
 
-                          return current === product.name ? null : product.name;
+                            return current === product.name ? null : product.name;
                         });
                       }}
                       className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
@@ -4633,6 +4640,8 @@ export function MembershipRegisterWizard({
     useState(false);
   const [showCreditCardFieldErrors, setShowCreditCardFieldErrors] =
     useState(false);
+  const [logOutgoingPayload, setLogOutgoingPayload] = useState(true);
+  const [submitToApi, setSubmitToApi] = useState(true);
   const [userLoginErrors, setUserLoginErrors] = useState<
     Partial<Record<keyof MembershipRegistrationFormState, string>>
   >({});
@@ -5042,6 +5051,10 @@ export function MembershipRegisterWizard({
 
         allowSubmitRef.current = false;
         event.preventDefault();
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLElement) {
+          activeElement.blur();
+        }
 
         if (currentStep < visibleSteps.length - 1) {
           return;
@@ -5128,6 +5141,10 @@ export function MembershipRegisterWizard({
             info.membershipDetail.customQuestions,
             customQuestionValues,
           ),
+          submissionPreferences: {
+            logToConsole: logOutgoingPayload,
+            submitToApi,
+          } satisfies MembershipRegistrationSubmissionPreferences,
         };
 
         await onSubmit(event, submissionContext);
@@ -5219,6 +5236,80 @@ export function MembershipRegisterWizard({
         className="mt-6 h-px w-full"
         style={{ background: theme.cardBorder, opacity: 0.7 }}
       />
+
+      {currentStep === visibleSteps.length - 1 ? (
+        <div
+          className="mt-6 rounded-3xl border p-4 sm:p-5"
+          style={{
+            borderColor: theme.cardBorder,
+            background: theme.cardBackground,
+          }}
+        >
+          <div className="mb-3">
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: theme.tileLabelColor }}
+            >
+              Submit options
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label
+              className="flex items-start gap-3 rounded-2xl border px-4 py-3 transition hover:bg-black/5"
+              style={{ borderColor: theme.cardBorder }}
+            >
+              <input
+                type="checkbox"
+                checked={logOutgoingPayload}
+                onChange={(event) => setLogOutgoingPayload(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-cyan-600"
+                style={{ accentColor: theme.level1 }}
+              />
+              <span className="space-y-1">
+                <span
+                  className="block text-sm font-semibold"
+                  style={{ color: theme.titleColor }}
+                >
+                  Log on console
+                </span>
+                <span
+                  className="block text-xs leading-5"
+                  style={{ color: theme.tileLabelColor }}
+                >
+                  Print the outgoing payload to the browser console for review.
+                </span>
+              </span>
+            </label>
+
+            <label
+              className="flex items-start gap-3 rounded-2xl border px-4 py-3 transition hover:bg-black/5"
+              style={{ borderColor: theme.cardBorder }}
+            >
+              <input
+                type="checkbox"
+                checked={submitToApi}
+                onChange={(event) => setSubmitToApi(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-cyan-600"
+                style={{ accentColor: theme.level1 }}
+              />
+              <span className="space-y-1">
+                <span
+                  className="block text-sm font-semibold"
+                  style={{ color: theme.titleColor }}
+                >
+                  Submit to API
+                </span>
+                <span
+                  className="block text-xs leading-5"
+                  style={{ color: theme.tileLabelColor }}
+                >
+                  Send the registration payload to the backend endpoint.
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
