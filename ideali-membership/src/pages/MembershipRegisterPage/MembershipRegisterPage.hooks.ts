@@ -4,7 +4,11 @@ import { DEFAULT_MEMBERSHIP_REGISTER_FORM, MEMBERSHIP_REGISTER_PAGE_COPY } from 
 import { validateMembershipRegistrationForm } from "./MembershipRegisterPage.schema";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import { getMembershipRegistrationInfo, resolvePaymentProductId, submitMembershipRegistration } from "../../lib/membershipRegistration";
-import type { MembershipRegistrationFormState, MembershipRegistrationInfo } from "../../types/membershipRegistration";
+import type {
+  MembershipRegistrationFormState,
+  MembershipRegistrationInfo,
+  MembershipRegistrationSubmitContext,
+} from "../../types/membershipRegistration";
 
 function buildPaymentCurrencyPrefix(info: MembershipRegistrationInfo | null) {
   const currencySymbol = info?.paymentSettings.paymentCurrencySymbol?.trim();
@@ -222,7 +226,10 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     document.title = membershipName || "Membership";
   }, [membershipName]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+    context: MembershipRegistrationSubmitContext,
+  ) {
     event.preventDefault();
 
     if (!info) {
@@ -243,14 +250,16 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     try {
       const selectedPaymentMethod = form.paymentMethod.trim() ? Number(form.paymentMethod) : null;
       const donationAmount = parseDonationAmount(form.donationAmount);
-      const result = await submitMembershipRegistration(
-        currentMembershipTypeUniqueId,
-        form,
-        info.membershipDetail.membershipCharges ?? 0,
-        selectedPaymentMethod,
-        donationAmount,
-        info.membershipDetail.donationCampaignName,
-      );
+        const result = await submitMembershipRegistration(
+          currentMembershipTypeUniqueId,
+          form,
+          info.membershipDetail.membershipCharges ?? 0,
+          selectedPaymentMethod,
+          donationAmount,
+          info.membershipDetail.donationCampaignUniqueId ?? null,
+          info.membershipDetail.donationCampaignName,
+          context,
+        );
 
       setSubmitMessage(result.message);
     } catch (error) {

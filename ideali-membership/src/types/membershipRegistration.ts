@@ -6,6 +6,7 @@ export interface MembershipRegistrationCustomFormOption {
 }
 
 export interface MembershipRegistrationCustomFormField {
+  id: number;
   uniqueId: string;
   formId: number;
   formControlTypeId: number;
@@ -153,39 +154,25 @@ export interface MembershipRegistrationFormState {
   notes: string;
 }
 
-export interface MembershipRegistrationSubmitRequest {
-  contactInfo: {
-    prefix: string | null;
-    firstName: string;
-    middleName: string;
-    lastName: string;
-    primaryEmail: string;
-    cellPhone: string;
-    address: MembershipRegistrationContactAddress;
-  };
-  userInfo: {
-    email: string;
-    profilePhotoFileStorageId: number | null;
-    password: string;
-    confirmPassword: string;
-  };
-  addressInfo: MembershipRegistrationContactAddress;
-  invoiceDetail: {
-    invoiceAmount: number;
-    amountPaid: number;
-    paymentMethod: number | null;
-    notes: string;
-    paymentMethodDetail: Record<string, unknown> | null;
-    module: number;
-    invoiceType: number;
-    taxDetail: Record<string, unknown> | null;
-    discountDetail: Record<string, unknown> | null;
-    invoiceItems: Array<{
-      description: string;
-      quantity: number;
-      unitPrice: number;
-      itemType: number;
-    }>;
-  };
-  discountDetail: Record<string, unknown> | null;
+export interface MembershipRegistrationPaymentMethodDetail {
+  paymentMethodId: string;
+  cardHolderName?: string | null;
+}
+
+export interface MembershipRegistrationCustomFormResponse {
+  fieldId: number;
+  value: string;
+}
+
+export interface MembershipRegistrationCustomQuestionResponse {
+  questionUniqueId: string;
+  optionUniqueId?: string | null;
+  fileStorageId?: number | null;
+  value?: string | null;
+}
+
+export interface MembershipRegistrationSubmitContext {
+  paymentMethodDetail: MembershipRegistrationPaymentMethodDetail | null;
+  customFormResponses: MembershipRegistrationCustomFormResponse[];
+  customQuestionResponses: MembershipRegistrationCustomQuestionResponse[];
 }

@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
+  MembershipRegistrationSubmitContext,
 } from "../../types/membershipRegistration";
 
 export interface MembershipRegisterPageViewModel {
@@ -17,7 +18,10 @@ export interface MembershipRegisterPageViewModel {
   isSubmitting: boolean;
   isRegistrationUnavailable: boolean;
   errors: Partial<Record<keyof MembershipRegistrationFormState, string>>;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onSubmit: (
+    event: FormEvent<HTMLFormElement>,
+    context: MembershipRegistrationSubmitContext,
+  ) => Promise<void>;
   onRetry: () => void;
   setField: <T extends keyof MembershipRegistrationFormState>(field: T, value: MembershipRegistrationFormState[T]) => void;
 }

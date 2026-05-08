@@ -1,10 +1,13 @@
-import { getJson, postFormData, postJson } from "./api";
+import { getJson, postFormData } from "./api";
 import type {
   MembershipRegistrationFormState,
+  MembershipRegistrationCustomFormResponse,
+  MembershipRegistrationCustomQuestionResponse,
   MembershipRegistrationInfo,
+  MembershipRegistrationPaymentMethodDetail,
   MembershipRegistrationPaymentProduct,
   MembershipRegistrationStripeCredentials,
-  MembershipRegistrationSubmitRequest,
+  MembershipRegistrationSubmitContext,
 } from "../types/membershipRegistration";
 
 const PAYMENT_PRODUCT_NAME_TO_ID: Record<string, number> = {
@@ -75,18 +78,6 @@ function readBoolean(value: unknown) {
   return false;
 }
 
-async function uploadMembershipProfilePhoto(membershipTypeUniqueId: string, file: File | null) {
-  if (!file) {
-    return null;
-  }
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const payload = await postFormData<unknown>(`/api/membership/${membershipTypeUniqueId}/profile-photo`, formData);
-  return readNumber(readResponseData(payload));
-}
-
 function readPaymentProducts(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
@@ -152,6 +143,93 @@ function readPresetTips(value: unknown) {
       };
     })
     .filter((item): item is MembershipRegistrationInfo["presetTips"][number] => item !== null);
+}
+
+function appendFormDataValue(formData: FormData, key: string, value: unknown) {
+  if (value === null || value === undefined) {
+    return;
+  }
+
+  if (value instanceof File) {
+    formData.append(key, value);
+    return;
+  }
+
+  if (typeof value === "boolean") {
+    formData.append(key, value ? "true" : "false");
+    return;
+  }
+
+  if (typeof value === "number") {
+    if (Number.isFinite(value)) {
+      formData.append(key, String(value));
+    }
+    return;
+  }
+
+  const text = String(value).trim();
+  if (text) {
+    formData.append(key, text);
+  }
+}
+
+function appendAddressFormData(formData: FormData, prefix: string, address: Record<string, unknown> | null | undefined) {
+  if (!address) {
+    return;
+  }
+
+  appendFormDataValue(formData, `${prefix}.StreetLine1`, address.StreetLine1 ?? address.streetLine1);
+  appendFormDataValue(formData, `${prefix}.StreetLine2`, address.StreetLine2 ?? address.streetLine2);
+  appendFormDataValue(formData, `${prefix}.ZipCode`, address.ZipCode ?? address.zipCode);
+}
+
+function appendInvoiceItem(formData: FormData, index: number, item: Record<string, unknown>) {
+  appendFormDataValue(formData, `InvoiceDetail.InvoiceItems[${index}].Description`, item.description ?? item.Description);
+  appendFormDataValue(formData, `InvoiceDetail.InvoiceItems[${index}].Quantity`, item.quantity ?? item.Quantity);
+  appendFormDataValue(formData, `InvoiceDetail.InvoiceItems[${index}].UnitPrice`, item.unitPrice ?? item.UnitPrice);
+  appendFormDataValue(formData, `InvoiceDetail.InvoiceItems[${index}].ItemType`, item.itemType ?? item.ItemType);
+}
+
+function appendPaymentMethodDetail(
+  formData: FormData,
+  paymentMethodDetail: MembershipRegistrationPaymentMethodDetail | null,
+) {
+  if (!paymentMethodDetail) {
+    return;
+  }
+
+  appendFormDataValue(
+    formData,
+    "InvoiceDetail.PaymentMethodDetail.PaymentMethodId",
+    paymentMethodDetail.paymentMethodId,
+  );
+  appendFormDataValue(
+    formData,
+    "InvoiceDetail.PaymentMethodDetail.CardHolderName",
+    paymentMethodDetail.cardHolderName ?? null,
+  );
+}
+
+function appendCustomFormResponses(
+  formData: FormData,
+  responses: MembershipRegistrationCustomFormResponse[],
+) {
+  responses.forEach((response, index) => {
+    appendFormDataValue(formData, `CustomFormResponses[${index}].FieldId`, response.fieldId);
+    appendFormDataValue(formData, `CustomFormResponses[${index}].Value`, response.value);
+  });
+}
+
+function appendCustomQuestionResponses(
+  formData: FormData,
+  responses: MembershipRegistrationCustomQuestionResponse[],
+) {
+  responses.forEach((response, index) => {
+    appendFormDataValue(formData, `CustomQuestionResponses[${index}].QuestionUniqueId`, response.questionUniqueId);
+    appendFormDataValue(formData, `CustomQuestionResponses[${index}].OptionUniqueId`, response.optionUniqueId ?? null);
+    appendFormDataValue(formData, `CustomQuestionResponses[${index}].FileStorageId`, response.fileStorageId ?? null);
+    appendFormDataValue(formData, `CustomQuestionResponses[${index}].Value`, response.value ?? null);
+  });
 }
 
 export function resolvePaymentProductId(value: string) {
@@ -367,6 +445,7 @@ function readCustomForms(value: unknown) {
             : [];
 
           return {
+            id: readNumber(fieldRecord.Id ?? fieldRecord.id) ?? 0,
             uniqueId: readText(fieldRecord.UniqueId ?? fieldRecord.uniqueId),
             formId: readNumber(fieldRecord.FormId ?? fieldRecord.formId) ?? 0,
             formControlTypeId: readNumber(fieldRecord.FormControlTypeId ?? fieldRecord.formControlTypeId) ?? 0,
@@ -392,6 +471,7 @@ function readCustomForms(value: unknown) {
           (
             field,
           ): field is {
+            id: number;
             uniqueId: string;
             formId: number;
             formControlTypeId: number;
@@ -437,6 +517,7 @@ function readCustomForms(value: unknown) {
       layoutColumn: number | null;
       fieldCount: number;
       fields: Array<{
+        id: number;
         uniqueId: string;
         formId: number;
         formControlTypeId: number;
@@ -673,7 +754,9 @@ export async function submitMembershipRegistration(
   membershipCharges: number,
   paymentMethod: number | null,
   donationAmount: number,
+  donationCampaignUniqueId: string | null,
   donationCampaignName: string | null,
+  submissionContext: MembershipRegistrationSubmitContext,
 ) {
   const amount = Number.isFinite(membershipCharges) ? membershipCharges : 0;
   const donationTotal = Number.isFinite(donationAmount) && donationAmount > 0 ? donationAmount : 0;
@@ -681,11 +764,16 @@ export async function submitMembershipRegistration(
     const parsedTipAmount = Number(formState.tipAmount.replace(/,/g, "").trim());
     return Number.isFinite(parsedTipAmount) && parsedTipAmount > 0 ? parsedTipAmount : 0;
   })();
-  const campaignLabel = donationCampaignName?.trim() || "campaign";
-  const profilePhotoFileStorageId = await uploadMembershipProfilePhoto(
-    membershipTypeUniqueId,
-    formState.profilePhotoFile,
-  );
+  const totalAmount = amount + donationTotal + tipTotal;
+  const amountBreakdown = {
+    membershipAmount: amount,
+    donationCampaign: {
+      uniqueId: donationCampaignUniqueId,
+      amount: donationTotal,
+    },
+    tipAmount: tipTotal,
+    totalAmount,
+  };
   const trimmedPrefix = formState.prefix.trim();
   const trimmedStreetLine1 = formState.streetLine1.trim();
   const trimmedStreetLine2 = formState.streetLine2.trim();
@@ -696,92 +784,127 @@ export async function submitMembershipRegistration(
   const stateId = formState.stateId.trim();
   const parsedCountryId = countryId && Number.isFinite(Number(countryId)) ? Number(countryId) : null;
   const parsedStateId = stateId && Number.isFinite(Number(stateId)) ? Number(stateId) : null;
-  const invoiceItems = [
-    {
-      description: "Membership registration",
-      quantity: 1,
-      unitPrice: amount,
-      itemType: 1,
-    },
-  ];
+  const formData = new FormData();
+  appendFormDataValue(formData, "AvatarFile", formState.profilePhotoFile);
 
-  if (donationTotal > 0) {
-    invoiceItems.push({
-      description: `Donation to ${campaignLabel}`,
-      quantity: 1,
-      unitPrice: donationTotal,
-      itemType: 1,
-    });
-  }
+  appendFormDataValue(formData, "ContactInfo.Prefix", trimmedPrefix || null);
+  appendFormDataValue(formData, "ContactInfo.FirstName", formState.firstName.trim());
+  appendFormDataValue(formData, "ContactInfo.MiddleName", formState.middleName.trim());
+  appendFormDataValue(formData, "ContactInfo.LastName", formState.lastName.trim());
+  appendFormDataValue(formData, "ContactInfo.PrimaryEmail", formState.email.trim());
+  appendFormDataValue(formData, "ContactInfo.CellPhone", formState.cellPhone.trim());
+  appendAddressFormData(formData, "ContactInfo.Address", {
+    StreetLine1: trimmedStreetLine1 || null,
+    StreetLine2: trimmedStreetLine2 || null,
+    ZipCode: trimmedZipCode || null,
+  });
 
-  if (tipTotal > 0) {
-    invoiceItems.push({
-      description: "Tip",
-      quantity: 1,
-      unitPrice: tipTotal,
-      itemType: 1,
-    });
-  }
+  appendFormDataValue(formData, "UserInfo.Email", formState.email.trim());
+  appendFormDataValue(formData, "UserInfo.Password", formState.password);
+  appendFormDataValue(formData, "UserInfo.ConfirmPassword", formState.confirmPassword);
 
-  const requestBody: MembershipRegistrationSubmitRequest = {
-    contactInfo: {
-      prefix: trimmedPrefix || null,
-      firstName: formState.firstName.trim(),
-      middleName: formState.middleName.trim(),
-      lastName: formState.lastName.trim(),
-      primaryEmail: formState.email.trim(),
-      cellPhone: formState.cellPhone.trim(),
-      address: {
-        addressType: trimmedAddressType || null,
-        streetLine1: trimmedStreetLine1 || null,
-        streetLine2: trimmedStreetLine2 || null,
-        zipCode: trimmedZipCode || null,
-        cityName: trimmedCityName || null,
-        countryId: parsedCountryId,
-        stateId: parsedStateId,
+  appendAddressFormData(formData, "AddressInfo", {
+    StreetLine1: trimmedStreetLine1 || null,
+    StreetLine2: trimmedStreetLine2 || null,
+    ZipCode: trimmedZipCode || null,
+  });
+  appendFormDataValue(formData, "AddressInfo.AddressType", trimmedAddressType || null);
+  appendFormDataValue(formData, "AddressInfo.CityName", trimmedCityName || null);
+  appendFormDataValue(formData, "AddressInfo.CountryId", parsedCountryId);
+  appendFormDataValue(formData, "AddressInfo.StateId", parsedStateId);
+
+  appendFormDataValue(formData, "InvoiceDetail.InvoiceAmount", amount + donationTotal + tipTotal);
+  appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.MembershipAmount", amount);
+  appendFormDataValue(
+    formData,
+    "InvoiceDetail.AmountBreakdown.DonationCampaign.UniqueId",
+    donationCampaignUniqueId,
+  );
+  appendFormDataValue(
+    formData,
+    "InvoiceDetail.AmountBreakdown.DonationCampaign.Amount",
+    donationTotal,
+  );
+  appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TipAmount", tipTotal);
+  appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TotalAmount", totalAmount);
+  appendFormDataValue(formData, "InvoiceDetail.PaymentMethod", paymentMethod);
+  appendFormDataValue(formData, "InvoiceDetail.Notes", formState.notes.trim());
+  appendPaymentMethodDetail(formData, submissionContext.paymentMethodDetail);
+
+  appendFormDataValue(formData, "DiscountDetail.Amount", null);
+  appendFormDataValue(formData, "DiscountDetail.Percentage", null);
+  appendCustomFormResponses(formData, submissionContext.customFormResponses);
+  appendCustomQuestionResponses(formData, submissionContext.customQuestionResponses);
+
+  const payloadPreview = {
+    membershipTypeUniqueId,
+    AvatarFile: formState.profilePhotoFile
+      ? {
+          name: formState.profilePhotoFile.name,
+          type: formState.profilePhotoFile.type,
+          size: formState.profilePhotoFile.size,
+          lastModified: formState.profilePhotoFile.lastModified,
+        }
+      : null,
+    ContactInfo: {
+      Prefix: trimmedPrefix || null,
+      FirstName: formState.firstName.trim(),
+      MiddleName: formState.middleName.trim(),
+      LastName: formState.lastName.trim(),
+      PrimaryEmail: formState.email.trim(),
+      CellPhone: formState.cellPhone.trim(),
+      Address: {
+        StreetLine1: trimmedStreetLine1 || null,
+        StreetLine2: trimmedStreetLine2 || null,
+        ZipCode: trimmedZipCode || null,
       },
     },
-    userInfo: {
-      email: formState.email.trim(),
-      profilePhotoFileStorageId,
-      password: formState.password,
-      confirmPassword: formState.confirmPassword,
+    UserInfo: {
+      Email: formState.email.trim(),
+      Password: formState.password,
+      ConfirmPassword: formState.confirmPassword,
     },
-    addressInfo: {
-      addressType: trimmedAddressType || null,
-      streetLine1: trimmedStreetLine1 || null,
-      streetLine2: trimmedStreetLine2 || null,
-      zipCode: trimmedZipCode || null,
-      cityName: trimmedCityName || null,
-      countryId: parsedCountryId,
-      stateId: parsedStateId,
+    AddressInfo: {
+      AddressType: trimmedAddressType || null,
+      StreetLine1: trimmedStreetLine1 || null,
+      StreetLine2: trimmedStreetLine2 || null,
+      ZipCode: trimmedZipCode || null,
+      CityName: trimmedCityName || null,
+      CountryId: parsedCountryId,
+      StateId: parsedStateId,
     },
-    invoiceDetail: {
-      invoiceAmount: amount + donationTotal + tipTotal,
-      amountPaid: amount + donationTotal + tipTotal,
-      paymentMethod,
-      notes: formState.notes.trim(),
-      paymentMethodDetail: null,
-      module: 5,
-      invoiceType: 1,
-      taxDetail: null,
-      discountDetail: null,
-      invoiceItems,
+    InvoiceDetail: {
+      InvoiceAmount: amount + donationTotal + tipTotal,
+      AmountBreakdown: amountBreakdown,
+      PaymentMethod: paymentMethod,
+      Notes: formState.notes.trim(),
+      PaymentMethodDetail: submissionContext.paymentMethodDetail,
+      DiscountDetail: null,
+      TaxDetail: null,
     },
-    discountDetail: null,
+    DiscountDetail: null,
+    CustomFormResponses: submissionContext.customFormResponses,
+    CustomQuestionResponses: submissionContext.customQuestionResponses,
   };
 
-  const payload = await postJson<unknown>(`/api/membership/${membershipTypeUniqueId}/register`, requestBody);
-  const responseData = readResponseData(payload);
+  console.groupCollapsed(
+    `[Membership Registration] Outgoing payload for ${membershipTypeUniqueId}`,
+  );
+  console.log(payloadPreview);
+  console.log(JSON.stringify(payloadPreview, null, 2));
+  console.groupEnd();
 
-  const message = typeof responseData === "string"
-    ? responseData
-    : responseData && typeof responseData === "object"
-      ? readText((responseData as Record<string, unknown>).Message ?? (responseData as Record<string, unknown>).message)
-      : "";
+  const payload = await postFormData<unknown>(
+    `/api/membership/${membershipTypeUniqueId}/register`,
+    formData,
+  );
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  const message =
+    readText(responseData?.Message ?? responseData?.message) ||
+    "Membership registration submitted successfully.";
 
   return {
-    message: message || "Membership registration submitted successfully.",
-    responseData,
+    message,
+    responseData: responseData ?? payload,
   };
 }

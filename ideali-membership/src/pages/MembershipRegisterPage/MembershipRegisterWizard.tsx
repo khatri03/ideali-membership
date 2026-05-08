@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -14,17 +15,23 @@ import {
   CardExpiryElement,
   CardNumberElement,
   Elements,
+  useElements,
+  useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
   MembershipRegistrationFormState,
+  MembershipRegistrationCustomFormResponse,
+  MembershipRegistrationCustomQuestionResponse,
   MembershipRegistrationInfo,
   MembershipRegistrationCustomFormField,
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomFormSummary,
+  MembershipRegistrationPaymentMethodDetail,
   MembershipRegistrationStripeCredentials,
+  MembershipRegistrationSubmitContext,
 } from "../../types/membershipRegistration";
 import { CountrySelectInput } from "../../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
@@ -1567,6 +1574,79 @@ type CustomFormErrors = Record<string, string>;
 type CustomQuestionValue = CustomFormValue;
 type CustomQuestionValues = Record<string, CustomQuestionValue>;
 type CustomQuestionErrors = Record<string, string>;
+
+type StripeCardPaymentMethodCreator = (
+  cardHolderName: string,
+) => Promise<{ id: string }>;
+
+function serializeCustomValue(value: CustomFormValue | undefined): string {
+  if (value instanceof File) {
+    return value.name;
+  }
+
+  if (Array.isArray(value)) {
+    return JSON.stringify(value.map((item) => serializeCustomValue(item)));
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  return "";
+}
+
+function buildCustomFormResponses(
+  customForms: MembershipRegistrationInfo["membershipDetail"]["customForms"],
+  values: CustomFormValues,
+): MembershipRegistrationCustomFormResponse[] {
+  return customForms.flatMap((form) =>
+    form.fields
+      .slice()
+      .sort((left, right) => left.displayOrder - right.displayOrder)
+      .map((field) => {
+        const value = values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? null;
+        const fieldId = field.id;
+
+        return {
+          fieldId,
+          value: serializeCustomValue(value),
+        };
+      })
+      .filter((response) => response.fieldId > 0 && response.value !== ""),
+  );
+}
+
+function buildCustomQuestionResponses(
+  customQuestions: MembershipRegistrationInfo["membershipDetail"]["customQuestions"],
+  values: CustomQuestionValues,
+): MembershipRegistrationCustomQuestionResponse[] {
+  return customQuestions
+    .slice()
+    .sort((left, right) => left.displayOrder - right.displayOrder)
+    .map((question) => {
+      const rawValue = values[buildCustomQuestionKey(question.uniqueId)] ?? null;
+      const serializedValue = serializeCustomValue(rawValue);
+      const matchedOption =
+        typeof rawValue === "string"
+          ? question.options.find(
+              (option) =>
+                option.uniqueId === rawValue || option.value === rawValue,
+            ) ?? null
+          : null;
+
+      return {
+        questionUniqueId: question.uniqueId,
+        optionUniqueId: matchedOption?.uniqueId ?? null,
+        fileStorageId: null,
+        value: serializedValue || null,
+      };
+    })
+    .filter((response) => response.value !== null || response.optionUniqueId !== null);
+}
 
 function buildCustomFormFieldKey(formUniqueId: string, fieldUniqueId: string) {
   return `${formUniqueId}:${fieldUniqueId}`;
@@ -3692,6 +3772,12 @@ type PaymentStepProps = {
   info: MembershipRegistrationInfo;
   form: MembershipRegistrationFormState;
   paymentMethodError?: string;
+  isCreditCardFieldsComplete: boolean;
+  showCreditCardFieldErrors: boolean;
+  onStripeCardPaymentMethodCreatorReady: (
+    creator: StripeCardPaymentMethodCreator | null,
+  ) => void;
+  onStripeCardFieldsCompleteChange: (isComplete: boolean) => void;
   setField: MembershipRegisterPageViewModel["setField"];
   theme: MembershipTheme;
 };
@@ -3709,7 +3795,21 @@ function ChevronDownIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-function StripeCardFields({ theme }: { theme: MembershipTheme }) {
+function StripeCardFields({
+  theme,
+  onCreatePaymentMethodReady,
+  onCardFieldsCompleteChange,
+  showFieldErrors,
+}: {
+  theme: MembershipTheme;
+  onCreatePaymentMethodReady: (
+    creator: StripeCardPaymentMethodCreator | null,
+  ) => void;
+  onCardFieldsCompleteChange: (isComplete: boolean) => void;
+  showFieldErrors: boolean;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
   const stripeInputClassName =
     "w-full rounded-2xl border bg-white px-4 py-3 text-sm shadow-sm";
   const stripeInputStyle = {
@@ -3730,7 +3830,64 @@ function StripeCardFields({ theme }: { theme: MembershipTheme }) {
     ...stripeInputStyle,
     disableLink: true,
   };
+  const [isCardNumberComplete, setIsCardNumberComplete] = useState(false);
+  const [isCardExpiryComplete, setIsCardExpiryComplete] = useState(false);
+  const [isCardCvcComplete, setIsCardCvcComplete] = useState(false);
+  const cardExpiryElementRef = useRef<{ focus: () => void } | null>(null);
   const cardCvcElementRef = useRef<{ focus: () => void } | null>(null);
+
+  useEffect(() => {
+    onCardFieldsCompleteChange(
+      isCardNumberComplete && isCardExpiryComplete && isCardCvcComplete,
+    );
+  }, [
+    isCardCvcComplete,
+    isCardExpiryComplete,
+    isCardNumberComplete,
+    onCardFieldsCompleteChange,
+  ]);
+
+  useEffect(() => {
+    if (!stripe || !elements) {
+      onCreatePaymentMethodReady(null);
+      onCardFieldsCompleteChange(false);
+      return;
+    }
+
+    const createPaymentMethod: StripeCardPaymentMethodCreator = async (
+      cardHolderName: string,
+    ) => {
+      const cardNumberElement = elements.getElement(CardNumberElement);
+      if (!cardNumberElement) {
+        throw new Error("Card element not found.");
+      }
+
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: "card",
+        card: cardNumberElement,
+        billing_details: {
+          name: cardHolderName,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!paymentMethod) {
+        throw new Error("Unable to create payment method.");
+      }
+
+      return { id: paymentMethod.id };
+    };
+
+    onCreatePaymentMethodReady(createPaymentMethod);
+
+    return () => {
+      onCreatePaymentMethodReady(null);
+      onCardFieldsCompleteChange(false);
+    };
+  }, [elements, onCardFieldsCompleteChange, onCreatePaymentMethodReady, stripe]);
 
   return (
     <div className="space-y-3">
@@ -3747,8 +3904,21 @@ function StripeCardFields({ theme }: { theme: MembershipTheme }) {
               className={stripeInputClassName}
               style={{ borderColor: theme.cardBorder }}
             >
-              <CardNumberElement options={cardNumberElementOptions} />
+              <CardNumberElement
+                options={cardNumberElementOptions}
+                onChange={(event) => {
+                  setIsCardNumberComplete(event.complete);
+                  if (event.complete) {
+                    cardExpiryElementRef.current?.focus();
+                  }
+                }}
+              />
             </div>
+            {showFieldErrors && !isCardNumberComplete ? (
+              <p className="text-xs font-medium leading-5 text-rose-600">
+                Credit card required.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -3765,12 +3935,21 @@ function StripeCardFields({ theme }: { theme: MembershipTheme }) {
               <CardExpiryElement
                 options={stripeInputStyle}
                 onChange={(event) => {
+                  setIsCardExpiryComplete(event.complete);
                   if (event.complete) {
                     cardCvcElementRef.current?.focus();
                   }
                 }}
+                onReady={(element) => {
+                  cardExpiryElementRef.current = element;
+                }}
               />
             </div>
+            {showFieldErrors && !isCardExpiryComplete ? (
+              <p className="text-xs font-medium leading-5 text-rose-600">
+                Expiry required.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -3786,11 +3965,19 @@ function StripeCardFields({ theme }: { theme: MembershipTheme }) {
             >
               <CardCvcElement
                 options={stripeInputStyle}
+                onChange={(event) => {
+                  setIsCardCvcComplete(event.complete);
+                }}
                 onReady={(element) => {
                   cardCvcElementRef.current = element;
                 }}
               />
             </div>
+            {showFieldErrors && !isCardCvcComplete ? (
+              <p className="text-xs font-medium leading-5 text-rose-600">
+                CVV required.
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -3801,9 +3988,17 @@ function StripeCardFields({ theme }: { theme: MembershipTheme }) {
 function StripeElementsFields({
   theme,
   stripeCredentials,
+  onCreatePaymentMethodReady,
+  onCardFieldsCompleteChange,
+  showFieldErrors,
 }: {
   theme: MembershipTheme;
   stripeCredentials: MembershipRegistrationStripeCredentials;
+  onCreatePaymentMethodReady: (
+    creator: StripeCardPaymentMethodCreator | null,
+  ) => void;
+  onCardFieldsCompleteChange: (isComplete: boolean) => void;
+  showFieldErrors: boolean;
 }) {
   const stripePromise = useMemo(() => {
     return loadStripe(stripeCredentials.publishableKey, {
@@ -3817,8 +4012,39 @@ function StripeElementsFields({
 
   return (
     <Elements stripe={stripePromise}>
-      <StripeCardFields theme={theme} />
+      <StripeCardFields
+        theme={theme}
+        onCreatePaymentMethodReady={onCreatePaymentMethodReady}
+        onCardFieldsCompleteChange={onCardFieldsCompleteChange}
+        showFieldErrors={showFieldErrors}
+      />
     </Elements>
+  );
+}
+
+function StripeCardSkeleton() {
+  const skeletonRowClassName =
+    "h-12 animate-pulse rounded-2xl border border-slate-200 bg-slate-100";
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-[3fr_1fr_1fr]">
+        <div className="space-y-2">
+          <div className="h-3 w-24 animate-pulse rounded-full bg-slate-200" />
+          <div className={skeletonRowClassName} />
+        </div>
+
+        <div className="space-y-2">
+          <div className="h-3 w-16 animate-pulse rounded-full bg-slate-200" />
+          <div className={skeletonRowClassName} />
+        </div>
+
+        <div className="space-y-2">
+          <div className="h-3 w-12 animate-pulse rounded-full bg-slate-200" />
+          <div className={skeletonRowClassName} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -3826,6 +4052,10 @@ function PaymentStep({
   info,
   form,
   paymentMethodError,
+  isCreditCardFieldsComplete,
+  showCreditCardFieldErrors,
+  onStripeCardPaymentMethodCreatorReady,
+  onStripeCardFieldsCompleteChange,
   setField,
   theme,
 }: PaymentStepProps) {
@@ -3976,6 +4206,12 @@ function PaymentStep({
     );
   }, [paymentProducts, selectedPaymentProduct]);
 
+  useEffect(() => {
+    if (selectedPaymentProduct?.name !== "CreditCard") {
+      onStripeCardFieldsCompleteChange(false);
+    }
+  }, [onStripeCardFieldsCompleteChange, selectedPaymentProduct?.name]);
+
   if (paymentProducts.length === 0) {
     return (
       <div
@@ -4082,26 +4318,28 @@ function PaymentStep({
                         className="overflow-hidden border-t px-4"
                         style={{ borderColor: theme.cardBorder }}
                       >
-                        <div className="py-4">
-                          {product.name === "CreditCard" && isSelected ? (
-                            <div className="mt-4">
-                              {stripeCredentialsLoading ? (
-                                <div
-                                  className="rounded-2xl border px-4 py-4 text-sm"
-                                  style={{ borderColor: theme.cardBorder }}
-                                >
-                                  Loading card fields...
-                                </div>
-                              ) : stripeCredentialsError ? (
-                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
-                                  {stripeCredentialsError}
-                                </div>
+                          <div className="py-4">
+                            {product.name === "CreditCard" && isSelected ? (
+                              <div className="mt-4">
+                                {stripeCredentialsLoading ? (
+                                  <StripeCardSkeleton />
+                                ) : stripeCredentialsError ? (
+                                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+                                    {stripeCredentialsError}
+                                  </div>
                               ) : stripeCredentials ? (
-                                <StripeElementsFields
-                                  key={`${stripeCredentials.publishableKey}:${stripeCredentials.stripeAccount ?? ""}`}
-                                  theme={theme}
-                                  stripeCredentials={stripeCredentials}
-                                />
+                              <StripeElementsFields
+                                key={`${stripeCredentials.publishableKey}:${stripeCredentials.stripeAccount ?? ""}`}
+                                theme={theme}
+                                stripeCredentials={stripeCredentials}
+                                onCreatePaymentMethodReady={
+                                  onStripeCardPaymentMethodCreatorReady
+                                }
+                                onCardFieldsCompleteChange={
+                                  onStripeCardFieldsCompleteChange
+                                }
+                                showFieldErrors={showCreditCardFieldErrors}
+                              />
                               ) : null}
                             </div>
                           ) : null}
@@ -4114,6 +4352,7 @@ function PaymentStep({
               );
             })}
           </div>
+
         </div>
 
         <div
@@ -4385,8 +4624,15 @@ export function MembershipRegisterWizard({
   const formRef = useRef<HTMLFormElement | null>(null);
   const allowSubmitRef = useRef(false);
   const hasAutoFilledDummyDataRef = useRef(false);
+  const stripeCardPaymentMethodCreatorRef =
+    useRef<StripeCardPaymentMethodCreator | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isFillingDummyData, setIsFillingDummyData] = useState(false);
+  const [paymentStepError, setPaymentStepError] = useState("");
+  const [isCreditCardFieldsComplete, setIsCreditCardFieldsComplete] =
+    useState(false);
+  const [showCreditCardFieldErrors, setShowCreditCardFieldErrors] =
+    useState(false);
   const [userLoginErrors, setUserLoginErrors] = useState<
     Partial<Record<keyof MembershipRegistrationFormState, string>>
   >({});
@@ -4400,6 +4646,22 @@ export function MembershipRegisterWizard({
     useState<CustomQuestionValues>({});
   const [customQuestionErrors, setCustomQuestionErrors] =
     useState<CustomQuestionErrors>({});
+  const handleStripeCardPaymentMethodCreatorReady = useCallback(
+    (creator: StripeCardPaymentMethodCreator | null) => {
+      stripeCardPaymentMethodCreatorRef.current = creator;
+      if (creator) {
+        setPaymentStepError("");
+      }
+    },
+    [],
+  );
+  const handleStripeCardFieldsCompleteChange = useCallback((isComplete: boolean) => {
+    setIsCreditCardFieldsComplete(isComplete);
+    if (isComplete) {
+      setPaymentStepError("");
+      setShowCreditCardFieldErrors(false);
+    }
+  }, []);
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
   const hasQuestionnaireContent = Boolean(
@@ -4446,6 +4708,14 @@ export function MembershipRegisterWizard({
     );
     setCustomQuestionErrors({});
   }, [info]);
+
+  useEffect(() => {
+    setPaymentStepError("");
+  }, [form.paymentMethod]);
+
+  useEffect(() => {
+    setShowCreditCardFieldErrors(false);
+  }, [form.paymentMethod]);
 
   useEffect(() => {
     setCurrentStep((value) => Math.min(value, visibleSteps.length - 1));
@@ -4764,16 +5034,16 @@ export function MembershipRegisterWizard({
     <form
       ref={formRef}
       className="w-full max-w-400 space-y-6"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         if (!allowSubmitRef.current) {
           event.preventDefault();
           return;
         }
 
         allowSubmitRef.current = false;
+        event.preventDefault();
 
         if (currentStep < visibleSteps.length - 1) {
-          event.preventDefault();
           return;
         }
 
@@ -4798,12 +5068,74 @@ export function MembershipRegisterWizard({
           }
         }
 
-        void onSubmit(event);
+        const selectedPaymentProduct = info.paymentSettings.paymentProducts.find(
+          (product) => {
+            const productId = resolvePaymentProductId(product.name);
+            return productId ? String(productId) === form.paymentMethod.trim() : false;
+          },
+        );
+
+        const cardPaymentMethodCreator =
+          stripeCardPaymentMethodCreatorRef.current;
+        let paymentMethodDetail: MembershipRegistrationPaymentMethodDetail | null =
+          null;
+
+        if (selectedPaymentProduct?.name === "CreditCard") {
+          if (!isCreditCardFieldsComplete) {
+            setPaymentStepError(
+              "Complete the credit card fields before submitting.",
+            );
+            setShowCreditCardFieldErrors(true);
+            return;
+          }
+
+          if (!cardPaymentMethodCreator) {
+            setPaymentStepError(
+              "Card payment fields are not ready yet. Please wait and try again.",
+            );
+            return;
+          }
+
+          const cardHolderName =
+            `${form.firstName.trim()} ${form.lastName.trim()}`.trim() ||
+            form.email.trim();
+
+          try {
+            const paymentMethod = await cardPaymentMethodCreator(cardHolderName);
+            paymentMethodDetail = {
+              paymentMethodId: paymentMethod.id,
+              cardHolderName,
+            };
+          } catch (error) {
+            setPaymentStepError(
+              error instanceof Error
+                ? error.message
+                : "Unable to create the card payment method.",
+            );
+            return;
+          }
+        }
+
+        setPaymentStepError("");
+
+        const submissionContext: MembershipRegistrationSubmitContext = {
+          paymentMethodDetail,
+          customFormResponses: buildCustomFormResponses(
+            info.membershipDetail.customForms,
+            customFormValues,
+          ),
+          customQuestionResponses: buildCustomQuestionResponses(
+            info.membershipDetail.customQuestions,
+            customQuestionValues,
+          ),
+        };
+
+        await onSubmit(event, submissionContext);
       }}
     >
-      {submitError ? (
+      {paymentStepError || submitError ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800 shadow-sm">
-          {submitError}
+          {paymentStepError || submitError}
         </div>
       ) : null}
 
@@ -4869,6 +5201,14 @@ export function MembershipRegisterWizard({
             info={info}
             form={form}
             paymentMethodError={errors.paymentMethod}
+            isCreditCardFieldsComplete={isCreditCardFieldsComplete}
+            showCreditCardFieldErrors={showCreditCardFieldErrors}
+            onStripeCardPaymentMethodCreatorReady={
+              handleStripeCardPaymentMethodCreatorReady
+            }
+            onStripeCardFieldsCompleteChange={
+              handleStripeCardFieldsCompleteChange
+            }
             setField={setField}
             theme={theme}
           />
@@ -4912,6 +5252,7 @@ export function MembershipRegisterWizard({
             type="button"
             disabled={isSubmitting}
             onClick={() => {
+              setShowCreditCardFieldErrors(true);
               allowSubmitRef.current = true;
               formRef.current?.requestSubmit();
             }}
