@@ -772,6 +772,7 @@ export async function submitMembershipRegistration(
       amount: donationTotal,
     },
     tipAmount: tipTotal,
+    applicationFeeAmount: tipTotal,
     totalAmount,
   };
   const trimmedPrefix = formState.prefix.trim();
@@ -826,6 +827,11 @@ export async function submitMembershipRegistration(
     donationTotal,
   );
   appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TipAmount", tipTotal);
+  appendFormDataValue(
+    formData,
+    "InvoiceDetail.AmountBreakdown.ApplicationFeeAmount",
+    tipTotal,
+  );
   appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TotalAmount", totalAmount);
   appendFormDataValue(formData, "InvoiceDetail.PaymentMethod", paymentMethod);
   appendFormDataValue(formData, "InvoiceDetail.Notes", formState.notes.trim());
