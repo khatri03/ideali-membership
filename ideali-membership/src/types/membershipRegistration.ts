@@ -72,8 +72,6 @@ export interface MembershipRegistrationDetail {
   annualExpiryMonth: number | null;
   annualExpiryDay: number | null;
   customExpiryDays: number | null;
-  donationCampaignUniqueId: string | null;
-  donationCampaignName: string | null;
   isFree: boolean;
   membershipCharges: number | null;
   allowPartialPayment: boolean;
@@ -147,7 +145,6 @@ export interface MembershipRegistrationFormState {
   cityName: string;
   countryId: string;
   stateId: string;
-  donationAmount: string;
   tipPresetPercent: string;
   tipAmount: string;
   paymentMethod: string;

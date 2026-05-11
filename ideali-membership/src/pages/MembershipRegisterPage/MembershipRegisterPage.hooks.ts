@@ -55,12 +55,12 @@ function getPaymentMethodOptions(info: MembershipRegistrationInfo | null) {
     .filter((value) => value.value > 0);
 }
 
-function parseDonationAmount(value: string) {
+function parseTipAmount(value: string) {
   const parsed = Number(value.replace(/,/g, "").trim());
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function buildDefaultTipFields(info: MembershipRegistrationInfo | null, donationAmount: string) {
+function buildDefaultTipFields(info: MembershipRegistrationInfo | null) {
   const presetTips = info?.presetTips ?? [];
   const defaultPreset = presetTips.find((presetTip) => presetTip.isDefault) ?? presetTips[0] ?? null;
 
@@ -72,8 +72,7 @@ function buildDefaultTipFields(info: MembershipRegistrationInfo | null, donation
   }
 
   const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
-  const donationTotal = parseDonationAmount(donationAmount);
-  const tipAmount = ((membershipAmount + donationTotal) * defaultPreset.percent) / 100;
+  const tipAmount = (membershipAmount * defaultPreset.percent) / 100;
 
   return {
     tipPresetPercent: String(defaultPreset.percent),
@@ -81,13 +80,13 @@ function buildDefaultTipFields(info: MembershipRegistrationInfo | null, donation
   };
 }
 
-function getDefaultPaymentMethodValue(info: MembershipRegistrationInfo | null, donationAmount: string) {
+function getDefaultPaymentMethodValue(info: MembershipRegistrationInfo | null) {
   if (!info) {
     return "";
   }
 
   const firstPaymentMethod = getPaymentMethodOptions(info)[0];
-  const requiresPaymentMethod = !info.membershipDetail.isFree || parseDonationAmount(donationAmount) > 0;
+  const requiresPaymentMethod = !info.membershipDetail.isFree;
   return requiresPaymentMethod && firstPaymentMethod ? String(firstPaymentMethod.value) : "";
 }
 
@@ -112,7 +111,6 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const previousTitleRef = useRef(document.title);
-  const previousDonationAmountRef = useRef(DEFAULT_MEMBERSHIP_REGISTER_FORM.donationAmount);
   const isRegistrationUnavailable = loadError === "Membership registration is not available yet.";
 
   useEffect(() => {
@@ -163,14 +161,13 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
 
   useEffect(() => {
     if (!info) {
-      previousDonationAmountRef.current = form.donationAmount;
       return;
     }
 
     setForm((current) => {
-      const nextPaymentMethod = current.paymentMethod || getDefaultPaymentMethodValue(info, current.donationAmount);
+      const nextPaymentMethod = current.paymentMethod || getDefaultPaymentMethodValue(info);
       const hasTipSelection = Boolean(current.tipPresetPercent.trim() || current.tipAmount.trim());
-      const nextTipFields = hasTipSelection ? current : buildDefaultTipFields(info, current.donationAmount);
+      const nextTipFields = hasTipSelection ? current : buildDefaultTipFields(info);
 
       return {
         ...current,
@@ -179,32 +176,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
         tipAmount: nextTipFields.tipAmount,
       };
     });
-  }, [form.donationAmount, info]);
-
-  useEffect(() => {
-    if (!info || previousDonationAmountRef.current === form.donationAmount) {
-      previousDonationAmountRef.current = form.donationAmount;
-      return;
-    }
-
-    setForm((current) => {
-      const previousDefaults = buildDefaultTipFields(info, previousDonationAmountRef.current);
-      const nextDefaults = buildDefaultTipFields(info, current.donationAmount);
-      const isUsingPresetTip =
-        current.tipPresetPercent.trim() !== "" &&
-        current.tipPresetPercent.trim() !== "other" &&
-        current.tipAmount === previousDefaults.tipAmount;
-
-      previousDonationAmountRef.current = current.donationAmount;
-
-      return {
-        ...current,
-        paymentMethod: current.paymentMethod || getDefaultPaymentMethodValue(info, current.donationAmount),
-        tipPresetPercent: isUsingPresetTip ? nextDefaults.tipPresetPercent : current.tipPresetPercent,
-        tipAmount: isUsingPresetTip ? nextDefaults.tipAmount : current.tipAmount,
-      };
-    });
-  }, [form.donationAmount, info]);
+  }, [info]);
 
   const paymentMethodOptions = useMemo(() => getPaymentMethodOptions(info), [info]);
 
@@ -249,17 +221,13 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
 
     try {
       const selectedPaymentMethod = form.paymentMethod.trim() ? Number(form.paymentMethod) : null;
-      const donationAmount = parseDonationAmount(form.donationAmount);
-        const result = await submitMembershipRegistration(
-          currentMembershipTypeUniqueId,
-          form,
-          info.membershipDetail.membershipCharges ?? 0,
-          selectedPaymentMethod,
-          donationAmount,
-          info.membershipDetail.donationCampaignUniqueId ?? null,
-          info.membershipDetail.donationCampaignName,
-          context,
-        );
+      const result = await submitMembershipRegistration(
+        currentMembershipTypeUniqueId,
+        form,
+        info.membershipDetail.membershipCharges ?? 0,
+        selectedPaymentMethod,
+        context,
+      );
 
       setSubmitMessage(result.message);
     } catch (error) {

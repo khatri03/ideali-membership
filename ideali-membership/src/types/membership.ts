@@ -85,7 +85,6 @@ export interface MembershipAdvanceSettingsInfo {
   registrationStartDateUtc: string | null;
   registrationEndDateUtc: string | null;
   requiresApproval: boolean;
-  donationCampaignUniqueId: string | null;
   stepNo: number;
 }
 
@@ -112,8 +111,6 @@ export interface MembershipReviewInfo {
   registrationStartDateUtc: string | null;
   registrationEndDateUtc: string | null;
   publishedAtUtc: string | null;
-  donationCampaignUniqueId: string | null;
-  donationCampaignName: string | null;
   setupState: string;
   availableForSignUp: boolean;
   stepNo: number;

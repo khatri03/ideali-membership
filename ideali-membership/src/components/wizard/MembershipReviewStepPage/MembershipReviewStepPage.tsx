@@ -724,12 +724,6 @@ export function MembershipReviewStepPage() {
                 <ReviewGridRow label="Registration Window">
                   {reviewInfo.registrationStartDateUtc || reviewInfo.registrationEndDateUtc ? <CheckPill /> : <NoPill />}
                 </ReviewGridRow>
-
-                {reviewInfo.donationCampaignUniqueId && reviewInfo.donationCampaignName ? (
-                  <ReviewGridRow label="Donation Campaign">
-                    <span className="text-sm font-semibold text-slate-900">{reviewInfo.donationCampaignName}</span>
-                  </ReviewGridRow>
-                ) : null}
               </div>
             </div>
           </SummaryCard>

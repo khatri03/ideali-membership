@@ -36,13 +36,6 @@ export function validateMembershipRegistrationForm(
     errors.streetLine1 = "Street line 1 is required.";
   }
 
-  if (form.donationAmount.trim()) {
-    const parsedDonationAmount = Number(form.donationAmount.replace(/,/g, ""));
-    if (!Number.isFinite(parsedDonationAmount) || parsedDonationAmount < 0) {
-      errors.donationAmount = "Enter a valid donation amount.";
-    }
-  }
-
   if (form.tipAmount.trim()) {
     const parsedTipAmount = Number(form.tipAmount.replace(/,/g, ""));
     if (!Number.isFinite(parsedTipAmount) || parsedTipAmount < 0) {
@@ -51,8 +44,7 @@ export function validateMembershipRegistrationForm(
   }
 
   const membershipDetail = info?.membershipDetail;
-  const donationAmount = form.donationAmount.trim() ? Number(form.donationAmount.replace(/,/g, "")) : 0;
-  const requiresPaymentMethod = Boolean(membershipDetail && (!membershipDetail.isFree || donationAmount > 0));
+  const requiresPaymentMethod = Boolean(membershipDetail && !membershipDetail.isFree);
 
   if (requiresPaymentMethod && !form.paymentMethod.trim()) {
     errors.paymentMethod = "Select a payment method.";

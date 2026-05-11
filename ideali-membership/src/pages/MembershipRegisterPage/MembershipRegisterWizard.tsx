@@ -225,27 +225,12 @@ function formatMonthDayLabel(month: number | null, day: number | null) {
   return `${String(day).padStart(2, "0")}-${monthLabel}`;
 }
 
-function parseDonationAmount(value: string) {
+function parseTipAmount(value: string) {
   const parsed = Number(value.replace(/,/g, "").trim());
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
-function buildCurrencyPrefix(info: MembershipRegistrationInfo) {
-  const currencySymbol = info.paymentSettings.paymentCurrencySymbol?.trim();
-  const currencyCode = info.paymentSettings.paymentCurrencyCode?.trim();
-
-  if (currencyCode) {
-    return `${currencyCode.toUpperCase()} $`;
-  }
-
-  if (currencySymbol) {
-    return currencySymbol;
-  }
-
-  return "";
-}
-
-function formatDonationAmountInput(value: string) {
+function formatAmountInput(value: string) {
   const sanitized = value.replace(/[^0-9.]/g, "");
   if (!sanitized) {
     return "";
@@ -268,16 +253,8 @@ function formatDonationAmountInput(value: string) {
     : `${formattedWholePart}.`;
 }
 
-function getFieldBorderClass(showBorders: boolean) {
-  return showBorders ? "border" : "";
-}
-
-function getFieldDashedBorderClass(showBorders: boolean) {
-  return showBorders ? "border border-dashed" : "";
-}
-
-function normalizeDonationAmountInput(value: string) {
-  const parsed = parseDonationAmount(value);
+function normalizeAmountInput(value: string) {
+  const parsed = parseTipAmount(value);
   if (!Number.isFinite(parsed) || value.trim() === "") {
     return "";
   }
@@ -287,6 +264,30 @@ function normalizeDonationAmountInput(value: string) {
     maximumFractionDigits: 2,
   }).format(parsed);
 }
+
+function getFieldBorderClass(showBorders: boolean) {
+  return showBorders ? "border" : "";
+}
+
+function getFieldDashedBorderClass(showBorders: boolean) {
+  return showBorders ? "border border-dashed" : "";
+}
+
+function buildCurrencyPrefix(info: MembershipRegistrationInfo) {
+  const currencySymbol = info.paymentSettings.paymentCurrencySymbol?.trim();
+  const currencyCode = info.paymentSettings.paymentCurrencyCode?.trim();
+
+  if (currencyCode) {
+    return `${currencyCode.toUpperCase()} $`;
+  }
+
+  if (currencySymbol) {
+    return currencySymbol;
+  }
+
+  return "";
+}
+
 
 function formatFileSize(size: number) {
   if (!Number.isFinite(size) || size <= 0) {
@@ -397,10 +398,7 @@ function isPricingStepComplete(
   form: MembershipRegistrationFormState,
   isFreeMembership: boolean,
 ) {
-  const donationAmount = parseDonationAmount(form.donationAmount);
-  const requiresPaymentMethod = !isFreeMembership || donationAmount > 0;
-
-  return requiresPaymentMethod ? Boolean(form.paymentMethod.trim()) : true;
+  return isFreeMembership ? true : Boolean(form.paymentMethod.trim());
 }
 
 function validateUserLoginStep(form: MembershipRegistrationFormState) {
@@ -3090,18 +3088,14 @@ function PricingStep({
   setField: MembershipRegisterPageViewModel["setField"];
 }) {
   const tenureInfo = formatTenureWithExpiryLabel(info);
-  const donationCampaignName =
-    info.membershipDetail.donationCampaignName?.trim();
-  const donationCampaignAmount = parseDonationAmount(form.donationAmount);
   const currencyPrefix = buildCurrencyPrefix(info);
   const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
-  const totalAmount = membershipAmount + donationCampaignAmount;
   const totalAmountLabel =
-    totalAmount > 0
+    membershipAmount > 0
       ? `${currencyPrefix}${new Intl.NumberFormat("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
-        }).format(totalAmount)}`
+        }).format(membershipAmount)}`
       : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel;
 
   return (
@@ -3160,31 +3154,29 @@ function PricingStep({
               Review the membership charge before moving ahead.
             </p>
           </div>
-          {donationCampaignName ? (
-            <div
-              className="w-full rounded-2xl px-4 py-3 text-center sm:max-w-sm sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
-              style={{ background: theme.tileBackground }}
+          <div
+            className="w-full rounded-2xl px-4 py-3 text-center sm:max-w-sm sm:px-5 sm:py-4 lg:ml-auto lg:min-w-56"
+            style={{ background: theme.tileBackground }}
+          >
+            <span
+              className="text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: theme.tileLabelColor }}
             >
-              <span
-                className="text-xs font-semibold uppercase tracking-[0.2em]"
-                style={{ color: theme.tileLabelColor }}
-              >
-                Total Payable
-              </span>
-              <span
-                className="mt-2 block text-2xl font-bold sm:text-3xl"
-                style={{ color: theme.level1 }}
-              >
-                {totalAmountLabel}
-              </span>
-            </div>
-          ) : null}
+              Total Payable
+            </span>
+            <span
+              className="mt-2 block text-2xl font-bold sm:text-3xl"
+              style={{ color: theme.level1 }}
+            >
+              {totalAmountLabel}
+            </span>
+          </div>
         </div>
         <div
           className="h-px w-full"
           style={{ background: theme.tileBorder, opacity: 0.7 }}
         />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div>
           <div
             className="rounded-2xl px-4 py-3 sm:px-5 sm:py-4"
             style={{ background: theme.tileBackground }}
@@ -3202,69 +3194,6 @@ function PricingStep({
               {formattedMembershipCharges}
             </p>
           </div>
-
-          {info.membershipDetail.donationCampaignName ? (
-            <div
-              className="space-y-3 rounded-2xl px-4 py-3 sm:px-5 sm:py-4"
-              style={{ background: theme.tileBackground }}
-            >
-              <div className="space-y-1">
-                <p
-                  className="text-xs font-semibold uppercase tracking-[0.2em]"
-                  style={{ color: theme.tileLabelColor }}
-                >
-                  Donation Campaign
-                </p>
-                <p
-                  className="text-base font-semibold"
-                  style={{ color: theme.tileValueColor }}
-                >
-                  {donationCampaignName}
-                </p>
-              </div>
-              <label
-                className="flex min-w-0 items-stretch overflow-hidden rounded-2xl border"
-                style={{ borderColor: theme.cardBorder }}
-              >
-                <span
-                  className="flex shrink-0 items-center whitespace-nowrap border-r px-3 text-sm font-semibold"
-                  style={{
-                    borderColor: theme.cardBorder,
-                    color: theme.tileValueColor,
-                    background: theme.level3,
-                  }}
-                >
-                  {currencyPrefix}
-                </span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={form.donationAmount}
-                  onChange={(event) =>
-                    setField(
-                      "donationAmount",
-                      formatDonationAmountInput(event.target.value),
-                    )
-                  }
-                  onBlur={(event) =>
-                    setField(
-                      "donationAmount",
-                      normalizeDonationAmountInput(event.target.value),
-                    )
-                  }
-                  placeholder="0.00"
-                  className="w-full bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
-                  style={{ color: theme.titleColor }}
-                />
-              </label>
-              <p
-                className="text-xs leading-5"
-                style={{ color: theme.mutedLabelColor }}
-              >
-                Optional. Leave blank if you do not want to donate.
-              </p>
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
@@ -3875,12 +3804,16 @@ function StripeCardFields({
         throw new Error(error.message);
       }
 
-      if (!paymentMethod) {
-        throw new Error("Unable to create payment method.");
-      }
+        if (!paymentMethod) {
+          throw new Error("Unable to create payment method.");
+        }
 
-      return { id: paymentMethod.id };
-    };
+        console.log("[Membership Registration] Created Stripe payment method", {
+          paymentMethodId: paymentMethod.id,
+        });
+
+        return { id: paymentMethod.id };
+      };
 
     onCreatePaymentMethodReady(createPaymentMethod);
 
@@ -3999,10 +3932,8 @@ function StripeElementsFields({
   showFieldErrors: boolean;
 }) {
   const stripePromise = useMemo(() => {
-    return loadStripe(stripeCredentials.publishableKey, {
-      stripeAccount: stripeCredentials.stripeAccount,
-    });
-  }, [stripeCredentials.publishableKey, stripeCredentials.stripeAccount]);
+    return loadStripe(stripeCredentials.publishableKey);
+  }, [stripeCredentials.publishableKey]);
 
   if (!stripePromise) {
     return null;
@@ -4066,21 +3997,15 @@ function PaymentStep({
   }, [info.paymentSettings.paymentProducts]);
   const paymentAccountUniqueId =
     info.paymentSettings.paymentAccountUniqueId?.trim();
-  const donationCampaignName =
-    info.membershipDetail.donationCampaignName?.trim();
   const currencyPrefix = buildCurrencyPrefix(info);
   const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
-  const donationAmount = donationCampaignName
-    ? parseDonationAmount(form.donationAmount)
-    : 0;
-  const subTotalAmount = membershipAmount + donationAmount;
   const presetTips = info.presetTips ?? [];
   const tipAmount =
-    presetTips.length > 0 ? parseDonationAmount(form.tipAmount) : 0;
+    presetTips.length > 0 ? parseTipAmount(form.tipAmount) : 0;
   const selectedTipPercent =
     presetTips.length > 0 ? Number(form.tipPresetPercent) : 0;
   const tipAmountInputRef = useRef<HTMLInputElement | null>(null);
-  const totalAmount = membershipAmount + donationAmount + tipAmount;
+  const totalAmount = membershipAmount + tipAmount;
   const [stripeCredentials, setStripeCredentials] =
     useState<MembershipRegistrationStripeCredentials | null>(null);
   const [stripeCredentialsLoading, setStripeCredentialsLoading] =
@@ -4114,7 +4039,7 @@ function PaymentStep({
       return;
     }
 
-    const presetBaseAmount = membershipAmount + donationAmount;
+    const presetBaseAmount = membershipAmount;
     const nextTipAmount = (
       (presetBaseAmount * matchingPreset.percent) /
       100
@@ -4124,7 +4049,6 @@ function PaymentStep({
       setField("tipAmount", nextTipAmount);
     }
   }, [
-    donationAmount,
     form.tipAmount,
     membershipAmount,
     presetTips,
@@ -4335,10 +4259,10 @@ function PaymentStep({
                                     {stripeCredentialsError}
                                   </div>
                               ) : stripeCredentials ? (
-                              <StripeElementsFields
-                                key={`${stripeCredentials.publishableKey}:${stripeCredentials.stripeAccount ?? ""}`}
-                                theme={theme}
-                                stripeCredentials={stripeCredentials}
+                                <StripeElementsFields
+                                  key={stripeCredentials.publishableKey}
+                                  theme={theme}
+                                  stripeCredentials={stripeCredentials}
                                 onCreatePaymentMethodReady={
                                   onStripeCardPaymentMethodCreatorReady
                                 }
@@ -4406,55 +4330,7 @@ function PaymentStep({
                 </p>
               </div>
 
-              {donationCampaignName ? (
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-                  <div className="min-w-0">
-                    <p
-                      className="text-xs font-semibold uppercase tracking-[0.2em]"
-                      style={{ color: theme.tileLabelColor }}
-                    >
-                      Donation
-                    </p>
-                    <p className="mt-1 text-sm font-semibold leading-5">
-                      {donationCampaignName}
-                    </p>
-                  </div>
-                  <div className="w-[200px]">
-                    <div className="flex min-w-0 items-stretch overflow-hidden rounded-2xl bg-white/70 shadow-sm">
-                      <span
-                        className="flex shrink-0 items-center whitespace-nowrap px-3 text-sm font-semibold"
-                        style={{
-                          color: theme.tileValueColor,
-                          background: theme.level3,
-                        }}
-                      >
-                        {currencyPrefix}
-                      </span>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={form.donationAmount}
-                        onChange={(event) =>
-                          setField(
-                            "donationAmount",
-                            formatDonationAmountInput(event.target.value),
-                          )
-                        }
-                        onBlur={(event) =>
-                          setField(
-                            "donationAmount",
-                            normalizeDonationAmountInput(event.target.value),
-                          )
-                        }
-                        placeholder="0.00"
-                        className="w-full bg-white/70 px-3 py-2.5 text-right text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20"
-                        style={{ color: theme.titleColor }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
+              
               <div className="border-t border-b" style={{ borderColor: theme.cardBorder }}>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3">
                   <p
@@ -4467,8 +4343,8 @@ function PaymentStep({
                     className="text-base text-right font-semibold"
                     style={{ color: theme.tileValueColor }}
                   >
-                    {subTotalAmount > 0
-                      ? formatMoney(subTotalAmount)
+                    {membershipAmount > 0
+                      ? formatMoney(membershipAmount)
                       : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel}
                   </p>
                 </div>
@@ -4507,8 +4383,7 @@ function PaymentStep({
                             return;
                           }
 
-                          const presetBaseAmount =
-                            membershipAmount + donationAmount;
+                          const presetBaseAmount = membershipAmount;
                           const presetAmount =
                             (presetBaseAmount * selectedPreset.percent) / 100;
                           setField("tipPresetPercent", event.target.value);
@@ -4555,14 +4430,14 @@ function PaymentStep({
                             setField("tipPresetPercent", "other");
                             setField(
                               "tipAmount",
-                              formatDonationAmountInput(event.target.value),
+                              formatAmountInput(event.target.value),
                             );
                           }}
                           onBlur={(event) => {
                             setField("tipPresetPercent", "other");
                             setField(
                               "tipAmount",
-                              normalizeDonationAmountInput(event.target.value),
+                              normalizeAmountInput(event.target.value),
                             );
                           }}
                           placeholder="0.00"
@@ -4965,12 +4840,15 @@ export function MembershipRegisterWizard({
             `${form.firstName.trim()} ${form.lastName.trim()}`.trim() ||
             form.email.trim();
 
-          try {
-            const paymentMethod = await cardPaymentMethodCreator(cardHolderName);
-            paymentMethodDetail = {
-              paymentMethodId: paymentMethod.id,
-              cardHolderName,
-            };
+            try {
+              const paymentMethod = await cardPaymentMethodCreator(cardHolderName);
+              console.log("[Membership Registration] Using Stripe payment method", {
+                paymentMethodId: paymentMethod.id,
+              });
+              paymentMethodDetail = {
+                paymentMethodId: paymentMethod.id,
+                cardHolderName,
+              };
           } catch (error) {
             setPaymentStepError(
               error instanceof Error

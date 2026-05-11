@@ -63,10 +63,6 @@ export function MembershipAdvanceSettingsStepPage() {
     registrationStartDateUtc,
     registrationEndDateUtc,
     requiresApproval,
-    donationCampaignEnabled,
-    donationCampaigns,
-    selectedDonationCampaignUniqueId,
-    isDonationCampaignsLoading,
     error,
     validationError,
     isLoading,
@@ -76,8 +72,6 @@ export function MembershipAdvanceSettingsStepPage() {
     setRegistrationStartDateUtc,
     setRegistrationEndDateUtc,
     setRequiresApproval,
-    setDonationCampaignEnabled,
-    setSelectedDonationCampaignUniqueId,
   } = useMembershipAdvanceSettingsStep();
 
   if (error) {
@@ -102,8 +96,7 @@ export function MembershipAdvanceSettingsStepPage() {
           <MembershipAdvanceSettingsSkeleton />
         ) : (
           <>
-            <div className="inline-flex w-full flex-col items-stretch gap-4 md:w-fit">
-              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
+            <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
                   {MEMBERSHIP_ADVANCE_SETTINGS_CONTENT.approvalLabel}
@@ -131,7 +124,7 @@ export function MembershipAdvanceSettingsStepPage() {
               </div>
             </div>
 
-              <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
+            <div className="w-full rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 shadow-sm md:w-[34rem] lg:w-[38rem]">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
@@ -175,15 +168,15 @@ export function MembershipAdvanceSettingsStepPage() {
                   </span>
                   <DatePicker
                     selected={registrationStartDateUtc}
-                  onChange={(value: Date | null) => setRegistrationStartDateUtc(value)}
-                  showTimeSelect
-                  showMonthDropdown
-                  showYearDropdown
-                  scrollableYearDropdown
-                  yearDropdownItemNumber={100}
-                  timeIntervals={15}
-                  timeCaption="Time"
-                  dateFormat="MMM d, yyyy h:mm aa"
+                    onChange={(value: Date | null) => setRegistrationStartDateUtc(value)}
+                    showTimeSelect
+                    showMonthDropdown
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    timeIntervals={15}
+                    timeCaption="Time"
+                    dateFormat="MMM d, yyyy h:mm aa"
                     placeholderText="Select start date and time"
                     customInput={<DateTimeInput />}
                   />
@@ -195,105 +188,21 @@ export function MembershipAdvanceSettingsStepPage() {
                   </span>
                   <DatePicker
                     selected={registrationEndDateUtc}
-                  onChange={(value: Date | null) => setRegistrationEndDateUtc(value)}
-                  minDate={registrationStartDateUtc ?? undefined}
-                  showTimeSelect
-                  showMonthDropdown
-                  showYearDropdown
-                  scrollableYearDropdown
-                  yearDropdownItemNumber={100}
-                  timeIntervals={15}
-                  timeCaption="Time"
-                  dateFormat="MMM d, yyyy h:mm aa"
+                    onChange={(value: Date | null) => setRegistrationEndDateUtc(value)}
+                    minDate={registrationStartDateUtc ?? undefined}
+                    showTimeSelect
+                    showMonthDropdown
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    timeIntervals={15}
+                    timeCaption="Time"
+                    dateFormat="MMM d, yyyy h:mm aa"
                     placeholderText="Select end date and time"
                     customInput={<DateTimeInput />}
                   />
                 </label>
               </fieldset>
-            </div>
-
-            {!isDonationCampaignsLoading ? (
-              <div
-                className={[
-                  "w-full rounded-[1.75rem] p-4 shadow-sm md:w-[34rem] lg:w-[38rem]",
-                  donationCampaigns.length > 0
-                    ? "border border-slate-200 bg-slate-50"
-                    : "border border-amber-200 bg-amber-50",
-                ].join(" ")}
-              >
-                {donationCampaigns.length > 0 ? (
-                  <>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-700">
-                          Promote Donation Campaign?
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Pick an active campaign that should receive donations for this organizer.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setDonationCampaignEnabled(!donationCampaignEnabled)}
-                        className={[
-                          "relative inline-flex h-8 w-14 items-center rounded-full border transition",
-                          donationCampaignEnabled
-                            ? "border-cyan-500 bg-cyan-500"
-                            : "border-slate-300 bg-slate-200",
-                        ].join(" ")}
-                        aria-pressed={donationCampaignEnabled}
-                        aria-label={
-                          donationCampaignEnabled
-                            ? "Disable donation campaign selection"
-                            : "Enable donation campaign selection"
-                        }
-                      >
-                        <span
-                          className={[
-                            "inline-block h-6 w-6 transform rounded-full bg-white shadow transition",
-                            donationCampaignEnabled ? "translate-x-7" : "translate-x-1",
-                          ].join(" ")}
-                        />
-                      </button>
-                    </div>
-
-                    {donationCampaigns.length > 0 ? (
-                      <label className="mt-4 block space-y-2">
-                        <span className="block text-sm font-semibold text-slate-800">
-                          Campaign
-                          {donationCampaignEnabled ? <span className="ml-1 text-rose-600">*</span> : null}
-                        </span>
-                        <select
-                          value={selectedDonationCampaignUniqueId}
-                          onChange={(event) => setSelectedDonationCampaignUniqueId(event.target.value)}
-                          disabled={!donationCampaignEnabled}
-                          aria-required={donationCampaignEnabled}
-                          className={[
-                            "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100",
-                            !donationCampaignEnabled ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-70" : "",
-                          ].join(" ")}
-                        >
-                          {donationCampaigns.map((campaign) => (
-                            <option key={campaign.uniqueId} value={campaign.uniqueId}>
-                              {campaign.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="inline-flex items-start gap-2 text-sm leading-5 text-amber-700">
-                    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600">
-                      <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
-                        <path d="M10 2.5 18 17.5H2L10 2.5Zm0 4.1a.75.75 0 0 0-.75.75v4.3a.75.75 0 0 0 1.5 0v-4.3A.75.75 0 0 0 10 6.6Zm0 8.1a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
-                      </svg>
-                    </span>
-                    <span>No active donation campaign found.</span>
-                  </p>
-                )}
-              </div>
-            ) : null}
             </div>
 
             {validationError ? (

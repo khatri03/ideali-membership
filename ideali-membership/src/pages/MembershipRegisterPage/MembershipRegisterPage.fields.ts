@@ -27,7 +27,6 @@ export const DEFAULT_MEMBERSHIP_REGISTER_FORM: MembershipRegistrationFormState =
   cityName: "",
   countryId: "",
   stateId: "",
-  donationAmount: "",
   tipPresetPercent: "",
   tipAmount: "",
   paymentMethod: "",

@@ -665,12 +665,6 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   const customExpiryDays = readNumber(
     membershipDetailRecord?.CustomExpiryDays ?? membershipDetailRecord?.customExpiryDays,
   );
-  const donationCampaignUniqueId = readText(
-    membershipDetailRecord?.DonationCampaignUniqueId ?? membershipDetailRecord?.donationCampaignUniqueId,
-  );
-  const donationCampaignName = readText(
-    membershipDetailRecord?.DonationCampaignName ?? membershipDetailRecord?.donationCampaignName,
-  );
   const isFree = readBoolean(membershipDetailRecord?.IsFree ?? membershipDetailRecord?.isFree);
   const membershipCharges = readNumber(
     membershipDetailRecord?.MembershipCharges ?? membershipDetailRecord?.membershipCharges,
@@ -725,8 +719,6 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       annualExpiryMonth,
       annualExpiryDay,
       customExpiryDays,
-      donationCampaignUniqueId: donationCampaignUniqueId || null,
-      donationCampaignName: donationCampaignName || null,
       isFree,
       membershipCharges,
       allowPartialPayment,
@@ -753,24 +745,16 @@ export async function submitMembershipRegistration(
   formState: MembershipRegistrationFormState,
   membershipCharges: number,
   paymentMethod: number | null,
-  donationAmount: number,
-  donationCampaignUniqueId: string | null,
-  donationCampaignName: string | null,
   submissionContext: MembershipRegistrationSubmitContext,
 ) {
   const amount = Number.isFinite(membershipCharges) ? membershipCharges : 0;
-  const donationTotal = Number.isFinite(donationAmount) && donationAmount > 0 ? donationAmount : 0;
   const tipTotal = (() => {
     const parsedTipAmount = Number(formState.tipAmount.replace(/,/g, "").trim());
     return Number.isFinite(parsedTipAmount) && parsedTipAmount > 0 ? parsedTipAmount : 0;
   })();
-  const totalAmount = amount + donationTotal + tipTotal;
+  const totalAmount = amount + tipTotal;
   const amountBreakdown = {
     membershipAmount: amount,
-    donationCampaign: {
-      uniqueId: donationCampaignUniqueId,
-      amount: donationTotal,
-    },
     tipAmount: tipTotal,
     applicationFeeAmount: tipTotal,
     totalAmount,
@@ -814,18 +798,8 @@ export async function submitMembershipRegistration(
   appendFormDataValue(formData, "AddressInfo.CountryId", parsedCountryId);
   appendFormDataValue(formData, "AddressInfo.StateId", parsedStateId);
 
-  appendFormDataValue(formData, "InvoiceDetail.InvoiceAmount", amount + donationTotal + tipTotal);
+  appendFormDataValue(formData, "InvoiceDetail.InvoiceAmount", amount + tipTotal);
   appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.MembershipAmount", amount);
-  appendFormDataValue(
-    formData,
-    "InvoiceDetail.AmountBreakdown.DonationCampaign.UniqueId",
-    donationCampaignUniqueId,
-  );
-  appendFormDataValue(
-    formData,
-    "InvoiceDetail.AmountBreakdown.DonationCampaign.Amount",
-    donationTotal,
-  );
   appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TipAmount", tipTotal);
   appendFormDataValue(
     formData,
@@ -880,7 +854,7 @@ export async function submitMembershipRegistration(
       StateId: parsedStateId,
     },
     InvoiceDetail: {
-      InvoiceAmount: amount + donationTotal + tipTotal,
+      InvoiceAmount: amount + tipTotal,
       AmountBreakdown: amountBreakdown,
       PaymentMethod: paymentMethod,
       Notes: formState.notes.trim(),
