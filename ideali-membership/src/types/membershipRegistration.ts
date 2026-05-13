@@ -189,6 +189,9 @@ export interface MembershipRegistrationSubmitContext {
   customFormResponses: MembershipRegistrationCustomFormResponse[];
   customQuestionResponses: MembershipRegistrationCustomQuestionResponse[];
   submissionPreferences: MembershipRegistrationSubmissionPreferences;
+  couponUniqueId: string | null;
+  discountType: string | null;
+  discountAmount: number | null;
 }
 
 export interface MembershipRegistrationSubmissionPreferences {

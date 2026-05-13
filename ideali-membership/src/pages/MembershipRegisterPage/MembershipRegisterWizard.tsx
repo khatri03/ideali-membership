@@ -4054,7 +4054,7 @@ function PaymentStep({
     presetTips.length > 0 ? Number(form.tipPresetPercent) : 0;
   const tipAmountInputRef = useRef<HTMLInputElement | null>(null);
   const totalAmount = membershipAmount + tipAmount;
-  const couponDiscountAmount = couponValidation?.isValid
+  const couponDiscountAmount = isCouponApplied && couponValidation
     ? Math.min(couponValidation.discountAmount, membershipAmount)
     : 0;
   const finalTotal = Math.max(totalAmount - couponDiscountAmount, 0);
@@ -4386,51 +4386,90 @@ function PaymentStep({
               </div>
 
               {hasCouponSection ? (
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-                  <p
-                    className="text-xs font-semibold uppercase tracking-[0.2em]"
-                    style={{ color: theme.tileLabelColor }}
-                  >
-                    Coupon
-                  </p>
+                <div
+                  className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 ${isCouponApplied ? "rounded-2xl p-3 -mx-3" : ""}`.trim()}
+                  id="coupon-section"
+                  style={{
+                    background: isCouponApplied
+                      ? "rgba(240,253,244,0.98)"
+                      : "transparent",
+                  }}
+                >
+                  <div>
+                    <p
+                      className="text-xs font-semibold uppercase tracking-[0.2em]"
+                      style={{ color: theme.tileLabelColor }}
+                    >
+                      Coupon
+                    </p>
+                    {isCouponApplied && couponValidation ? (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                          </svg>
+                          {couponValidation.code}
+                        </span>
+                        <span className="text-sm font-semibold text-emerald-600">
+                          -{couponValidation.discountType === "Percentage"
+                            ? `${couponValidation.discountValue}%`
+                            : formatMoney(couponValidation.discountAmount)}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
                   <p
                     className="text-base text-right font-semibold"
                     style={{ color: theme.tileValueColor }}
                   >
                     <div className="space-y-2">
-                      <div className="flex min-w-0 items-stretch overflow-hidden rounded-2xl bg-white/80 shadow-sm transition">
-                        <input
-                          id="couponCode"
-                          type="text"
-                          value={form.couponCode}
-                          onChange={(event) =>
-                            setField("couponCode", event.target.value)
-                          }
-                          placeholder="Enter coupon code"
-                          className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
-                          style={{ color: theme.titleColor }}
-                          disabled={isSubmitting || isValidatingCoupon}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              void onValidateCoupon();
+                      {!isCouponApplied ? (
+                        <div className="flex min-w-0 items-stretch overflow-hidden rounded-2xl bg-white/80 shadow-sm transition">
+                          <input
+                            id="couponCode"
+                            type="text"
+                            value={form.couponCode}
+                            onChange={(event) =>
+                              setField("couponCode", event.target.value)
                             }
-                          }}
-                        />
+                            placeholder="Enter coupon code"
+                            className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+                            style={{ color: theme.titleColor }}
+                            disabled={isSubmitting || isValidatingCoupon}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                void onValidateCoupon();
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void onValidateCoupon()}
+                            disabled={
+                              !form.couponCode.trim() ||
+                              isSubmitting ||
+                              isValidatingCoupon
+                            }
+                            className="shrink-0 px-3 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                            style={{ background: theme.level1 }}
+                          >
+                            {isValidatingCoupon ? "Validating..." : "Apply"}
+                          </button>
+                        </div>
+                      ) : (
                         <button
                           type="button"
-                          onClick={() => void onValidateCoupon()}
-                          disabled={
-                            !form.couponCode.trim() ||
-                            isSubmitting ||
-                            isValidatingCoupon
-                          }
-                          className="shrink-0 px-3 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-                          style={{ background: theme.level1 }}
+                          onClick={() => onClearCoupon()}
+                          disabled={isSubmitting}
+                          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition disabled:opacity-50"
                         >
-                          {isValidatingCoupon ? "Validating..." : "Apply"}
+                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                          </svg>
+                          Remove
                         </button>
-                      </div>
+                      )}
 
                       {couponValidationError ? (
                         <p className="text-xs text-rose-600">
@@ -4502,7 +4541,7 @@ function PaymentStep({
                       </select>
                     </div>
 
-                    <div className="w-full sm:max-w-[200px]">
+                    <div className="w-full sm:max-w-50">
                       <div className="flex min-w-0 items-stretch overflow-hidden rounded-2xl bg-white/70 shadow-sm">
                         <span
                           className="flex shrink-0 items-center whitespace-nowrap px-3 text-sm font-semibold"
@@ -4554,6 +4593,17 @@ function PaymentStep({
             </div>
           </div>
 
+          {isCouponApplied && couponDiscountAmount > 0 ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-2.5">
+              <span className="text-sm font-medium text-emerald-700">
+                Discount applied
+              </span>
+              <span className="text-sm font-bold text-emerald-700">
+                -{formatMoney(couponDiscountAmount)}
+              </span>
+            </div>
+          ) : null}
+
           <div className="border-t" style={{ borderColor: theme.cardBorder }} />
 
           <div
@@ -4569,7 +4619,7 @@ function PaymentStep({
               </p>
               <p
                 className="text-2xl font-bold text-right sm:text-3xl"
-                style={{ color: theme.level1 }}
+                style={{ color: isCouponApplied ? theme.level1 : theme.level1 }}
               >
                 {totalAmountLabel}
               </p>
@@ -4981,6 +5031,9 @@ export function MembershipRegisterWizard({
             logToConsole: logOutgoingPayload,
             submitToApi,
           } satisfies MembershipRegistrationSubmissionPreferences,
+          couponUniqueId: isCouponApplied && couponValidation ? couponValidation.couponUniqueId : null,
+          discountType: isCouponApplied && couponValidation ? couponValidation.discountType : null,
+          discountAmount: isCouponApplied && couponValidation ? couponValidation.discountAmount : null,
         };
 
         await onSubmit(event, submissionContext);

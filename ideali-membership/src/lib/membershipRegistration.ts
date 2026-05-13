@@ -762,12 +762,15 @@ export async function submitMembershipRegistration(
     const parsedTipAmount = Number(formState.tipAmount.replace(/,/g, "").trim());
     return Number.isFinite(parsedTipAmount) && parsedTipAmount > 0 ? parsedTipAmount : 0;
   })();
-  const totalAmount = amount + tipTotal;
+  const discountAmount = submissionContext.discountAmount ?? 0;
+  const finalAmount = amount - discountAmount + tipTotal;
   const amountBreakdown = {
     membershipAmount: amount,
+    discountAmount,
+    finalAmount: amount - discountAmount,
     tipAmount: tipTotal,
     applicationFeeAmount: tipTotal,
-    totalAmount,
+    totalAmount: finalAmount,
   };
   const trimmedPrefix = formState.prefix.trim();
   const trimmedStreetLine1 = formState.streetLine1.trim();
@@ -808,21 +811,24 @@ export async function submitMembershipRegistration(
   appendFormDataValue(formData, "AddressInfo.CountryId", parsedCountryId);
   appendFormDataValue(formData, "AddressInfo.StateId", parsedStateId);
 
-  appendFormDataValue(formData, "InvoiceDetail.InvoiceAmount", amount + tipTotal);
+  appendFormDataValue(formData, "InvoiceDetail.InvoiceAmount", finalAmount);
   appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.MembershipAmount", amount);
+  appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.DiscountAmount", discountAmount);
+  appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.FinalAmount", amount - discountAmount);
   appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TipAmount", tipTotal);
   appendFormDataValue(
     formData,
     "InvoiceDetail.AmountBreakdown.ApplicationFeeAmount",
     tipTotal,
   );
-  appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TotalAmount", totalAmount);
+  appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TotalAmount", finalAmount);
   appendFormDataValue(formData, "InvoiceDetail.PaymentMethod", paymentMethod);
   appendFormDataValue(formData, "InvoiceDetail.Notes", formState.notes.trim());
   appendPaymentMethodDetail(formData, submissionContext.paymentMethodDetail);
 
-  appendFormDataValue(formData, "DiscountDetail.Amount", null);
-  appendFormDataValue(formData, "DiscountDetail.Percentage", null);
+  appendFormDataValue(formData, "DiscountDetail.CouponUniqueId", submissionContext.couponUniqueId);
+  appendFormDataValue(formData, "DiscountDetail.DiscountType", submissionContext.discountType);
+  appendFormDataValue(formData, "DiscountDetail.Amount", submissionContext.discountAmount);
   appendCustomFormResponses(formData, submissionContext.customFormResponses);
   appendCustomQuestionResponses(formData, submissionContext.customQuestionResponses);
 
@@ -864,7 +870,7 @@ export async function submitMembershipRegistration(
       StateId: parsedStateId,
     },
     InvoiceDetail: {
-      InvoiceAmount: amount + tipTotal,
+      InvoiceAmount: finalAmount,
       AmountBreakdown: amountBreakdown,
       PaymentMethod: paymentMethod,
       Notes: formState.notes.trim(),
@@ -872,7 +878,11 @@ export async function submitMembershipRegistration(
       DiscountDetail: null,
       TaxDetail: null,
     },
-    DiscountDetail: null,
+    DiscountDetail: {
+      CouponUniqueId: submissionContext.couponUniqueId,
+      DiscountType: submissionContext.discountType,
+      Amount: submissionContext.discountAmount,
+    },
     CustomFormResponses: submissionContext.customFormResponses,
     CustomQuestionResponses: submissionContext.customQuestionResponses,
   };

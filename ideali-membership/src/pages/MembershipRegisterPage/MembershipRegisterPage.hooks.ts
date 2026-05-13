@@ -231,7 +231,12 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
         form,
         info.membershipDetail.membershipCharges ?? 0,
         selectedPaymentMethod,
-        context,
+        {
+          ...context,
+          couponUniqueId: isCouponApplied && couponValidation ? couponValidation.couponUniqueId : null,
+          discountType: isCouponApplied && couponValidation ? couponValidation.discountType : null,
+          discountAmount: isCouponApplied && couponValidation ? couponValidation.discountAmount : null,
+        },
       );
 
       setSubmitMessage(result.message);
@@ -296,8 +301,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
         membershipCharges,
       );
       if (result.isValid) {
-        console.log("coupon applied");
-        setCouponValidation(null);
+        setCouponValidation(result);
         setCouponValidationError("");
         setIsCouponApplied(true);
         return;
