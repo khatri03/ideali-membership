@@ -1,5 +1,7 @@
 import { getJson, postFormData, postJson } from "./api";
+import { readResponseData, readText, readNumber } from "./parseUtils";
 import type {
+  DiscountCouponValidationResult,
   MembershipRegistrationFormState,
   MembershipRegistrationCustomFormResponse,
   MembershipRegistrationCustomQuestionResponse,
@@ -24,30 +26,6 @@ let contactPrefixOptionsCache: Array<{ label: string; value: string }> | null = 
 let contactPrefixOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
 let addressTypeOptionsCache: Array<{ label: string; value: string }> | null = null;
 let addressTypeOptionsRequest: Promise<Array<{ label: string; value: string }>> | null = null;
-
-function readResponseData(payload: unknown) {
-  if (!payload || typeof payload !== "object") {
-    return payload;
-  }
-
-  if ("Data" in payload) {
-    return (payload as { Data?: unknown }).Data;
-  }
-
-  if ("data" in payload) {
-    return (payload as { data?: unknown }).data;
-  }
-
-  return payload;
-}
-
-function readText(value: unknown) {
-  return typeof value === "string" ? value : "";
-}
-
-function readNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function readScalar(value: unknown) {
   if (typeof value === "string") {
@@ -916,23 +894,11 @@ export async function submitMembershipRegistration(
   };
 }
 
-export interface CouponValidationResult {
-  isValid: boolean;
-  errorMessage: string | null;
-  couponUniqueId: string | null;
-  code: string | null;
-  discountType: string;
-  discountValue: number;
-  maxDiscountAmount: number | null;
-  discountAmount: number;
-  finalAmount: number;
-}
-
 export async function validateCoupon(
   membershipTypeUniqueId: string,
   couponCode: string,
   membershipCharges: number,
-): Promise<CouponValidationResult> {
+): Promise<DiscountCouponValidationResult> {
   const payload = await postJson<unknown>(`/api/membership/${membershipTypeUniqueId}/validate-coupon`, {
     couponCode: couponCode.trim(),
     membershipCharges,

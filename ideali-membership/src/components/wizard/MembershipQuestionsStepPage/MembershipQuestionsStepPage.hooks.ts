@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useWizardFooterActions } from "../WizardFooterActionsContext/WizardFooterActionsContext";
@@ -237,7 +237,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     };
   }, [currentMembershipTypeUniqueId, reloadTick]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setFooterActions({
       showBack: true,
       showSkip: true,

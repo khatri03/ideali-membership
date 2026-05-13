@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
 import {
@@ -107,7 +107,7 @@ export function useMembershipColorStep(): MembershipColorStepState {
     };
   }, [currentMembershipTypeUniqueId, reloadTick]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const selectedColor = selection.customColor ?? selection.selectedPresetColor;
 
     setFooterActions({

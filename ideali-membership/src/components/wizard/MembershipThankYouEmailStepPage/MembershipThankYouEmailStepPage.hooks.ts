@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useEditor } from "@tiptap/react";
 import { useNavigate, useParams } from "react-router-dom";
 import StarterKit from "@tiptap/starter-kit";
@@ -254,7 +254,7 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
     editor.commands.setContent(emailTemplateHtml, { emitUpdate: false });
   }, [editor, emailTemplateHtml]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const persistWithValidation = (onSuccess: (savedMembershipTypeUniqueId: string) => void | Promise<void>) => {
       const nextValidationErrors = validateThankYouEmailStep(subjectEditor, editor);
       setValidationErrors(nextValidationErrors);

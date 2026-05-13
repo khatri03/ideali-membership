@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
 import { DEFAULT_MEMBERSHIP_REGISTER_FORM, MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import { validateMembershipRegistrationForm } from "./MembershipRegisterPage.schema";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
-import { getMembershipRegistrationInfo, resolvePaymentProductId, submitMembershipRegistration, validateCoupon, type CouponValidationResult } from "../../lib/membershipRegistration";
+import { getMembershipRegistrationInfo, resolvePaymentProductId, submitMembershipRegistration, validateCoupon } from "../../lib/membershipRegistration";
+import type { DiscountCouponValidationResult } from "../../types/membershipRegistration";
 import { showToast } from "../../components/toast/Toast";
 import type {
   MembershipRegistrationFormState,
@@ -111,12 +112,12 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const [submitError, setSubmitError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const previousTitleRef = useRef(document.title);
   const isRegistrationUnavailable = loadError === "Membership registration is not available yet.";
-  const [couponValidation, setCouponValidation] = useState<CouponValidationResult | null>(null);
+  const [couponValidation, setCouponValidation] = useState<DiscountCouponValidationResult | null>(null);
   const [couponValidationError, setCouponValidationError] = useState("");
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -156,13 +157,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     return () => {
       isMounted = false;
     };
-  }, [currentMembershipTypeUniqueId]);
-
-  useEffect(() => {
-    return () => {
-      document.title = previousTitleRef.current;
-    };
-  }, []);
+  }, [currentMembershipTypeUniqueId, reloadTick]);
 
   useEffect(() => {
     if (!info) {
@@ -248,25 +243,17 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   }
 
   const onRetry = useCallback(() => {
-    setLoadError("");
-    setIsLoading(true);
     setInfo(null);
     setSubmitError("");
     setSubmitMessage("");
     setErrors({});
-    void (async () => {
-      try {
-        const result = await getMembershipRegistrationInfo(currentMembershipTypeUniqueId);
-        setInfo(result);
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Unable to load membership registration.");
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, [currentMembershipTypeUniqueId]);
+    setCouponValidation(null);
+    setCouponValidationError("");
+    setIsCouponApplied(false);
+    setReloadTick((t) => t + 1);
+  }, []);
 
-  function setField<T extends keyof MembershipRegistrationFormState>(field: T, value: MembershipRegistrationFormState[T]) {
+  const setField = useCallback(<T extends keyof MembershipRegistrationFormState>(field: T, value: MembershipRegistrationFormState[T]) => {
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -281,7 +268,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
       setCouponValidationError("");
       setIsCouponApplied(false);
     }
-  }
+  }, []);
 
   async function handleValidateCoupon() {
     if (!info || !form.couponCode.trim()) {
@@ -323,7 +310,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     }
   }
 
-  function handleClearCoupon() {
+  const handleClearCoupon = useCallback(() => {
     setForm((current) => ({
       ...current,
       couponCode: "",
@@ -331,7 +318,7 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     setCouponValidation(null);
     setCouponValidationError("");
     setIsCouponApplied(false);
-  }
+  }, []);
 
   return {
     info,

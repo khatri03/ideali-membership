@@ -5,6 +5,11 @@ import fs from "fs";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: [],
+  },
   server: {
     port: 4001,
     open: true,

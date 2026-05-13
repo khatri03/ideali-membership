@@ -7,19 +7,19 @@ import {
   type DragMoveEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type Modifier,
   PointerSensor,
   type DragCancelEvent,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
-  type Modifier,
 } from "@dnd-kit/core";
 import {
   arrayMove,
+  rectSortingStrategy,
   SortableContext,
   useSortable,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -63,32 +63,6 @@ import type {
 import { APP_ROUTES } from "../routes";
 
 const CANVAS_ID = "custom-form-canvas";
-const constrainFieldDragToCanvas: Modifier = ({
-  active,
-  activeNodeRect,
-  containerNodeRect,
-  transform,
-}) => {
-  const activeData = active?.data.current as
-    | { source?: "palette"; control?: CustomFormControl }
-    | { source?: "field" }
-    | undefined;
-
-  if (activeData?.source !== "field" || !activeNodeRect || !containerNodeRect) {
-    return transform;
-  }
-
-  const minX = containerNodeRect.left - activeNodeRect.left;
-  const maxX = containerNodeRect.right - activeNodeRect.right;
-  const minY = containerNodeRect.top - activeNodeRect.top;
-  const maxY = containerNodeRect.bottom - activeNodeRect.bottom;
-
-  return {
-    ...transform,
-    x: Math.min(Math.max(transform.x, minX), maxX),
-    y: Math.min(Math.max(transform.y, minY), maxY),
-  };
-};
 
 type ActiveDragItem =
   | { kind: "palette"; control: CustomFormControl }
@@ -216,6 +190,33 @@ function normalizeFields(fields: CustomFormFieldDraft[]) {
     ...field,
     displayOrder: index + 1,
   }));
+}
+
+function getRowBoundsForIndex(
+  fieldList: CustomFormFieldDraft[],
+  targetIndex: number,
+  formLayoutColumn: number,
+): { start: number; end: number } {
+  let col = 0;
+  let rowStart = 0;
+
+  for (let i = 0; i < fieldList.length; i++) {
+    const field = fieldList[i];
+    if (!field) continue;
+    const span = getPreviewColumnSpan(field, formLayoutColumn);
+
+    if (i > 0 && col + span > 12) {
+      if (targetIndex < i) {
+        return { start: rowStart, end: i - 1 };
+      }
+      rowStart = i;
+      col = span;
+    } else {
+      col += span;
+    }
+  }
+
+  return { start: rowStart, end: fieldList.length - 1 };
 }
 
 function useCompactViewport() {
@@ -364,21 +365,6 @@ function buildEmptyDraft(): CustomFormDraft {
   };
 }
 
-function readResponseData(payload: unknown) {
-  if (!payload || typeof payload !== "object") {
-    return payload;
-  }
-
-  if ("Data" in payload) {
-    return (payload as { Data?: unknown }).Data;
-  }
-
-  if ("data" in payload) {
-    return (payload as { data?: unknown }).data;
-  }
-
-  return payload;
-}
 
 function getControlIcon(controlType: string) {
   return CONTROL_ICON_MAP[controlType.trim().toLowerCase()] ?? CircleHelp;
@@ -410,13 +396,9 @@ function toggleAcceptedFileType(
   fileType: string,
   checked: boolean,
 ) {
-  const next = checked
+  return checked
     ? Array.from(new Set([...acceptedFileTypes, fileType]))
     : acceptedFileTypes.filter((value) => value !== fileType);
-
-  console.log("[custom-form] acceptedFileTypes:", next.join(","));
-
-  return next;
 }
 
 function getDefaultOptionValue(field: CustomFormFieldDraft) {
@@ -1634,6 +1616,27 @@ export function CustomFormCreatePage() {
     }),
   );
 
+  const canvasRestrictModifier = useMemo<Modifier>(
+    () =>
+      ({ active, transform, draggingNodeRect }) => {
+        const activeData = active?.data.current as { source?: string } | undefined;
+        if (activeData?.source !== "field") return transform;
+        const canvas = canvasDropRef.current;
+        if (!canvas || !draggingNodeRect) return transform;
+        const rect = canvas.getBoundingClientRect();
+        const minX = rect.left - draggingNodeRect.left;
+        const maxX = rect.right - draggingNodeRect.right;
+        const minY = rect.top - draggingNodeRect.top;
+        const maxY = rect.bottom - draggingNodeRect.bottom;
+        return {
+          ...transform,
+          x: Math.min(Math.max(transform.x, minX), maxX),
+          y: Math.min(Math.max(transform.y, minY), maxY),
+        };
+      },
+    [],
+  );
+
   const { setNodeRef: setCanvasRef, isOver: isCanvasOver } = useDroppable({
     id: CANVAS_ID,
   });
@@ -1773,12 +1776,6 @@ export function CustomFormCreatePage() {
       return;
     }
 
-    console.log("[CustomForm][Preview]", {
-      draft,
-      previewColumnCount,
-      fields,
-    });
-
     setIsPreviewOpen(true);
   }
 
@@ -1893,9 +1890,20 @@ export function CustomFormCreatePage() {
     const oldIndex = fields.findIndex((field) => field.id === event.active.id);
     const newIndex = fields.findIndex((field) => field.id === overId);
 
-    if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
-      setFields((current) => normalizeFields(arrayMove(current, oldIndex, newIndex)));
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+      return;
     }
+
+    const activeField = fields[oldIndex];
+    const activeSpan = activeField ? getPreviewColumnSpan(activeField, draft.layoutColumn) : 0;
+    let adjustedNewIndex = newIndex;
+
+    if (activeSpan === 12) {
+      const rowBounds = getRowBoundsForIndex(fields, newIndex, draft.layoutColumn);
+      adjustedNewIndex = oldIndex < newIndex ? rowBounds.end : rowBounds.start;
+    }
+
+    setFields((current) => normalizeFields(arrayMove(current, oldIndex, adjustedNewIndex)));
   }
 
   function onDragCancel(_event: DragCancelEvent) {
@@ -2147,7 +2155,6 @@ export function CustomFormCreatePage() {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        modifiers={[constrainFieldDragToCanvas]}
         onDragStart={onDragStart}
         onDragMove={onDragMove}
         onDragOver={onDragOver}
@@ -2230,7 +2237,7 @@ export function CustomFormCreatePage() {
               </p>
             </div>
           </aside>
-          <DragOverlay dropAnimation={null}>
+          <DragOverlay dropAnimation={null} modifiers={[canvasRestrictModifier]}>
             <DragGhost item={activeDragItem} rect={activeDragRect} />
           </DragOverlay>
 
@@ -2291,7 +2298,7 @@ export function CustomFormCreatePage() {
                     Release to drop into the form canvas.
                   </div>
                 ) : null}
-                <SortableContext items={fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={fields.map((field) => field.id)} strategy={rectSortingStrategy}>
                 {fields.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
                     {fields.map((field) => (

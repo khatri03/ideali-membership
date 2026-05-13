@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { AuthSession, LoginChallenge } from "../types/auth";
 import { postForm, postJson } from "../lib/api";
+import { readResponseData, readText, readNumber, readBoolean } from "../lib/parseUtils";
 import { AUTH_STORAGE_KEY } from "./authStorage";
 
 type AuthStatus = "loading" | "anonymous" | "pending-2fa" | "authenticated";
@@ -39,33 +40,6 @@ function isExpired(session: AuthSession) {
   return new Date(session.expiresOnUtc).getTime() <= Date.now();
 }
 
-function getResponseData(payload: unknown) {
-  if (!payload || typeof payload !== "object") {
-    return payload;
-  }
-
-  if ("Data" in payload) {
-    return (payload as { Data?: unknown }).Data;
-  }
-
-  if ("data" in payload) {
-    return (payload as { data?: unknown }).data;
-  }
-
-  return payload;
-}
-
-function readText(value: unknown) {
-  return typeof value === "string" ? value : "";
-}
-
-function readNumber(value: unknown) {
-  return typeof value === "number" ? value : 0;
-}
-
-function readBoolean(value: unknown) {
-  return typeof value === "boolean" ? value : false;
-}
 
 function toAuthSession(raw: unknown): AuthSession | null {
   if (!raw || typeof raw !== "object") {
@@ -88,12 +62,12 @@ function toAuthSession(raw: unknown): AuthSession | null {
     accessToken: readText(candidate.AccessToken ?? candidate.accessToken),
     refreshToken: readText(candidate.RefreshToken ?? candidate.refreshToken),
     expiresOnUtc: readText(candidate.ExpiresOnUtc ?? candidate.expiresOnUtc),
-    expiresInMinutes: readNumber(candidate.ExpiresInMinutes ?? candidate.expiresInMinutes),
+    expiresInMinutes: readNumber(candidate.ExpiresInMinutes ?? candidate.expiresInMinutes) ?? 0,
     userDetail: {
       email: readText(userDetail?.Email ?? userDetail?.email),
       name: readText(userDetail?.Name ?? userDetail?.name),
       logoUrl: (userDetail?.LogoUrl ?? userDetail?.logoUrl) as string | null | undefined,
-      userId: readNumber(userDetail?.UserId ?? userDetail?.userId),
+      userId: readNumber(userDetail?.UserId ?? userDetail?.userId) ?? 0,
       roles: Array.isArray(userDetail?.Roles ?? userDetail?.roles)
         ? ((userDetail?.Roles ?? userDetail?.roles) as string[])
         : [],
@@ -101,7 +75,7 @@ function toAuthSession(raw: unknown): AuthSession | null {
     organizerDetail: {
       email: readText(organizerDetail?.Email ?? organizerDetail?.email),
       name: readText(organizerDetail?.Name ?? organizerDetail?.name),
-      organizerId: readNumber(organizerDetail?.OrganizerId ?? organizerDetail?.organizerId),
+      organizerId: readNumber(organizerDetail?.OrganizerId ?? organizerDetail?.organizerId) ?? 0,
       organizerUniqueId: readText(
         organizerDetail?.OrganizerUniqueId ?? organizerDetail?.organizerUniqueId,
       ),
@@ -197,7 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      const responseData = getResponseData(payload);
+      const responseData = readResponseData(payload);
       const challenge = toChallenge(responseData);
       if (challenge) {
         setPendingChallenge(challenge);
@@ -235,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { emailCode },
       );
 
-      const responseData = getResponseData(payload);
+      const responseData = readResponseData(payload);
       const nextSession = toAuthSession(responseData);
       if (!nextSession) {
         throw new Error("Unexpected verification response.");

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
 import {
@@ -98,7 +98,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     };
   }, [currentMembershipTypeUniqueId, reloadTick]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setFooterActions({
       showBack: true,
       showSkip: true,

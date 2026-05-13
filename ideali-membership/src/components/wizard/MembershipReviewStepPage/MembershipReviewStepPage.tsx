@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
@@ -559,7 +559,7 @@ export function MembershipReviewStepPage() {
     };
   }, [currentMembershipTypeUniqueId, reloadTick]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setFooterActions({
       ...defaultWizardFooterActions,
       showBack: true,

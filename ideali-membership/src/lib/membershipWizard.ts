@@ -1,4 +1,5 @@
 import { getJson, postJson } from "./api";
+import { readResponseData, readText, readNumber, readBoolean } from "./parseUtils";
 import type {
   DiscountCouponListItem,
   DiscountCouponTypeValue,
@@ -18,34 +19,6 @@ import type {
   MembershipTypeListItem,
   OrganizerPaymentAccountSelectionItem,
 } from "../types/membership";
-
-function readResponseData(payload: unknown) {
-  if (!payload || typeof payload !== "object") {
-    return payload;
-  }
-
-  if ("Data" in payload) {
-    return (payload as { Data?: unknown }).Data;
-  }
-
-  if ("data" in payload) {
-    return (payload as { data?: unknown }).data;
-  }
-
-  return payload;
-}
-
-function readText(value: unknown) {
-  return typeof value === "string" ? value : "";
-}
-
-function readNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function readBoolean(value: unknown) {
-  return typeof value === "boolean" ? value : undefined;
-}
 
 function readStringArray(value: unknown) {
   if (Array.isArray(value)) {

@@ -1,4 +1,5 @@
 import { getJson, postJson, putJson } from "./api";
+import { readResponseData } from "./parseUtils";
 import type {
   CustomFormControl,
   CustomFormDraft,
@@ -7,22 +8,6 @@ import type {
   CustomFormPreview,
   CustomFormSummary,
 } from "../types/customForms";
-
-function getResponseData(payload: unknown) {
-  if (!payload || typeof payload !== "object") {
-    return payload;
-  }
-
-  if ("Data" in payload) {
-    return (payload as { Data?: unknown }).Data;
-  }
-
-  if ("data" in payload) {
-    return (payload as { data?: unknown }).data;
-  }
-
-  return payload;
-}
 
 function asBoolean(value: unknown) {
   return typeof value === "boolean" ? value : false;
@@ -93,7 +78,7 @@ const countryStateOptionsRequest = new Map<string, Promise<Array<{ label: string
 
 export async function fetchCustomFormListItems() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/list-items");
-  const data = getResponseData(payload);
+  const data = readResponseData(payload);
 
   if (!Array.isArray(data)) {
     return [];
@@ -119,7 +104,7 @@ export async function fetchCountryOptions() {
 
   countryOptionsRequest = (async () => {
     const payload = await getJson<unknown>("/api/geo/public/country/list");
-    const data = getResponseData(payload);
+    const data = readResponseData(payload);
 
     if (!Array.isArray(data)) {
       return [];
@@ -167,7 +152,7 @@ export async function fetchStateOptions(countryId: string) {
 
   const request = (async () => {
     const payload = await getJson<unknown>(`/api/geo/public/country/${encodeURIComponent(trimmedCountryId)}/states`);
-    const data = getResponseData(payload);
+    const data = readResponseData(payload);
 
     if (!Array.isArray(data)) {
       return [];
@@ -206,7 +191,7 @@ export async function fetchStateOptions(countryId: string) {
 
 export async function fetchCustomForms() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/list");
-  const data = getResponseData(payload);
+  const data = readResponseData(payload);
 
   if (!Array.isArray(data)) {
     return [];
@@ -229,7 +214,7 @@ export async function fetchCustomForms() {
 
 export async function fetchCustomFormControls() {
   const payload = await getJson<unknown>("/api/organizer/custom-form/controls");
-  const data = getResponseData(payload);
+  const data = readResponseData(payload);
 
   if (!Array.isArray(data)) {
     return [];
@@ -263,7 +248,7 @@ export async function fetchCustomFormControls() {
 
 export async function fetchCustomFormPreview(customFormUniqueId: string) {
   const payload = await getJson<unknown>(`/api/organizer/custom-form/${customFormUniqueId}/edit`);
-  const data = getResponseData(payload) as Record<string, unknown> | null;
+  const data = readResponseData(payload) as Record<string, unknown> | null;
 
   if (!data) {
     throw new Error("Unexpected custom form response.");
@@ -435,7 +420,7 @@ export async function createCustomForm(
   };
 
   const response = await postJson<unknown>("/api/organizer/custom-form/create-form", payload);
-  const data = getResponseData(response);
+  const data = readResponseData(response);
 
   if (typeof data === "number") {
     return data;
@@ -462,7 +447,7 @@ export async function updateCustomForm(
   };
 
   const data = await putJson<unknown>(`/api/organizer/custom-form/${customFormUniqueId}/edit`, payload);
-  const responseData = getResponseData(data);
+  const responseData = readResponseData(data);
 
   if (typeof responseData === "number") {
     return responseData;

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
 import {
@@ -195,7 +195,7 @@ export function useMembershipPaymentAccountStep(): MembershipPaymentAccountStepS
     };
   }, [savedPaymentAccountUniqueId, savedPaymentMethods, selectedPaymentAccountUniqueId]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setFooterActions({
       showBack: true,
       showSkip: false,

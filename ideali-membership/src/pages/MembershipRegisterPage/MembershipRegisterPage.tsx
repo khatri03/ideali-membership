@@ -3,30 +3,8 @@ import { Navigate, useParams } from "react-router-dom";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import { useMembershipRegisterPage } from "./MembershipRegisterPage.hooks";
 import { MembershipRegisterWizard } from "./MembershipRegisterWizard";
+import type { MembershipTheme } from "./MembershipRegisterPage.types";
 import { buildMembershipRegisterCountdownPath } from "../../routes";
-
-type MembershipTheme = {
-  accentRgb: { r: number; g: number; b: number };
-  level1: string;
-  level2: string;
-  level3: string;
-  pageBackground: string;
-  cardBackground: string;
-  cardBorder: string;
-  cardShadow: string;
-  iconBackground: string;
-  iconBorder: string;
-  iconColor: string;
-  titleColor: string;
-  bodyColor: string;
-  labelColor: string;
-  mutedLabelColor: string;
-  tileBorder: string;
-  tileBackground: string;
-  tileLabelColor: string;
-  tileValueColor: string;
-  barBackground: string;
-};
 
 type DecorativeShape = {
   kind: "circle" | "square" | "diamond" | "hex" | "ring" | "shield";
@@ -374,7 +352,12 @@ export function MembershipRegisterPage() {
 
       <div className="relative z-10 flex w-full justify-center">
         {isLoading ? (
-          <section className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white/95 p-8 text-center shadow-xl shadow-slate-200/50 backdrop-blur-sm">
+          <section
+            role="status"
+            aria-live="polite"
+            aria-label="Loading registration details"
+            className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white/95 p-8 text-center shadow-xl shadow-slate-200/50 backdrop-blur-sm"
+          >
             <p className="text-sm font-semibold uppercase tracking-[0.24em]" style={{ color: theme.level1 }}>
               Loading
             </p>

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useEditor } from "@tiptap/react";
 import { useNavigate, useParams } from "react-router-dom";
 import StarterKit from "@tiptap/starter-kit";
@@ -156,7 +156,7 @@ export function useMembershipDescriptionStep(): MembershipDescriptionStepState {
     editor.commands.setContent(descriptionHtml, { emitUpdate: false });
   }, [descriptionHtml, editor]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setFooterActions({
       showBack: true,
       showSkip: true,

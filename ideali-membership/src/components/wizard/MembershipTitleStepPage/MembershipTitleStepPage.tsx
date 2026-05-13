@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWizardFooterActions } from "../WizardFooterActionsContext/WizardFooterActionsContext";
 import { useWizardMembershipTitle } from "../WizardMembershipTitleContext/WizardMembershipTitleContext";
@@ -157,7 +157,7 @@ export function MembershipTitleStepPage() {
     };
   }, [currentMembershipTypeUniqueId, reloadTick]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setFooterActions({
       showBack: false,
       showSaveNext: true,

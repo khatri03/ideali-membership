@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { matchPath, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
-import { getMembershipTitleInfo, getMembershipWizardProgress } from "../../../lib/membershipWizard";
+import { getMembershipTitleInfo } from "../../../lib/membershipWizard";
+import { useNavVisibility } from "./useNavVisibility";
+import { useWizardProgress } from "./useWizardProgress";
 import {
   defaultWizardFooterActions,
   WizardFooterActionsProvider,
@@ -35,11 +37,8 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const navigate = useNavigate();
   const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
-  const [isNavVisible, setIsNavVisible] = useState(() =>
-    typeof window === "undefined" ? true : window.innerWidth >= 1024,
-  );
-  const [completedStepNo, setCompletedStepNo] = useState(0);
-  const [isProgressLoading, setIsProgressLoading] = useState(true);
+  const { isNavVisible, setIsNavVisible } = useNavVisibility();
+  const { completedStepNo, isProgressLoading } = useWizardProgress(currentMembershipTypeUniqueId, location.pathname);
   const [footerActions, setFooterActions] = useState(defaultWizardFooterActions);
   const [membershipTitle, setMembershipTitle] = useState("");
   const [isMembershipTitleLoading, setIsMembershipTitleLoading] = useState(true);
@@ -119,40 +118,6 @@ export function WizardLayout({ children }: WizardLayoutProps) {
     return () => window.removeEventListener("keydown", handleEnterKey);
   }, [footerActions]);
 
-  useEffect(() => {
-    if (!currentMembershipTypeUniqueId) {
-      setCompletedStepNo(0);
-      setIsProgressLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadWizardProgress() {
-      setIsProgressLoading(true);
-
-      try {
-        const progress = await getMembershipWizardProgress(currentMembershipTypeUniqueId);
-        if (isMounted) {
-          setCompletedStepNo(progress);
-        }
-      } catch {
-        if (isMounted) {
-          setCompletedStepNo(0);
-        }
-      }
-
-      if (isMounted) {
-        setIsProgressLoading(false);
-      }
-    }
-
-    void loadWizardProgress();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentMembershipTypeUniqueId, location.pathname]);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -207,19 +172,6 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   }, [completedStepNo, currentMembershipTypeUniqueId, isProgressLoading, isResumeRoute, navigate]);
 
   useEffect(() => {
-    const syncNavVisibility = () => {
-      setIsNavVisible(window.innerWidth >= 1024);
-    };
-
-    syncNavVisibility();
-    window.addEventListener("resize", syncNavVisibility);
-
-    return () => {
-      window.removeEventListener("resize", syncNavVisibility);
-    };
-  }, []);
-
-  useEffect(() => {
     if (isResumeRoute) {
       setFooterActions((current) => ({
         ...defaultWizardFooterActions,
@@ -245,16 +197,16 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   }, [currentStepIndex, isFirstStep, isLastStep, isResumeRoute, setFooterActions]);
 
   useEffect(() => {
-    const focusFirstInteractiveElement = () => {
+    const rafId = requestAnimationFrame(() => {
       const mainElement = mainRef.current;
       if (!mainElement) {
-        return false;
+        return;
       }
 
       const preferredTarget = mainElement.querySelector<HTMLElement>('[data-wizard-focus="true"]');
       if (preferredTarget) {
         preferredTarget.focus();
-        return true;
+        return;
       }
 
       const selector = [
@@ -266,41 +218,10 @@ export function WizardLayout({ children }: WizardLayoutProps) {
         '[tabindex]:not([tabindex="-1"])',
       ].join(", ");
 
-      const firstFocusable = mainElement.querySelector<HTMLElement>(selector);
-      if (!firstFocusable) {
-        return false;
-      }
+      mainElement.querySelector<HTMLElement>(selector)?.focus();
+    });
 
-      firstFocusable.focus();
-      return true;
-    };
-
-    let cancelled = false;
-    let attempts = 0;
-    let timeoutId: number | undefined;
-
-    const tryFocus = () => {
-      if (cancelled) {
-        return;
-      }
-
-      attempts += 1;
-      const didFocus = focusFirstInteractiveElement();
-      if (didFocus || attempts >= 100) {
-        return;
-      }
-
-      timeoutId = window.setTimeout(tryFocus, 50);
-    };
-
-    timeoutId = window.setTimeout(tryFocus, 0);
-
-    return () => {
-      cancelled = true;
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-    };
+    return () => cancelAnimationFrame(rafId);
   }, [currentStepIndex, location.pathname, isProgressLoading, isMembershipTitleLoading]);
 
   return (
@@ -350,10 +271,19 @@ export function WizardLayout({ children }: WizardLayoutProps) {
               />
             ) : null}
 
-            <main ref={mainRef} className="min-w-0 flex-1 self-start space-y-6">
-              {children ?? <Outlet />}
+            <div className="min-w-0 flex-1 self-start space-y-6">
+              <main ref={mainRef}>
+                {children ?? <Outlet />}
+              </main>
 
               <footer className="rounded-[2rem] border border-slate-200 bg-white/90 px-6 py-5 shadow-sm">
+                <span
+                  role="status"
+                  aria-live="polite"
+                  className="sr-only"
+                >
+                  {footerActions.isSaving ? "Saving…" : ""}
+                </span>
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                   <div className="flex w-full items-stretch sm:w-auto">
                     {footerActions.showBack ? (
@@ -384,10 +314,11 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                           type="button"
                           onClick={footerActions.onSkip}
                           disabled={footerActions.isSaving}
+                          aria-busy={footerActions.isSaving}
                           className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {footerActions.isSaving ? (
-                            <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-700 border-t-transparent align-[-3px]" />
+                            <span aria-hidden="true" className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-700 border-t-transparent align-[-3px]" />
                           ) : null}
                           {footerActions.skipLabel}
                         </button>
@@ -397,10 +328,11 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                           type="button"
                           onClick={footerActions.onSaveNext ?? (() => {})}
                           disabled={footerActions.isSaving}
+                          aria-busy={footerActions.isSaving}
                           className="rounded-full border border-cyan-200 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {footerActions.isSaving ? (
-                            <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-cyan-700 border-t-transparent align-[-3px]" />
+                            <span aria-hidden="true" className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-cyan-700 border-t-transparent align-[-3px]" />
                           ) : null}
                           {footerActions.saveNextLabel}
                         </button>
@@ -410,10 +342,11 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                           type="button"
                           onClick={footerActions.onSaveExit ?? (() => navigate(APP_ROUTES.membershipTypes))}
                           disabled={footerActions.isSaving}
+                          aria-busy={footerActions.isSaving}
                           className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {footerActions.isSaving ? (
-                            <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent align-[-3px]" />
+                            <span aria-hidden="true" className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent align-[-3px]" />
                           ) : null}
                           {footerActions.saveExitLabel}
                         </button>
@@ -422,7 +355,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
                   </div>
                 </div>
               </footer>
-            </main>
+            </div>
           </div>
         </div>
       </WizardMembershipTitleProvider>

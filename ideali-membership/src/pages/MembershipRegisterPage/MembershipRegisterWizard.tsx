@@ -19,7 +19,7 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
+import type { MembershipRegisterPageViewModel, MembershipTheme } from "./MembershipRegisterPage.types";
 import { MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import type {
   MembershipRegistrationFormState,
@@ -47,29 +47,6 @@ import {
   fetchStripePublicCredentials,
   resolvePaymentProductId,
 } from "../../lib/membershipRegistration";
-
-type MembershipTheme = {
-  accentRgb: { r: number; g: number; b: number };
-  level1: string;
-  level2: string;
-  level3: string;
-  pageBackground: string;
-  cardBackground: string;
-  cardBorder: string;
-  cardShadow: string;
-  iconBackground: string;
-  iconBorder: string;
-  iconColor: string;
-  titleColor: string;
-  bodyColor: string;
-  labelColor: string;
-  mutedLabelColor: string;
-  tileBorder: string;
-  tileBackground: string;
-  tileLabelColor: string;
-  tileValueColor: string;
-  barBackground: string;
-};
 
 type MembershipRegisterWizardProps = Pick<
   MembershipRegisterPageViewModel,
@@ -4055,7 +4032,7 @@ function PaymentStep({
   const tipAmountInputRef = useRef<HTMLInputElement | null>(null);
   const totalAmount = membershipAmount + tipAmount;
   const couponDiscountAmount = isCouponApplied && couponValidation
-    ? Math.min(couponValidation.discountAmount, membershipAmount)
+    ? couponValidation.discountAmount
     : 0;
   const finalTotal = Math.max(totalAmount - couponDiscountAmount, 0);
   const hasCouponSection =
@@ -4411,9 +4388,7 @@ function PaymentStep({
                           {couponValidation.code}
                         </span>
                         <span className="text-sm font-semibold text-emerald-600">
-                          -{couponValidation.discountType === "Percentage"
-                            ? `${couponValidation.discountValue}%`
-                            : formatMoney(couponValidation.discountAmount)}
+                          -{formatMoney(couponValidation.discountAmount)}
                         </span>
                       </div>
                     ) : null}
