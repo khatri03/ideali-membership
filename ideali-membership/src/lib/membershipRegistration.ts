@@ -1,4 +1,4 @@
-import { getJson, postFormData } from "./api";
+import { getJson, postFormData, postJson } from "./api";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationCustomFormResponse,
@@ -648,6 +648,13 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
   );
   const registrationState = readText(responseData?.RegistrationState ?? responseData?.registrationState) || "Unavailable";
   const canRegister = readBoolean(responseData?.CanRegister ?? responseData?.canRegister);
+  const discountsEnabled = readBoolean(
+    responseData?.DiscountsEnabled ?? responseData?.discountsEnabled
+      ?? membershipDetailRecord?.DiscountsEnabled ?? membershipDetailRecord?.discountsEnabled
+  );
+  const hasActiveCoupons = readBoolean(
+    responseData?.HasActiveCoupons ?? responseData?.hasActiveCoupons
+  );
   const membershipDetailUniqueId = readText(membershipDetailRecord?.UniqueId ?? membershipDetailRecord?.uniqueId) || uniqueId;
   const name = readText(membershipDetailRecord?.Name ?? membershipDetailRecord?.name);
   const description = readText(membershipDetailRecord?.Description ?? membershipDetailRecord?.description);
@@ -708,6 +715,8 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     registrationEndDateUtc: registrationEndDateUtc || null,
     registrationState: (registrationState as MembershipRegistrationInfo["registrationState"]) || "Unavailable",
     canRegister,
+    discountsEnabled,
+    hasActiveCoupons,
     membershipDetail: {
       uniqueId: membershipDetailUniqueId || uniqueId,
       name,
@@ -722,6 +731,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       isFree,
       membershipCharges,
       allowPartialPayment,
+      discountsEnabled,
       color: color || null,
       customForms,
       customQuestions,
@@ -902,5 +912,42 @@ export async function submitMembershipRegistration(
   return {
     message,
     responseData,
+  };
+}
+
+export interface CouponValidationResult {
+  isValid: boolean;
+  errorMessage: string | null;
+  couponUniqueId: string | null;
+  code: string | null;
+  discountType: string;
+  discountValue: number;
+  maxDiscountAmount: number | null;
+  discountAmount: number;
+  finalAmount: number;
+}
+
+export async function validateCoupon(
+  membershipTypeUniqueId: string,
+  couponCode: string,
+  membershipCharges: number,
+): Promise<CouponValidationResult> {
+  const payload = await postJson<unknown>(`/api/membership/${membershipTypeUniqueId}/validate-coupon`, {
+    couponCode: couponCode.trim(),
+    membershipCharges,
+  });
+
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  return {
+    isValid: readBoolean(responseData?.IsValid ?? responseData?.isValid),
+    errorMessage: readText(responseData?.ErrorMessage ?? responseData?.errorMessage) || null,
+    couponUniqueId: readText(responseData?.CouponUniqueId ?? responseData?.couponUniqueId) || null,
+    code: readText(responseData?.Code ?? responseData?.code) || null,
+    discountType: readText(responseData?.DiscountType ?? responseData?.discountType),
+    discountValue: readNumber(responseData?.DiscountValue ?? responseData?.discountValue) ?? 0,
+    maxDiscountAmount: readNumber(responseData?.MaxDiscountAmount ?? responseData?.maxDiscountAmount),
+    discountAmount: readNumber(responseData?.DiscountAmount ?? responseData?.discountAmount) ?? 0,
+    finalAmount: readNumber(responseData?.FinalAmount ?? responseData?.finalAmount) ?? membershipCharges,
   };
 }

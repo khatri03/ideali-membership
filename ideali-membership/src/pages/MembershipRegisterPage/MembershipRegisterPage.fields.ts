@@ -30,6 +30,7 @@ export const DEFAULT_MEMBERSHIP_REGISTER_FORM: MembershipRegistrationFormState =
   tipPresetPercent: "",
   tipAmount: "",
   paymentMethod: "",
+  couponCode: "",
   notes: "",
 };
 

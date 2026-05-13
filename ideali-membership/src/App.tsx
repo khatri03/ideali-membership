@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
+import { ToastContainer } from "./components/toast/Toast";
 import { LoginScreen } from "./components/LoginScreen/LoginScreen";
 import { ProtectedShell } from "./components/ProtectedShell/ProtectedShell";
 import { AppLayout } from "./components/layout/AppLayout/AppLayout";
@@ -101,6 +102,8 @@ function AppHome() {
 
 function RouterApp() {
   return (
+    <>
+    <ToastContainer />
     <Routes>
       <Route path={APP_ROUTES.membershipRegisterCountdown} element={<MembershipRegisterCountdownPage />} />
       <Route path={APP_ROUTES.membershipRegister} element={<MembershipRegisterPage />} />
@@ -169,6 +172,7 @@ function RouterApp() {
       </Route>
       <Route path="*" element={<Navigate to={APP_ROUTES.root} replace />} />
     </Routes>
+    </>
   );
 }
 

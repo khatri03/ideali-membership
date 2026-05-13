@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import { DEFAULT_MEMBERSHIP_REGISTER_FORM, MEMBERSHIP_REGISTER_PAGE_COPY } from "./MembershipRegisterPage.fields";
 import { validateMembershipRegistrationForm } from "./MembershipRegisterPage.schema";
 import type { MembershipRegisterPageViewModel } from "./MembershipRegisterPage.types";
-import { getMembershipRegistrationInfo, resolvePaymentProductId, submitMembershipRegistration } from "../../lib/membershipRegistration";
+import { getMembershipRegistrationInfo, resolvePaymentProductId, submitMembershipRegistration, validateCoupon, type CouponValidationResult } from "../../lib/membershipRegistration";
+import { showToast } from "../../components/toast/Toast";
 import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
@@ -112,6 +113,10 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const previousTitleRef = useRef(document.title);
   const isRegistrationUnavailable = loadError === "Membership registration is not available yet.";
+  const [couponValidation, setCouponValidation] = useState<CouponValidationResult | null>(null);
+  const [couponValidationError, setCouponValidationError] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [isCouponApplied, setIsCouponApplied] = useState(false);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -265,6 +270,63 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
       ...current,
       [field]: "",
     }));
+
+    if (field === "couponCode") {
+      setCouponValidation(null);
+      setCouponValidationError("");
+      setIsCouponApplied(false);
+    }
+  }
+
+  async function handleValidateCoupon() {
+    if (!info || !form.couponCode.trim()) {
+      setCouponValidation(null);
+      setCouponValidationError("");
+      return;
+    }
+
+    setIsValidatingCoupon(true);
+    setCouponValidationError("");
+
+    try {
+      const membershipCharges = info.membershipDetail.membershipCharges ?? 0;
+      const result = await validateCoupon(
+        currentMembershipTypeUniqueId,
+        form.couponCode,
+        membershipCharges,
+      );
+      if (result.isValid) {
+        console.log("coupon applied");
+        setCouponValidation(null);
+        setCouponValidationError("");
+        setIsCouponApplied(true);
+        return;
+      }
+
+      const errorMessage = "Invalid coupon code.";
+      setCouponValidation(null);
+      setCouponValidationError(errorMessage);
+      setIsCouponApplied(false);
+      showToast(errorMessage, "error");
+    } catch (error) {
+      setCouponValidation(null);
+      const msg = error instanceof Error ? error.message : "Unable to validate coupon.";
+      setCouponValidationError(msg);
+      setIsCouponApplied(false);
+      showToast(msg, "error");
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  }
+
+  function handleClearCoupon() {
+    setForm((current) => ({
+      ...current,
+      couponCode: "",
+    }));
+    setCouponValidation(null);
+    setCouponValidationError("");
+    setIsCouponApplied(false);
   }
 
   return {
@@ -291,5 +353,11 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     registrationStartDateUtc,
     registrationEndDateUtc,
     isRegistrationUnavailable,
+    couponValidation,
+    couponValidationError,
+    isValidatingCoupon,
+    isCouponApplied,
+    onValidateCoupon: handleValidateCoupon,
+    onClearCoupon: handleClearCoupon,
   };
 }

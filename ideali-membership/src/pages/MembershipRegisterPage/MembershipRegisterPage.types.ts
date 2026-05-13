@@ -3,6 +3,7 @@ import type {
   MembershipRegistrationFormState,
   MembershipRegistrationInfo,
   MembershipRegistrationSubmitContext,
+  DiscountCouponValidationResult,
 } from "../../types/membershipRegistration";
 
 export interface MembershipRegisterPageViewModel {
@@ -18,6 +19,12 @@ export interface MembershipRegisterPageViewModel {
   isSubmitting: boolean;
   isRegistrationUnavailable: boolean;
   errors: Partial<Record<keyof MembershipRegistrationFormState, string>>;
+  couponValidation: DiscountCouponValidationResult | null;
+  couponValidationError: string;
+  isValidatingCoupon: boolean;
+  isCouponApplied: boolean;
+  onValidateCoupon: () => Promise<void>;
+  onClearCoupon: () => void;
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     context: MembershipRegistrationSubmitContext,

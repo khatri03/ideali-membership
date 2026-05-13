@@ -75,6 +75,7 @@ export interface MembershipRegistrationDetail {
   isFree: boolean;
   membershipCharges: number | null;
   allowPartialPayment: boolean;
+  discountsEnabled: boolean;
   color: string | null;
   customForms: MembershipRegistrationCustomFormSummary[];
   customQuestions: MembershipRegistrationCustomQuestion[];
@@ -116,6 +117,20 @@ export interface MembershipRegistrationInfo {
   paymentSettings: MembershipRegistrationPaymentSettings;
   presetTips: MembershipRegistrationPresetTip[];
   taxSettings: Record<string, unknown> | null;
+  discountsEnabled: boolean;
+  hasActiveCoupons: boolean;
+}
+
+export interface DiscountCouponValidationResult {
+  isValid: boolean;
+  errorMessage: string | null;
+  couponUniqueId: string | null;
+  code: string | null;
+  discountType: string;
+  discountValue: number;
+  maxDiscountAmount: number | null;
+  discountAmount: number;
+  finalAmount: number;
 }
 
 export interface MembershipRegistrationContactAddress {
@@ -148,6 +163,7 @@ export interface MembershipRegistrationFormState {
   tipPresetPercent: string;
   tipAmount: string;
   paymentMethod: string;
+  couponCode: string;
   notes: string;
 }
 

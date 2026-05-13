@@ -33,6 +33,7 @@ import type {
   MembershipRegistrationSubmissionPreferences,
   MembershipRegistrationStripeCredentials,
   MembershipRegistrationSubmitContext,
+  DiscountCouponValidationResult,
 } from "../../types/membershipRegistration";
 import { CountrySelectInput } from "../../components/inputs/CountrySelectInput/CountrySelectInput";
 import { MultiSelectInput } from "../../components/inputs/MultiSelectInput/MultiSelectInput";
@@ -72,7 +73,17 @@ type MembershipTheme = {
 
 type MembershipRegisterWizardProps = Pick<
   MembershipRegisterPageViewModel,
-  "errors" | "form" | "isSubmitting" | "onSubmit" | "setField"
+  | "errors"
+  | "form"
+  | "isSubmitting"
+  | "onSubmit"
+  | "setField"
+  | "couponValidation"
+  | "couponValidationError"
+  | "isValidatingCoupon"
+  | "isCouponApplied"
+  | "onValidateCoupon"
+  | "onClearCoupon"
 > & {
   info: MembershipRegistrationInfo;
   formattedMembershipCharges: string;
@@ -120,6 +131,19 @@ function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
       fill="currentColor"
     >
       <path d="M7.8 13.7 4.6 10.5l-1.5 1.5 4.7 4.7 9.2-9.2-1.5-1.5z" />
+    </svg>
+  );
+}
+
+function XMarkIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      className={className}
+      fill="currentColor"
+    >
+      <path d="M5.22 4.16a.75.75 0 0 0-1.06 1.06L8.94 10l-4.78 4.78a.75.75 0 1 0 1.06 1.06L10 11.06l4.78 4.78a.75.75 0 1 0 1.06-1.06L11.06 10l4.78-4.78a.75.75 0 0 0-1.06-1.06L10 8.94 5.22 4.16Z" />
     </svg>
   );
 }
@@ -287,7 +311,6 @@ function buildCurrencyPrefix(info: MembershipRegistrationInfo) {
 
   return "";
 }
-
 
 function formatFileSize(size: number) {
   if (!Number.isFinite(size) || size <= 0) {
@@ -1607,7 +1630,9 @@ function buildCustomFormResponses(
       .slice()
       .sort((left, right) => left.displayOrder - right.displayOrder)
       .map((field) => {
-        const value = values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? null;
+        const value =
+          values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ??
+          null;
         const fieldId = field.id;
 
         return {
@@ -1627,14 +1652,15 @@ function buildCustomQuestionResponses(
     .slice()
     .sort((left, right) => left.displayOrder - right.displayOrder)
     .map((question) => {
-      const rawValue = values[buildCustomQuestionKey(question.uniqueId)] ?? null;
+      const rawValue =
+        values[buildCustomQuestionKey(question.uniqueId)] ?? null;
       const serializedValue = serializeCustomValue(rawValue);
       const matchedOption =
         typeof rawValue === "string"
-          ? question.options.find(
+          ? (question.options.find(
               (option) =>
                 option.uniqueId === rawValue || option.value === rawValue,
-            ) ?? null
+            ) ?? null)
           : null;
 
       return {
@@ -1644,7 +1670,9 @@ function buildCustomQuestionResponses(
         value: serializedValue || null,
       };
     })
-    .filter((response) => response.value !== null || response.optionUniqueId !== null);
+    .filter(
+      (response) => response.value !== null || response.optionUniqueId !== null,
+    );
 }
 
 function buildCustomFormFieldKey(formUniqueId: string, fieldUniqueId: string) {
@@ -3710,6 +3738,14 @@ type PaymentStepProps = {
   onStripeCardFieldsCompleteChange: (isComplete: boolean) => void;
   setField: MembershipRegisterPageViewModel["setField"];
   theme: MembershipTheme;
+  couponValidation: DiscountCouponValidationResult | null;
+  couponValidationError: string;
+  isValidatingCoupon: boolean;
+  isCouponApplied: boolean;
+  onValidateCoupon: () => void;
+  onClearCoupon: () => void;
+  isSubmitting: boolean;
+  isLastStep: boolean;
 };
 
 function ChevronDownIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -3804,16 +3840,16 @@ function StripeCardFields({
         throw new Error(error.message);
       }
 
-        if (!paymentMethod) {
-          throw new Error("Unable to create payment method.");
-        }
+      if (!paymentMethod) {
+        throw new Error("Unable to create payment method.");
+      }
 
-        console.log("[Membership Registration] Created Stripe payment method", {
-          paymentMethodId: paymentMethod.id,
-        });
+      console.log("[Membership Registration] Created Stripe payment method", {
+        paymentMethodId: paymentMethod.id,
+      });
 
-        return { id: paymentMethod.id };
-      };
+      return { id: paymentMethod.id };
+    };
 
     onCreatePaymentMethodReady(createPaymentMethod);
 
@@ -3821,7 +3857,12 @@ function StripeCardFields({
       onCreatePaymentMethodReady(null);
       onCardFieldsCompleteChange(false);
     };
-  }, [elements, onCardFieldsCompleteChange, onCreatePaymentMethodReady, stripe]);
+  }, [
+    elements,
+    onCardFieldsCompleteChange,
+    onCreatePaymentMethodReady,
+    stripe,
+  ]);
 
   return (
     <div className="space-y-3">
@@ -3987,6 +4028,14 @@ function PaymentStep({
   onStripeCardFieldsCompleteChange,
   setField,
   theme,
+  couponValidation,
+  couponValidationError,
+  isValidatingCoupon,
+  isCouponApplied,
+  onValidateCoupon,
+  onClearCoupon,
+  isSubmitting,
+  isLastStep,
 }: PaymentStepProps) {
   const paymentProducts = useMemo(() => {
     return info.paymentSettings.paymentProducts.filter(
@@ -4000,12 +4049,17 @@ function PaymentStep({
   const currencyPrefix = buildCurrencyPrefix(info);
   const membershipAmount = Number(info.membershipDetail.membershipCharges ?? 0);
   const presetTips = info.presetTips ?? [];
-  const tipAmount =
-    presetTips.length > 0 ? parseTipAmount(form.tipAmount) : 0;
+  const tipAmount = presetTips.length > 0 ? parseTipAmount(form.tipAmount) : 0;
   const selectedTipPercent =
     presetTips.length > 0 ? Number(form.tipPresetPercent) : 0;
   const tipAmountInputRef = useRef<HTMLInputElement | null>(null);
   const totalAmount = membershipAmount + tipAmount;
+  const couponDiscountAmount = couponValidation?.isValid
+    ? Math.min(couponValidation.discountAmount, membershipAmount)
+    : 0;
+  const finalTotal = Math.max(totalAmount - couponDiscountAmount, 0);
+  const hasCouponSection =
+    isLastStep && Boolean(info?.discountsEnabled && info?.hasActiveCoupons);
   const [stripeCredentials, setStripeCredentials] =
     useState<MembershipRegistrationStripeCredentials | null>(null);
   const [stripeCredentialsLoading, setStripeCredentialsLoading] =
@@ -4024,8 +4078,8 @@ function PaymentStep({
     }).format(amount)}`;
   };
   const totalAmountLabel =
-    totalAmount > 0
-      ? formatMoney(totalAmount)
+    finalTotal > 0
+      ? formatMoney(finalTotal)
       : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel;
   useEffect(() => {
     if (!selectedTipPercent || !presetTips.length) {
@@ -4139,7 +4193,11 @@ function PaymentStep({
       onStripeCardFieldsCompleteChange(false);
       blurActiveElement();
     }
-  }, [blurActiveElement, onStripeCardFieldsCompleteChange, selectedPaymentProduct?.name]);
+  }, [
+    blurActiveElement,
+    onStripeCardFieldsCompleteChange,
+    selectedPaymentProduct?.name,
+  ]);
 
   if (paymentProducts.length === 0) {
     return (
@@ -4204,7 +4262,7 @@ function PaymentStep({
                             return current;
                           }
 
-                            return current === product.name ? null : product.name;
+                          return current === product.name ? null : product.name;
                         });
                       }}
                       className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30"
@@ -4236,8 +4294,7 @@ function PaymentStep({
                           </span>
                         </div>
                       </div>
-
-                  </button>
+                    </button>
 
                     <div
                       className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
@@ -4249,28 +4306,28 @@ function PaymentStep({
                         className="overflow-hidden border-t px-4"
                         style={{ borderColor: theme.cardBorder }}
                       >
-                          <div className="py-4">
-                            {product.name === "CreditCard" && isSelected ? (
-                              <div className="mt-4">
-                                {stripeCredentialsLoading ? (
-                                  <StripeCardSkeleton />
-                                ) : stripeCredentialsError ? (
-                                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
-                                    {stripeCredentialsError}
-                                  </div>
+                        <div className="py-4">
+                          {product.name === "CreditCard" && isSelected ? (
+                            <div className="mt-4">
+                              {stripeCredentialsLoading ? (
+                                <StripeCardSkeleton />
+                              ) : stripeCredentialsError ? (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+                                  {stripeCredentialsError}
+                                </div>
                               ) : stripeCredentials ? (
                                 <StripeElementsFields
                                   key={stripeCredentials.publishableKey}
                                   theme={theme}
                                   stripeCredentials={stripeCredentials}
-                                onCreatePaymentMethodReady={
-                                  onStripeCardPaymentMethodCreatorReady
-                                }
-                                onCardFieldsCompleteChange={
-                                  onStripeCardFieldsCompleteChange
-                                }
-                                showFieldErrors={showCreditCardFieldErrors}
-                              />
+                                  onCreatePaymentMethodReady={
+                                    onStripeCardPaymentMethodCreatorReady
+                                  }
+                                  onCardFieldsCompleteChange={
+                                    onStripeCardFieldsCompleteChange
+                                  }
+                                  showFieldErrors={showCreditCardFieldErrors}
+                                />
                               ) : null}
                             </div>
                           ) : null}
@@ -4278,12 +4335,10 @@ function PaymentStep({
                       </div>
                     </div>
                   </section>
-
                 </div>
               );
             })}
           </div>
-
         </div>
 
         <div
@@ -4330,25 +4385,62 @@ function PaymentStep({
                 </p>
               </div>
 
-              
-              <div className="border-t border-b" style={{ borderColor: theme.cardBorder }}>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3">
+              {hasCouponSection ? (
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
                   <p
                     className="text-xs font-semibold uppercase tracking-[0.2em]"
                     style={{ color: theme.tileLabelColor }}
                   >
-                    Sub Total
+                    Coupon
                   </p>
                   <p
                     className="text-base text-right font-semibold"
                     style={{ color: theme.tileValueColor }}
                   >
-                    {membershipAmount > 0
-                      ? formatMoney(membershipAmount)
-                      : MEMBERSHIP_REGISTER_PAGE_COPY.priceFreeLabel}
+                    <div className="space-y-2">
+                      <div className="flex min-w-0 items-stretch overflow-hidden rounded-2xl bg-white/80 shadow-sm transition">
+                        <input
+                          id="couponCode"
+                          type="text"
+                          value={form.couponCode}
+                          onChange={(event) =>
+                            setField("couponCode", event.target.value)
+                          }
+                          placeholder="Enter coupon code"
+                          className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+                          style={{ color: theme.titleColor }}
+                          disabled={isSubmitting || isValidatingCoupon}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              void onValidateCoupon();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void onValidateCoupon()}
+                          disabled={
+                            !form.couponCode.trim() ||
+                            isSubmitting ||
+                            isValidatingCoupon
+                          }
+                          className="shrink-0 px-3 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                          style={{ background: theme.level1 }}
+                        >
+                          {isValidatingCoupon ? "Validating..." : "Apply"}
+                        </button>
+                      </div>
+
+                      {couponValidationError ? (
+                        <p className="text-xs text-rose-600">
+                          {couponValidationError}
+                        </p>
+                      ) : null}
+                    </div>
                   </p>
                 </div>
-              </div>
+              ) : null}
 
               {presetTips.length > 0 ? (
                 <div className="space-y-2">
@@ -4502,6 +4594,12 @@ export function MembershipRegisterWizard({
   membershipName,
   membershipDescription,
   submitError,
+  couponValidation,
+  couponValidationError,
+  isValidatingCoupon,
+  isCouponApplied,
+  onValidateCoupon,
+  onClearCoupon,
 }: MembershipRegisterWizardProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const allowSubmitRef = useRef(false);
@@ -4538,13 +4636,16 @@ export function MembershipRegisterWizard({
     },
     [],
   );
-  const handleStripeCardFieldsCompleteChange = useCallback((isComplete: boolean) => {
-    setIsCreditCardFieldsComplete(isComplete);
-    if (isComplete) {
-      setPaymentStepError("");
-      setShowCreditCardFieldErrors(false);
-    }
-  }, []);
+  const handleStripeCardFieldsCompleteChange = useCallback(
+    (isComplete: boolean) => {
+      setIsCreditCardFieldsComplete(isComplete);
+      if (isComplete) {
+        setPaymentStepError("");
+        setShowCreditCardFieldErrors(false);
+      }
+    },
+    [],
+  );
   const showBorders = isEnabledFlag(import.meta.env.VITE_SHOW_BORDERS);
   const pricingStepComplete = isPricingStepComplete(form, isFreeMembership);
   const hasQuestionnaireContent = Boolean(
@@ -4808,12 +4909,13 @@ export function MembershipRegisterWizard({
           }
         }
 
-        const selectedPaymentProduct = info.paymentSettings.paymentProducts.find(
-          (product) => {
+        const selectedPaymentProduct =
+          info.paymentSettings.paymentProducts.find((product) => {
             const productId = resolvePaymentProductId(product.name);
-            return productId ? String(productId) === form.paymentMethod.trim() : false;
-          },
-        );
+            return productId
+              ? String(productId) === form.paymentMethod.trim()
+              : false;
+          });
 
         const cardPaymentMethodCreator =
           stripeCardPaymentMethodCreatorRef.current;
@@ -4840,15 +4942,19 @@ export function MembershipRegisterWizard({
             `${form.firstName.trim()} ${form.lastName.trim()}`.trim() ||
             form.email.trim();
 
-            try {
-              const paymentMethod = await cardPaymentMethodCreator(cardHolderName);
-              console.log("[Membership Registration] Using Stripe payment method", {
+          try {
+            const paymentMethod =
+              await cardPaymentMethodCreator(cardHolderName);
+            console.log(
+              "[Membership Registration] Using Stripe payment method",
+              {
                 paymentMethodId: paymentMethod.id,
-              });
-              paymentMethodDetail = {
-                paymentMethodId: paymentMethod.id,
-                cardHolderName,
-              };
+              },
+            );
+            paymentMethodDetail = {
+              paymentMethodId: paymentMethod.id,
+              cardHolderName,
+            };
           } catch (error) {
             setPaymentStepError(
               error instanceof Error
@@ -4958,6 +5064,14 @@ export function MembershipRegisterWizard({
             }
             setField={setField}
             theme={theme}
+            couponValidation={couponValidation}
+            couponValidationError={couponValidationError}
+            isValidatingCoupon={isValidatingCoupon}
+            isCouponApplied={isCouponApplied}
+            onValidateCoupon={onValidateCoupon}
+            onClearCoupon={onClearCoupon}
+            isSubmitting={isSubmitting}
+            isLastStep={currentStep === visibleSteps.length - 1}
           />
         )}
       </section>
@@ -4991,7 +5105,9 @@ export function MembershipRegisterWizard({
               <input
                 type="checkbox"
                 checked={logOutgoingPayload}
-                onChange={(event) => setLogOutgoingPayload(event.target.checked)}
+                onChange={(event) =>
+                  setLogOutgoingPayload(event.target.checked)
+                }
                 className="mt-1 h-4 w-4 accent-cyan-600"
                 style={{ accentColor: theme.level1 }}
               />

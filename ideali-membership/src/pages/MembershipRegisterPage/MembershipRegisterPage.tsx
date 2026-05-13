@@ -400,6 +400,12 @@ export function MembershipRegisterPage() {
             membershipName={registration.membershipName}
             membershipDescription={registration.membershipDescription}
             submitError={submitError}
+            couponValidation={registration.couponValidation}
+            couponValidationError={registration.couponValidationError}
+            isValidatingCoupon={registration.isValidatingCoupon}
+            isCouponApplied={registration.isCouponApplied}
+            onValidateCoupon={registration.onValidateCoupon}
+            onClearCoupon={registration.onClearCoupon}
           />
         ) : (
           <UnavailableCard />
