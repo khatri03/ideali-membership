@@ -824,11 +824,8 @@ export async function submitMembershipRegistration(
   appendFormDataValue(formData, "InvoiceDetail.AmountBreakdown.TotalAmount", finalAmount);
   appendFormDataValue(formData, "InvoiceDetail.PaymentMethod", paymentMethod);
   appendFormDataValue(formData, "InvoiceDetail.Notes", formState.notes.trim());
+  appendFormDataValue(formData, "CouponUniqueId", submissionContext.couponUniqueId);
   appendPaymentMethodDetail(formData, submissionContext.paymentMethodDetail);
-
-  appendFormDataValue(formData, "DiscountDetail.CouponUniqueId", submissionContext.couponUniqueId);
-  appendFormDataValue(formData, "DiscountDetail.DiscountType", submissionContext.discountType);
-  appendFormDataValue(formData, "DiscountDetail.Amount", submissionContext.discountAmount);
   appendCustomFormResponses(formData, submissionContext.customFormResponses);
   appendCustomQuestionResponses(formData, submissionContext.customQuestionResponses);
 
@@ -875,13 +872,7 @@ export async function submitMembershipRegistration(
       PaymentMethod: paymentMethod,
       Notes: formState.notes.trim(),
       PaymentMethodDetail: submissionContext.paymentMethodDetail,
-      DiscountDetail: null,
       TaxDetail: null,
-    },
-    DiscountDetail: {
-      CouponUniqueId: submissionContext.couponUniqueId,
-      DiscountType: submissionContext.discountType,
-      Amount: submissionContext.discountAmount,
     },
     CustomFormResponses: submissionContext.customFormResponses,
     CustomQuestionResponses: submissionContext.customQuestionResponses,
