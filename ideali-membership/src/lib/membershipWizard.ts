@@ -645,7 +645,7 @@ export async function getMembershipTypePlaceholders() {
     const items = flattenMembershipTypePlaceholderRecords(responseData)
       .map(
         (item): MembershipTypePlaceholderItem => ({
-          id: readNumber(item.Id ?? item.id),
+          id: readNumber(item.Id ?? item.id) ?? undefined,
           uniqueId: readText(item.UniqueId ?? item.uniqueId),
           displayText: readText(item.DisplayText ?? item.displayText),
           placeHolderText: readText(item.PlaceHolderText ?? item.placeHolderText),
@@ -664,7 +664,7 @@ export async function getMembershipTypePlaceholders() {
       const items = flattenMembershipTypePlaceholderRecords(groupValue)
         .map(
           (item): MembershipTypePlaceholderItem => ({
-            id: readNumber(item.Id ?? item.id),
+            id: readNumber(item.Id ?? item.id) ?? undefined,
             uniqueId: readText(item.UniqueId ?? item.uniqueId),
             displayText: readText(item.DisplayText ?? item.displayText),
             placeHolderText: readText(item.PlaceHolderText ?? item.placeHolderText),
