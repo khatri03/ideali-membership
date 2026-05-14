@@ -1,10 +1,11 @@
 import type {
-  MembershipRegistrationInfo,
+  DiscountCouponValidationResult,
   MembershipRegistrationCustomFormField,
   MembershipRegistrationCustomFormResponse,
   MembershipRegistrationCustomFormSummary,
   MembershipRegistrationCustomQuestion,
   MembershipRegistrationCustomQuestionResponse,
+  MembershipRegistrationInfo,
 } from "../../types/membershipRegistration";
 import type {
   CustomFormErrors,
@@ -14,7 +15,12 @@ import type {
   CustomQuestionValue,
   CustomQuestionValues,
 } from "./MembershipRegisterWizard.types";
-import { isEmailValid, isPhoneLikeValue, isValidDateValue, isValidNumberValue } from "./MembershipRegisterWizard.utils";
+import {
+  isEmailValid,
+  isPhoneLikeValue,
+  isValidDateValue,
+  isValidNumberValue,
+} from "./MembershipRegisterWizard.utils";
 
 export function serializeCustomValue(value: CustomFormValue | undefined): string {
   if (value instanceof File) {
@@ -44,75 +50,38 @@ export function buildCustomQuestionKey(questionUniqueId: string) {
   return questionUniqueId;
 }
 
-export function buildCustomFormResponses(
-  customForms: MembershipRegistrationInfo["membershipDetail"]["customForms"],
-  values: CustomFormValues,
-): MembershipRegistrationCustomFormResponse[] {
-  return customForms.flatMap((form) =>
-    form.fields
-      .slice()
-      .sort((left, right) => left.displayOrder - right.displayOrder)
-      .map((field) => {
-        const value =
-          values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ?? null;
-        const fieldId = field.id;
-
-        return {
-          fieldId,
-          value: serializeCustomValue(value),
-        };
-      })
-      .filter((response) => response.fieldId > 0 && response.value !== ""),
-  );
-}
-
-export function buildCustomQuestionResponses(
-  customQuestions: MembershipRegistrationInfo["membershipDetail"]["customQuestions"],
-  values: CustomQuestionValues,
-): MembershipRegistrationCustomQuestionResponse[] {
-  return customQuestions
-    .slice()
-    .sort((left, right) => left.displayOrder - right.displayOrder)
-    .map((question) => {
-      const rawValue = values[buildCustomQuestionKey(question.uniqueId)] ?? null;
-      const serializedValue = serializeCustomValue(rawValue);
-      const matchedOption =
-        typeof rawValue === "string"
-          ? (question.options.find(
-              (option) =>
-                option.uniqueId === rawValue || option.value === rawValue,
-            ) ?? null)
-          : null;
-
-      return {
-        questionUniqueId: question.uniqueId,
-        optionUniqueId: matchedOption?.uniqueId ?? null,
-        fileStorageId: null,
-        value: serializedValue || null,
-      };
-    })
-    .filter(
-      (response) => response.value !== null || response.optionUniqueId !== null,
-    );
-}
-
 export function getCustomFormControlType(controlTypeId: number): string {
   switch (controlTypeId) {
-    case 1: return "text";
-    case 2: return "email";
-    case 3: return "number";
-    case 4: return "date";
-    case 5: return "select";
-    case 6: return "checkbox";
-    case 7: return "radio";
-    case 8: return "textarea";
-    case 9: return "file";
-    case 10: return "password";
-    case 14: return "phone";
-    case 15: return "multiselect";
-    case 16: return "country";
-    case 17: return "state";
-    default: return "text";
+    case 1:
+      return "text";
+    case 2:
+      return "email";
+    case 3:
+      return "number";
+    case 4:
+      return "date";
+    case 5:
+      return "select";
+    case 6:
+      return "checkbox";
+    case 7:
+      return "radio";
+    case 8:
+      return "textarea";
+    case 9:
+      return "file";
+    case 10:
+      return "password";
+    case 14:
+      return "phone";
+    case 15:
+      return "multiselect";
+    case 16:
+      return "country";
+    case 17:
+      return "state";
+    default:
+      return "text";
   }
 }
 
@@ -325,6 +294,60 @@ export function getCustomQuestionFileValidationError(
   return "";
 }
 
+export function buildCustomFormResponses(
+  customForms: MembershipRegistrationInfo["membershipDetail"]["customForms"],
+  values: CustomFormValues,
+): MembershipRegistrationCustomFormResponse[] {
+  return customForms.flatMap((form) =>
+    form.fields
+      .slice()
+      .sort((left, right) => left.displayOrder - right.displayOrder)
+      .map((field) => {
+        const value =
+          values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ??
+          null;
+        const fieldId = field.id;
+
+        return {
+          fieldId,
+          value: serializeCustomValue(value),
+        };
+      })
+      .filter((response) => response.fieldId > 0 && response.value !== ""),
+  );
+}
+
+export function buildCustomQuestionResponses(
+  customQuestions: MembershipRegistrationInfo["membershipDetail"]["customQuestions"],
+  values: CustomQuestionValues,
+): MembershipRegistrationCustomQuestionResponse[] {
+  return customQuestions
+    .slice()
+    .sort((left, right) => left.displayOrder - right.displayOrder)
+    .map((question) => {
+      const rawValue =
+        values[buildCustomQuestionKey(question.uniqueId)] ?? null;
+      const serializedValue = serializeCustomValue(rawValue);
+      const matchedOption =
+        typeof rawValue === "string"
+          ? (question.options.find(
+              (option) =>
+                option.uniqueId === rawValue || option.value === rawValue,
+            ) ?? null)
+          : null;
+
+      return {
+        questionUniqueId: question.uniqueId,
+        optionUniqueId: matchedOption?.uniqueId ?? null,
+        fileStorageId: null,
+        value: serializedValue || null,
+      };
+    })
+    .filter(
+      (response) => response.value !== null || response.optionUniqueId !== null,
+    );
+}
+
 export function buildCustomFormValues(
   customForms: MembershipRegistrationCustomFormSummary[],
 ) {
@@ -383,7 +406,9 @@ export function validateCustomFormField(
     }
 
     if (selectedValues.length > 0 && field.options.length > 0) {
-      const allowedValues = new Set(field.options.map((option) => option.value));
+      const allowedValues = new Set(
+        field.options.map((option) => option.value),
+      );
       if (selectedValues.some((item) => !allowedValues.has(item))) {
         return "Select a valid option.";
       }
@@ -496,7 +521,9 @@ export function validateCustomQuestionField(
     }
 
     if (selectedValues.length > 0 && question.options.length > 0) {
-      const allowedValues = new Set(question.options.map((option) => option.value));
+      const allowedValues = new Set(
+        question.options.map((option) => option.value),
+      );
       if (selectedValues.some((item) => !allowedValues.has(item))) {
         return "Select a valid option.";
       }
@@ -623,4 +650,40 @@ export function getNearestCountryQuestionValue(
   }
 
   return null;
+}
+
+export function getCustomQuestionGridClass() {
+  return "grid gap-4";
+}
+
+export function getCustomFormGridClass(layoutColumn: number) {
+  void layoutColumn;
+  return "grid grid-cols-1 gap-4 md:grid-cols-12";
+}
+
+export function getCustomFormFieldGridSpanClass(layoutColumn: number) {
+  switch (layoutColumn) {
+    case 1:
+      return "col-span-12";
+    case 2:
+      return "col-span-12 md:col-span-6";
+    case 3:
+      return "col-span-12 md:col-span-6 lg:col-span-4";
+    case 4:
+      return "col-span-12 md:col-span-6 lg:col-span-3";
+    default:
+      return "col-span-12";
+  }
+}
+
+export function getCustomFormFieldSpanClass(
+  formLayoutColumn: number,
+  fieldLayoutColumn: number | null,
+) {
+  const resolvedLayoutColumn = Math.max(
+    1,
+    Math.min(4, fieldLayoutColumn ?? formLayoutColumn),
+  );
+  const span = resolvedLayoutColumn;
+  return getCustomFormFieldGridSpanClass(span);
 }

@@ -1,1 +1,1 @@
-export { WizardFooterActionsContext } from "../../../components/wizard/WizardFooterActionsContext/WizardFooterActionsContext";
+export * from "../../../components/wizard/WizardFooterActionsContext/WizardFooterActionsContext";

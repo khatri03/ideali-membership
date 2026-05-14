@@ -157,7 +157,9 @@ export function WizardSideNav({
                     rowClassName="border border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
                   >
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-600 text-xs font-semibold text-white shadow-sm">
-                      ✓
+                      <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 fill-current">
+                        <path d="M7.8 13.7 4.6 10.5l-1.5 1.5 4.7 4.7 9.2-9.2-1.5-1.5z" />
+                      </svg>
                     </span>
                     <span className="min-w-0 truncate text-emerald-900">{step.label}</span>
                   </StepRow>

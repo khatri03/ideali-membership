@@ -1,1 +1,1 @@
-export { WizardMembershipTitleContext } from "../../../components/wizard/WizardMembershipTitleContext/WizardMembershipTitleContext";
+export * from "../../../components/wizard/WizardMembershipTitleContext/WizardMembershipTitleContext";

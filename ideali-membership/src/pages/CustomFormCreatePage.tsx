@@ -48,6 +48,7 @@ import { CountrySelectInput } from "../components/inputs/CountrySelectInput/Coun
 import { MultiSelectInput } from "../components/inputs/MultiSelectInput/MultiSelectInput";
 import { StateSelectInput } from "../components/inputs/StateSelectInput/StateSelectInput";
 import { PasswordInput } from "../components/inputs/PasswordInput/PasswordInput";
+import { ControlIcon, ControlPaletteItem, ToggleField } from "./CustomFormCreatePage.parts";
 import {
   createCustomForm,
   fetchCustomFormControls,
@@ -365,20 +366,6 @@ function buildEmptyDraft(): CustomFormDraft {
   };
 }
 
-
-function getControlIcon(controlType: string) {
-  return CONTROL_ICON_MAP[controlType.trim().toLowerCase()] ?? CircleHelp;
-}
-
-function getControlTooltip(control: CustomFormControl) {
-  const details = [
-    control.name,
-    "Double-click to add",
-  ].filter(Boolean);
-
-  return details.join(" • ");
-}
-
 function isTruthyValue(value: string) {
   return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
 }
@@ -450,80 +437,7 @@ function buildPreviewValues(fields: CustomFormFieldDraft[]) {
   }, {});
 }
 
-function ControlPaletteItem({
-  control,
-  count,
-  onDoubleClick,
-}: {
-  control: CustomFormControl;
-  count: number;
-  onDoubleClick: (control: CustomFormControl) => void;
-}) {
-  const Icon = getControlIcon(control.controlType);
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `palette-${control.id}`,
-    data: {
-      source: "palette",
-      control,
-    },
-  });
-
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
-
-  return (
-    <button
-      ref={setNodeRef}
-      type="button"
-      onDoubleClick={() => onDoubleClick(control)}
-      title={getControlTooltip(control)}
-      {...listeners}
-      {...attributes}
-      style={isDragging ? undefined : style}
-      className={[
-        "group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition",
-        "cursor-pointer hover:cursor-pointer hover:border-cyan-300 hover:shadow-md select-none touch-none",
-        isDragging ? "scale-[0.98] opacity-60 cursor-grabbing" : "",
-      ].join(" ")}
-    >
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-sm font-bold text-cyan-700 cursor-pointer hover:cursor-pointer select-none touch-none">
-        <Icon className="h-5 w-5" aria-hidden="true" />
-      </div>
-      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
-        {control.name}
-      </p>
-      <span
-        className={[
-          "ml-auto inline-flex min-w-8 items-center justify-center rounded-full px-2 py-1 text-xs font-semibold",
-          count > 0 ? "bg-cyan-600 text-white" : "bg-slate-100 text-slate-400",
-        ].join(" ")}
-        title={`${count} field${count === 1 ? "" : "s"} on canvas`}
-      >
-        {count}
-      </span>
-    </button>
-  );
-}
-
-function ControlIcon({
-  controlType,
-  label,
-}: {
-  controlType: string;
-  label: string;
-}) {
-  const Icon = getControlIcon(controlType);
-
-  return (
-    <div
-      className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-500/10 text-cyan-700 cursor-grab hover:cursor-grab select-none touch-none"
-      title={label}
-      aria-hidden="true"
-    >
-      <Icon className="h-5 w-5" aria-hidden="true" />
-    </div>
-  );
-}
 
 function SortableFieldCard({
   field,
@@ -1251,7 +1165,7 @@ function DragGhost({ item, rect }: { item: ActiveDragItem; rect: ActiveDragRect 
         className="flex cursor-grabbing items-center gap-3 rounded-2xl border border-cyan-200 bg-white px-3 py-3 shadow-2xl shadow-slate-900/10"
         style={style}
       >
-        <ControlIcon controlType={item.control.controlType} label={item.control.name} />
+        <ControlIcon icon={CONTROL_ICON_MAP[item.control.controlType.trim().toLowerCase()] ?? CircleHelp} label={item.control.name} />
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
           {item.control.name}
         </p>
@@ -1309,27 +1223,6 @@ function measureDragSourceRect(sourceId: string) {
   };
 }
 
-function ToggleField({
-  title,
-  checked,
-  onChange,
-}: {
-  title: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-      <span className="text-sm font-medium text-slate-700">{title}</span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="h-4 w-4 accent-cyan-600"
-      />
-    </label>
-  );
-}
 
 export function CustomFormCreatePage() {
   const { customFormUniqueId } = useParams<{ customFormUniqueId?: string }>();
@@ -1422,7 +1315,7 @@ export function CustomFormCreatePage() {
           name: preview.name,
           headerText: preview.headerText,
           description: preview.description ?? "",
-          layoutColumn: preview.layoutColumn ?? 1,
+          layoutColumn: preview.layoutColumn ?? 2,
         });
         setFields(preview.fields.map((field) => mapPreviewFieldToDraft(field)));
         setSelectedFieldId(null);
@@ -1573,7 +1466,7 @@ export function CustomFormCreatePage() {
     );
   }, [selectedField, selectedOptionId]);
 
-  const previewColumnCount = Math.max(1, Math.min(4, Number(draft.layoutColumn) || 1));
+  const previewColumnCount = Math.max(1, Math.min(4, Number(draft.layoutColumn) || 2));
   const fieldLayoutMenuStyle = useMemo(() => {
     if (!fieldLayoutMenu || typeof window === "undefined") {
       return null;
@@ -2227,6 +2120,8 @@ export function CustomFormCreatePage() {
                       key={control.id}
                       control={control}
                       count={controlUsageCounts.get(control.id) ?? 0}
+                      icon={CONTROL_ICON_MAP[control.controlType.trim().toLowerCase()] ?? CircleHelp}
+                      tooltip={`${control.name} • Double-click to add`}
                       onDoubleClick={appendFieldToCanvas}
                     />
                   ))

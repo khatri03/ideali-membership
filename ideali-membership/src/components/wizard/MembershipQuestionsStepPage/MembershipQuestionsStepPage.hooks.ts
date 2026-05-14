@@ -156,7 +156,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
   const [previewCustomFormFields, setPreviewCustomFormFields] = useState<
     MembershipQuestionsStepState["previewCustomFormFields"]
   >([]);
-  const [previewCustomFormLayoutColumn, setPreviewCustomFormLayoutColumn] = useState(1);
+  const [previewCustomFormLayoutColumn, setPreviewCustomFormLayoutColumn] = useState(2);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -353,7 +353,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
         })),
       });
       setPreviewCustomFormName(preview.headerText || preview.name || formItem.text);
-      setPreviewCustomFormLayoutColumn(Math.max(1, Math.min(4, preview.layoutColumn || 1)));
+      setPreviewCustomFormLayoutColumn(Math.max(1, Math.min(4, preview.layoutColumn || 2)));
       setPreviewCustomFormFields(
         (preview.fields || []).map((field) => ({
           id: field.id,
@@ -386,7 +386,7 @@ export function useMembershipQuestionsStep(): MembershipQuestionsStepState {
     setPreviewCustomFormLoading(false);
     setPreviewCustomFormError("");
     setPreviewCustomFormFields([]);
-    setPreviewCustomFormLayoutColumn(1);
+    setPreviewCustomFormLayoutColumn(2);
   };
 
   const openCustomQuestionModal = (customQuestionId?: string) => {

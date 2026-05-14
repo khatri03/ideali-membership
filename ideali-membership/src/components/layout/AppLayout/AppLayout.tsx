@@ -1,2 +1,2 @@
-export * from "../../../../shared/components/layout/AppLayout/AppLayout";
+export * from "../../../shared/components/layout/AppLayout/AppLayout";
 

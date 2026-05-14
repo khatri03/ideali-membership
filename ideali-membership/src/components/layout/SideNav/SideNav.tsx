@@ -1,2 +1,2 @@
-export * from "../../../../shared/components/layout/SideNav/SideNav";
+export * from "../../../shared/components/layout/SideNav/SideNav";
 

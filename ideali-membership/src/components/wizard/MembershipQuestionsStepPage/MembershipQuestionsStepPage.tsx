@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { MEMBERSHIP_QUESTIONS_CONTENT } from "./MembershipQuestionsStepPage.fields";
 import { useMembershipQuestionsStep } from "./MembershipQuestionsStepPage.hooks";
+import { getPreviewColumnSpan } from "../../../lib/customFormDesignerUtils";
 import type { CustomFormControl, CustomFormListItem } from "../../../types/customForms";
 import type { MembershipCustomQuestionDraft } from "../../../types/membership";
 import { MultiSelectInput } from "../../../components/inputs/MultiSelectInput/MultiSelectInput";
@@ -800,7 +801,10 @@ function CustomFormPreviewField({
   const defaultOptionValue = getPreviewDefaultOptionValue(field.options, field.defaultValue);
   const [previewMultiSelectValue, setPreviewMultiSelectValue] = useState(() => parseDelimitedValues(field.defaultValue));
   const label = field.placeHolder || field.controlLabel;
-  const layoutColumn = normalizePreviewLayoutColumn(field.layoutColumn ?? formLayoutColumn);
+  const layoutSpan = getPreviewColumnSpan(
+    { layoutColumn: field.layoutColumn },
+    formLayoutColumn,
+  );
 
   useEffect(() => {
     if (controlType === "multiselect") {
@@ -809,7 +813,10 @@ function CustomFormPreviewField({
   }, [controlType, field.defaultValue]);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4" style={{ gridColumn: `span ${layoutColumn} / span ${layoutColumn}` }}>
+    <div
+      className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
+      style={{ gridColumn: `span ${layoutSpan} / span ${layoutSpan}` }}
+    >
       <div className="mb-2 flex items-center gap-2">
         <span className="text-sm font-semibold text-slate-800">{field.controlLabel}</span>
         {field.isMandatory ? <span className="text-base font-bold leading-none text-rose-600">*</span> : null}
@@ -962,10 +969,7 @@ function CustomFormPreviewModal({
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
             ) : fields.length > 0 ? (
               <div
-                className="grid gap-5"
-                style={{
-                  gridTemplateColumns: `repeat(${Math.max(1, Math.min(4, layoutColumn || 1))}, minmax(0, 1fr))`,
-                }}
+                className="grid grid-cols-1 gap-5 sm:grid-cols-12"
               >
                 {fields.map((field) => (
                   <CustomFormPreviewField key={field.id} field={field} formLayoutColumn={layoutColumn} />
