@@ -506,23 +506,6 @@ function SortableFieldCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate font-semibold text-slate-900">{field.label}</h3>
-            <span className="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
-              {getLayoutPresetLabel(layoutColumn)}
-              {field.layoutColumn === null ? null : (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onClearLayout(field.id);
-                  }}
-                  className="ml-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-[10px] font-bold leading-none text-rose-600 transition hover:bg-rose-100 hover:text-rose-700"
-                  aria-label="Remove layout override"
-                  title="Remove layout override"
-                >
-                  x
-                </button>
-              )}
-            </span>
             {field.required ? (
               <span
                 className="text-sm font-bold leading-none text-rose-600"
@@ -541,7 +524,7 @@ function SortableFieldCard({
               type="button"
               title="Drag to reorder"
               aria-label="Drag to reorder"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-cyan-300 hover:text-cyan-700 cursor-grab hover:cursor-grab active:cursor-grabbing select-none touch-none"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 cursor-grab hover:cursor-grab active:cursor-grabbing select-none touch-none"
               {...attributes}
               {...listeners}
               onClick={(event) => event.stopPropagation()}
@@ -564,9 +547,9 @@ function SortableFieldCard({
 
           <button
             type="button"
-            title="Change Layout"
-            aria-label="Change Layout"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-100 bg-cyan-50 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800"
+            title={`Change Layout (${getLayoutPresetLabel(layoutColumn)})`}
+            aria-label={`Change layout, current ${getLayoutPresetLabel(layoutColumn)}`}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-cyan-100 bg-cyan-50 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800"
             onClick={(event) => {
               event.stopPropagation();
               const rect = event.currentTarget.getBoundingClientRect();
@@ -576,28 +559,41 @@ function SortableFieldCard({
               });
             }}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-              aria-hidden="true"
-            >
-              <rect x="3.5" y="5" width="17" height="4.5" rx="1.2" />
-              <rect x="3.5" y="10.75" width="11.5" height="4.5" rx="1.2" />
-              <rect x="3.5" y="16.5" width="8.25" height="4.5" rx="1.2" />
-            </svg>
+            <span className="text-[10px] font-bold tracking-[0.08em]">{getLayoutPresetLabel(layoutColumn)}</span>
           </button>
+          {field.layoutColumn !== null ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onClearLayout(field.id);
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-600 shadow-sm transition hover:bg-rose-100 hover:text-rose-700"
+              aria-label="Remove layout override"
+              title="Remove layout override"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M5 5 15 15" />
+                <path d="M15 5 5 15" />
+              </svg>
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={(event) => {
               event.stopPropagation();
               onRemove(field.id);
             }}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-600 shadow-sm transition hover:bg-rose-100 hover:text-rose-700"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-600 shadow-sm transition hover:bg-rose-100 hover:text-rose-700"
             title="Remove field"
             aria-label="Remove field"
           >
