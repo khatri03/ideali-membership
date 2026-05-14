@@ -1595,7 +1595,10 @@ function PaymentStep({
     : 0;
   const finalTotal = Math.max(totalAmount - couponDiscountAmount, 0);
   const hasCouponSection =
-    isLastStep && Boolean(info?.discountsEnabled && info?.hasActiveCoupons);
+    isLastStep &&
+    membershipAmount > 0 &&
+    !info.membershipDetail.isFree &&
+    Boolean(info?.discountsEnabled && info?.hasActiveCoupons);
   const [stripeCredentials, setStripeCredentials] =
     useState<MembershipRegistrationStripeCredentials | null>(null);
   const [stripeCredentialsLoading, setStripeCredentialsLoading] =

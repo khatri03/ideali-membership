@@ -84,6 +84,121 @@ function hasMeaningfulEditorContent(editor: ReturnType<typeof useEditor> | null)
   return !editor.isEmpty && editor.getText().trim().length > 0;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function getPlaceholderLabel(value: string) {
+  return value
+    .replaceAll(/[{}]/g, "")
+    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replaceAll(/_/g, " ")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+}
+
+function buildPlaceholderLookup(placeholders: MembershipThankYouEmailStepState["placeholders"]) {
+  const lookup = new Map<string, { label: string; token: string }>();
+
+  placeholders.forEach((group) => {
+    group.items.forEach((item) => {
+      const token = item.placeHolderText;
+      const label = item.displayText || getPlaceholderLabel(token) || token;
+      const normalizedToken = token.trim().toLowerCase();
+      const normalizedLabel = label.trim().toLowerCase();
+
+      lookup.set(normalizedToken, { label, token });
+      lookup.set(normalizedLabel, { label, token });
+      lookup.set(getPlaceholderLabel(token).trim().toLowerCase(), { label, token });
+    });
+  });
+
+  return lookup;
+}
+
+function normalizeSubjectTemplateText(template: string, placeholders: MembershipThankYouEmailStepState["placeholders"]) {
+  const rawValue = template.trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  const lookup = buildPlaceholderLookup(placeholders);
+  const plainText = /<[^>]+>/.test(rawValue)
+    ? (() => {
+        const container = document.createElement("div");
+        container.innerHTML = rawValue;
+        return container.textContent || "";
+      })()
+    : rawValue;
+
+  const tokenPattern = /\{\{[^}]+\}\}/g;
+  const placeholderLabels = Array.from(lookup.values())
+    .map((item) => item.label)
+    .filter((item, index, array) => array.indexOf(item) === index)
+    .sort((a, b) => b.length - a.length)
+    .map((item) => item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  const labelPattern = placeholderLabels.length > 0 ? `|${placeholderLabels.join("|")}` : "";
+  const matcher = new RegExp(`(${tokenPattern.source}${labelPattern})`, "gi");
+
+  return plainText.replace(matcher, (match) => {
+    const normalized = match.trim().toLowerCase();
+    return lookup.get(normalized)?.token || match;
+  });
+}
+
+function buildSubjectEditorHtml(template: string, placeholders: MembershipThankYouEmailStepState["placeholders"]) {
+  const normalizedText = normalizeSubjectTemplateText(template, placeholders);
+  if (!normalizedText) {
+    return "<p></p>";
+  }
+
+  const lookup = buildPlaceholderLookup(placeholders);
+  const segments = normalizedText.split(/(\{\{[^}]+\}\})/g);
+
+  const html = segments
+    .map((segment) => {
+      if (!segment) {
+        return "";
+      }
+
+      const token = segment.trim();
+      const placeholder = lookup.get(token.toLowerCase());
+      if (placeholder) {
+        return [
+          "<span",
+          ` data-placeholder-label=\"${escapeHtml(placeholder.label)}\"`,
+          ` data-placeholder-token=\"${escapeHtml(placeholder.token)}\"`,
+          " contenteditable=\"false\"",
+          ' class="membership-placeholder-token inline-flex cursor-pointer items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs tracking-wide text-cyan-800 align-baseline transition-colors"',
+          ` title=\"${escapeHtml(placeholder.label)}\"`,
+          `>${escapeHtml(placeholder.label)}</span>`,
+        ].join("");
+      }
+
+      return escapeHtml(segment).replace(/\n/g, "<br />");
+    })
+    .join("");
+
+  return `<p>${html}</p>`;
+}
+
+function getPlainTextTemplate(editor: ReturnType<typeof useEditor> | null, fallback: string) {
+  if (!editor) {
+    return fallback;
+  }
+
+  return editor
+    .getText({ blockSeparator: " " })
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function validateThankYouEmailStep(
   subjectEditor: ReturnType<typeof useEditor> | null,
   editor: ReturnType<typeof useEditor> | null,
@@ -141,7 +256,7 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
     ],
     content: emailSubjectHtml,
     onUpdate: ({ editor: currentEditor }) => {
-      emailSubjectRef.current = currentEditor.getHTML();
+      emailSubjectRef.current = getPlainTextTemplate(currentEditor, "");
     },
     editorProps: {
       attributes: {
@@ -211,8 +326,8 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
         }
 
         descriptionRef.current = info.description || "<p></p>";
-        emailSubjectRef.current = info.emailSubject || "<p></p>";
-        setEmailSubjectHtml(info.emailSubject || "<p></p>");
+        emailSubjectRef.current = normalizeSubjectTemplateText(info.emailSubject || "<p></p>", placeholderItems);
+        setEmailSubjectHtml(buildSubjectEditorHtml(info.emailSubject || "<p></p>", placeholderItems));
         emailTemplateRef.current = info.emailTemplate || "<p></p>";
         setEmailTemplateHtml(info.emailTemplate || "<p></p>");
         setNotifyOrganizer(info.notifyOrganizer ?? false);
@@ -263,10 +378,13 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
         return;
       }
 
+      const currentEmailSubject = getPlainTextTemplate(subjectEditor, emailSubjectRef.current);
+      const currentEmailTemplate = editor?.getHTML() ?? emailTemplateRef.current;
+
       void persistThankYouEmailStepWithFeedback({
         description: descriptionRef.current,
-        emailSubject: emailSubjectRef.current,
-        emailTemplate: emailTemplateRef.current,
+        emailSubject: currentEmailSubject,
+        emailTemplate: currentEmailTemplate,
         notifyOrganizer,
         otherNotificationEmails,
         stepNumber: MEMBERSHIP_THANK_YOU_EMAIL_STEP_NUMBER,

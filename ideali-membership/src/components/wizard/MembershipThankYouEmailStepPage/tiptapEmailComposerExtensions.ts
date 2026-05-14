@@ -3,6 +3,33 @@ import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
 import { createElement, type MouseEvent } from "react";
 
+function normalizePlaceholderToken(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^\{\{.+\}\}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `{{${trimmed.replace(/\s+/g, "")}}}`;
+}
+
+function derivePlaceholderLabel(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const normalized = trimmed.replace(/^\{\{|\}\}$/g, "");
+  return normalized
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function MembershipPlaceholderTokenNodeView({ node, selected, deleteNode }: NodeViewProps) {
   const label = node.attrs.label || node.attrs["data-placeholder-label"] || "";
   const styles = [
@@ -133,8 +160,13 @@ export const MembershipPlaceholderTokenExtension = Node.create({
         default: "",
         parseHTML: (element) =>
           (element as HTMLElement).getAttribute("data-placeholder-label") ||
-          (element as HTMLElement).textContent ||
-          "",
+          derivePlaceholderLabel((element as HTMLElement).getAttribute("data-placeholder-token") || (element as HTMLElement).textContent || ""),
+      },
+      token: {
+        default: "",
+        parseHTML: (element) =>
+          (element as HTMLElement).getAttribute("data-placeholder-token") ||
+          normalizePlaceholderToken((element as HTMLElement).textContent || ""),
       },
       fontSize: {
         default: null,
@@ -166,13 +198,14 @@ export const MembershipPlaceholderTokenExtension = Node.create({
   parseHTML() {
     return [
       {
-        tag: "span[data-placeholder-label]",
+        tag: "span[data-placeholder-label], span[data-placeholder-token]",
       },
     ];
   },
 
   renderHTML({ HTMLAttributes }) {
     const label = HTMLAttributes.label || HTMLAttributes["data-placeholder-label"] || "";
+    const token = HTMLAttributes.token || HTMLAttributes["data-placeholder-token"] || normalizePlaceholderToken(label);
     const styles = [
       HTMLAttributes.fontSize ? `font-size: ${HTMLAttributes.fontSize}` : "",
       HTMLAttributes.color ? `color: ${HTMLAttributes.color}` : "",
@@ -188,14 +221,19 @@ export const MembershipPlaceholderTokenExtension = Node.create({
       "span",
       {
         "data-placeholder-label": label,
+        "data-placeholder-token": token,
         contenteditable: "false",
         class:
           "membership-placeholder-token inline-flex cursor-pointer items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs tracking-wide text-cyan-800 align-baseline transition-colors",
         title: label,
         style: styles || undefined,
       },
-      label,
+      token || label,
     ];
+  },
+
+  renderText({ node }) {
+    return node.attrs.token || node.attrs.label || "";
   },
 
   addNodeView() {

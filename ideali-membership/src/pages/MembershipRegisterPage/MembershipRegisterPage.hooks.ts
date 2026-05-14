@@ -164,6 +164,16 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
       return;
     }
 
+    if (info.membershipDetail.isFree || Number(info.membershipDetail.membershipCharges ?? 0) <= 0) {
+      setForm((current) => ({
+        ...current,
+        couponCode: "",
+      }));
+      setCouponValidation(null);
+      setCouponValidationError("");
+      setIsCouponApplied(false);
+    }
+
     setForm((current) => {
       const nextPaymentMethod = current.paymentMethod || getDefaultPaymentMethodValue(info);
       const hasTipSelection = Boolean(current.tipPresetPercent.trim() || current.tipAmount.trim());
@@ -271,7 +281,10 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
   }, []);
 
   async function handleValidateCoupon() {
-    if (!info || !form.couponCode.trim()) {
+    const membershipCharges = info?.membershipDetail.membershipCharges ?? 0;
+    const isFreeMembership = Boolean(info?.membershipDetail.isFree) || membershipCharges <= 0;
+
+    if (!info || !form.couponCode.trim() || isFreeMembership) {
       setCouponValidation(null);
       setCouponValidationError("");
       return;
@@ -281,7 +294,6 @@ export function useMembershipRegisterPage(): MembershipRegisterPageViewModel & {
     setCouponValidationError("");
 
     try {
-      const membershipCharges = info.membershipDetail.membershipCharges ?? 0;
       const result = await validateCoupon(
         currentMembershipTypeUniqueId,
         form.couponCode,

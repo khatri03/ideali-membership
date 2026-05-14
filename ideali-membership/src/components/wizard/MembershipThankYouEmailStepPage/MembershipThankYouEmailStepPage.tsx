@@ -50,14 +50,23 @@ function buildPlaceholderGroups(placeholders: MembershipTypePlaceholderGroup[]) 
     label: group.label,
     options: group.items.map((item) => ({
       label: item.displayText || item.placeHolderText,
-      value: item.displayText || item.placeHolderText,
+      value: item.placeHolderText,
     })),
   }));
 }
 
+function getPlaceholderLabel(value: string) {
+  return value
+    .replaceAll(/[{}]/g, "")
+    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replaceAll(/_/g, " ")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+}
+
 function splitNotificationEmails(value: string) {
   return value
-    .split(/[,\n]/g)
+    .split(/[;,\n]/g)
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
 }
@@ -282,13 +291,20 @@ export function MembershipThankYouEmailStepPage() {
                       return;
                     }
 
+                    const placeholder = placeholders
+                      .flatMap((group) => group.items)
+                      .find((item) => item.placeHolderText === value);
+
                     subjectEditor
                       ?.chain()
                       .focus()
                       .insertContent([
                         {
                           type: "membershipPlaceholderToken",
-                          attrs: { label: value },
+                          attrs: {
+                            label: placeholder?.displayText || getPlaceholderLabel(value) || value,
+                            token: value,
+                          },
                         },
                         { type: "text", text: " " },
                       ])
@@ -314,14 +330,14 @@ export function MembershipThankYouEmailStepPage() {
             <MembershipThankYouEmailToolbar
               editor={editor}
               placeholders={placeholders}
-              onInsertVariable={(value) => {
+              onInsertVariable={(placeholder) => {
                 editor
                   ?.chain()
                   .focus()
                   .insertContent([
                     {
                       type: "membershipPlaceholderToken",
-                      attrs: { label: value },
+                      attrs: { label: placeholder.label, token: placeholder.token },
                     },
                     { type: "text", text: " " },
                   ])

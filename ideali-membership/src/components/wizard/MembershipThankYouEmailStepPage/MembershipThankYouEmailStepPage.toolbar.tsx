@@ -144,6 +144,15 @@ function SelectField({
   );
 }
 
+function getPlaceholderLabel(value: string) {
+  return value
+    .replaceAll(/[{}]/g, "")
+    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replaceAll(/_/g, " ")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+}
+
 function ColorButton({
   editor,
   onApplyColor,
@@ -305,14 +314,14 @@ export function MembershipThankYouEmailToolbar({
   placeholders,
 }: {
   editor: Editor | null;
-  onInsertVariable: (value: string) => void;
+  onInsertVariable: (value: { label: string; token: string }) => void;
   placeholders: MembershipTypePlaceholderGroup[];
 }) {
   const variableGroups = placeholders.map((group) => ({
     label: group.label,
     options: group.items.map((item) => ({
-      label: item.displayText || item.placeHolderText,
-      value: item.displayText || item.placeHolderText,
+      label: item.displayText || getPlaceholderLabel(item.placeHolderText) || item.placeHolderText,
+      value: item.placeHolderText,
     })),
   }));
 
@@ -389,7 +398,14 @@ export function MembershipThankYouEmailToolbar({
                 return;
               }
 
-              onInsertVariable(value);
+              const placeholder = placeholders
+                .flatMap((group) => group.items)
+                .find((item) => item.placeHolderText === value);
+
+              onInsertVariable({
+                label: placeholder?.displayText || getPlaceholderLabel(value) || value,
+                token: value,
+              });
             }}
             groups={variableGroups.length > 0 ? variableGroups : undefined}
             options={variableGroups.length > 0 ? undefined : [{ label: "No variables available", value: "", disabled: true }]}
