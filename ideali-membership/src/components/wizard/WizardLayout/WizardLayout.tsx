@@ -18,6 +18,26 @@ interface WizardLayoutProps {
   children?: ReactNode;
 }
 
+function queueNavigation(callback: () => void) {
+  let cancelled = false;
+
+  const run = () => {
+    if (!cancelled) {
+      callback();
+    }
+  };
+
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(run);
+  } else {
+    window.setTimeout(run, 0);
+  }
+
+  return () => {
+    cancelled = true;
+  };
+}
+
 function getCurrentWizardStep(pathname: string): MembershipWizardStep {
   if (
     matchPath({ path: APP_ROUTES.membershipWizardTitleWithId, end: true }, pathname) ||
@@ -166,10 +186,12 @@ export function WizardLayout({ children }: WizardLayoutProps) {
     );
     const step = MEMBERSHIP_WIZARD_STEPS[nextStepNo - 1] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
 
-    navigate(
-      buildMembershipWizardStepPath(step.to, currentMembershipTypeUniqueId, nextStepNo),
-      { replace: true },
-    );
+    return queueNavigation(() => {
+      navigate(
+        buildMembershipWizardStepPath(step.to, currentMembershipTypeUniqueId, nextStepNo),
+        { replace: true },
+      );
+    });
   }, [completedStepNo, currentMembershipTypeUniqueId, isProgressLoading, isResumeRoute, navigate]);
 
   useEffect(() => {
