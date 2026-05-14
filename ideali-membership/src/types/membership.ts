@@ -154,3 +154,19 @@ export interface MembershipCustomQuestionDraft {
   options: MembershipCustomQuestionOptionDraft[];
 }
 
+export interface MembershipMemberListItem {
+  uniqueId?: string;
+  memberFullName: string;
+  activeMembershipName: string;
+  email: string;
+  membershipExpiryUtc: string | null;
+}
+
+export interface PageResult<T> {
+  pageNo: number;
+  pageSize: number;
+  pageCount: number;
+  totalRecordsCount: number;
+  pageData: T[];
+}
+
