@@ -70,6 +70,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === MEMBERSHIP_WIZARD_STEPS.length - 1;
   const previousStep = MEMBERSHIP_WIZARD_STEPS[Math.max(currentStepIndex - 1, 0)] ?? MEMBERSHIP_WIZARD_STEPS[0]!;
+  const displayCompletedStepNo = Math.max(completedStepNo, currentStepIndex);
 
   useEffect(() => {
     const handleEnterKey = (event: KeyboardEvent) => {
@@ -259,7 +260,7 @@ export function WizardLayout({ children }: WizardLayoutProps) {
               <WizardSideNav
                 isNavVisible={isNavVisible}
                 currentStepIndex={currentStepIndex}
-                completedStepNo={completedStepNo}
+                completedStepNo={displayCompletedStepNo}
                 isProgressLoading={isProgressLoading}
                 membershipTypeUniqueId={membershipTypeUniqueId}
                 onNavToggle={() => setIsNavVisible((current) => !current)}
