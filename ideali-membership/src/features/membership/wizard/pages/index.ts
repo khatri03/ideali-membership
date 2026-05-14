@@ -1,0 +1,12 @@
+export { MembershipTitleStepPage } from "./MembershipTitleStepPage";
+export { MembershipWizardResumePage } from "./MembershipWizardResumePage";
+export { MembershipDescriptionStepPage } from "./MembershipDescriptionStepPage";
+export { MembershipColorStepPage } from "./MembershipColorStepPage";
+export { MembershipBannerStepPage } from "./MembershipBannerStepPage";
+export { MembershipPaymentAccountStepPage } from "./MembershipPaymentAccountStepPage";
+export { MembershipPricingStepPage } from "./MembershipPricingStepPage";
+export { MembershipDiscountCouponsStepPage } from "./MembershipDiscountCouponsStepPage";
+export { MembershipQuestionsStepPage } from "./MembershipQuestionsStepPage";
+export { MembershipThankYouEmailStepPage } from "./MembershipThankYouEmailStepPage";
+export { MembershipAdvanceSettingsStepPage } from "./MembershipAdvanceSettingsStepPage";
+export { MembershipReviewStepPage } from "./MembershipReviewStepPage";

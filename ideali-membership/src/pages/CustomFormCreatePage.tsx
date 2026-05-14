@@ -560,9 +560,21 @@ function SortableFieldCard({
     transition,
   };
   const combinedStyle = {
-    ...(isDragging ? { transition, opacity: 0 } : style),
+    ...(isDragging ? { transition } : style),
     gridColumn: isCompactViewport ? "1 / -1" : `span ${span} / span ${span}`,
   };
+
+  if (isDragging) {
+    return (
+      <article
+        ref={setNodeRef}
+        data-field-id={field.id}
+        className="rounded-3xl border-2 border-dashed border-cyan-300 bg-cyan-50/40 p-4 pointer-events-none"
+        style={combinedStyle}
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <article
@@ -571,7 +583,6 @@ function SortableFieldCard({
       className={[
         "rounded-3xl border bg-white p-4 shadow-sm transition cursor-default hover:cursor-default",
         selected ? "border-cyan-400 ring-2 ring-cyan-100" : "border-slate-200",
-        isDragging ? "opacity-70" : "",
       ].join(" ")}
       style={combinedStyle}
       onClick={() => onSelect(field.id)}

@@ -7,7 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { APP_ROUTES, buildMembershipRegisterPath, buildMembershipWizardStepPath } from "../routes";
 import { getMembershipTypeOrderList, getMembershipWizardProgress, getMembershipTypes, saveMembershipReviewStep, saveMembershipTypeOrderList } from "../lib/membershipWizard";
-import { MEMBERSHIP_WIZARD_STEPS } from "../components/wizard/membershipWizardSteps";
+import { MEMBERSHIP_WIZARD_STEPS } from "../features/membership/wizard/membershipWizardSteps";
 import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
 
 function EditIcon() {

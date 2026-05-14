@@ -1,1 +1,1 @@
-export const AUTH_STORAGE_KEY = "ideali-membership.auth";
+export * from "../features/auth/authStorage";
