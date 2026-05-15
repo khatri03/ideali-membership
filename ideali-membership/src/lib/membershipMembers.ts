@@ -33,7 +33,6 @@ function buildQueryString(
   pageNo: number,
   pageSize: number,
   membershipStatuses?: string[] | null,
-  approvalStatuses?: string[] | null,
   membershipTypeUniqueIds?: string[] | null,
   searchTerm?: string | null,
 ) {
@@ -42,20 +41,12 @@ function buildQueryString(
     pageSize: String(pageSize),
   });
 
-  const normalizedApprovalStatuses = Array.from(
-    new Set((approvalStatuses ?? []).map((value) => value.trim()).filter((value) => value.length > 0)),
-  );
-
   const normalizedMembershipStatuses = Array.from(
     new Set((membershipStatuses ?? []).map((value) => value.trim()).filter((value) => value.length > 0)),
   );
 
   normalizedMembershipStatuses.forEach((membershipStatus) => {
     searchParams.append("membershipStatuses", membershipStatus);
-  });
-
-  normalizedApprovalStatuses.forEach((approvalStatus) => {
-    searchParams.append("approvalStatuses", approvalStatus);
   });
 
   const uniqueIds = Array.from(
@@ -78,7 +69,6 @@ export async function fetchMembershipMembers(
   pageNo: number,
   pageSize: number,
   membershipStatuses?: string[] | null,
-  approvalStatuses?: string[] | null,
   membershipTypeUniqueIds?: string[] | null,
   searchTerm?: string | null,
 ) {
@@ -87,7 +77,6 @@ export async function fetchMembershipMembers(
       pageNo,
       pageSize,
       membershipStatuses,
-      approvalStatuses,
       membershipTypeUniqueIds,
       searchTerm,
     )}`,
@@ -110,7 +99,6 @@ export async function fetchMembershipMembers(
         memberFullName: readText(item.MemberFullName ?? item.memberFullName),
         activeMembershipName: readText(item.ActiveMembershipName ?? item.activeMembershipName),
         membershipStatus: readText(item.MembershipStatus ?? item.membershipStatus),
-        approvalStatus: readText(item.ApprovalStatus ?? item.approvalStatus),
         email: readText(item.Email ?? item.email),
         membershipExpiryUtc: readNullableText(item.MembershipExpiryUtc ?? item.membershipExpiryUtc),
       }))

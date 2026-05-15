@@ -7,22 +7,18 @@ export type MembersFilterOption = {
 
 type MembersFiltersProps = {
   draftMembershipStatuses: string[];
-  draftApprovalStatuses: string[];
   draftMembershipTypeUniqueIds: string[];
   draftSearchTerm: string;
   hasPendingFilterChanges: boolean;
   isMembershipTypesLoading: boolean;
   membershipStatusOptions: MembersFilterOption[];
-  approvalStatusOptions: MembersFilterOption[];
   selectedMembershipStatuses: string[];
-  selectedApprovalStatuses: string[];
   membershipTypeOptions: MembersFilterOption[];
   selectedMembershipTypeUniqueIds: string[];
   selectedSearchTerm: string;
   onApplyFilters: () => void;
   onClearFilters: () => void;
   onDraftMembershipStatusesChange: (value: string[]) => void;
-  onDraftApprovalStatusesChange: (value: string[]) => void;
   onDraftMembershipTypeUniqueIdsChange: (value: string[]) => void;
   onDraftSearchTermChange: (value: string) => void;
   onResetChanges: () => void;
@@ -30,22 +26,18 @@ type MembersFiltersProps = {
 
 export function MembersFilters({
   membershipStatusOptions,
-  approvalStatusOptions,
   draftMembershipStatuses,
-  draftApprovalStatuses,
   draftMembershipTypeUniqueIds,
   draftSearchTerm,
   hasPendingFilterChanges,
   isMembershipTypesLoading,
   selectedMembershipStatuses,
-  selectedApprovalStatuses,
   membershipTypeOptions,
   selectedMembershipTypeUniqueIds,
   selectedSearchTerm,
   onApplyFilters,
   onClearFilters,
   onDraftMembershipStatusesChange,
-  onDraftApprovalStatusesChange,
   onDraftMembershipTypeUniqueIdsChange,
   onDraftSearchTermChange,
   onResetChanges,
@@ -67,19 +59,6 @@ export function MembersFilters({
             placeholder="All membership statuses"
             className="w-full"
             inputId="membership-status-filter"
-          />
-        </div>
-        <div className="space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Approval Status
-          </div>
-          <MultiSelectInput
-            value={draftApprovalStatuses}
-            onChange={onDraftApprovalStatusesChange}
-            options={approvalStatusOptions}
-            placeholder="All approval statuses"
-            className="w-full"
-            inputId="approval-status-filter"
           />
         </div>
         <div className="space-y-2">
@@ -115,13 +94,11 @@ export function MembersFilters({
           {hasPendingFilterChanges ? (
             <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
               {draftMembershipStatuses.length +
-                draftApprovalStatuses.length +
                 draftMembershipTypeUniqueIds.length +
                 (draftSearchTerm.trim().length > 0 ? 1 : 0)} pending
             </span>
           ) : null}
           {selectedMembershipStatuses.length > 0 ||
-          selectedApprovalStatuses.length > 0 ||
           selectedMembershipTypeUniqueIds.length > 0 ||
           selectedSearchTerm.length > 0 ? (
             <button

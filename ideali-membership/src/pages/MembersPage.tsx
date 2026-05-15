@@ -5,17 +5,11 @@ import { fetchMembershipMembers } from "../lib/membershipMembers";
 import { getMembershipTypes } from "../lib/membershipWizard";
 import type { MembershipMemberListItem, MembershipTypeListItem } from "../types/membership";
 
-const approvalStatusOptions = [
-  { label: "Approved", value: "Approved" },
-  { label: "Pending Approval", value: "PendingApproval" },
-  { label: "Rejected", value: "Rejected" },
-];
-
 const membershipStatusOptions = [
+  { label: "Pending Approval", value: "PendingApproval" },
   { label: "Active", value: "Active" },
-  { label: "Pending", value: "Pending" },
   { label: "Expired", value: "Expired" },
-  { label: "Near Expiry", value: "NearExpiry" },
+  { label: "Inactive", value: "InActive" },
 ];
 
 function getPositiveNumber(value: string | null, fallback: number) {
@@ -66,14 +60,6 @@ export function MembersPage() {
     () => selectedSearchTerm.toLowerCase(),
     [selectedSearchTerm],
   );
-  const selectedApprovalStatuses = useMemo(
-    () => normalizeUniqueIds(searchParams.getAll("approvalStatuses")),
-    [searchParamsKey],
-  );
-  const selectedApprovalStatusesKey = useMemo(
-    () => normalizeUniqueIds(selectedApprovalStatuses).join("\u0000"),
-    [selectedApprovalStatuses],
-  );
   const selectedMembershipStatuses = useMemo(
     () => normalizeUniqueIds(searchParams.getAll("membershipStatuses")),
     [searchParamsKey],
@@ -89,7 +75,6 @@ export function MembersPage() {
   const [membershipTypes, setMembershipTypes] = useState<MembershipTypeListItem[]>([]);
   const [isMembershipTypesLoading, setIsMembershipTypesLoading] = useState(true);
   const [draftMembershipStatuses, setDraftMembershipStatuses] = useState(selectedMembershipStatuses);
-  const [draftApprovalStatuses, setDraftApprovalStatuses] = useState(selectedApprovalStatuses);
   const [draftMembershipTypeUniqueIds, setDraftMembershipTypeUniqueIds] = useState<string[]>(
     selectedMembershipTypeUniqueIds,
   );
@@ -101,10 +86,6 @@ export function MembersPage() {
   const hasPendingMembershipStatusChanges = useMemo(
     () => !areUniqueIdListsEqual(draftMembershipStatuses, selectedMembershipStatuses),
     [draftMembershipStatuses, selectedMembershipStatuses],
-  );
-  const hasPendingApprovalStatusChanges = useMemo(
-    () => !areUniqueIdListsEqual(draftApprovalStatuses, selectedApprovalStatuses),
-    [draftApprovalStatuses, selectedApprovalStatuses],
   );
   const hasPendingMembershipTypeChanges = useMemo(
     () => !areUniqueIdListsEqual(draftMembershipTypeUniqueIds, selectedMembershipTypeUniqueIds),
@@ -149,10 +130,6 @@ export function MembersPage() {
   }, [selectedMembershipStatusesKey]);
 
   useEffect(() => {
-    setDraftApprovalStatuses(selectedApprovalStatuses);
-  }, [selectedApprovalStatusesKey]);
-
-  useEffect(() => {
     setDraftMembershipTypeUniqueIds(selectedMembershipTypeUniqueIds);
   }, [selectedMembershipTypeKey]);
 
@@ -172,7 +149,6 @@ export function MembersPage() {
           pageNo,
           pageSize,
           selectedMembershipStatuses,
-          selectedApprovalStatuses,
           selectedMembershipTypeUniqueIds,
           selectedSearchTerm,
         );
@@ -208,7 +184,6 @@ export function MembersPage() {
   }, [
     pageNo,
     pageSize,
-    selectedApprovalStatusesKey,
     selectedMembershipStatusesKey,
     selectedMembershipTypeKey,
     selectedSearchTermKey,
@@ -242,17 +217,12 @@ export function MembersPage() {
     nextParams.set("pageNo", "1");
     nextParams.set("pageSize", String(pageSize));
     nextParams.delete("membershipStatuses");
-    nextParams.delete("approvalStatuses");
     nextParams.delete("membershipTypeUniqueId");
     nextParams.delete("membershipTypeUniqueIds");
     nextParams.delete("searchTerm");
 
     draftMembershipStatuses.forEach((membershipStatus) => {
       nextParams.append("membershipStatuses", membershipStatus);
-    });
-
-    draftApprovalStatuses.forEach((approvalStatus) => {
-      nextParams.append("approvalStatuses", approvalStatus);
     });
 
     draftMembershipTypeUniqueIds.forEach((membershipTypeUniqueId) => {
@@ -269,7 +239,6 @@ export function MembersPage() {
 
   function resetDraftFilters() {
     setDraftMembershipStatuses(selectedMembershipStatuses);
-    setDraftApprovalStatuses(selectedApprovalStatuses);
     setDraftMembershipTypeUniqueIds(selectedMembershipTypeUniqueIds);
     setDraftSearchTerm(selectedSearchTerm);
   }
@@ -277,7 +246,6 @@ export function MembersPage() {
   function clearFilters() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("membershipStatuses");
-    nextParams.delete("approvalStatuses");
     nextParams.delete("membershipTypeUniqueId");
     nextParams.delete("membershipTypeUniqueIds");
     nextParams.delete("searchTerm");
@@ -287,8 +255,7 @@ export function MembersPage() {
   }
 
   const hasPendingFilterChanges =
-    hasPendingMembershipStatusChanges ||
-    hasPendingApprovalStatusChanges || hasPendingMembershipTypeChanges || hasPendingSearchTermChanges;
+    hasPendingMembershipStatusChanges || hasPendingMembershipTypeChanges || hasPendingSearchTermChanges;
 
   return (
     <section className="space-y-6">
@@ -312,22 +279,18 @@ export function MembersPage() {
       <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <MembersFilters
           membershipStatusOptions={membershipStatusOptions}
-          approvalStatusOptions={approvalStatusOptions}
           draftMembershipStatuses={draftMembershipStatuses}
-          draftApprovalStatuses={draftApprovalStatuses}
           draftMembershipTypeUniqueIds={draftMembershipTypeUniqueIds}
           draftSearchTerm={draftSearchTerm}
           hasPendingFilterChanges={hasPendingFilterChanges}
           isMembershipTypesLoading={isMembershipTypesLoading}
           selectedMembershipStatuses={selectedMembershipStatuses}
-          selectedApprovalStatuses={selectedApprovalStatuses}
           membershipTypeOptions={membershipTypeOptions}
           selectedMembershipTypeUniqueIds={selectedMembershipTypeUniqueIds}
           selectedSearchTerm={selectedSearchTerm}
           onApplyFilters={applyFilters}
           onClearFilters={clearFilters}
           onDraftMembershipStatusesChange={setDraftMembershipStatuses}
-          onDraftApprovalStatusesChange={setDraftApprovalStatuses}
           onDraftMembershipTypeUniqueIdsChange={setDraftMembershipTypeUniqueIds}
           onDraftSearchTermChange={setDraftSearchTerm}
           onResetChanges={resetDraftFilters}
