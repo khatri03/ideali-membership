@@ -1,28 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { DataTable } from "../components/shared/DataTable";
-import type { Column } from "../components/shared/DataTable";
+import { MembersPagination, MembersTable } from "../features/membership/components";
 import { fetchMembershipMembers } from "../lib/membershipMembers";
-import type { MembershipMemberListItem } from "../types/membership";
-
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 5000];
-
-function formatExpiry(value: string | null) {
-  if (!value) {
-    return "No expiry";
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-PK", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(parsedDate);
-}
+import { getMembershipTypes } from "../lib/membershipWizard";
+import type { MembershipMemberListItem, MembershipTypeListItem } from "../types/membership";
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -36,9 +17,41 @@ export function MembersPage() {
   const pageSize = getPositiveNumber(searchParams.get("pageSize"), 25);
 
   const [members, setMembers] = useState<MembershipMemberListItem[]>([]);
+  const [membershipTypes, setMembershipTypes] = useState<MembershipTypeListItem[]>([]);
+  const [isMembershipTypesLoading, setIsMembershipTypesLoading] = useState(true);
   const [totalRecordsCount, setTotalRecordsCount] = useState(0);
+  const [pageCount, setPageCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMembershipTypes() {
+      setIsMembershipTypesLoading(true);
+
+      try {
+        const items = await getMembershipTypes();
+        if (!cancelled) {
+          setMembershipTypes(items.slice().sort((left, right) => left.displayOrder - right.displayOrder));
+        }
+      } catch {
+        if (!cancelled) {
+          setMembershipTypes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsMembershipTypesLoading(false);
+        }
+      }
+    }
+
+    void loadMembershipTypes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,18 +61,27 @@ export function MembersPage() {
       setError(null);
 
       try {
-        const response = await fetchMembershipMembers(pageNo, pageSize, membershipTypeUniqueId);
+        const response = await fetchMembershipMembers(
+          pageNo,
+          pageSize,
+          membershipTypeUniqueId,
+        );
+
         if (cancelled) {
           return;
         }
 
         setMembers(response.pageData);
         setTotalRecordsCount(response.totalRecordsCount);
+        setPageCount(response.pageCount);
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load members.");
+          setError(
+            loadError instanceof Error ? loadError.message : "Unable to load members.",
+          );
           setMembers([]);
           setTotalRecordsCount(0);
+          setPageCount(0);
         }
       } finally {
         if (!cancelled) {
@@ -89,38 +111,16 @@ export function MembersPage() {
     return `Showing ${startRecord}-${endRecord} of ${totalRecordsCount} member${totalRecordsCount === 1 ? "" : "s"}`;
   }, [isLoading, pageNo, pageSize, totalRecordsCount]);
 
-  const columns: Column<MembershipMemberListItem>[] = useMemo(
-    () => [
-      {
-        header: "Member full name",
-        accessor: "memberFullName",
-        headerAlign: "center",
-        cellAlign: "left",
-      },
-      {
-        header: "Active membership",
-        accessor: "activeMembershipName",
-        headerAlign: "center",
-        cellAlign: "left",
-      },
-      {
-        header: "Email",
-        accessor: "email",
-        headerAlign: "center",
-        cellAlign: "left",
-      },
-      {
-        header: "Membership expiry",
-        accessor: (item) => formatExpiry(item.membershipExpiryUtc),
-        headerAlign: "center",
-        cellAlign: "left",
-      },
-    ],
-    [],
-  );
+  const selectedMembershipTypeLabel = useMemo(() => {
+    if (!membershipTypeUniqueId) {
+      return "All membership types";
+    }
 
-  const canGoPrevious = pageNo > 1 && !isLoading;
-  const canGoNext = !isLoading && pageNo * pageSize < totalRecordsCount;
+    return (
+      membershipTypes.find((item) => item.value === membershipTypeUniqueId)?.text ??
+      membershipTypeUniqueId
+    );
+  }, [membershipTypeUniqueId, membershipTypes]);
 
   function updatePage(nextPageNo: number) {
     const nextParams = new URLSearchParams(searchParams);
@@ -136,6 +136,20 @@ export function MembersPage() {
     setSearchParams(nextParams, { replace: true });
   }
 
+  function updateMembershipType(nextMembershipTypeUniqueId: string) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("pageNo", "1");
+    nextParams.set("pageSize", String(pageSize));
+
+    if (nextMembershipTypeUniqueId) {
+      nextParams.set("membershipTypeUniqueId", nextMembershipTypeUniqueId);
+    } else {
+      nextParams.delete("membershipTypeUniqueId");
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }
+
   return (
     <section className="space-y-6">
       <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -146,21 +160,48 @@ export function MembersPage() {
                 Membership members
               </p>
               <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                Active member list
+                Registered members
               </h1>
               <p className="mt-3 max-w-2xl text-slate-600">
-                Review enrolled members, their active membership, contact email, and expiry date in one place.
+                Review enrolled members, their active membership, contact email,
+                and expiry date in one place.
               </p>
             </div>
             <p className="text-sm font-medium text-slate-500">{summaryLabel}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {membershipTypeUniqueId ? (
+          <div className="flex w-full flex-col gap-3 lg:max-w-md">
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Filter by Membership Type
+            </label>
+            <select
+              value={membershipTypeUniqueId ?? ""}
+              onChange={(event) => updateMembershipType(event.target.value)}
+              disabled={isMembershipTypesLoading}
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+              aria-label="Filter by membership type"
+            >
+              <option value="">All membership types</option>
+              {membershipTypes.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.text}
+                </option>
+              ))}
+            </select>
+            <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center rounded-full bg-cyan-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Filter applied
+                {selectedMembershipTypeLabel}
               </span>
-            ) : null}
+              {membershipTypeUniqueId ? (
+                <button
+                  type="button"
+                  onClick={() => updateMembershipType("")}
+                  className="text-sm font-medium text-cyan-700 underline-offset-4 hover:underline"
+                >
+                  Clear filter
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -177,17 +218,17 @@ export function MembersPage() {
             {error}
           </div>
         ) : (
-          <DataTable
-            data={members}
-            columns={columns}
-            totalItems={totalRecordsCount}
-            currentPage={pageNo}
-            pageSize={pageSize}
-            onPageChange={updatePage}
-            onPageSizeChange={updatePageSize}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-            keyExtractor={(item) => item.uniqueId || `${item.memberFullName}-${item.email}-${item.membershipExpiryUtc ?? ""}`}
-          />
+          <div className="space-y-4">
+            <MembersTable members={members} />
+            <MembersPagination
+              currentPage={pageNo}
+              pageSize={pageSize}
+              totalPages={pageCount > 0 ? pageCount : Math.ceil(totalRecordsCount / pageSize)}
+              totalRecordsCount={totalRecordsCount}
+              onPageChange={updatePage}
+              onPageSizeChange={updatePageSize}
+            />
+          </div>
         )}
       </div>
     </section>

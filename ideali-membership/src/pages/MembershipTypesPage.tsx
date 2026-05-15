@@ -861,19 +861,19 @@ function MembershipTypeActionsMenu({
                   onMouseEnter={clearMemberCloseTimer}
                   onMouseLeave={scheduleMemberClose}
                 >
-                  <button
-                    type="button"
-                    disabled
-                    className="flex w-full cursor-not-allowed items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition"
-                    aria-disabled="true"
-                    title="Members list is coming soon."
+                  <Link
+                    to={`${APP_ROUTES.membershipMembers}?${new URLSearchParams({
+                      membershipTypeUniqueId: item.value,
+                    }).toString()}`}
+                    onClick={() => {
+                      setIsOpen(false);
+                      setIsMemberOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                   >
-                    <Users className="h-4 w-4 text-slate-300" />
-                    List
-                    <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                      Disabled
-                    </span>
-                  </button>
+                    <Users className="h-4 w-4" />
+                    Members
+                  </Link>
 
                   <button
                     type="button"
