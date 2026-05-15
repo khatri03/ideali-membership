@@ -18,6 +18,62 @@ function formatExpiry(value: string | null) {
   }).format(parsedDate);
 }
 
+function formatApprovalStatus(value: string) {
+  switch (value) {
+    case "Approved":
+      return "Approved";
+    case "PendingApproval":
+      return "Pending Approval";
+    case "Rejected":
+      return "Rejected";
+    default:
+      return value;
+  }
+}
+
+function formatMembershipStatus(value: string) {
+  switch (value) {
+    case "Pending":
+      return "Pending";
+    case "Active":
+      return "Active";
+    case "Expired":
+      return "Expired";
+    case "NearExpiry":
+      return "Near Expiry";
+    default:
+      return value;
+  }
+}
+
+function getMembershipStatusStyles(value: string) {
+  switch (value) {
+    case "Pending":
+      return "border-slate-200 bg-slate-50 text-slate-700";
+    case "Active":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "Expired":
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    case "NearExpiry":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700";
+  }
+}
+
+function getApprovalStatusStyles(value: string) {
+  switch (value) {
+    case "Approved":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "PendingApproval":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    case "Rejected":
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700";
+  }
+}
+
 type MembersTableProps = {
   members: MembershipMemberListItem[];
 };
@@ -33,6 +89,12 @@ export function MembersTable({ members }: MembersTableProps) {
             </th>
             <th className="h-12 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700 sm:px-4">
               Active Membership
+            </th>
+            <th className="h-12 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700 sm:px-4">
+              Membership Status
+            </th>
+            <th className="h-12 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700 sm:px-4">
+              Approval Status
             </th>
             <th className="h-12 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700 sm:px-4">
               Email
@@ -66,6 +128,26 @@ export function MembersTable({ members }: MembersTableProps) {
                 {member.activeMembershipName}
               </td>
               <td className="px-3 py-3 text-sm text-slate-700 sm:px-4">
+                <span
+                  className={cn(
+                    "inline-flex rounded-full border px-3 py-1 text-xs font-semibold",
+                    getMembershipStatusStyles(member.membershipStatus),
+                  )}
+                >
+                  {formatMembershipStatus(member.membershipStatus)}
+                </span>
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-700 sm:px-4">
+                <span
+                  className={cn(
+                    "inline-flex rounded-full border px-3 py-1 text-xs font-semibold",
+                    getApprovalStatusStyles(member.approvalStatus),
+                  )}
+                >
+                  {formatApprovalStatus(member.approvalStatus)}
+                </span>
+              </td>
+              <td className="px-3 py-3 text-sm text-slate-700 sm:px-4">
                 {member.email}
               </td>
               <td className="px-3 py-3 text-center text-sm font-medium text-slate-900 sm:px-4">
@@ -76,7 +158,7 @@ export function MembersTable({ members }: MembersTableProps) {
 
           {members.length === 0 ? (
             <tr>
-              <td colSpan={4} className="py-12 text-center text-slate-500">
+              <td colSpan={6} className="py-12 text-center text-slate-500">
                 No registered members found.
               </td>
             </tr>

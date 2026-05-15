@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MultiSelectInput } from "../components/inputs/MultiSelectInput/MultiSelectInput";
-import { MembersPagination, MembersTable } from "../features/membership/components";
+import { MembersFilters, MembersPagination, MembersTable } from "../features/membership/components";
 import { fetchMembershipMembers } from "../lib/membershipMembers";
 import { getMembershipTypes } from "../lib/membershipWizard";
 import type { MembershipMemberListItem, MembershipTypeListItem } from "../types/membership";
+
+const approvalStatusOptions = [
+  { label: "Approved", value: "Approved" },
+  { label: "Pending Approval", value: "PendingApproval" },
+  { label: "Rejected", value: "Rejected" },
+];
+
+const membershipStatusOptions = [
+  { label: "Active", value: "Active" },
+  { label: "Pending", value: "Pending" },
+  { label: "Expired", value: "Expired" },
+  { label: "Near Expiry", value: "NearExpiry" },
+];
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -46,27 +58,62 @@ export function MembersPage() {
     () => normalizeUniqueIds(selectedMembershipTypeUniqueIds).join("\u0000"),
     [selectedMembershipTypeUniqueIds],
   );
+  const selectedSearchTerm = useMemo(
+    () => searchParams.get("searchTerm")?.trim() ?? "",
+    [searchParamsKey],
+  );
+  const selectedSearchTermKey = useMemo(
+    () => selectedSearchTerm.toLowerCase(),
+    [selectedSearchTerm],
+  );
+  const selectedApprovalStatuses = useMemo(
+    () => normalizeUniqueIds(searchParams.getAll("approvalStatuses")),
+    [searchParamsKey],
+  );
+  const selectedApprovalStatusesKey = useMemo(
+    () => normalizeUniqueIds(selectedApprovalStatuses).join("\u0000"),
+    [selectedApprovalStatuses],
+  );
+  const selectedMembershipStatuses = useMemo(
+    () => normalizeUniqueIds(searchParams.getAll("membershipStatuses")),
+    [searchParamsKey],
+  );
+  const selectedMembershipStatusesKey = useMemo(
+    () => normalizeUniqueIds(selectedMembershipStatuses).join("\u0000"),
+    [selectedMembershipStatuses],
+  );
   const pageNo = getPositiveNumber(searchParams.get("pageNo"), 1);
   const pageSize = getPositiveNumber(searchParams.get("pageSize"), 25);
 
   const [members, setMembers] = useState<MembershipMemberListItem[]>([]);
   const [membershipTypes, setMembershipTypes] = useState<MembershipTypeListItem[]>([]);
   const [isMembershipTypesLoading, setIsMembershipTypesLoading] = useState(true);
+  const [draftMembershipStatuses, setDraftMembershipStatuses] = useState(selectedMembershipStatuses);
+  const [draftApprovalStatuses, setDraftApprovalStatuses] = useState(selectedApprovalStatuses);
   const [draftMembershipTypeUniqueIds, setDraftMembershipTypeUniqueIds] = useState<string[]>(
     selectedMembershipTypeUniqueIds,
   );
+  const [draftSearchTerm, setDraftSearchTerm] = useState(selectedSearchTerm);
   const [totalRecordsCount, setTotalRecordsCount] = useState(0);
   const [pageCount, setPageCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasPendingMembershipStatusChanges = useMemo(
+    () => !areUniqueIdListsEqual(draftMembershipStatuses, selectedMembershipStatuses),
+    [draftMembershipStatuses, selectedMembershipStatuses],
+  );
+  const hasPendingApprovalStatusChanges = useMemo(
+    () => !areUniqueIdListsEqual(draftApprovalStatuses, selectedApprovalStatuses),
+    [draftApprovalStatuses, selectedApprovalStatuses],
+  );
   const hasPendingMembershipTypeChanges = useMemo(
     () => !areUniqueIdListsEqual(draftMembershipTypeUniqueIds, selectedMembershipTypeUniqueIds),
     [draftMembershipTypeUniqueIds, selectedMembershipTypeUniqueIds],
   );
-  const canApplyMembershipTypes = hasPendingMembershipTypeChanges && draftMembershipTypeUniqueIds.length > 0;
-  const pendingMembershipTypeCount = hasPendingMembershipTypeChanges
-    ? draftMembershipTypeUniqueIds.length
-    : 0;
+  const hasPendingSearchTermChanges = useMemo(
+    () => draftSearchTerm.trim().toLowerCase() !== selectedSearchTermKey,
+    [draftSearchTerm, selectedSearchTermKey],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -98,8 +145,20 @@ export function MembersPage() {
   }, []);
 
   useEffect(() => {
+    setDraftMembershipStatuses(selectedMembershipStatuses);
+  }, [selectedMembershipStatusesKey]);
+
+  useEffect(() => {
+    setDraftApprovalStatuses(selectedApprovalStatuses);
+  }, [selectedApprovalStatusesKey]);
+
+  useEffect(() => {
     setDraftMembershipTypeUniqueIds(selectedMembershipTypeUniqueIds);
   }, [selectedMembershipTypeKey]);
+
+  useEffect(() => {
+    setDraftSearchTerm(selectedSearchTerm);
+  }, [selectedSearchTermKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +171,10 @@ export function MembersPage() {
         const response = await fetchMembershipMembers(
           pageNo,
           pageSize,
+          selectedMembershipStatuses,
+          selectedApprovalStatuses,
           selectedMembershipTypeUniqueIds,
+          selectedSearchTerm,
         );
 
         if (cancelled) {
@@ -143,29 +205,14 @@ export function MembersPage() {
     return () => {
       cancelled = true;
     };
-  }, [pageNo, pageSize, selectedMembershipTypeKey]);
-
-  const summaryLabel = useMemo(() => {
-    if (isLoading) {
-      return "Loading members...";
-    }
-
-    if (totalRecordsCount === 0) {
-      return "No members found";
-    }
-
-    const startRecord = (pageNo - 1) * pageSize + 1;
-    const endRecord = Math.min(pageNo * pageSize, totalRecordsCount);
-    return `Showing ${startRecord}-${endRecord} of ${totalRecordsCount} member${totalRecordsCount === 1 ? "" : "s"}`;
-  }, [isLoading, pageNo, pageSize, totalRecordsCount]);
-
-  const selectedMembershipTypeItems = useMemo(
-    () =>
-      selectedMembershipTypeUniqueIds
-        .map((value) => membershipTypes.find((item) => item.value === value))
-        .filter((item): item is MembershipTypeListItem => Boolean(item)),
-    [membershipTypes, selectedMembershipTypeUniqueIds],
-  );
+  }, [
+    pageNo,
+    pageSize,
+    selectedApprovalStatusesKey,
+    selectedMembershipStatusesKey,
+    selectedMembershipTypeKey,
+    selectedSearchTermKey,
+  ]);
 
   const membershipTypeOptions = useMemo(
     () =>
@@ -190,33 +237,58 @@ export function MembersPage() {
     setSearchParams(nextParams, { replace: true });
   }
 
-  function applyMembershipTypes(nextMembershipTypeUniqueIds: string[]) {
+  function applyFilters() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("pageNo", "1");
     nextParams.set("pageSize", String(pageSize));
+    nextParams.delete("membershipStatuses");
+    nextParams.delete("approvalStatuses");
     nextParams.delete("membershipTypeUniqueId");
     nextParams.delete("membershipTypeUniqueIds");
+    nextParams.delete("searchTerm");
 
-    nextMembershipTypeUniqueIds.forEach((membershipTypeUniqueId) => {
+    draftMembershipStatuses.forEach((membershipStatus) => {
+      nextParams.append("membershipStatuses", membershipStatus);
+    });
+
+    draftApprovalStatuses.forEach((approvalStatus) => {
+      nextParams.append("approvalStatuses", approvalStatus);
+    });
+
+    draftMembershipTypeUniqueIds.forEach((membershipTypeUniqueId) => {
       nextParams.append("membershipTypeUniqueIds", membershipTypeUniqueId);
     });
+
+    const normalizedSearchTerm = draftSearchTerm.trim();
+    if (normalizedSearchTerm.length > 0) {
+      nextParams.set("searchTerm", normalizedSearchTerm);
+    }
 
     setSearchParams(nextParams, { replace: true });
   }
 
-  function applyDraftMembershipTypes() {
-    applyMembershipTypes(draftMembershipTypeUniqueIds);
-  }
-
-  function resetDraftMembershipTypes() {
+  function resetDraftFilters() {
+    setDraftMembershipStatuses(selectedMembershipStatuses);
+    setDraftApprovalStatuses(selectedApprovalStatuses);
     setDraftMembershipTypeUniqueIds(selectedMembershipTypeUniqueIds);
+    setDraftSearchTerm(selectedSearchTerm);
   }
 
-  function removeMembershipType(nextMembershipTypeUniqueId: string) {
-    applyMembershipTypes(
-      selectedMembershipTypeUniqueIds.filter((value) => value !== nextMembershipTypeUniqueId),
-    );
+  function clearFilters() {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("membershipStatuses");
+    nextParams.delete("approvalStatuses");
+    nextParams.delete("membershipTypeUniqueId");
+    nextParams.delete("membershipTypeUniqueIds");
+    nextParams.delete("searchTerm");
+    nextParams.set("pageNo", "1");
+    nextParams.set("pageSize", String(pageSize));
+    setSearchParams(nextParams, { replace: true });
   }
+
+  const hasPendingFilterChanges =
+    hasPendingMembershipStatusChanges ||
+    hasPendingApprovalStatusChanges || hasPendingMembershipTypeChanges || hasPendingSearchTermChanges;
 
   return (
     <section className="space-y-6">
@@ -238,54 +310,28 @@ export function MembersPage() {
       </div>
 
       <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="mb-6 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-          <div className="flex flex-col gap-3">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Filter by Membership Types
-            </label>
-            <MultiSelectInput
-              value={draftMembershipTypeUniqueIds}
-              onChange={setDraftMembershipTypeUniqueIds}
-              options={membershipTypeOptions}
-              placeholder="All membership types"
-              isDisabled={isMembershipTypesLoading}
-              className="w-full"
-              inputId="membership-type-filter"
-            />
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={applyDraftMembershipTypes}
-                disabled={!canApplyMembershipTypes}
-                className="inline-flex items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-              >
-                Apply filter
-              </button>
-              {hasPendingMembershipTypeChanges ? (
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
-                  {pendingMembershipTypeCount} pending
-                </span>
-              ) : null}
-              {selectedMembershipTypeUniqueIds.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => applyMembershipTypes([])}
-                  className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
-                >
-                  Clear filters
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={resetDraftMembershipTypes}
-                disabled={!hasPendingMembershipTypeChanges}
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Reset changes
-              </button>
-            </div>
-          </div>
-        </div>
+        <MembersFilters
+          membershipStatusOptions={membershipStatusOptions}
+          approvalStatusOptions={approvalStatusOptions}
+          draftMembershipStatuses={draftMembershipStatuses}
+          draftApprovalStatuses={draftApprovalStatuses}
+          draftMembershipTypeUniqueIds={draftMembershipTypeUniqueIds}
+          draftSearchTerm={draftSearchTerm}
+          hasPendingFilterChanges={hasPendingFilterChanges}
+          isMembershipTypesLoading={isMembershipTypesLoading}
+          selectedMembershipStatuses={selectedMembershipStatuses}
+          selectedApprovalStatuses={selectedApprovalStatuses}
+          membershipTypeOptions={membershipTypeOptions}
+          selectedMembershipTypeUniqueIds={selectedMembershipTypeUniqueIds}
+          selectedSearchTerm={selectedSearchTerm}
+          onApplyFilters={applyFilters}
+          onClearFilters={clearFilters}
+          onDraftMembershipStatusesChange={setDraftMembershipStatuses}
+          onDraftApprovalStatusesChange={setDraftApprovalStatuses}
+          onDraftMembershipTypeUniqueIdsChange={setDraftMembershipTypeUniqueIds}
+          onDraftSearchTermChange={setDraftSearchTerm}
+          onResetChanges={resetDraftFilters}
+        />
 
         {isLoading ? (
           <div className="grid gap-4">

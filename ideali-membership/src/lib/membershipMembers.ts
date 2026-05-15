@@ -29,10 +29,33 @@ function readNumber(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function buildQueryString(pageNo: number, pageSize: number, membershipTypeUniqueIds?: string[] | null) {
+function buildQueryString(
+  pageNo: number,
+  pageSize: number,
+  membershipStatuses?: string[] | null,
+  approvalStatuses?: string[] | null,
+  membershipTypeUniqueIds?: string[] | null,
+  searchTerm?: string | null,
+) {
   const searchParams = new URLSearchParams({
     pageNo: String(pageNo),
     pageSize: String(pageSize),
+  });
+
+  const normalizedApprovalStatuses = Array.from(
+    new Set((approvalStatuses ?? []).map((value) => value.trim()).filter((value) => value.length > 0)),
+  );
+
+  const normalizedMembershipStatuses = Array.from(
+    new Set((membershipStatuses ?? []).map((value) => value.trim()).filter((value) => value.length > 0)),
+  );
+
+  normalizedMembershipStatuses.forEach((membershipStatus) => {
+    searchParams.append("membershipStatuses", membershipStatus);
+  });
+
+  normalizedApprovalStatuses.forEach((approvalStatus) => {
+    searchParams.append("approvalStatuses", approvalStatus);
   });
 
   const uniqueIds = Array.from(
@@ -43,12 +66,31 @@ function buildQueryString(pageNo: number, pageSize: number, membershipTypeUnique
     searchParams.append("membershipTypeUniqueIds", membershipTypeUniqueId);
   });
 
+  const normalizedSearchTerm = searchTerm?.trim();
+  if (normalizedSearchTerm) {
+    searchParams.set("searchTerm", normalizedSearchTerm);
+  }
+
   return searchParams.toString();
 }
 
-export async function fetchMembershipMembers(pageNo: number, pageSize: number, membershipTypeUniqueIds?: string[] | null) {
+export async function fetchMembershipMembers(
+  pageNo: number,
+  pageSize: number,
+  membershipStatuses?: string[] | null,
+  approvalStatuses?: string[] | null,
+  membershipTypeUniqueIds?: string[] | null,
+  searchTerm?: string | null,
+) {
   const payload = await getJson<unknown>(
-    `/api/organizer/membership/type/members?${buildQueryString(pageNo, pageSize, membershipTypeUniqueIds)}`,
+    `/api/organizer/membership/type/members?${buildQueryString(
+      pageNo,
+      pageSize,
+      membershipStatuses,
+      approvalStatuses,
+      membershipTypeUniqueIds,
+      searchTerm,
+    )}`,
   );
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
   const items = Array.isArray(responseData?.PageData)
@@ -67,6 +109,8 @@ export async function fetchMembershipMembers(pageNo: number, pageSize: number, m
         uniqueId: readText(item.UniqueId ?? item.uniqueId),
         memberFullName: readText(item.MemberFullName ?? item.memberFullName),
         activeMembershipName: readText(item.ActiveMembershipName ?? item.activeMembershipName),
+        membershipStatus: readText(item.MembershipStatus ?? item.membershipStatus),
+        approvalStatus: readText(item.ApprovalStatus ?? item.approvalStatus),
         email: readText(item.Email ?? item.email),
         membershipExpiryUtc: readNullableText(item.MembershipExpiryUtc ?? item.membershipExpiryUtc),
       }))

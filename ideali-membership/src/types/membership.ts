@@ -158,6 +158,8 @@ export interface MembershipMemberListItem {
   uniqueId?: string;
   memberFullName: string;
   activeMembershipName: string;
+  membershipStatus: string;
+  approvalStatus: string;
   email: string;
   membershipExpiryUtc: string | null;
 }
