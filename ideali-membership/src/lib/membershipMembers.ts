@@ -1,9 +1,6 @@
 import { getJson } from "./api";
 import type { MembershipMemberListItem, PageResult } from "../types/membership";
 
-const ENABLE_DUMMY_MEMBERS = import.meta.env.DEV;
-const DUMMY_PAGE_COUNT = 8;
-
 function readResponseData(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return payload;
@@ -32,47 +29,26 @@ function readNumber(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function buildQueryString(pageNo: number, pageSize: number, membershipTypeUniqueId?: string | null) {
+function buildQueryString(pageNo: number, pageSize: number, membershipTypeUniqueIds?: string[] | null) {
   const searchParams = new URLSearchParams({
     pageNo: String(pageNo),
     pageSize: String(pageSize),
   });
 
-  if (membershipTypeUniqueId) {
-    searchParams.set("membershipTypeUniqueId", membershipTypeUniqueId);
-  }
+  const uniqueIds = Array.from(
+    new Set((membershipTypeUniqueIds ?? []).map((value) => value.trim()).filter((value) => value.length > 0)),
+  );
+
+  uniqueIds.forEach((membershipTypeUniqueId) => {
+    searchParams.append("membershipTypeUniqueIds", membershipTypeUniqueId);
+  });
 
   return searchParams.toString();
 }
 
-function buildDummyMembers(
-  pageNo: number,
-  pageSize: number,
-  membershipTypeUniqueId?: string | null,
-): MembershipMemberListItem[] {
-  const typeLabel = membershipTypeUniqueId?.trim()
-    ? membershipTypeUniqueId.trim().slice(0, 8)
-    : "general";
-
-  return Array.from({ length: pageSize }, (_, index) => {
-    const position = (pageNo - 1) * pageSize + index + 1;
-
-    return {
-      uniqueId: `dummy-member-${pageNo}-${index + 1}`,
-      memberFullName: `Test Member ${position}`,
-      activeMembershipName: `Test Membership ${typeLabel.toUpperCase()}`,
-      email: `test.member.${position}@example.com`,
-      membershipExpiryUtc:
-        position % 3 === 0
-          ? null
-          : new Date(Date.now() + position * 86400000).toISOString(),
-    };
-  });
-}
-
-export async function fetchMembershipMembers(pageNo: number, pageSize: number, membershipTypeUniqueId?: string | null) {
+export async function fetchMembershipMembers(pageNo: number, pageSize: number, membershipTypeUniqueIds?: string[] | null) {
   const payload = await getJson<unknown>(
-    `/api/organizer/membership/type/members?${buildQueryString(pageNo, pageSize, membershipTypeUniqueId)}`,
+    `/api/organizer/membership/type/members?${buildQueryString(pageNo, pageSize, membershipTypeUniqueIds)}`,
   );
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
   const items = Array.isArray(responseData?.PageData)
@@ -96,13 +72,6 @@ export async function fetchMembershipMembers(pageNo: number, pageSize: number, m
       }))
       .filter((item) => item.memberFullName.length > 0 || item.email.length > 0),
   };
-
-  if (ENABLE_DUMMY_MEMBERS) {
-    const dummyMembers = buildDummyMembers(pageNo, pageSize, membershipTypeUniqueId);
-    pageResult.pageData = [...pageResult.pageData, ...dummyMembers];
-    pageResult.totalRecordsCount = Math.max(pageResult.totalRecordsCount, pageSize * DUMMY_PAGE_COUNT);
-    pageResult.pageCount = Math.max(pageResult.pageCount, Math.ceil(pageResult.totalRecordsCount / pageSize));
-  }
 
   return pageResult;
 }
