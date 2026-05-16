@@ -12,7 +12,7 @@ import {
   fetchMembershipStatusOptions,
   fetchMembershipTypeOptions,
 } from "../lib/membershipMembers";
-import type { MembershipMemberListItem } from "../types/membership";
+import type { MembershipMemberSortBy } from "../types/membership";
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -42,6 +42,22 @@ const MEMBERS_QUERY_KEYS = {
   membershipStatusOptions: "membership-status-options",
 } as const;
 
+const MEMBERS_SORT_FIELDS: MembershipMemberSortBy[] = [
+  "memberFullName",
+  "activeMembershipName",
+  "membershipStatus",
+  "email",
+  "membershipExpiryUtc",
+];
+
+function isMembershipMemberSortBy(value: string | null): value is MembershipMemberSortBy {
+  return value !== null && MEMBERS_SORT_FIELDS.includes(value as MembershipMemberSortBy);
+}
+
+function isSortOrder(value: string | null): value is "asc" | "desc" {
+  return value === "asc" || value === "desc";
+}
+
 export function MembersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParamsKey = searchParams.toString();
@@ -70,6 +86,14 @@ export function MembersPage() {
     () => selectedSearchTerm.toLowerCase(),
     [selectedSearchTerm],
   );
+  const selectedSortBy = useMemo(() => {
+    const sortBy = searchParams.get("sortBy");
+    return isMembershipMemberSortBy(sortBy) ? sortBy : undefined;
+  }, [searchParamsKey]);
+  const selectedSortOrder = useMemo(() => {
+    const sortOrder = searchParams.get("sortOrder");
+    return isSortOrder(sortOrder) ? sortOrder : undefined;
+  }, [searchParamsKey]);
   const selectedMembershipStatuses = useMemo(
     () => {
       const nextMembershipStatuses = normalizeUniqueIds(searchParams.getAll("membershipStatuses"));
@@ -122,6 +146,8 @@ export function MembersPage() {
       selectedMembershipStatusesKey,
       selectedMembershipTypeKey,
       selectedSearchTermKey,
+      selectedSortBy ?? "",
+      selectedSortOrder ?? "",
     ],
     queryFn: () =>
       fetchMembershipMembers(
@@ -130,6 +156,8 @@ export function MembersPage() {
         selectedMembershipStatuses,
         selectedMembershipTypeUniqueIds,
         selectedSearchTerm,
+        selectedSortBy,
+        selectedSortOrder,
       ),
     placeholderData: keepPreviousData,
   });
@@ -195,12 +223,6 @@ export function MembersPage() {
     setSearchParams(nextParams, { replace: true });
   }
 
-  function resetDraftFilters() {
-    setDraftMembershipStatuses(selectedMembershipStatuses);
-    setDraftMembershipTypeUniqueIds(selectedMembershipTypeUniqueIds);
-    setDraftSearchTerm(selectedSearchTerm);
-  }
-
   function clearFilters() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("membershipStatuses");
@@ -210,6 +232,39 @@ export function MembersPage() {
     nextParams.set("pageNo", "1");
     nextParams.set("pageSize", String(pageSize));
     setSearchParams(nextParams, { replace: true });
+  }
+
+  function clearSort() {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("sortBy");
+    nextParams.delete("sortOrder");
+    nextParams.set("pageNo", "1");
+    nextParams.set("pageSize", String(pageSize));
+    setSearchParams(nextParams, { replace: true });
+  }
+
+  function handleSort(sortBy: MembershipMemberSortBy) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("pageNo", "1");
+    nextParams.set("pageSize", String(pageSize));
+
+    const isCurrentSort = selectedSortBy === sortBy;
+
+    if (!isCurrentSort) {
+      nextParams.set("sortBy", sortBy);
+      nextParams.set("sortOrder", "asc");
+      setSearchParams(nextParams, { replace: true });
+      return;
+    }
+
+    if (selectedSortOrder === "asc") {
+      nextParams.set("sortBy", sortBy);
+      nextParams.set("sortOrder", "desc");
+      setSearchParams(nextParams, { replace: true });
+      return;
+    }
+
+    clearSort();
   }
 
   const hasPendingFilterChanges =
@@ -267,7 +322,14 @@ export function MembersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <MembersTable members={members} membershipStatusOptions={membershipStatusOptions} />
+            <MembersTable
+              members={members}
+              membershipStatusOptions={membershipStatusOptions}
+              sortBy={selectedSortBy}
+              sortOrder={selectedSortOrder}
+              onSort={handleSort}
+              onClearSort={clearSort}
+            />
             <MembersPagination
               currentPage={pageNo}
               pageSize={pageSize}

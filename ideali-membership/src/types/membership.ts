@@ -163,6 +163,13 @@ export interface MembershipMemberListItem {
   membershipExpiryUtc: string | null;
 }
 
+export type MembershipMemberSortBy =
+  | "memberFullName"
+  | "activeMembershipName"
+  | "membershipStatus"
+  | "email"
+  | "membershipExpiryUtc";
+
 export interface PageResult<T> {
   pageNo: number;
   pageSize: number;

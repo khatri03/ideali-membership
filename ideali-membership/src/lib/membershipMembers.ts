@@ -1,5 +1,5 @@
 import { getJson } from "./api";
-import type { MembershipMemberListItem, PageResult } from "../types/membership";
+import type { MembershipMemberListItem, MembershipMemberSortBy, PageResult } from "../types/membership";
 import { readResponseData, readText } from "./parseUtils";
 
 function readNullableText(value: unknown) {
@@ -16,6 +16,8 @@ function buildQueryString(
   membershipStatuses?: string[] | null,
   membershipTypeUniqueIds?: string[] | null,
   searchTerm?: string | null,
+  sortBy?: MembershipMemberSortBy | null,
+  sortOrder?: "asc" | "desc" | null,
 ) {
   const searchParams = new URLSearchParams({
     pageNo: String(pageNo),
@@ -43,6 +45,14 @@ function buildQueryString(
     searchParams.set("searchTerm", normalizedSearchTerm);
   }
 
+  if (sortBy) {
+    searchParams.set("sortBy", sortBy);
+  }
+
+  if (sortOrder) {
+    searchParams.set("sortOrder", sortOrder);
+  }
+
   return searchParams.toString();
 }
 
@@ -52,6 +62,8 @@ export async function fetchMembershipMembers(
   membershipStatuses?: string[] | null,
   membershipTypeUniqueIds?: string[] | null,
   searchTerm?: string | null,
+  sortBy?: MembershipMemberSortBy | null,
+  sortOrder?: "asc" | "desc" | null,
 ) {
   const payload = await getJson<unknown>(
     `/api/organizer/membership/type/members?${buildQueryString(
@@ -60,6 +72,8 @@ export async function fetchMembershipMembers(
       membershipStatuses,
       membershipTypeUniqueIds,
       searchTerm,
+      sortBy,
+      sortOrder,
     )}`,
   );
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
