@@ -25,3 +25,8 @@ export function readNumber(value: unknown): number | null {
 export function readBoolean(value: unknown): boolean {
   return typeof value === "boolean" ? value : false;
 }
+
+export function getPositiveNumber(value: string | null | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}

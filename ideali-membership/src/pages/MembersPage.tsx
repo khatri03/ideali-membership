@@ -1,274 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
 import {
   MembersFilters,
   MembersPagination,
   MembersTable,
-  type MembersFilterOption,
 } from "../features/membership/components";
-import {
-  fetchMembershipMembers,
-  fetchMembershipStatusOptions,
-  fetchMembershipTypeOptions,
-} from "../lib/membershipMembers";
-import type { MembershipMemberSortBy } from "../types/membership";
-
-function getPositiveNumber(value: string | null, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function normalizeUniqueIds(values: string[]) {
-  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))].sort();
-}
-
-function areUniqueIdListsEqual(left: string[], right: string[]) {
-  const normalizedLeft = normalizeUniqueIds(left);
-  const normalizedRight = normalizeUniqueIds(right);
-
-  if (normalizedLeft.length !== normalizedRight.length) {
-    return false;
-  }
-
-  return normalizedLeft.every((value, index) => value === normalizedRight[index]);
-}
-
-const defaultMembershipStatuses = ["Active"];
-
-const MEMBERS_QUERY_KEYS = {
-  members: "membership-members",
-  membershipTypeOptions: "membership-type-options",
-  membershipStatusOptions: "membership-status-options",
-} as const;
-
-const MEMBERS_SORT_FIELDS: MembershipMemberSortBy[] = [
-  "memberFullName",
-  "activeMembershipName",
-  "membershipStatus",
-  "email",
-  "membershipExpiryUtc",
-];
-
-function isMembershipMemberSortBy(value: string | null): value is MembershipMemberSortBy {
-  return value !== null && MEMBERS_SORT_FIELDS.includes(value as MembershipMemberSortBy);
-}
-
-function isSortOrder(value: string | null): value is "asc" | "desc" {
-  return value === "asc" || value === "desc";
-}
+import { useMembersPage } from "./MembersPage.hooks";
 
 export function MembersPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const searchParamsKey = searchParams.toString();
-  const selectedMembershipTypeUniqueIds = useMemo(() => {
-    const nextUniqueIds = searchParams
-      .getAll("membershipTypeUniqueIds")
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0);
-
-    if (nextUniqueIds.length > 0) {
-      return normalizeUniqueIds(nextUniqueIds);
-    }
-
-    const legacyUniqueId = searchParams.get("membershipTypeUniqueId")?.trim();
-    return legacyUniqueId ? [legacyUniqueId] : [];
-  }, [searchParamsKey]);
-  const selectedMembershipTypeKey = useMemo(
-    () => normalizeUniqueIds(selectedMembershipTypeUniqueIds).join("\u0000"),
-    [selectedMembershipTypeUniqueIds],
-  );
-  const selectedSearchTerm = useMemo(
-    () => searchParams.get("searchTerm")?.trim() ?? "",
-    [searchParamsKey],
-  );
-  const selectedSearchTermKey = useMemo(
-    () => selectedSearchTerm.toLowerCase(),
-    [selectedSearchTerm],
-  );
-  const selectedSortBy = useMemo(() => {
-    const sortBy = searchParams.get("sortBy");
-    return isMembershipMemberSortBy(sortBy) ? sortBy : undefined;
-  }, [searchParamsKey]);
-  const selectedSortOrder = useMemo(() => {
-    const sortOrder = searchParams.get("sortOrder");
-    return isSortOrder(sortOrder) ? sortOrder : undefined;
-  }, [searchParamsKey]);
-  const selectedMembershipStatuses = useMemo(
-    () => {
-      const nextMembershipStatuses = normalizeUniqueIds(searchParams.getAll("membershipStatuses"));
-      return nextMembershipStatuses.length > 0 ? nextMembershipStatuses : defaultMembershipStatuses;
-    },
-    [searchParamsKey],
-  );
-  const selectedMembershipStatusesKey = useMemo(
-    () => normalizeUniqueIds(selectedMembershipStatuses).join("\u0000"),
-    [selectedMembershipStatuses],
-  );
-  const pageNo = getPositiveNumber(searchParams.get("pageNo"), 1);
-  const pageSize = getPositiveNumber(searchParams.get("pageSize"), 25);
-
-  const [draftMembershipStatuses, setDraftMembershipStatuses] = useState(selectedMembershipStatuses);
-  const [draftMembershipTypeUniqueIds, setDraftMembershipTypeUniqueIds] = useState<string[]>(
+  const {
+    members,
+    totalRecordsCount,
+    pageCount,
+    pageNo,
+    pageSize,
+    isLoading,
+    error,
+    membershipTypeOptions,
+    membershipStatusOptions,
+    isMembershipTypesLoading,
+    isMembershipStatusesLoading,
+    selectedMembershipStatuses,
     selectedMembershipTypeUniqueIds,
-  );
-  const [draftSearchTerm, setDraftSearchTerm] = useState(selectedSearchTerm);
-  const hasPendingMembershipStatusChanges = useMemo(
-    () => !areUniqueIdListsEqual(draftMembershipStatuses, selectedMembershipStatuses),
-    [draftMembershipStatuses, selectedMembershipStatuses],
-  );
-  const hasPendingMembershipTypeChanges = useMemo(
-    () => !areUniqueIdListsEqual(draftMembershipTypeUniqueIds, selectedMembershipTypeUniqueIds),
-    [draftMembershipTypeUniqueIds, selectedMembershipTypeUniqueIds],
-  );
-  const hasPendingSearchTermChanges = useMemo(
-    () => draftSearchTerm.trim().toLowerCase() !== selectedSearchTermKey,
-    [draftSearchTerm, selectedSearchTermKey],
-  );
-
-  const membershipTypeOptionsQuery = useQuery({
-    queryKey: [MEMBERS_QUERY_KEYS.membershipTypeOptions],
-    queryFn: fetchMembershipTypeOptions,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const membershipStatusOptionsQuery = useQuery({
-    queryKey: [MEMBERS_QUERY_KEYS.membershipStatusOptions],
-    queryFn: fetchMembershipStatusOptions,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const membersQuery = useQuery({
-    queryKey: [
-      MEMBERS_QUERY_KEYS.members,
-      pageNo,
-      pageSize,
-      selectedMembershipStatusesKey,
-      selectedMembershipTypeKey,
-      selectedSearchTermKey,
-      selectedSortBy ?? "",
-      selectedSortOrder ?? "",
-    ],
-    queryFn: () =>
-      fetchMembershipMembers(
-        pageNo,
-        pageSize,
-        selectedMembershipStatuses,
-        selectedMembershipTypeUniqueIds,
-        selectedSearchTerm,
-        selectedSortBy,
-        selectedSortOrder,
-      ),
-    placeholderData: keepPreviousData,
-  });
-
-  const members = membersQuery.data?.pageData ?? [];
-  const totalRecordsCount = membersQuery.data?.totalRecordsCount ?? 0;
-  const pageCount = membersQuery.data?.pageCount ?? 0;
-  const isLoading = membersQuery.isPending || membersQuery.isFetching;
-  const error = membersQuery.error instanceof Error ? membersQuery.error.message : null;
-  const membershipTypeOptions = membershipTypeOptionsQuery.data ?? [];
-  const membershipStatusOptions = (membershipStatusOptionsQuery.data ?? []).slice().sort((left, right) => left.label.localeCompare(right.label));
-  const isMembershipTypesLoading = membershipTypeOptionsQuery.isPending;
-  const isMembershipStatusesLoading = membershipStatusOptionsQuery.isPending;
-
-  useEffect(() => {
-    setDraftMembershipStatuses(selectedMembershipStatuses);
-  }, [selectedMembershipStatusesKey, selectedMembershipStatuses]);
-
-  useEffect(() => {
-    setDraftMembershipTypeUniqueIds(selectedMembershipTypeUniqueIds);
-  }, [selectedMembershipTypeKey, selectedMembershipTypeUniqueIds]);
-
-  useEffect(() => {
-    setDraftSearchTerm(selectedSearchTerm);
-  }, [selectedSearchTermKey, selectedSearchTerm]);
-
-  function updatePage(nextPageNo: number) {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("pageNo", String(nextPageNo));
-    nextParams.set("pageSize", String(pageSize));
-    setSearchParams(nextParams, { replace: true });
-  }
-
-  function updatePageSize(nextPageSize: number) {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("pageNo", "1");
-    nextParams.set("pageSize", String(nextPageSize));
-    setSearchParams(nextParams, { replace: true });
-  }
-
-  function applyFilters() {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("pageNo", "1");
-    nextParams.set("pageSize", String(pageSize));
-    nextParams.delete("membershipStatuses");
-    nextParams.delete("membershipTypeUniqueId");
-    nextParams.delete("membershipTypeUniqueIds");
-    nextParams.delete("searchTerm");
-
-    draftMembershipStatuses.forEach((membershipStatus) => {
-      nextParams.append("membershipStatuses", membershipStatus);
-    });
-
-    draftMembershipTypeUniqueIds.forEach((membershipTypeUniqueId) => {
-      nextParams.append("membershipTypeUniqueIds", membershipTypeUniqueId);
-    });
-
-    const normalizedSearchTerm = draftSearchTerm.trim();
-    if (normalizedSearchTerm.length > 0) {
-      nextParams.set("searchTerm", normalizedSearchTerm);
-    }
-
-    setSearchParams(nextParams, { replace: true });
-  }
-
-  function clearFilters() {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("membershipStatuses");
-    nextParams.delete("membershipTypeUniqueId");
-    nextParams.delete("membershipTypeUniqueIds");
-    nextParams.delete("searchTerm");
-    nextParams.set("pageNo", "1");
-    nextParams.set("pageSize", String(pageSize));
-    setSearchParams(nextParams, { replace: true });
-  }
-
-  function clearSort() {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("sortBy");
-    nextParams.delete("sortOrder");
-    nextParams.set("pageNo", "1");
-    nextParams.set("pageSize", String(pageSize));
-    setSearchParams(nextParams, { replace: true });
-  }
-
-  function handleSort(sortBy: MembershipMemberSortBy) {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("pageNo", "1");
-    nextParams.set("pageSize", String(pageSize));
-
-    const isCurrentSort = selectedSortBy === sortBy;
-
-    if (!isCurrentSort) {
-      nextParams.set("sortBy", sortBy);
-      nextParams.set("sortOrder", "asc");
-      setSearchParams(nextParams, { replace: true });
-      return;
-    }
-
-    if (selectedSortOrder === "asc") {
-      nextParams.set("sortBy", sortBy);
-      nextParams.set("sortOrder", "desc");
-      setSearchParams(nextParams, { replace: true });
-      return;
-    }
-
-    clearSort();
-  }
-
-  const hasPendingFilterChanges =
-    hasPendingMembershipStatusChanges || hasPendingMembershipTypeChanges || hasPendingSearchTermChanges;
+    selectedSearchTerm,
+    selectedSortBy,
+    selectedSortOrder,
+    draftMembershipStatuses,
+    draftMembershipTypeUniqueIds,
+    draftSearchTerm,
+    hasPendingFilterChanges,
+    setDraftMembershipStatuses,
+    setDraftMembershipTypeUniqueIds,
+    setDraftSearchTerm,
+    updatePage,
+    updatePageSize,
+    applyFilters,
+    clearFilters,
+    clearSort,
+    handleSort,
+  } = useMembersPage();
 
   return (
     <section className="space-y-6">

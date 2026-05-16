@@ -47,6 +47,7 @@ export function MembersFilters({
   return (
     <div className="mb-6 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
       <form
+        aria-label="Filters"
         className="flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
@@ -56,15 +57,19 @@ export function MembersFilters({
           onApplyFilters();
         }}
       >
-        <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <span aria-hidden="true" className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
           Filters
-        </label>
+        </span>
         <div className="grid gap-4 lg:grid-cols-3 lg:items-end">
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <label
+              htmlFor="member-search"
+              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500"
+            >
               Search
-            </div>
+            </label>
             <input
+              id="member-search"
               value={draftSearchTerm}
               onChange={(event) => onDraftSearchTermChange(event.target.value)}
               placeholder="Name, email, or phone"
@@ -74,9 +79,12 @@ export function MembersFilters({
             />
           </div>
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <label
+              htmlFor="membership-type-filter"
+              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500"
+            >
               Membership Types
-            </div>
+            </label>
             <MultiSelectInput
               value={draftMembershipTypeUniqueIds}
               onChange={onDraftMembershipTypeUniqueIdsChange}
@@ -88,9 +96,12 @@ export function MembersFilters({
             />
           </div>
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <label
+              htmlFor="membership-status-filter"
+              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500"
+            >
               Membership Status
-            </div>
+            </label>
             <MultiSelectInput
               value={draftMembershipStatuses}
               onChange={onDraftMembershipStatusesChange}
@@ -106,9 +117,35 @@ export function MembersFilters({
           <button
             type="submit"
             disabled={!hasPendingFilterChanges || isMembersFetching}
-            className="inline-flex items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
-            Apply filter
+            {isMembersFetching ? (
+              <>
+                <svg
+                  aria-hidden="true"
+                  className="h-4 w-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Applying…
+              </>
+            ) : (
+              "Apply filter"
+            )}
           </button>
           {selectedMembershipStatuses.length > 0 ||
           selectedMembershipTypeUniqueIds.length > 0 ||

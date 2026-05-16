@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchCustomForms } from "../lib/customForms";
 import type { CustomFormSummary } from "../types/customForms";
@@ -126,39 +127,10 @@ function CustomFormActionsMenu({
 
 export function CustomFormsPage() {
   const navigate = useNavigate();
-  const [forms, setForms] = useState<CustomFormSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadForms() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetchCustomForms();
-        if (!cancelled) {
-          setForms(response);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load custom forms.");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadForms();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: forms = [], isLoading, error } = useQuery({
+    queryKey: ["custom-forms"],
+    queryFn: fetchCustomForms,
+  });
 
   const formCountLabel = useMemo(() => {
     if (forms.length === 0) {
@@ -205,7 +177,7 @@ export function CustomFormsPage() {
           </div>
         ) : error ? (
           <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium text-rose-700">
-            {error}
+            {error.message || "Unable to load custom forms."}
           </div>
         ) : forms.length > 0 ? (
           <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50 shadow-sm">

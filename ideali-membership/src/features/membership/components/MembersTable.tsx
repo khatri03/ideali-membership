@@ -87,10 +87,14 @@ export function MembersTable({
       ) : null}
 
       <div className="max-h-[38rem] overflow-auto rounded-[1.75rem] border border-cyan-100 bg-white/95 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.3)]">
-        <table className="w-full border-collapse text-sm">
+        <table aria-label="Registered members" className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 backdrop-blur">
             <tr className="border-b border-cyan-100 bg-cyan-50/80">
-              <th className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4">
+              <th
+                scope="col"
+                aria-sort={sortBy === "memberFullName" ? (sortOrder === "desc" ? "descending" : "ascending") : "none"}
+                className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4"
+              >
                 <button
                   type="button"
                   onClick={() => onSort("memberFullName")}
@@ -101,7 +105,11 @@ export function MembersTable({
                   {renderSortIcon("memberFullName")}
                 </button>
               </th>
-              <th className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4">
+              <th
+                scope="col"
+                aria-sort={sortBy === "activeMembershipName" ? (sortOrder === "desc" ? "descending" : "ascending") : "none"}
+                className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4"
+              >
                 <button
                   type="button"
                   onClick={() => onSort("activeMembershipName")}
@@ -112,7 +120,11 @@ export function MembersTable({
                   {renderSortIcon("activeMembershipName")}
                 </button>
               </th>
-              <th className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4">
+              <th
+                scope="col"
+                aria-sort={sortBy === "membershipStatus" ? (sortOrder === "desc" ? "descending" : "ascending") : "none"}
+                className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4"
+              >
                 <button
                   type="button"
                   onClick={() => onSort("membershipStatus")}
@@ -123,7 +135,11 @@ export function MembersTable({
                   {renderSortIcon("membershipStatus")}
                 </button>
               </th>
-              <th className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4">
+              <th
+                scope="col"
+                aria-sort={sortBy === "email" ? (sortOrder === "desc" ? "descending" : "ascending") : "none"}
+                className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4"
+              >
                 <button
                   type="button"
                   onClick={() => onSort("email")}
@@ -134,7 +150,11 @@ export function MembersTable({
                   {renderSortIcon("email")}
                 </button>
               </th>
-              <th className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4">
+              <th
+                scope="col"
+                aria-sort={sortBy === "membershipExpiryUtc" ? (sortOrder === "desc" ? "descending" : "ascending") : "none"}
+                className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4"
+              >
                 <button
                   type="button"
                   onClick={() => onSort("membershipExpiryUtc")}

@@ -1,0 +1,252 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fetchMembershipMembers, fetchMembershipStatusOptions, fetchMembershipTypeOptions } from "./membershipMembers";
+
+vi.mock("./api", () => ({
+  getJson: vi.fn(),
+}));
+
+import { getJson } from "./api";
+const mockGetJson = vi.mocked(getJson);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+// ─── fetchMembershipMembers ───────────────────────────────────────────────────
+
+describe("fetchMembershipMembers", () => {
+  it("parses PascalCase response correctly", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: {
+        PageNo: 1,
+        PageSize: 20,
+        PageCount: 2,
+        TotalRecordsCount: 25,
+        PageData: [
+          {
+            UniqueId: "uid-1",
+            MemberFullName: "John Doe",
+            ActiveMembershipName: "Gold",
+            MembershipStatus: "Active",
+            Email: "john@example.com",
+            MembershipExpiryUtc: "2026-12-31",
+          },
+        ],
+      },
+    });
+
+    const result = await fetchMembershipMembers(1, 20);
+
+    expect(result.pageNo).toBe(1);
+    expect(result.pageSize).toBe(20);
+    expect(result.pageCount).toBe(2);
+    expect(result.totalRecordsCount).toBe(25);
+    expect(result.pageData).toHaveLength(1);
+    expect(result.pageData[0]).toMatchObject({
+      uniqueId: "uid-1",
+      memberFullName: "John Doe",
+      activeMembershipName: "Gold",
+      membershipStatus: "Active",
+      email: "john@example.com",
+      membershipExpiryUtc: "2026-12-31",
+    });
+  });
+
+  it("parses camelCase response correctly", async () => {
+    mockGetJson.mockResolvedValue({
+      data: {
+        pageNo: 1,
+        pageSize: 10,
+        pageCount: 1,
+        totalRecordsCount: 3,
+        pageData: [
+          {
+            uniqueId: "uid-2",
+            memberFullName: "Jane Smith",
+            activeMembershipName: "Silver",
+            membershipStatus: "Expired",
+            email: "jane@example.com",
+            membershipExpiryUtc: null,
+          },
+        ],
+      },
+    });
+
+    const result = await fetchMembershipMembers(1, 10);
+    expect(result.pageData[0].uniqueId).toBe("uid-2");
+    expect(result.pageData[0].membershipExpiryUtc).toBe(null);
+  });
+
+  it("filters out items with no name and no email", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: {
+        PageNo: 1,
+        PageSize: 10,
+        PageCount: 1,
+        TotalRecordsCount: 2,
+        PageData: [
+          { UniqueId: "a", MemberFullName: "Alice", Email: "" },
+          { UniqueId: "b", MemberFullName: "", Email: "" },
+        ],
+      },
+    });
+
+    const result = await fetchMembershipMembers(1, 10);
+    expect(result.pageData).toHaveLength(1);
+    expect(result.pageData[0].uniqueId).toBe("a");
+  });
+
+  it("includes query params: pageNo and pageSize always present", async () => {
+    mockGetJson.mockResolvedValue({ Data: { PageNo: 2, PageSize: 5, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
+    await fetchMembershipMembers(2, 5);
+
+    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("pageNo=2");
+    expect(calledUrl).toContain("pageSize=5");
+  });
+
+  it("includes membershipStatuses in query when provided", async () => {
+    mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
+    await fetchMembershipMembers(1, 10, ["Active", "Expired"]);
+
+    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("membershipStatuses=Active");
+    expect(calledUrl).toContain("membershipStatuses=Expired");
+  });
+
+  it("deduplicates and trims membershipStatuses", async () => {
+    mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
+    await fetchMembershipMembers(1, 10, ["Active", " Active ", "Active"]);
+
+    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    const statusOccurrences = (calledUrl.match(/membershipStatuses=/g) ?? []).length;
+    expect(statusOccurrences).toBe(1);
+  });
+
+  it("includes searchTerm in query when provided", async () => {
+    mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
+    await fetchMembershipMembers(1, 10, null, null, "  john  ");
+
+    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("searchTerm=john");
+  });
+
+  it("omits searchTerm from query when blank", async () => {
+    mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
+    await fetchMembershipMembers(1, 10, null, null, "   ");
+
+    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    expect(calledUrl).not.toContain("searchTerm");
+  });
+
+  it("includes sortBy and sortOrder when provided", async () => {
+    mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
+    await fetchMembershipMembers(1, 10, null, null, null, "MemberFullName", "asc");
+
+    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("sortBy=MemberFullName");
+    expect(calledUrl).toContain("sortOrder=asc");
+  });
+
+  it("falls back to pageNo/pageSize args when response values missing", async () => {
+    mockGetJson.mockResolvedValue({ Data: { PageData: [] } });
+    const result = await fetchMembershipMembers(3, 15);
+    expect(result.pageNo).toBe(3);
+    expect(result.pageSize).toBe(15);
+    expect(result.pageCount).toBe(0);
+    expect(result.totalRecordsCount).toBe(0);
+  });
+});
+
+// ─── fetchMembershipStatusOptions ────────────────────────────────────────────
+
+describe("fetchMembershipStatusOptions", () => {
+  it("parses array response (PascalCase)", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: [
+        { Text: "Active", Value: "active" },
+        { Text: "Expired", Value: "expired" },
+      ],
+    });
+
+    const result = await fetchMembershipStatusOptions();
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ label: "Active", value: "active" });
+    expect(result[1]).toEqual({ label: "Expired", value: "expired" });
+  });
+
+  it("parses array response (camelCase)", async () => {
+    mockGetJson.mockResolvedValue({
+      data: [
+        { text: "Pending", value: "pending" },
+      ],
+    });
+
+    const result = await fetchMembershipStatusOptions();
+    expect(result[0]).toEqual({ label: "Pending", value: "pending" });
+  });
+
+  it("parses flat array response (no Data wrapper)", async () => {
+    mockGetJson.mockResolvedValue([
+      { Text: "Draft", Value: "draft" },
+    ]);
+
+    const result = await fetchMembershipStatusOptions();
+    expect(result[0]).toEqual({ label: "Draft", value: "draft" });
+  });
+
+  it("filters out items with empty label or value", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: [
+        { Text: "Valid", Value: "valid" },
+        { Text: "", Value: "missing-label" },
+        { Text: "Missing Value", Value: "" },
+      ],
+    });
+
+    const result = await fetchMembershipStatusOptions();
+    expect(result).toHaveLength(1);
+    expect(result[0].label).toBe("Valid");
+  });
+
+  it("returns empty array when response is not iterable", async () => {
+    mockGetJson.mockResolvedValue({ Data: null });
+    const result = await fetchMembershipStatusOptions();
+    expect(result).toEqual([]);
+  });
+});
+
+// ─── fetchMembershipTypeOptions ──────────────────────────────────────────────
+
+describe("fetchMembershipTypeOptions", () => {
+  it("parses PascalCase options from Data", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: [
+        { Text: "Gold", Value: "gold-uid" },
+        { Text: "Silver", Value: "silver-uid" },
+      ],
+    });
+
+    const result = await fetchMembershipTypeOptions();
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ label: "Gold", value: "gold-uid" });
+  });
+
+  it("returns empty array when response empty", async () => {
+    mockGetJson.mockResolvedValue({ Data: [] });
+    const result = await fetchMembershipTypeOptions();
+    expect(result).toEqual([]);
+  });
+
+  it("filters out items with empty label or value", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: [
+        { Text: "Good", Value: "good" },
+        { Text: "", Value: "no-label" },
+      ],
+    });
+
+    const result = await fetchMembershipTypeOptions();
+    expect(result).toHaveLength(1);
+  });
+});

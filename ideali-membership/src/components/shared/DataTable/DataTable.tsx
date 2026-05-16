@@ -94,10 +94,19 @@ export function DataTable<T>({
               {columns.map((column, index) => (
                 <th
                   key={`${column.header}-${index}`}
+                  scope="col"
+                  aria-sort={
+                    column.sortable && getSortKey(column)
+                      ? sortBy === getSortKey(column)
+                        ? sortOrder === "desc"
+                          ? "descending"
+                          : "ascending"
+                        : "none"
+                      : undefined
+                  }
                   className={cn(
                     column.className,
                     index !== columns.length - 1 && "border-r border-cyan-100",
-                    column.sortable && "cursor-pointer select-none",
                     "h-12 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700 sm:px-4",
                     sortBy === getSortKey(column) && "bg-cyan-100 text-cyan-700",
                     {
@@ -106,12 +115,21 @@ export function DataTable<T>({
                       "text-right": column.headerAlign === "right",
                     },
                   )}
-                  onClick={() => handleSort(column)}
                 >
-                  <div className="flex items-center gap-1.5">
-                    {column.header}
-                    {sortIndicator(column)}
-                  </div>
+                  {column.sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSort(column)}
+                      className="inline-flex w-full items-center gap-1.5 select-none"
+                    >
+                      {column.header}
+                      {sortIndicator(column)}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      {column.header}
+                    </div>
+                  )}
                 </th>
               ))}
             </tr>

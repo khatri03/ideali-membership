@@ -390,7 +390,7 @@ export function CustomFormSection({
           This custom form does not contain any fields.
         </div>
       ) : (
-        <div className={getCustomFormGridClass(layoutColumn)}>
+        <div className={getCustomFormGridClass()}>
           {fields.map((field) => (
             <CustomFormFieldCard
               key={field.uniqueId || `${field.formId}-${field.displayOrder}`}

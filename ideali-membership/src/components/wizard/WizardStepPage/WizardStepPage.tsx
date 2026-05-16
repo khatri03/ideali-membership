@@ -1,26 +1,9 @@
-import { useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-
 interface WizardStepPageProps {
   title: string;
   description: string;
 }
 
 export function WizardStepPage({ title, description }: WizardStepPageProps) {
-  const { membershipTypeUniqueId } = useParams<{ membershipTypeUniqueId?: string }>();
-  const [searchParams] = useSearchParams();
-  const stepNo = searchParams.get("stepNo");
-
-  useEffect(() => {
-    if (membershipTypeUniqueId) {
-      console.log("Membership type unique id:", membershipTypeUniqueId);
-    }
-
-    if (stepNo) {
-      console.log("Wizard step number:", stepNo);
-    }
-  }, [membershipTypeUniqueId, stepNo]);
-
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
       <div className="mt-5 space-y-3">
