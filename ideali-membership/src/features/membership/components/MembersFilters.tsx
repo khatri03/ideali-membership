@@ -10,6 +10,7 @@ type MembersFiltersProps = {
   draftMembershipTypeUniqueIds: string[];
   draftSearchTerm: string;
   hasPendingFilterChanges: boolean;
+  isMembersFetching: boolean;
   isMembershipTypesLoading: boolean;
   isMembershipStatusesLoading: boolean;
   membershipStatusOptions: MembersFilterOption[];
@@ -31,6 +32,7 @@ export function MembersFilters({
   draftMembershipTypeUniqueIds,
   draftSearchTerm,
   hasPendingFilterChanges,
+  isMembersFetching,
   isMembershipTypesLoading,
   isMembershipStatusesLoading,
   selectedMembershipStatuses,
@@ -46,67 +48,76 @@ export function MembersFilters({
 }: MembersFiltersProps) {
   return (
     <div className="mb-6 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-      <div className="flex flex-col gap-3">
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (isMembersFetching || !hasPendingFilterChanges) {
+            return;
+          }
+          onApplyFilters();
+        }}
+      >
         <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
           Filters
         </label>
-        <div className="space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Membership Status
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-end">
+          <div className="space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Search
+            </div>
+            <input
+              value={draftSearchTerm}
+              onChange={(event) => onDraftSearchTermChange(event.target.value)}
+              placeholder="Name, email, or phone"
+              type="search"
+              className="h-13 w-full rounded-[1rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+            />
           </div>
-          <MultiSelectInput
-            value={draftMembershipStatuses}
-            onChange={onDraftMembershipStatusesChange}
-            options={membershipStatusOptions}
-            placeholder="All membership statuses"
-            isDisabled={isMembershipStatusesLoading}
-            className="w-full"
-            inputId="membership-status-filter"
-          />
-        </div>
-        <div className="space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Membership Types
+          <div className="space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Membership Types
+            </div>
+            <MultiSelectInput
+              value={draftMembershipTypeUniqueIds}
+              onChange={onDraftMembershipTypeUniqueIdsChange}
+              options={membershipTypeOptions}
+              placeholder="All membership types"
+              isDisabled={isMembershipTypesLoading}
+              className="w-full"
+              inputId="membership-type-filter"
+            />
           </div>
-          <MultiSelectInput
-            value={draftMembershipTypeUniqueIds}
-            onChange={onDraftMembershipTypeUniqueIdsChange}
-            options={membershipTypeOptions}
-            placeholder="All membership types"
-            isDisabled={isMembershipTypesLoading}
-            className="w-full"
-            inputId="membership-type-filter"
-          />
+          <div className="space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Membership Status
+            </div>
+            <MultiSelectInput
+              value={draftMembershipStatuses}
+              onChange={onDraftMembershipStatusesChange}
+              options={membershipStatusOptions}
+              placeholder="All membership statuses"
+              isDisabled={isMembershipStatusesLoading}
+              className="w-full"
+              inputId="membership-status-filter"
+            />
+          </div>
         </div>
-        <input
-          value={draftSearchTerm}
-          onChange={(event) => onDraftSearchTermChange(event.target.value)}
-          placeholder="Search by name, email, or phone"
-          type="search"
-          className="h-13 w-full rounded-[1rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-        />
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           <button
-            type="button"
-            onClick={onApplyFilters}
-            disabled={!hasPendingFilterChanges}
+            type="submit"
+            disabled={!hasPendingFilterChanges || isMembersFetching}
             className="inline-flex items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
             Apply filter
           </button>
-          {hasPendingFilterChanges ? (
-            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
-              {draftMembershipStatuses.length +
-                draftMembershipTypeUniqueIds.length +
-                (draftSearchTerm.trim().length > 0 ? 1 : 0)} pending
-            </span>
-          ) : null}
           {selectedMembershipStatuses.length > 0 ||
           selectedMembershipTypeUniqueIds.length > 0 ||
           selectedSearchTerm.length > 0 ? (
             <button
               type="button"
               onClick={onClearFilters}
+              disabled={isMembersFetching}
               className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
             >
               Clear filters
@@ -115,13 +126,13 @@ export function MembersFilters({
           <button
             type="button"
             onClick={onResetChanges}
-            disabled={!hasPendingFilterChanges}
+            disabled={!hasPendingFilterChanges || isMembersFetching}
             className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Reset changes
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

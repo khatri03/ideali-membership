@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   MembersFilters,
@@ -6,9 +7,12 @@ import {
   MembersTable,
   type MembersFilterOption,
 } from "../features/membership/components";
-import { fetchMembershipMembers, fetchMembershipStatusOptions } from "../lib/membershipMembers";
-import { getMembershipTypes } from "../lib/membershipWizard";
-import type { MembershipMemberListItem, MembershipTypeListItem } from "../types/membership";
+import {
+  fetchMembershipMembers,
+  fetchMembershipStatusOptions,
+  fetchMembershipTypeOptions,
+} from "../lib/membershipMembers";
+import type { MembershipMemberListItem } from "../types/membership";
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -31,6 +35,12 @@ function areUniqueIdListsEqual(left: string[], right: string[]) {
 }
 
 const defaultMembershipStatuses = ["Active"];
+
+const MEMBERS_QUERY_KEYS = {
+  members: "membership-members",
+  membershipTypeOptions: "membership-type-options",
+  membershipStatusOptions: "membership-status-options",
+} as const;
 
 export function MembersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,20 +84,11 @@ export function MembersPage() {
   const pageNo = getPositiveNumber(searchParams.get("pageNo"), 1);
   const pageSize = getPositiveNumber(searchParams.get("pageSize"), 25);
 
-  const [members, setMembers] = useState<MembershipMemberListItem[]>([]);
-  const [membershipTypes, setMembershipTypes] = useState<MembershipTypeListItem[]>([]);
-  const [isMembershipTypesLoading, setIsMembershipTypesLoading] = useState(true);
-  const [membershipStatusOptions, setMembershipStatusOptions] = useState<MembersFilterOption[]>([]);
-  const [isMembershipStatusesLoading, setIsMembershipStatusesLoading] = useState(true);
   const [draftMembershipStatuses, setDraftMembershipStatuses] = useState(selectedMembershipStatuses);
   const [draftMembershipTypeUniqueIds, setDraftMembershipTypeUniqueIds] = useState<string[]>(
     selectedMembershipTypeUniqueIds,
   );
   const [draftSearchTerm, setDraftSearchTerm] = useState(selectedSearchTerm);
-  const [totalRecordsCount, setTotalRecordsCount] = useState(0);
-  const [pageCount, setPageCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const hasPendingMembershipStatusChanges = useMemo(
     () => !areUniqueIdListsEqual(draftMembershipStatuses, selectedMembershipStatuses),
     [draftMembershipStatuses, selectedMembershipStatuses],
@@ -101,123 +102,59 @@ export function MembersPage() {
     [draftSearchTerm, selectedSearchTermKey],
   );
 
-  useEffect(() => {
-    let cancelled = false;
+  const membershipTypeOptionsQuery = useQuery({
+    queryKey: [MEMBERS_QUERY_KEYS.membershipTypeOptions],
+    queryFn: fetchMembershipTypeOptions,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    async function loadFilterOptions() {
-      setIsMembershipTypesLoading(true);
-      setIsMembershipStatusesLoading(true);
+  const membershipStatusOptionsQuery = useQuery({
+    queryKey: [MEMBERS_QUERY_KEYS.membershipStatusOptions],
+    queryFn: fetchMembershipStatusOptions,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      const [membershipTypesResult, membershipStatusOptionsResult] = await Promise.allSettled([
-        getMembershipTypes(),
-        fetchMembershipStatusOptions(),
-      ]);
+  const membersQuery = useQuery({
+    queryKey: [
+      MEMBERS_QUERY_KEYS.members,
+      pageNo,
+      pageSize,
+      selectedMembershipStatusesKey,
+      selectedMembershipTypeKey,
+      selectedSearchTermKey,
+    ],
+    queryFn: () =>
+      fetchMembershipMembers(
+        pageNo,
+        pageSize,
+        selectedMembershipStatuses,
+        selectedMembershipTypeUniqueIds,
+        selectedSearchTerm,
+      ),
+    placeholderData: keepPreviousData,
+  });
 
-      if (cancelled) {
-        return;
-      }
-
-      if (membershipTypesResult.status === "fulfilled") {
-        setMembershipTypes(
-          membershipTypesResult.value.slice().sort((left, right) => left.displayOrder - right.displayOrder),
-        );
-      } else {
-        setMembershipTypes([]);
-      }
-
-      if (membershipStatusOptionsResult.status === "fulfilled") {
-        setMembershipStatusOptions(
-          membershipStatusOptionsResult.value
-            .slice()
-            .sort((left, right) => left.label.localeCompare(right.label)),
-        );
-      } else {
-        setMembershipStatusOptions([]);
-      }
-
-      setIsMembershipTypesLoading(false);
-      setIsMembershipStatusesLoading(false);
-    }
-
-    void loadFilterOptions();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const members = membersQuery.data?.pageData ?? [];
+  const totalRecordsCount = membersQuery.data?.totalRecordsCount ?? 0;
+  const pageCount = membersQuery.data?.pageCount ?? 0;
+  const isLoading = membersQuery.isPending || membersQuery.isFetching;
+  const error = membersQuery.error instanceof Error ? membersQuery.error.message : null;
+  const membershipTypeOptions = membershipTypeOptionsQuery.data ?? [];
+  const membershipStatusOptions = (membershipStatusOptionsQuery.data ?? []).slice().sort((left, right) => left.label.localeCompare(right.label));
+  const isMembershipTypesLoading = membershipTypeOptionsQuery.isPending;
+  const isMembershipStatusesLoading = membershipStatusOptionsQuery.isPending;
 
   useEffect(() => {
     setDraftMembershipStatuses(selectedMembershipStatuses);
-  }, [selectedMembershipStatusesKey]);
+  }, [selectedMembershipStatusesKey, selectedMembershipStatuses]);
 
   useEffect(() => {
     setDraftMembershipTypeUniqueIds(selectedMembershipTypeUniqueIds);
-  }, [selectedMembershipTypeKey]);
+  }, [selectedMembershipTypeKey, selectedMembershipTypeUniqueIds]);
 
   useEffect(() => {
     setDraftSearchTerm(selectedSearchTerm);
-  }, [selectedSearchTermKey]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadMembers() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetchMembershipMembers(
-          pageNo,
-          pageSize,
-          selectedMembershipStatuses,
-          selectedMembershipTypeUniqueIds,
-          selectedSearchTerm,
-        );
-
-        if (cancelled) {
-          return;
-        }
-
-        setMembers(response.pageData);
-        setTotalRecordsCount(response.totalRecordsCount);
-        setPageCount(response.pageCount);
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error ? loadError.message : "Unable to load members.",
-          );
-          setMembers([]);
-          setTotalRecordsCount(0);
-          setPageCount(0);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadMembers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    pageNo,
-    pageSize,
-    selectedMembershipStatusesKey,
-    selectedMembershipTypeKey,
-    selectedSearchTermKey,
-  ]);
-
-  const membershipTypeOptions = useMemo(
-    () =>
-      membershipTypes.map((item) => ({
-        label: item.text,
-        value: item.value,
-      })),
-    [membershipTypes],
-  );
+  }, [selectedSearchTermKey, selectedSearchTerm]);
 
   function updatePage(nextPageNo: number) {
     const nextParams = new URLSearchParams(searchParams);
@@ -304,6 +241,7 @@ export function MembersPage() {
           draftMembershipTypeUniqueIds={draftMembershipTypeUniqueIds}
           draftSearchTerm={draftSearchTerm}
           hasPendingFilterChanges={hasPendingFilterChanges}
+          isMembersFetching={isLoading}
           isMembershipTypesLoading={isMembershipTypesLoading}
           isMembershipStatusesLoading={isMembershipStatusesLoading}
           selectedMembershipStatuses={selectedMembershipStatuses}

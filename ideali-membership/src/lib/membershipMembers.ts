@@ -107,3 +107,22 @@ export async function fetchMembershipStatusOptions() {
     }))
     .filter((item) => item.label.length > 0 && item.value.length > 0);
 }
+
+export async function fetchMembershipTypeOptions() {
+  const payload = await getJson<unknown>("/api/organizer/membership/type/options");
+  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null | Array<unknown>;
+  const items = Array.isArray(responseData)
+    ? responseData
+    : Array.isArray(responseData?.PageData)
+      ? responseData.PageData
+      : Array.isArray(responseData?.Data)
+        ? responseData.Data
+        : [];
+
+  return items
+    .map((item) => ({
+      label: readText((item as { Text?: unknown; text?: unknown }).Text ?? (item as { Text?: unknown; text?: unknown }).text),
+      value: readText((item as { Value?: unknown; value?: unknown }).Value ?? (item as { Value?: unknown; value?: unknown }).value),
+    }))
+    .filter((item) => item.label.length > 0 && item.value.length > 0);
+}
