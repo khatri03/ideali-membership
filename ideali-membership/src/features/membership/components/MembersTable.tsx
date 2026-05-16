@@ -1,5 +1,6 @@
 import { cn } from "../../../lib/utils";
 import type { MembershipMemberListItem } from "../../../types/membership";
+import type { MembersFilterOption } from "./MembersFilters";
 
 function formatExpiry(value: string | null) {
   if (!value) {
@@ -16,23 +17,6 @@ function formatExpiry(value: string | null) {
     month: "short",
     year: "numeric",
   }).format(parsedDate);
-}
-
-function formatMembershipStatus(value: string) {
-  switch (value) {
-    case "PendingApproval":
-    case "Pending":
-      return "Pending Approval";
-    case "Active":
-      return "Active";
-    case "Expired":
-      return "Expired";
-    case "InActive":
-    case "NearExpiry":
-      return "Inactive";
-    default:
-      return value;
-  }
 }
 
 function getMembershipStatusStyles(value: string) {
@@ -54,9 +38,14 @@ function getMembershipStatusStyles(value: string) {
 
 type MembersTableProps = {
   members: MembershipMemberListItem[];
+  membershipStatusOptions: MembersFilterOption[];
 };
 
-export function MembersTable({ members }: MembersTableProps) {
+export function MembersTable({ members, membershipStatusOptions }: MembersTableProps) {
+  const membershipStatusLabelMap = new Map(
+    membershipStatusOptions.map((item) => [item.value, item.label] as const),
+  );
+
   return (
     <div className="max-h-[38rem] overflow-auto rounded-[1.75rem] border border-cyan-100 bg-white/95 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.3)]">
       <table className="w-full border-collapse text-sm">
@@ -109,7 +98,7 @@ export function MembersTable({ members }: MembersTableProps) {
                     getMembershipStatusStyles(member.membershipStatus),
                   )}
                 >
-                  {formatMembershipStatus(member.membershipStatus)}
+                  {membershipStatusLabelMap.get(member.membershipStatus) ?? member.membershipStatus}
                 </span>
               </td>
               <td className="px-3 py-3 text-sm text-slate-700 sm:px-4">

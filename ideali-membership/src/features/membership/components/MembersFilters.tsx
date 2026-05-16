@@ -11,6 +11,7 @@ type MembersFiltersProps = {
   draftSearchTerm: string;
   hasPendingFilterChanges: boolean;
   isMembershipTypesLoading: boolean;
+  isMembershipStatusesLoading: boolean;
   membershipStatusOptions: MembersFilterOption[];
   selectedMembershipStatuses: string[];
   membershipTypeOptions: MembersFilterOption[];
@@ -31,6 +32,7 @@ export function MembersFilters({
   draftSearchTerm,
   hasPendingFilterChanges,
   isMembershipTypesLoading,
+  isMembershipStatusesLoading,
   selectedMembershipStatuses,
   membershipTypeOptions,
   selectedMembershipTypeUniqueIds,
@@ -57,6 +59,7 @@ export function MembersFilters({
             onChange={onDraftMembershipStatusesChange}
             options={membershipStatusOptions}
             placeholder="All membership statuses"
+            isDisabled={isMembershipStatusesLoading}
             className="w-full"
             inputId="membership-status-filter"
           />

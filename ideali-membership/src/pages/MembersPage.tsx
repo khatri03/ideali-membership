@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { MembersFilters, MembersPagination, MembersTable } from "../features/membership/components";
-import { fetchMembershipMembers } from "../lib/membershipMembers";
+import {
+  MembersFilters,
+  MembersPagination,
+  MembersTable,
+  type MembersFilterOption,
+} from "../features/membership/components";
+import { fetchMembershipMembers, fetchMembershipStatusOptions } from "../lib/membershipMembers";
 import { getMembershipTypes } from "../lib/membershipWizard";
 import type { MembershipMemberListItem, MembershipTypeListItem } from "../types/membership";
-
-const membershipStatusOptions = [
-  { label: "Pending Approval", value: "PendingApproval" },
-  { label: "Active", value: "Active" },
-  { label: "Expired", value: "Expired" },
-  { label: "Inactive", value: "InActive" },
-];
 
 function getPositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -31,6 +29,8 @@ function areUniqueIdListsEqual(left: string[], right: string[]) {
 
   return normalizedLeft.every((value, index) => value === normalizedRight[index]);
 }
+
+const defaultMembershipStatuses = ["Active"];
 
 export function MembersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -61,7 +61,10 @@ export function MembersPage() {
     [selectedSearchTerm],
   );
   const selectedMembershipStatuses = useMemo(
-    () => normalizeUniqueIds(searchParams.getAll("membershipStatuses")),
+    () => {
+      const nextMembershipStatuses = normalizeUniqueIds(searchParams.getAll("membershipStatuses"));
+      return nextMembershipStatuses.length > 0 ? nextMembershipStatuses : defaultMembershipStatuses;
+    },
     [searchParamsKey],
   );
   const selectedMembershipStatusesKey = useMemo(
@@ -74,6 +77,8 @@ export function MembersPage() {
   const [members, setMembers] = useState<MembershipMemberListItem[]>([]);
   const [membershipTypes, setMembershipTypes] = useState<MembershipTypeListItem[]>([]);
   const [isMembershipTypesLoading, setIsMembershipTypesLoading] = useState(true);
+  const [membershipStatusOptions, setMembershipStatusOptions] = useState<MembersFilterOption[]>([]);
+  const [isMembershipStatusesLoading, setIsMembershipStatusesLoading] = useState(true);
   const [draftMembershipStatuses, setDraftMembershipStatuses] = useState(selectedMembershipStatuses);
   const [draftMembershipTypeUniqueIds, setDraftMembershipTypeUniqueIds] = useState<string[]>(
     selectedMembershipTypeUniqueIds,
@@ -99,26 +104,42 @@ export function MembersPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadMembershipTypes() {
+    async function loadFilterOptions() {
       setIsMembershipTypesLoading(true);
+      setIsMembershipStatusesLoading(true);
 
-      try {
-        const items = await getMembershipTypes();
-        if (!cancelled) {
-          setMembershipTypes(items.slice().sort((left, right) => left.displayOrder - right.displayOrder));
-        }
-      } catch {
-        if (!cancelled) {
-          setMembershipTypes([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsMembershipTypesLoading(false);
-        }
+      const [membershipTypesResult, membershipStatusOptionsResult] = await Promise.allSettled([
+        getMembershipTypes(),
+        fetchMembershipStatusOptions(),
+      ]);
+
+      if (cancelled) {
+        return;
       }
+
+      if (membershipTypesResult.status === "fulfilled") {
+        setMembershipTypes(
+          membershipTypesResult.value.slice().sort((left, right) => left.displayOrder - right.displayOrder),
+        );
+      } else {
+        setMembershipTypes([]);
+      }
+
+      if (membershipStatusOptionsResult.status === "fulfilled") {
+        setMembershipStatusOptions(
+          membershipStatusOptionsResult.value
+            .slice()
+            .sort((left, right) => left.label.localeCompare(right.label)),
+        );
+      } else {
+        setMembershipStatusOptions([]);
+      }
+
+      setIsMembershipTypesLoading(false);
+      setIsMembershipStatusesLoading(false);
     }
 
-    void loadMembershipTypes();
+    void loadFilterOptions();
 
     return () => {
       cancelled = true;
@@ -284,6 +305,7 @@ export function MembersPage() {
           draftSearchTerm={draftSearchTerm}
           hasPendingFilterChanges={hasPendingFilterChanges}
           isMembershipTypesLoading={isMembershipTypesLoading}
+          isMembershipStatusesLoading={isMembershipStatusesLoading}
           selectedMembershipStatuses={selectedMembershipStatuses}
           membershipTypeOptions={membershipTypeOptions}
           selectedMembershipTypeUniqueIds={selectedMembershipTypeUniqueIds}
@@ -308,7 +330,7 @@ export function MembersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <MembersTable members={members} />
+            <MembersTable members={members} membershipStatusOptions={membershipStatusOptions} />
             <MembersPagination
               currentPage={pageNo}
               pageSize={pageSize}

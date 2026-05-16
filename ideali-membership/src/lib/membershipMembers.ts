@@ -1,25 +1,6 @@
 import { getJson } from "./api";
 import type { MembershipMemberListItem, PageResult } from "../types/membership";
-
-function readResponseData(payload: unknown) {
-  if (!payload || typeof payload !== "object") {
-    return payload;
-  }
-
-  if ("Data" in payload) {
-    return (payload as { Data?: unknown }).Data;
-  }
-
-  if ("data" in payload) {
-    return (payload as { data?: unknown }).data;
-  }
-
-  return payload;
-}
-
-function readText(value: unknown) {
-  return typeof value === "string" ? value : "";
-}
+import { readResponseData, readText } from "./parseUtils";
 
 function readNullableText(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
@@ -106,4 +87,23 @@ export async function fetchMembershipMembers(
   };
 
   return pageResult;
+}
+
+export async function fetchMembershipStatusOptions() {
+  const payload = await getJson<unknown>("/api/organizer/membership/type/status-options");
+  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null | Array<unknown>;
+  const items = Array.isArray(responseData)
+    ? responseData
+    : Array.isArray(responseData?.PageData)
+      ? responseData.PageData
+      : Array.isArray(responseData?.Data)
+        ? responseData.Data
+        : [];
+
+  return items
+    .map((item) => ({
+      label: readText((item as { Text?: unknown; text?: unknown }).Text ?? (item as { Text?: unknown; text?: unknown }).text),
+      value: readText((item as { Value?: unknown; value?: unknown }).Value ?? (item as { Value?: unknown; value?: unknown }).value),
+    }))
+    .filter((item) => item.label.length > 0 && item.value.length > 0);
 }
