@@ -23,7 +23,6 @@ type MembersFiltersProps = {
   onDraftMembershipStatusesChange: (value: string[]) => void;
   onDraftMembershipTypeUniqueIdsChange: (value: string[]) => void;
   onDraftSearchTermChange: (value: string) => void;
-  onResetChanges: () => void;
 };
 
 export function MembersFilters({
@@ -44,7 +43,6 @@ export function MembersFilters({
   onDraftMembershipStatusesChange,
   onDraftMembershipTypeUniqueIdsChange,
   onDraftSearchTermChange,
-  onResetChanges,
 }: MembersFiltersProps) {
   return (
     <div className="mb-6 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
@@ -71,7 +69,8 @@ export function MembersFilters({
               onChange={(event) => onDraftSearchTermChange(event.target.value)}
               placeholder="Name, email, or phone"
               type="search"
-              className="h-13 w-full rounded-[1rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              disabled={isMembersFetching}
+              className="h-13 w-full rounded-[1rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
             />
           </div>
           <div className="space-y-2">
@@ -83,7 +82,7 @@ export function MembersFilters({
               onChange={onDraftMembershipTypeUniqueIdsChange}
               options={membershipTypeOptions}
               placeholder="All membership types"
-              isDisabled={isMembershipTypesLoading}
+              isDisabled={isMembershipTypesLoading || isMembersFetching}
               className="w-full"
               inputId="membership-type-filter"
             />
@@ -97,7 +96,7 @@ export function MembersFilters({
               onChange={onDraftMembershipStatusesChange}
               options={membershipStatusOptions}
               placeholder="All membership statuses"
-              isDisabled={isMembershipStatusesLoading}
+              isDisabled={isMembershipStatusesLoading || isMembersFetching}
               className="w-full"
               inputId="membership-status-filter"
             />
@@ -118,19 +117,11 @@ export function MembersFilters({
               type="button"
               onClick={onClearFilters}
               disabled={isMembersFetching}
-              className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
+              className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Clear filters
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={onResetChanges}
-            disabled={!hasPendingFilterChanges || isMembersFetching}
-            className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Reset changes
-          </button>
         </div>
       </form>
     </div>

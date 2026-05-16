@@ -253,7 +253,6 @@ export function MembersPage() {
           onDraftMembershipStatusesChange={setDraftMembershipStatuses}
           onDraftMembershipTypeUniqueIdsChange={setDraftMembershipTypeUniqueIds}
           onDraftSearchTermChange={setDraftSearchTerm}
-          onResetChanges={resetDraftFilters}
         />
 
         {isLoading ? (

@@ -23,6 +23,7 @@ const selectStyles: StylesConfig<MultiSelectOption, true> = {
     borderRadius: "1rem",
     borderColor: state.isFocused ? "#22d3ee" : "#e2e8f0",
     backgroundColor: "#ffffff",
+    cursor: state.isDisabled ? "not-allowed" : "default",
     boxShadow: state.isFocused ? "0 0 0 4px rgba(34, 211, 238, 0.12)" : "none",
     ":hover": {
       borderColor: state.isFocused ? "#22d3ee" : "#cbd5e1",
@@ -86,6 +87,7 @@ const selectStyles: StylesConfig<MultiSelectOption, true> = {
   dropdownIndicator: (base, state) => ({
     ...base,
     color: state.isDisabled ? "#cbd5e1" : "#64748b",
+    cursor: state.isDisabled ? "not-allowed" : "pointer",
     ":hover": {
       color: state.isDisabled ? "#cbd5e1" : "#334155",
     },

@@ -1,22 +1,10 @@
 import { cn } from "../../../lib/utils";
+import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
 import type { MembershipMemberListItem } from "../../../types/membership";
 import type { MembersFilterOption } from "./MembersFilters";
 
 function formatExpiry(value: string | null) {
-  if (!value) {
-    return "No expiry";
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-PK", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(parsedDate);
+  return formatUtcToLocalDateTime(value);
 }
 
 function getMembershipStatusStyles(value: string) {
@@ -104,7 +92,7 @@ export function MembersTable({ members, membershipStatusOptions }: MembersTableP
               <td className="px-3 py-3 text-sm text-slate-700 sm:px-4">
                 {member.email}
               </td>
-              <td className="px-3 py-3 text-center text-sm font-medium text-slate-900 sm:px-4">
+              <td className="px-3 py-3 text-center text-sm text-slate-900 sm:px-4">
                 {formatExpiry(member.membershipExpiryUtc)}
               </td>
             </tr>
