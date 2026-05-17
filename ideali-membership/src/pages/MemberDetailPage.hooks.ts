@@ -130,6 +130,7 @@ function groupCustomFormResponses(
   });
 
   return Array.from(sections.values())
+    .filter((section) => section.items.length > 0)
     .map((section) => ({
       ...section,
       items: [...section.items].sort((left, right) => {

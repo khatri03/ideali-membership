@@ -12,6 +12,7 @@ import type { MembershipMemberCustomFormAnswer, MembershipMemberCustomQuestionAn
 import type { MembershipRegistrationCustomQuestionOption } from "../types/membershipRegistration";
 
 type MemberTone = "slate" | "cyan" | "emerald" | "amber" | "rose";
+const MEMBER_DETAIL_TAB_ID = "member-detail";
 
 function getInitials(value: string) {
   return value
@@ -64,6 +65,7 @@ function parseSelectedValues(value: string | null | undefined) {
 }
 
 export function MemberDetailPage() {
+  const [activeDetailTabId, setActiveDetailTabId] = useState<string>(MEMBER_DETAIL_TAB_ID);
   const {
     member,
     memberUniqueId,
@@ -79,6 +81,23 @@ export function MemberDetailPage() {
     refetch,
   } =
     useMemberDetailPage();
+
+  useEffect(() => {
+    const availableTabIds = [MEMBER_DETAIL_TAB_ID, ...customFormSections.map((section) => section.id)];
+    const hasCurrentTab = availableTabIds.includes(activeDetailTabId);
+    const nextActiveTabId = hasCurrentTab ? activeDetailTabId : MEMBER_DETAIL_TAB_ID;
+
+    if (nextActiveTabId !== activeDetailTabId) {
+      setActiveDetailTabId(nextActiveTabId);
+    }
+  }, [activeDetailTabId, customFormSections]);
+
+  const activeCustomFormSection = useMemo(
+    () => customFormSections.find((section) => section.id === activeDetailTabId) ?? null,
+    [activeDetailTabId, customFormSections],
+  );
+
+  const isMemberDetailTabActive = activeDetailTabId === MEMBER_DETAIL_TAB_ID;
 
   if (error && !memberUniqueId) {
     return (
@@ -204,150 +223,181 @@ export function MemberDetailPage() {
             ))}
           </div>
 
+          <div
+            role="tablist"
+            aria-label="Member detail tabs"
+            className="flex w-full flex-wrap items-center gap-2 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-2"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isMemberDetailTabActive}
+              onClick={() => setActiveDetailTabId(MEMBER_DETAIL_TAB_ID)}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition",
+                isMemberDetailTabActive
+                  ? "bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-200"
+                  : "text-slate-600 hover:bg-white hover:text-slate-900",
+              )}
+            >
+              <span>Member Detail</span>
+            </button>
+
+            {customFormSections.map((section) => {
+              const isActive = section.id === activeCustomFormSection?.id;
+
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveDetailTabId(section.id)}
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition",
+                    isActive
+                      ? "bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-200"
+                      : "text-slate-600 hover:bg-white hover:text-slate-900",
+                  )}
+                >
+                  <span>{section.title}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-6">
-              <DetailPanel
-                title="Profile and contact"
-                description="Core identity information and communication channels that help organizers verify the member at a glance."
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <InfoRow icon={<UserRound size={16} />} label="Name" value={member.memberFullName} />
-                  <InfoRow icon={<Mail size={16} />} label="Email" value={member.email} href={`mailto:${member.email}`} />
-                  <InfoRow icon={<Phone size={16} />} label="Phone" value={member.cellPhone || "Not provided"} href={member.cellPhone ? `tel:${member.cellPhone}` : undefined} />
-                  <InfoRow icon={<CalendarDays size={16} />} label="Membership start" value={membershipStartLabel} />
-                </div>
+              {isMemberDetailTabActive ? (
+                  <div className="space-y-6">
+                    <DetailPanel
+                      title="Profile and contact"
+                      description="Core identity information and communication channels that help organizers verify the member at a glance."
+                    >
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <InfoRow icon={<UserRound size={16} />} label="Name" value={member.memberFullName} />
+                        <InfoRow icon={<Mail size={16} />} label="Email" value={member.email} href={`mailto:${member.email}`} />
+                        <InfoRow icon={<Phone size={16} />} label="Phone" value={member.cellPhone || "Not provided"} href={member.cellPhone ? `tel:${member.cellPhone}` : undefined} />
+                        <InfoRow icon={<CalendarDays size={16} />} label="Membership start" value={membershipStartLabel} />
+                      </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <InfoRow icon={<FileText size={16} />} label="Member ID" value={member.uniqueId} mono />
-                  <InfoRow icon={<ShieldCheck size={16} />} label="Status" value={member.membershipStatus} />
-                </div>
+                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                        <InfoRow icon={<FileText size={16} />} label="Member ID" value={member.uniqueId} mono />
+                        <InfoRow icon={<ShieldCheck size={16} />} label="Status" value={member.membershipStatus} />
+                      </div>
 
-                {addressLines.length > 0 ? (
-                  <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address</p>
-                    <div className="mt-3 space-y-1 text-sm leading-6 text-slate-700">
-                      {addressLines.map((line) => (
-                        <p key={line}>{line}</p>
+                      {addressLines.length > 0 ? (
+                        <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address</p>
+                          <div className="mt-3 space-y-1 text-sm leading-6 text-slate-700">
+                            {addressLines.map((line) => (
+                              <p key={line}>{line}</p>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </DetailPanel>
+
+                    <DetailPanel
+                      title="Membership snapshot"
+                      description="A concise view of the member's current standing and the most important lifecycle dates."
+                    >
+                      <div className="space-y-4">
+                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Current plan</p>
+                          <p className="mt-2 text-lg font-semibold text-slate-900">{member.activeMembershipName || "Not assigned"}</p>
+                        </div>
+                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Expiry</p>
+                          <p className="mt-2 text-lg font-semibold text-slate-900">{membershipExpiryLabel}</p>
+                        </div>
+                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Record notes</p>
+                          <p className={cn("mt-2 text-sm leading-6", member.notes ? "text-slate-700" : "text-slate-500")}>
+                            {member.notes || "No notes provided with this member record."}
+                          </p>
+                        </div>
+                      </div>
+                    </DetailPanel>
+
+                    {customQuestionResponses.length > 0 ? (
+                      <DetailPanel
+                        title="Custom questions"
+                        description="Individual question responses captured at registration time."
+                      >
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {customQuestionResponses.map((item) => (
+                            <article key={item.questionUniqueId || item.questionLabel} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                {item.controlType || "Question"}
+                              </p>
+                              <h3 className="mt-2 text-base font-semibold text-slate-900">
+                                {item.questionLabel || "Unnamed question"}
+                              </h3>
+                              <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+                                {item.optionLabel ? <p><span className="font-medium text-slate-900">Selected:</span> {item.optionLabel}</p> : null}
+                                {renderCustomQuestionAnswer(item)}
+                              </div>
+                            </article>
+                          ))}
+                          </div>
+                        </DetailPanel>
+                    ) : null}
+
+                    <DetailPanel
+                      title="Operational actions"
+                      description="These links support the most common organizer workflows without leaving the detail page."
+                    >
+                      <div className="grid gap-3">
+                        <a
+                          href={`mailto:${member.email}`}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                        >
+                          <Mail size={16} />
+                          Send message
+                        </a>
+                        <Link
+                          to={APP_ROUTES.membershipMembers}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+                        >
+                          <ArrowLeft size={16} />
+                          Return to members list
+                        </Link>
+                      </div>
+                    </DetailPanel>
+                  </div>
+                ) : activeCustomFormSection ? (
+                  <div key={activeCustomFormSection.id} className="space-y-4">
+                    {activeCustomFormSection.description ? (
+                      <p className="text-sm leading-6 text-slate-600">{activeCustomFormSection.description}</p>
+                    ) : null}
+
+                    <div className={getCustomFormGridClass()}>
+                      {activeCustomFormSection.items.map((item, index) => (
+                        <article
+                          key={`${item.fieldUniqueId ?? item.fieldLabel}-${item.value}`}
+                          className={cn(
+                            "group relative space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5",
+                            getCustomFormFieldSpanClass(activeCustomFormSection.layoutColumn, item.fieldLayoutColumn),
+                          )}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-start gap-2">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {item.fieldLabel || "Unnamed field"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                            {renderCustomFormAnswer(item, activeCustomFormSection.items, index)}
+                          </div>
+                        </article>
                       ))}
                     </div>
                   </div>
                 ) : null}
-              </DetailPanel>
-
-              {customFormSections.length > 0 ? (
-                <DetailPanel
-                  title="Custom forms"
-                  description="Responses are rendered using the same form grid and spacing from registration."
-                >
-                  <div className="space-y-6">
-                    {customFormSections.map((section) => (
-                      <div key={section.id} className="space-y-4">
-                        <div className="space-y-1">
-                          <h3 className="text-xl font-bold tracking-tight text-slate-900">{section.title}</h3>
-                          {section.description ? (
-                            <p className="text-sm leading-6 text-slate-600">{section.description}</p>
-                          ) : null}
-                        </div>
-
-                        <div className={getCustomFormGridClass()}>
-                          {section.items.map((item, index) => (
-                            <article
-                              key={`${item.fieldUniqueId ?? item.fieldLabel}-${item.value}`}
-                              className={cn(
-                                "group relative space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5",
-                                getCustomFormFieldSpanClass(section.layoutColumn, item.fieldLayoutColumn),
-                              )}
-                            >
-                              <div className="space-y-1">
-                                <div className="flex items-start gap-2">
-                                  <p className="text-sm font-semibold text-slate-900">
-                                    {item.fieldLabel || "Unnamed field"}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                                {renderCustomFormAnswer(item, section.items, index)}
-                              </div>
-                            </article>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </DetailPanel>
-              ) : null}
-
-              {customQuestionResponses.length > 0 ? (
-                <DetailPanel
-                  title="Custom questions"
-                  description="Individual question responses captured at registration time."
-                >
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {customQuestionResponses.map((item) => (
-                      <article key={item.questionUniqueId || item.questionLabel} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          {item.controlType || "Question"}
-                        </p>
-                        <h3 className="mt-2 text-base font-semibold text-slate-900">
-                          {item.questionLabel || "Unnamed question"}
-                        </h3>
-                        <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
-                          {item.optionLabel ? <p><span className="font-medium text-slate-900">Selected:</span> {item.optionLabel}</p> : null}
-                          {renderCustomQuestionAnswer(item)}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </DetailPanel>
-              ) : null}
             </div>
-
-            <aside className="space-y-6">
-              <DetailPanel
-                title="Membership snapshot"
-                description="A concise view of the member's current standing and the most important lifecycle dates."
-              >
-                <div className="space-y-4">
-                  <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Current plan</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-900">{member.activeMembershipName || "Not assigned"}</p>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Expiry</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-900">{membershipExpiryLabel}</p>
-                  </div>
-                  <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Record notes</p>
-                    <p className={cn("mt-2 text-sm leading-6", member.notes ? "text-slate-700" : "text-slate-500")}>
-                      {member.notes || "No notes provided with this member record."}
-                    </p>
-                  </div>
-                </div>
-              </DetailPanel>
-
-              <DetailPanel
-                title="Operational actions"
-                description="These links support the most common organizer workflows without leaving the detail page."
-              >
-                <div className="grid gap-3">
-                  <a
-                    href={`mailto:${member.email}`}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
-                  >
-                    <Mail size={16} />
-                    Send message
-                  </a>
-                  <Link
-                    to={APP_ROUTES.membershipMembers}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-                  >
-                    <ArrowLeft size={16} />
-                    Return to members list
-                  </Link>
-                </div>
-              </DetailPanel>
-            </aside>
           </div>
         </>
       ) : (
