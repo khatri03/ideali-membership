@@ -34,8 +34,12 @@ type CustomFormSectionView = {
   order: number;
 };
 
+function normalizeStatusValue(value: string) {
+  return value.replace(/[\s_-]+/g, "").toLowerCase();
+}
+
 function getStatusTone(value: string): MemberTone {
-  switch (value.replace(/[\s_-]+/g, "").toLowerCase()) {
+  switch (normalizeStatusValue(value)) {
     case "active":
       return "emerald";
     case "pendingapproval":
@@ -48,6 +52,18 @@ function getStatusTone(value: string): MemberTone {
       return "cyan";
     default:
       return "slate";
+  }
+}
+
+function getMembershipStartCardLabel(value: string) {
+  switch (normalizeStatusValue(value)) {
+    case "active":
+      return "Member Since";
+    case "pendingapproval":
+    case "rejected":
+      return "Applied On";
+    default:
+      return "Applied On";
   }
 }
 
@@ -232,27 +248,23 @@ export function useMemberDetailPage() {
 
     return [
       {
-        label: "Active Membership Title",
+        label: "Active Memebrship",
         value: member.activeMembershipName || "Not assigned",
-        detail: member.memberFullName,
         tone: "cyan" as const,
       },
       {
         label: "Status",
         value: membershipStatusLabel,
-        detail: member.membershipStartUtc ? `Started ${formatUtcToLocalDateTime(member.membershipStartUtc)}` : "Start date unavailable",
         tone: getStatusTone(member.membershipStatus),
       },
       {
-        label: "Membership Start",
+        label: getMembershipStartCardLabel(membershipStatusLabel),
         value: membershipStartLabel,
-        detail: member.memberFullName,
         tone: "slate" as const,
       },
       {
         label: "Expiry",
         value: formatUtcToLocalDateTime(member.membershipExpiryUtc),
-        detail: member.memberFullName,
         tone: "amber" as const,
       },
     ];
