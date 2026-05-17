@@ -189,7 +189,7 @@ export async function fetchMembershipMembers(
 }
 
 export async function fetchMembershipMemberDetail(memberUniqueId: string) {
-  const payload = await getJson<unknown>(`/api/organizer/membership/type/members/${memberUniqueId}`);
+  const payload = await getJson<unknown>(`/api/organizer/membership/type/members/${memberUniqueId}/detail`);
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
   const detailRecord = pickMemberDetailRecord(responseData);
 
