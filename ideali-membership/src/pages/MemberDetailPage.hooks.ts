@@ -28,9 +28,14 @@ function groupCustomFormResponses(
   responses: Array<{
     formUniqueId: string | null;
     formName: string;
+    formHeaderText: string | null;
+    formDescription: string | null;
+    formLayoutColumn: number | null;
     fieldUniqueId: string | null;
     fieldLabel: string;
     fieldType: string | null;
+    fieldDisplayOrder: number | null;
+    fieldLayoutColumn: number | null;
     value: string;
   }>,
 ) {
@@ -39,13 +44,17 @@ function groupCustomFormResponses(
     {
       id: string;
       title: string;
+      description: string;
+      layoutColumn: number;
       items: typeof responses;
     }
   >();
 
   responses.forEach((response, index) => {
     const key = response.formUniqueId || response.formName || `form-${index}`;
-    const title = response.formName || "Custom form responses";
+    const title = response.formHeaderText || response.formName || "Custom form responses";
+    const description = response.formDescription || "";
+    const layoutColumn = Math.max(1, Math.min(4, response.formLayoutColumn ?? 2));
     const current = sections.get(key);
 
     if (current) {
@@ -56,11 +65,25 @@ function groupCustomFormResponses(
     sections.set(key, {
       id: key,
       title,
+      description,
+      layoutColumn,
       items: [response],
     });
   });
 
-  return Array.from(sections.values());
+  return Array.from(sections.values()).map((section) => ({
+    ...section,
+    items: [...section.items].sort((left, right) => {
+      const leftOrder = left.fieldDisplayOrder ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = right.fieldDisplayOrder ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return (left.fieldLabel || left.fieldUniqueId || "").localeCompare(right.fieldLabel || right.fieldUniqueId || "");
+    }),
+  }));
 }
 
 export function useMemberDetailPage() {

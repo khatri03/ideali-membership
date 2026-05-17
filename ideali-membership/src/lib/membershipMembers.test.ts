@@ -303,9 +303,14 @@ describe("fetchMembershipMemberDetail", () => {
           {
             FormUniqueId: "form-1",
             FormName: "Organization details",
+            FormHeaderText: "Organization details",
+            FormDescription: "Business profile fields",
+            FormLayoutColumn: 2,
             FieldUniqueId: "field-1",
             FieldLabel: "Department",
             FieldType: "Text",
+            FieldDisplayOrder: 1,
+            FieldLayoutColumn: 2,
             Value: "Engineering",
           },
         ],
@@ -329,7 +334,12 @@ describe("fetchMembershipMemberDetail", () => {
     expect(result.customFormResponses).toHaveLength(1);
     expect(result.customFormResponses[0]).toMatchObject({
       formName: "Organization details",
+      formHeaderText: "Organization details",
+      formDescription: "Business profile fields",
+      formLayoutColumn: 2,
       fieldLabel: "Department",
+      fieldDisplayOrder: 1,
+      fieldLayoutColumn: 2,
       value: "Engineering",
     });
     expect(result.customQuestionResponses).toHaveLength(1);
@@ -353,6 +363,6 @@ describe("fetchMembershipMemberDetail", () => {
     await fetchMembershipMemberDetail("uid-200");
 
     const calledUrl = mockGetJson.mock.calls[0]![0] as string;
-    expect(calledUrl).toContain("/api/organizer/membership/type/members/uid-200");
+    expect(calledUrl).toContain("/api/organizer/membership/type/members/uid-200/detail");
   });
 });

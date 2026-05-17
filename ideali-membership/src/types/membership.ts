@@ -166,9 +166,14 @@ export interface MembershipMemberListItem {
 export interface MembershipMemberCustomFormAnswer {
   formUniqueId: string | null;
   formName: string;
+  formHeaderText: string | null;
+  formDescription: string | null;
+  formLayoutColumn: number | null;
   fieldUniqueId: string | null;
   fieldLabel: string;
   fieldType: string | null;
+  fieldDisplayOrder: number | null;
+  fieldLayoutColumn: number | null;
   value: string;
 }
 

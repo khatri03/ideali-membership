@@ -5,6 +5,7 @@ import { APP_ROUTES } from "../routes";
 import { cn } from "../lib/utils";
 import { EmptyStatePanel, DetailPanel, StatCard, StatusPill } from "./MemberDetailPage.parts";
 import { useMemberDetailPage } from "./MemberDetailPage.hooks";
+import { getCustomFormFieldSpanClass, getCustomFormGridClass } from "./MembershipRegisterPage/MembershipRegisterWizard.logic";
 
 type MemberTone = "slate" | "cyan" | "emerald" | "amber" | "rose";
 
@@ -208,24 +209,42 @@ export function MemberDetailPage() {
 
               <DetailPanel
                 title="Custom forms"
-                description="Responses grouped by the form they came from during registration."
+                description="Responses are rendered using the same form grid and spacing from registration."
               >
                 {customFormSections.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {customFormSections.map((section) => (
-                      <div key={section.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-sm font-semibold text-slate-900">{section.title}</p>
-                        <div className="mt-4 grid gap-3">
+                      <div key={section.id} className="space-y-4">
+                        <div className="space-y-1">
+                          <h3 className="text-xl font-bold tracking-tight text-slate-900">{section.title}</h3>
+                          {section.description ? (
+                            <p className="text-sm leading-6 text-slate-600">{section.description}</p>
+                          ) : null}
+                        </div>
+
+                        <div className={getCustomFormGridClass()}>
                           {section.items.map((item) => (
-                            <div key={`${item.fieldUniqueId ?? item.fieldLabel}-${item.value}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                {item.fieldType || "Field"}
-                              </p>
-                              <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                                <p className="font-medium text-slate-900">{item.fieldLabel || "Unnamed field"}</p>
-                                <p className="text-sm leading-6 text-slate-700 sm:max-w-[60%] sm:text-right">{item.value || "No value"}</p>
+                            <article
+                              key={`${item.fieldUniqueId ?? item.fieldLabel}-${item.value}`}
+                              className={cn(
+                                "group relative space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5",
+                                getCustomFormFieldSpanClass(section.layoutColumn, item.fieldLayoutColumn),
+                              )}
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-start gap-2">
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {item.fieldLabel || "Unnamed field"}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
+
+                              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                <p className="text-sm leading-6 text-slate-700">
+                                  {renderCustomFormValue(item.value, item.fieldType)}
+                                </p>
+                              </div>
+                            </article>
                           ))}
                         </div>
                       </div>
@@ -365,4 +384,31 @@ function InfoRow({
       {content}
     </a>
   );
+}
+
+function renderCustomFormValue(value: string, fieldType: string | null) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return <span className="text-slate-400">No value provided</span>;
+  }
+
+  switch ((fieldType || "").toLowerCase()) {
+    case "checkbox":
+      return trimmedValue.toLowerCase() === "true" ? "Checked" : "Unchecked";
+    case "multiselect":
+      return (
+        <span className="inline-flex flex-wrap gap-2">
+          {trimmedValue.split(",").map((item) => (
+            <span key={item.trim()} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+              {item.trim()}
+            </span>
+          ))}
+        </span>
+      );
+    case "textarea":
+      return <span className="whitespace-pre-wrap">{trimmedValue}</span>;
+    default:
+      return <span className="whitespace-pre-wrap">{trimmedValue}</span>;
+  }
 }

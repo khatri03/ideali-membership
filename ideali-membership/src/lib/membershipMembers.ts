@@ -40,9 +40,14 @@ function readCustomFormAnswers(value: unknown) {
       return {
         formUniqueId: readNullableText(record.FormUniqueId ?? record.formUniqueId ?? record.FormId ?? record.formId),
         formName: readText(record.FormName ?? record.formName ?? record.FormTitle ?? record.formTitle),
+        formHeaderText: readNullableText(record.FormHeaderText ?? record.formHeaderText ?? record.HeaderText ?? record.headerText),
+        formDescription: readNullableText(record.FormDescription ?? record.formDescription ?? record.Description ?? record.description),
+        formLayoutColumn: readNullableNumber(record.FormLayoutColumn ?? record.formLayoutColumn ?? record.LayoutColumn ?? record.layoutColumn),
         fieldUniqueId: readNullableText(record.FieldUniqueId ?? record.fieldUniqueId ?? record.FieldId ?? record.fieldId),
         fieldLabel: readText(record.FieldLabel ?? record.fieldLabel ?? record.Label ?? record.label),
         fieldType: readNullableText(record.FieldType ?? record.fieldType ?? record.ControlType ?? record.controlType),
+        fieldDisplayOrder: readNullableNumber(record.FieldDisplayOrder ?? record.fieldDisplayOrder ?? record.DisplayOrder ?? record.displayOrder),
+        fieldLayoutColumn: readNullableNumber(record.FieldLayoutColumn ?? record.fieldLayoutColumn ?? record.LayoutColumn ?? record.layoutColumn),
         value: valueText,
       };
     })
