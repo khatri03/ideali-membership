@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchMembershipMembers, fetchMembershipStatusOptions, fetchMembershipTypeOptions } from "./membershipMembers";
+import {
+  fetchMembershipMemberDetail,
+  fetchMembershipMembers,
+  fetchMembershipStatusOptions,
+  fetchMembershipTypeOptions,
+} from "./membershipMembers";
 
 vi.mock("./api", () => ({
   getJson: vi.fn(),
@@ -36,13 +41,14 @@ describe("fetchMembershipMembers", () => {
     });
 
     const result = await fetchMembershipMembers(1, 20);
+    const first = result.pageData[0]!;
 
     expect(result.pageNo).toBe(1);
     expect(result.pageSize).toBe(20);
     expect(result.pageCount).toBe(2);
     expect(result.totalRecordsCount).toBe(25);
     expect(result.pageData).toHaveLength(1);
-    expect(result.pageData[0]).toMatchObject({
+    expect(first).toMatchObject({
       uniqueId: "uid-1",
       memberFullName: "John Doe",
       activeMembershipName: "Gold",
@@ -73,8 +79,9 @@ describe("fetchMembershipMembers", () => {
     });
 
     const result = await fetchMembershipMembers(1, 10);
-    expect(result.pageData[0].uniqueId).toBe("uid-2");
-    expect(result.pageData[0].membershipExpiryUtc).toBe(null);
+    const first = result.pageData[0]!;
+    expect(first.uniqueId).toBe("uid-2");
+    expect(first.membershipExpiryUtc).toBe(null);
   });
 
   it("filters out items with no name and no email", async () => {
@@ -93,14 +100,37 @@ describe("fetchMembershipMembers", () => {
 
     const result = await fetchMembershipMembers(1, 10);
     expect(result.pageData).toHaveLength(1);
-    expect(result.pageData[0].uniqueId).toBe("a");
+    expect(result.pageData[0]!.uniqueId).toBe("a");
+  });
+
+  it("supports alternate member id fields", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: {
+        PageNo: 1,
+        PageSize: 10,
+        PageCount: 1,
+        TotalRecordsCount: 1,
+        PageData: [
+          {
+            MemberUniqueId: "member-123",
+            MemberFullName: "Alex Johnson",
+            ActiveMembershipName: "Gold",
+            MembershipStatus: "Active",
+            Email: "alex@example.com",
+          },
+        ],
+      },
+    });
+
+    const result = await fetchMembershipMembers(1, 10);
+    expect(result.pageData[0]!.uniqueId).toBe("member-123");
   });
 
   it("includes query params: pageNo and pageSize always present", async () => {
     mockGetJson.mockResolvedValue({ Data: { PageNo: 2, PageSize: 5, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
     await fetchMembershipMembers(2, 5);
 
-    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    const calledUrl = mockGetJson.mock.calls[0]![0] as string;
     expect(calledUrl).toContain("pageNo=2");
     expect(calledUrl).toContain("pageSize=5");
   });
@@ -109,7 +139,7 @@ describe("fetchMembershipMembers", () => {
     mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
     await fetchMembershipMembers(1, 10, ["Active", "Expired"]);
 
-    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    const calledUrl = mockGetJson.mock.calls[0]![0] as string;
     expect(calledUrl).toContain("membershipStatuses=Active");
     expect(calledUrl).toContain("membershipStatuses=Expired");
   });
@@ -118,7 +148,7 @@ describe("fetchMembershipMembers", () => {
     mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
     await fetchMembershipMembers(1, 10, ["Active", " Active ", "Active"]);
 
-    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    const calledUrl = mockGetJson.mock.calls[0]![0] as string;
     const statusOccurrences = (calledUrl.match(/membershipStatuses=/g) ?? []).length;
     expect(statusOccurrences).toBe(1);
   });
@@ -127,7 +157,7 @@ describe("fetchMembershipMembers", () => {
     mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
     await fetchMembershipMembers(1, 10, null, null, "  john  ");
 
-    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    const calledUrl = mockGetJson.mock.calls[0]![0] as string;
     expect(calledUrl).toContain("searchTerm=john");
   });
 
@@ -135,16 +165,16 @@ describe("fetchMembershipMembers", () => {
     mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
     await fetchMembershipMembers(1, 10, null, null, "   ");
 
-    const calledUrl = mockGetJson.mock.calls[0][0] as string;
+    const calledUrl = mockGetJson.mock.calls[0]![0] as string;
     expect(calledUrl).not.toContain("searchTerm");
   });
 
   it("includes sortBy and sortOrder when provided", async () => {
     mockGetJson.mockResolvedValue({ Data: { PageNo: 1, PageSize: 10, PageCount: 0, TotalRecordsCount: 0, PageData: [] } });
-    await fetchMembershipMembers(1, 10, null, null, null, "MemberFullName", "asc");
+    await fetchMembershipMembers(1, 10, null, null, null, "memberFullName", "asc");
 
-    const calledUrl = mockGetJson.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("sortBy=MemberFullName");
+    const calledUrl = mockGetJson.mock.calls[0]![0] as string;
+    expect(calledUrl).toContain("sortBy=memberFullName");
     expect(calledUrl).toContain("sortOrder=asc");
   });
 
@@ -171,8 +201,8 @@ describe("fetchMembershipStatusOptions", () => {
 
     const result = await fetchMembershipStatusOptions();
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ label: "Active", value: "active" });
-    expect(result[1]).toEqual({ label: "Expired", value: "expired" });
+    expect(result[0]!).toEqual({ label: "Active", value: "active" });
+    expect(result[1]!).toEqual({ label: "Expired", value: "expired" });
   });
 
   it("parses array response (camelCase)", async () => {
@@ -183,7 +213,7 @@ describe("fetchMembershipStatusOptions", () => {
     });
 
     const result = await fetchMembershipStatusOptions();
-    expect(result[0]).toEqual({ label: "Pending", value: "pending" });
+    expect(result[0]!).toEqual({ label: "Pending", value: "pending" });
   });
 
   it("parses flat array response (no Data wrapper)", async () => {
@@ -192,7 +222,7 @@ describe("fetchMembershipStatusOptions", () => {
     ]);
 
     const result = await fetchMembershipStatusOptions();
-    expect(result[0]).toEqual({ label: "Draft", value: "draft" });
+    expect(result[0]!).toEqual({ label: "Draft", value: "draft" });
   });
 
   it("filters out items with empty label or value", async () => {
@@ -206,7 +236,7 @@ describe("fetchMembershipStatusOptions", () => {
 
     const result = await fetchMembershipStatusOptions();
     expect(result).toHaveLength(1);
-    expect(result[0].label).toBe("Valid");
+    expect(result[0]!.label).toBe("Valid");
   });
 
   it("returns empty array when response is not iterable", async () => {
@@ -229,7 +259,7 @@ describe("fetchMembershipTypeOptions", () => {
 
     const result = await fetchMembershipTypeOptions();
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ label: "Gold", value: "gold-uid" });
+    expect(result[0]!).toEqual({ label: "Gold", value: "gold-uid" });
   });
 
   it("returns empty array when response empty", async () => {
@@ -248,5 +278,81 @@ describe("fetchMembershipTypeOptions", () => {
 
     const result = await fetchMembershipTypeOptions();
     expect(result).toHaveLength(1);
+  });
+});
+
+// â”€â”€â”€ fetchMembershipMemberDetail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+describe("fetchMembershipMemberDetail", () => {
+  it("parses detail payload with custom responses", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: {
+        UniqueId: "uid-100",
+        MemberFullName: "Amina Khan",
+        ActiveMembershipName: "Platinum",
+        MembershipStatus: "Active",
+        Email: "amina@example.com",
+        MembershipExpiryUtc: "2026-12-31",
+        MembershipStartUtc: "2026-01-01",
+        MemberPhotoUrl: "https://example.com/photo.jpg",
+        CellPhone: "+92 300 0000000",
+        StreetLine1: "Street 1",
+        CityName: "Lahore",
+        CountryName: "Pakistan",
+        CustomFormResponses: [
+          {
+            FormUniqueId: "form-1",
+            FormName: "Organization details",
+            FieldUniqueId: "field-1",
+            FieldLabel: "Department",
+            FieldType: "Text",
+            Value: "Engineering",
+          },
+        ],
+        CustomQuestionResponses: [
+          {
+            QuestionUniqueId: "q-1",
+            QuestionLabel: "Preferred contact",
+            ControlType: "Radio",
+            OptionLabel: "Email",
+            Value: "Email",
+          },
+        ],
+      },
+    });
+
+    const result = await fetchMembershipMemberDetail("uid-100");
+
+    expect(result.uniqueId).toBe("uid-100");
+    expect(result.memberFullName).toBe("Amina Khan");
+    expect(result.activeMembershipName).toBe("Platinum");
+    expect(result.customFormResponses).toHaveLength(1);
+    expect(result.customFormResponses[0]).toMatchObject({
+      formName: "Organization details",
+      fieldLabel: "Department",
+      value: "Engineering",
+    });
+    expect(result.customQuestionResponses).toHaveLength(1);
+    expect(result.customQuestionResponses[0]).toMatchObject({
+      questionLabel: "Preferred contact",
+      optionLabel: "Email",
+    });
+  });
+
+  it("uses the member unique id in the request path", async () => {
+    mockGetJson.mockResolvedValue({
+      Data: {
+        UniqueId: "uid-200",
+        MemberFullName: "John Doe",
+        ActiveMembershipName: "Gold",
+        MembershipStatus: "Active",
+        Email: "john@example.com",
+      },
+    });
+
+    await fetchMembershipMemberDetail("uid-200");
+
+    const calledUrl = mockGetJson.mock.calls[0]![0] as string;
+    expect(calledUrl).toContain("/api/organizer/membership/type/members/uid-200");
   });
 });

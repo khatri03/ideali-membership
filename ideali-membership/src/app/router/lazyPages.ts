@@ -12,6 +12,9 @@ export const MembershipTypesPage = React.lazy(() =>
 export const MembersPage = React.lazy(() =>
   import("../../features/membership/pages/MembersPage").then((m) => ({ default: m.MembersPage })),
 );
+export const MemberDetailPage = React.lazy(() =>
+  import("../../features/membership/pages/MemberDetailPage").then((m) => ({ default: m.MemberDetailPage })),
+);
 export const CustomFormsPage = React.lazy(() =>
   import("../../pages/CustomFormsPage").then((m) => ({ default: m.CustomFormsPage })),
 );

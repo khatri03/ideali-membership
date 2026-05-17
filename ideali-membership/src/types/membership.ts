@@ -163,6 +163,49 @@ export interface MembershipMemberListItem {
   membershipExpiryUtc: string | null;
 }
 
+export interface MembershipMemberCustomFormAnswer {
+  formUniqueId: string | null;
+  formName: string;
+  fieldUniqueId: string | null;
+  fieldLabel: string;
+  fieldType: string | null;
+  value: string;
+}
+
+export interface MembershipMemberCustomQuestionAnswer {
+  questionUniqueId: string;
+  questionLabel: string;
+  controlType: string | null;
+  optionLabel: string | null;
+  fileStorageId: number | null;
+  value: string | null;
+}
+
+export interface MembershipMemberDetailItem {
+  uniqueId: string;
+  memberFullName: string;
+  activeMembershipName: string;
+  membershipStatus: string;
+  email: string;
+  membershipExpiryUtc: string | null;
+  membershipStartUtc: string | null;
+  memberPhotoUrl: string | null;
+  contactPrefix: string | null;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
+  cellPhone: string | null;
+  streetLine1: string | null;
+  streetLine2: string | null;
+  cityName: string | null;
+  stateName: string | null;
+  countryName: string | null;
+  zipCode: string | null;
+  notes: string | null;
+  customFormResponses: MembershipMemberCustomFormAnswer[];
+  customQuestionResponses: MembershipMemberCustomQuestionAnswer[];
+}
+
 export type MembershipMemberSortBy =
   | "memberFullName"
   | "activeMembershipName"

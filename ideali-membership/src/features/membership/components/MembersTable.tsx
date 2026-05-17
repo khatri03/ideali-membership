@@ -1,6 +1,10 @@
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "../../../lib/utils";
 import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
+import { buildMembershipMemberDetailPath } from "../../../routes";
 import type { MembershipMemberListItem, MembershipMemberSortBy } from "../../../types/membership";
 import type { MembersFilterOption } from "./MembersFilters";
 
@@ -33,6 +37,116 @@ type MembersTableProps = {
   onSort: (sortBy: MembershipMemberSortBy) => void;
   onClearSort: () => void;
 };
+
+function DotsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 fill-current">
+      <circle cx="4" cy="10" r="1.5" />
+      <circle cx="10" cy="10" r="1.5" />
+      <circle cx="16" cy="10" r="1.5" />
+    </svg>
+  );
+}
+
+function MemberDetailMenu({ member }: { member: MembershipMemberListItem }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+
+      setIsOpen(false);
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  function openMenu() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setIsOpen(true);
+      return;
+    }
+
+    const gap = 8;
+    const menuWidth = 192;
+    const menuHeight = 48;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
+
+    setMenuPosition({
+      top: openUpward ? Math.max(gap, rect.top - menuHeight - gap) : rect.bottom + gap,
+      left: Math.max(gap, Math.min(rect.left, window.innerWidth - menuWidth - gap)),
+    });
+    setIsOpen(true);
+  }
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={openMenu}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={`Open detail actions for ${member.memberFullName}`}
+        title="Detail"
+      >
+        <DotsIcon />
+      </button>
+
+      {isOpen && menuPosition
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="fixed z-[1200] w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-2xl shadow-slate-900/10"
+              style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+            >
+              {member.uniqueId ? (
+                <Link
+                  to={buildMembershipMemberDetailPath(member.uniqueId)}
+                  onClick={() => setIsOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  Detail
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex w-full cursor-not-allowed items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-300"
+                  title="Member ID unavailable from the current API response"
+                >
+                  Detail unavailable
+                </button>
+              )}
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
 
 export function MembersTable({
   members,
@@ -92,6 +206,14 @@ export function MembersTable({
             <tr className="border-b border-cyan-100 bg-cyan-50/80">
               <th
                 scope="col"
+                className="h-12 border-b border-r border-cyan-200 px-3 text-left sm:px-4"
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700">
+                  Actions
+                </span>
+              </th>
+              <th
+                scope="col"
                 aria-sort={sortBy === "memberFullName" ? (sortOrder === "desc" ? "descending" : "ascending") : "none"}
                 className="h-12 border-b border-r border-cyan-200 px-3 sm:px-4"
               >
@@ -144,7 +266,7 @@ export function MembersTable({
                   type="button"
                   onClick={() => onSort("email")}
                   title={getSortTooltip("email", "Email")}
-                  className="inline-flex w-full items-center justify-start gap-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700"
+                  className="inline-flex w-full items-center justify-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700"
                 >
                   Email
                   {renderSortIcon("email")}
@@ -178,13 +300,20 @@ export function MembersTable({
                 )}
               >
                 <td className="border-r border-slate-200/70 px-3 py-3 text-sm text-slate-700 sm:px-4">
-                  <div className="space-y-1">
-                    <div className="font-medium text-slate-900">
-                      {member.memberFullName}
-                    </div>
+                  <MemberDetailMenu member={member} />
+                </td>
+                <td className="border-r border-slate-200/70 px-3 py-3 text-sm text-slate-700 sm:px-4">
+                  <div className="font-medium text-slate-900">
                     {member.uniqueId ? (
-                      <div className="text-xs text-slate-500">{member.uniqueId}</div>
-                    ) : null}
+                      <Link
+                        to={buildMembershipMemberDetailPath(member.uniqueId)}
+                        className="inline-flex items-center gap-2 text-left font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4 transition hover:text-cyan-800 hover:decoration-cyan-400"
+                      >
+                        {member.memberFullName}
+                      </Link>
+                    ) : (
+                      member.memberFullName
+                    )}
                   </div>
                 </td>
                 <td className="border-r border-slate-200/70 px-3 py-3 text-sm text-slate-700 sm:px-4">

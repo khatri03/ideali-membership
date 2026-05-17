@@ -10,6 +10,7 @@ export const APP_ROUTES = {
   membershipDashboard: "/organizer/membership/type/dashboard",
   membershipTypes: "/organizer/membership/type/list",
   membershipMembers: "/organizer/membership/type/members",
+  membershipMemberDetail: "/organizer/membership/type/members/:memberUniqueId/detail",
   membershipPendingApprovals: "/organizer/membership/type/pending-approvals",
   dndPlayground: "/organizer/dnd-playground",
   membershipWizard: "/organizer/membership/type/wizard",
@@ -66,4 +67,8 @@ export function buildMembershipRegisterCountdownPath(membershipTypeUniqueId: str
 
 export function buildCustomFormEditPath(customFormUniqueId: string) {
   return generatePath(APP_ROUTES.customFormsEdit as string, { customFormUniqueId });
+}
+
+export function buildMembershipMemberDetailPath(memberUniqueId: string) {
+  return generatePath(APP_ROUTES.membershipMemberDetail as string, { memberUniqueId });
 }

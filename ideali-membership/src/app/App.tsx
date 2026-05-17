@@ -19,6 +19,7 @@ import {
   CustomFormsPage,
   DashboardPage,
   DnDGridSortExamplePage,
+  MemberDetailPage,
   MembersPage,
   MembershipAdvanceSettingsStepPage,
   MembershipBannerStepPage,
@@ -103,6 +104,8 @@ function RouterApp() {
                 <Route path="list" element={<MembershipTypesPage />} />
                 <Route path="types" element={<Navigate to={APP_ROUTES.membershipTypes} replace />} />
                 <Route path="members" element={<MembersPage />} />
+                <Route path="members/:memberUniqueId/detail" element={<MemberDetailPage />} />
+                <Route path="members/:memberUniqueId" element={<MemberDetailPage />} />
                 <Route
                   path="pending-approvals"
                   element={
