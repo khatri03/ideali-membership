@@ -24,17 +24,21 @@ function getInitials(value: string) {
     .join("");
 }
 
+function normalizeStatusValue(value: string) {
+  return value.replace(/[\s_-]+/g, "").toLowerCase();
+}
+
 function getStatusTone(status: string): MemberTone {
-  switch (status) {
-    case "Active":
+  switch (normalizeStatusValue(status)) {
+    case "active":
       return "emerald";
-    case "PendingApproval":
-    case "Pending":
+    case "pendingapproval":
+    case "pending":
       return "amber";
-    case "Expired":
+    case "expired":
       return "rose";
-    case "InActive":
-    case "NearExpiry":
+    case "inactive":
+    case "nearexpiry":
       return "cyan";
     default:
       return "slate";
@@ -70,6 +74,7 @@ export function MemberDetailPage() {
     member,
     memberUniqueId,
     fullName,
+    membershipStatusLabel,
     statCards,
     customFormSections,
     customQuestionResponses,
@@ -151,7 +156,7 @@ export function MemberDetailPage() {
 
                 {member ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <StatusPill label={member.membershipStatus || "Unknown"} tone={getStatusTone(member.membershipStatus)} />
+                    <StatusPill label={membershipStatusLabel} tone={getStatusTone(member.membershipStatus)} />
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
                       {member.activeMembershipName || "Membership not assigned"}
                     </span>
@@ -226,7 +231,7 @@ export function MemberDetailPage() {
           <div
             role="tablist"
             aria-label="Member detail tabs"
-            className="flex w-full flex-wrap items-center gap-2 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-2"
+            className="flex w-full flex-wrap items-stretch gap-2 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-2"
           >
             <button
               type="button"
@@ -234,7 +239,7 @@ export function MemberDetailPage() {
               aria-selected={isMemberDetailTabActive}
               onClick={() => setActiveDetailTabId(MEMBER_DETAIL_TAB_ID)}
               className={cn(
-                "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition",
+                "inline-flex min-w-[12rem] flex-1 basis-0 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-center transition",
                 isMemberDetailTabActive
                   ? "bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-200"
                   : "text-slate-600 hover:bg-white hover:text-slate-900",
@@ -250,15 +255,15 @@ export function MemberDetailPage() {
                 <button
                   key={section.id}
                   type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setActiveDetailTabId(section.id)}
-                  className={cn(
-                    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition",
-                    isActive
-                      ? "bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-200"
-                      : "text-slate-600 hover:bg-white hover:text-slate-900",
-                  )}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveDetailTabId(section.id)}
+                className={cn(
+                  "inline-flex min-w-[12rem] flex-1 basis-0 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-center transition",
+                  isActive
+                    ? "bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-200"
+                    : "text-slate-600 hover:bg-white hover:text-slate-900",
+                )}
                 >
                   <span>{section.title}</span>
                 </button>
@@ -266,11 +271,13 @@ export function MemberDetailPage() {
             })}
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-6">
             <div className="space-y-6">
               {isMemberDetailTabActive ? (
-                  <div className="space-y-6">
+                <div className="space-y-6">
+                  <div className="grid items-stretch gap-6 xl:grid-cols-2">
                     <DetailPanel
+                      className="h-full"
                       title="Profile and contact"
                       description="Core identity information and communication channels that help organizers verify the member at a glance."
                     >
@@ -283,7 +290,7 @@ export function MemberDetailPage() {
 
                       <div className="mt-5 grid gap-4 md:grid-cols-2">
                         <InfoRow icon={<FileText size={16} />} label="Member ID" value={member.uniqueId} mono />
-                        <InfoRow icon={<ShieldCheck size={16} />} label="Status" value={member.membershipStatus} />
+                        <InfoRow icon={<ShieldCheck size={16} />} label="Status" value={membershipStatusLabel} />
                       </div>
 
                       {addressLines.length > 0 ? (
@@ -299,6 +306,7 @@ export function MemberDetailPage() {
                     </DetailPanel>
 
                     <DetailPanel
+                      className="h-full"
                       title="Membership snapshot"
                       description="A concise view of the member's current standing and the most important lifecycle dates."
                     >
@@ -319,53 +327,33 @@ export function MemberDetailPage() {
                         </div>
                       </div>
                     </DetailPanel>
+                  </div>
 
-                    {customQuestionResponses.length > 0 ? (
-                      <DetailPanel
-                        title="Custom questions"
-                        description="Individual question responses captured at registration time."
-                      >
-                        <div className="grid gap-4 md:grid-cols-2">
-                          {customQuestionResponses.map((item) => (
-                            <article key={item.questionUniqueId || item.questionLabel} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                {item.controlType || "Question"}
-                              </p>
-                              <h3 className="mt-2 text-base font-semibold text-slate-900">
-                                {item.questionLabel || "Unnamed question"}
-                              </h3>
-                              <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
-                                {item.optionLabel ? <p><span className="font-medium text-slate-900">Selected:</span> {item.optionLabel}</p> : null}
-                                {renderCustomQuestionAnswer(item)}
-                              </div>
-                            </article>
-                          ))}
-                          </div>
-                        </DetailPanel>
-                    ) : null}
-
+                  {customQuestionResponses.length > 0 ? (
                     <DetailPanel
-                      title="Operational actions"
-                      description="These links support the most common organizer workflows without leaving the detail page."
+                      title="Custom questions"
+                      description="Individual question responses captured at registration time."
                     >
-                      <div className="grid gap-3">
-                        <a
-                          href={`mailto:${member.email}`}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
-                        >
-                          <Mail size={16} />
-                          Send message
-                        </a>
-                        <Link
-                          to={APP_ROUTES.membershipMembers}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-                        >
-                          <ArrowLeft size={16} />
-                          Return to members list
-                        </Link>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {customQuestionResponses.map((item) => (
+                          <article key={item.questionUniqueId || item.questionLabel} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                              {item.controlType || "Question"}
+                            </p>
+                            <h3 className="mt-2 text-base font-semibold text-slate-900">
+                              {item.questionLabel || "Unnamed question"}
+                            </h3>
+                            <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+                              {item.optionLabel ? <p><span className="font-medium text-slate-900">Selected:</span> {item.optionLabel}</p> : null}
+                              {renderCustomQuestionAnswer(item)}
+                            </div>
+                          </article>
+                        ))}
                       </div>
                     </DetailPanel>
-                  </div>
+                  ) : null}
+
+                </div>
                 ) : activeCustomFormSection ? (
                   <div key={activeCustomFormSection.id} className="space-y-4">
                     {activeCustomFormSection.description ? (

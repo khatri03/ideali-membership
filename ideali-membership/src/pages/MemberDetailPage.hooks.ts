@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { formatUtcToLocalDateTime } from "../lib/dateTime";
-import { fetchMembershipMemberDetail } from "../lib/membershipMembers";
+import { fetchMembershipMemberDetail, fetchMembershipStatusOptions } from "../lib/membershipMembers";
 import { getMembershipRegistrationInfo } from "../lib/membershipRegistration";
 import type {
   MembershipMemberCustomFormAnswer,
@@ -35,16 +35,16 @@ type CustomFormSectionView = {
 };
 
 function getStatusTone(value: string): MemberTone {
-  switch (value) {
-    case "Active":
+  switch (value.replace(/[\s_-]+/g, "").toLowerCase()) {
+    case "active":
       return "emerald";
-    case "PendingApproval":
-    case "Pending":
+    case "pendingapproval":
+    case "pending":
       return "amber";
-    case "Expired":
+    case "expired":
       return "rose";
-    case "InActive":
-    case "NearExpiry":
+    case "inactive":
+    case "nearexpiry":
       return "cyan";
     default:
       return "slate";
@@ -172,6 +172,12 @@ export function useMemberDetailPage() {
   const member = memberQuery.data ?? null;
   const membershipTypeUniqueId = member?.membershipTypeUniqueId ?? null;
 
+  const membershipStatusOptionsQuery = useQuery({
+    queryKey: ["membership-status-options"],
+    queryFn: fetchMembershipStatusOptions,
+    staleTime: STALE_TIME_5_MIN_MS,
+  });
+
   const registrationInfoQuery = useQuery({
     queryKey: ["membership-registration-info", membershipTypeUniqueId ?? ""],
     queryFn: () => getMembershipRegistrationInfo(membershipTypeUniqueId ?? ""),
@@ -180,6 +186,18 @@ export function useMemberDetailPage() {
   });
 
   const registrationInfo = registrationInfoQuery.data ?? null;
+  const membershipStatusOptions = membershipStatusOptionsQuery.data ?? [];
+  const membershipStatusLabelMap = useMemo(
+    () => new Map(membershipStatusOptions.map((option) => [option.value, option.label] as const)),
+    [membershipStatusOptions],
+  );
+  const membershipStatusLabel = useMemo(() => {
+    if (!member) {
+      return "Unknown";
+    }
+
+    return membershipStatusLabelMap.get(member.membershipStatus) ?? (member.membershipStatus || "Unknown");
+  }, [member, membershipStatusLabelMap]);
 
   const customFormSections = useMemo(() => {
     if (!member) {
@@ -203,6 +221,10 @@ export function useMemberDetailPage() {
     );
   }, [member, registrationInfo]);
 
+  const membershipStartLabel = member?.membershipStartUtc
+    ? formatUtcToLocalDateTime(member.membershipStartUtc)
+    : "Not available";
+
   const statCards = useMemo(() => {
     if (!member) {
       return [];
@@ -210,31 +232,31 @@ export function useMemberDetailPage() {
 
     return [
       {
-        label: "Membership status",
-        value: member.membershipStatus || "Unknown",
-        detail: member.activeMembershipName || "Membership assignment unavailable",
-        tone: getStatusTone(member.membershipStatus),
-      },
-      {
-        label: "Email",
-        value: member.email || "Not provided",
+        label: "Active Membership Title",
+        value: member.activeMembershipName || "Not assigned",
         detail: member.memberFullName,
         tone: "cyan" as const,
       },
       {
-        label: "Expiry",
-        value: formatUtcToLocalDateTime(member.membershipExpiryUtc),
+        label: "Status",
+        value: membershipStatusLabel,
         detail: member.membershipStartUtc ? `Started ${formatUtcToLocalDateTime(member.membershipStartUtc)}` : "Start date unavailable",
-        tone: "amber" as const,
+        tone: getStatusTone(member.membershipStatus),
       },
       {
-        label: "Custom responses",
-        value: String(member.customFormResponses.length + member.customQuestionResponses.length),
-        detail: `${member.customFormResponses.length} form ${member.customFormResponses.length === 1 ? "entry" : "entries"} and ${member.customQuestionResponses.length} question ${member.customQuestionResponses.length === 1 ? "entry" : "entries"}`,
-        tone: "emerald" as const,
+        label: "Membership Start",
+        value: membershipStartLabel,
+        detail: member.memberFullName,
+        tone: "slate" as const,
+      },
+      {
+        label: "Expiry",
+        value: formatUtcToLocalDateTime(member.membershipExpiryUtc),
+        detail: member.memberFullName,
+        tone: "amber" as const,
       },
     ];
-  }, [member]);
+  }, [member, membershipStartLabel, membershipStatusLabel]);
 
   const addressLines = useMemo(() => {
     if (!member) {
@@ -265,12 +287,12 @@ export function useMemberDetailPage() {
         : null
     : "Member ID is missing.";
   const membershipExpiryLabel = member ? formatUtcToLocalDateTime(member.membershipExpiryUtc) : "No expiry";
-  const membershipStartLabel = member?.membershipStartUtc ? formatUtcToLocalDateTime(member.membershipStartUtc) : "Not available";
 
   return {
     memberUniqueId,
     member,
     registrationInfo,
+    membershipStatusLabel,
     fullName,
     statCards,
     customFormSections,
