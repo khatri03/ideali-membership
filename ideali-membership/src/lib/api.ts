@@ -50,6 +50,13 @@ function buildHeaders(init?: HeadersInit) {
   return headers;
 }
 
+async function fetchWithAuth(path: string, init?: RequestInit) {
+  return fetch(createApiUrl(path), {
+    ...init,
+    headers: buildHeaders(init?.headers),
+  });
+}
+
 export async function postForm<T>(path: string, fields: Record<string, string>) {
   const formData = new FormData();
   for (const [key, value] of Object.entries(fields)) {
@@ -118,4 +125,39 @@ export async function getJson<T>(path: string) {
 
   inFlightGetRequests.set(requestKey, request as Promise<unknown>);
   return request;
+}
+
+export async function openBinaryFile(path: string) {
+  const response = await fetchWithAuth(path, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { message?: string; error?: string } | null;
+    throw new Error(payload?.message || payload?.error || `Request failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  return window.URL.createObjectURL(blob);
+}
+
+export async function downloadBinaryFile(path: string, fileName?: string | null) {
+  const response = await fetchWithAuth(path, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { message?: string; error?: string } | null;
+    throw new Error(payload?.message || payload?.error || `Request failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = downloadUrl;
+  anchor.download = fileName || "download";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(downloadUrl);
 }

@@ -175,12 +175,14 @@ export interface MembershipRegistrationPaymentMethodDetail {
 export interface MembershipRegistrationCustomFormResponse {
   fieldId: number;
   value: string;
+  file?: File | null;
 }
 
 export interface MembershipRegistrationCustomQuestionResponse {
   questionUniqueId: string;
   optionUniqueId?: string | null;
   fileStorageId?: number | null;
+  file?: File | null;
   value?: string | null;
 }
 

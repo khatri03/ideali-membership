@@ -48,6 +48,11 @@ function readCustomFormAnswers(value: unknown) {
         fieldType: readNullableText(record.FieldType ?? record.fieldType ?? record.ControlType ?? record.controlType),
         fieldDisplayOrder: readNullableNumber(record.FieldDisplayOrder ?? record.fieldDisplayOrder ?? record.DisplayOrder ?? record.displayOrder),
         fieldLayoutColumn: readNullableNumber(record.FieldLayoutColumn ?? record.fieldLayoutColumn ?? record.LayoutColumn ?? record.layoutColumn),
+        fileStorageId: readNullableNumber(record.FileStorageId ?? record.fileStorageId),
+        fileStorageUniqueId: readNullableText(record.FileStorageUniqueId ?? record.fileStorageUniqueId ?? record.FileUniqueId ?? record.fileUniqueId),
+        fileOriginalFileName: readNullableText(record.FileOriginalFileName ?? record.fileOriginalFileName ?? record.OriginalFileName ?? record.originalFileName),
+        fileContentType: readNullableText(record.FileContentType ?? record.fileContentType ?? record.ContentType ?? record.contentType),
+        fileSize: readNullableNumber(record.FileSize ?? record.fileSize),
         value: valueText,
       };
     })
@@ -72,6 +77,10 @@ function readCustomQuestionAnswers(value: unknown) {
         controlType: readNullableText(record.ControlType ?? record.controlType ?? record.QuestionType ?? record.questionType),
         optionLabel: readNullableText(record.OptionLabel ?? record.optionLabel ?? record.DisplayText ?? record.displayText),
         fileStorageId: readNullableNumber(record.FileStorageId ?? record.fileStorageId),
+        fileStorageUniqueId: readNullableText(record.FileStorageUniqueId ?? record.fileStorageUniqueId ?? record.FileUniqueId ?? record.fileUniqueId),
+        fileOriginalFileName: readNullableText(record.FileOriginalFileName ?? record.fileOriginalFileName ?? record.OriginalFileName ?? record.originalFileName),
+        fileContentType: readNullableText(record.FileContentType ?? record.fileContentType ?? record.ContentType ?? record.contentType),
+        fileSize: readNullableNumber(record.FileSize ?? record.fileSize),
         value: readNullableText(record.Value ?? record.value ?? record.Answer ?? record.answer),
       };
     })
@@ -235,6 +244,12 @@ export async function fetchMembershipMemberDetail(memberUniqueId: string) {
 
   return {
     uniqueId: readMemberUniqueId(detailRecord) || memberUniqueId,
+    membershipTypeUniqueId: readNullableText(
+      detailRecord.MembershipTypeUniqueId ??
+        detailRecord.membershipTypeUniqueId ??
+        detailRecord.ActiveMembershipTypeUniqueId ??
+        detailRecord.activeMembershipTypeUniqueId,
+    ),
     memberFullName,
     activeMembershipName: readText(
       detailRecord.ActiveMembershipName ??

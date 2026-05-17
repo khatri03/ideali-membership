@@ -203,10 +203,12 @@ export function buildCustomFormResponses(
           values[buildCustomFormFieldKey(form.uniqueId, field.uniqueId)] ??
           null;
         const fieldId = field.id;
+        const controlType = getCustomFormControlType(field.formControlTypeId);
 
         return {
           fieldId,
           value: serializeCustomValue(value),
+          file: controlType === "file" && value instanceof File ? value : null,
         };
       })
       .filter((response) => response.fieldId > 0 && response.value !== ""),
@@ -224,6 +226,7 @@ export function buildCustomQuestionResponses(
       const rawValue =
         values[buildCustomQuestionKey(question.uniqueId)] ?? null;
       const serializedValue = serializeCustomValue(rawValue);
+      const controlType = getCustomQuestionControlType(question.controlType);
       const matchedOption =
         typeof rawValue === "string"
           ? (question.options.find(
@@ -236,6 +239,7 @@ export function buildCustomQuestionResponses(
         questionUniqueId: question.uniqueId,
         optionUniqueId: matchedOption?.uniqueId ?? null,
         fileStorageId: null,
+        file: controlType === "file" && rawValue instanceof File ? rawValue : null,
         value: serializedValue || null,
       };
     })

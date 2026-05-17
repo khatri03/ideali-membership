@@ -294,6 +294,7 @@ describe("fetchMembershipMemberDetail", () => {
         Email: "amina@example.com",
         MembershipExpiryUtc: "2026-12-31",
         MembershipStartUtc: "2026-01-01",
+        MembershipTypeUniqueId: "membership-type-1",
         MemberPhotoUrl: "https://example.com/photo.jpg",
         CellPhone: "+92 300 0000000",
         StreetLine1: "Street 1",
@@ -329,6 +330,7 @@ describe("fetchMembershipMemberDetail", () => {
     const result = await fetchMembershipMemberDetail("uid-100");
 
     expect(result.uniqueId).toBe("uid-100");
+    expect(result.membershipTypeUniqueId).toBe("membership-type-1");
     expect(result.memberFullName).toBe("Amina Khan");
     expect(result.activeMembershipName).toBe("Platinum");
     expect(result.customFormResponses).toHaveLength(1);

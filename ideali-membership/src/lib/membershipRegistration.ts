@@ -195,6 +195,7 @@ function appendCustomFormResponses(
   responses.forEach((response, index) => {
     appendFormDataValue(formData, `CustomFormResponses[${index}].FieldId`, response.fieldId);
     appendFormDataValue(formData, `CustomFormResponses[${index}].Value`, response.value);
+    appendFormDataValue(formData, `CustomFormResponses[${index}].File`, response.file ?? null);
   });
 }
 
@@ -206,6 +207,7 @@ function appendCustomQuestionResponses(
     appendFormDataValue(formData, `CustomQuestionResponses[${index}].QuestionUniqueId`, response.questionUniqueId);
     appendFormDataValue(formData, `CustomQuestionResponses[${index}].OptionUniqueId`, response.optionUniqueId ?? null);
     appendFormDataValue(formData, `CustomQuestionResponses[${index}].FileStorageId`, response.fileStorageId ?? null);
+    appendFormDataValue(formData, `CustomQuestionResponses[${index}].File`, response.file ?? null);
     appendFormDataValue(formData, `CustomQuestionResponses[${index}].Value`, response.value ?? null);
   });
 }

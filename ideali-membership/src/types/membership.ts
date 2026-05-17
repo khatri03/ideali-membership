@@ -163,7 +163,15 @@ export interface MembershipMemberListItem {
   membershipExpiryUtc: string | null;
 }
 
-export interface MembershipMemberCustomFormAnswer {
+export interface MembershipMemberFileAttachment {
+  fileStorageId: number | null;
+  fileStorageUniqueId: string | null;
+  fileOriginalFileName: string | null;
+  fileContentType: string | null;
+  fileSize: number | null;
+}
+
+export interface MembershipMemberCustomFormAnswer extends MembershipMemberFileAttachment {
   formUniqueId: string | null;
   formName: string;
   formHeaderText: string | null;
@@ -177,17 +185,17 @@ export interface MembershipMemberCustomFormAnswer {
   value: string;
 }
 
-export interface MembershipMemberCustomQuestionAnswer {
+export interface MembershipMemberCustomQuestionAnswer extends MembershipMemberFileAttachment {
   questionUniqueId: string;
   questionLabel: string;
   controlType: string | null;
   optionLabel: string | null;
-  fileStorageId: number | null;
   value: string | null;
 }
 
 export interface MembershipMemberDetailItem {
   uniqueId: string;
+  membershipTypeUniqueId: string | null;
   memberFullName: string;
   activeMembershipName: string;
   membershipStatus: string;

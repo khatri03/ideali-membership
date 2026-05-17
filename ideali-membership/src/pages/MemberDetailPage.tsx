@@ -1,11 +1,15 @@
-import type { ReactNode } from "react";
-import { ArrowLeft, CalendarDays, FileText, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ArrowLeft, CalendarDays, Download, ExternalLink, FileText, Image, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { APP_ROUTES } from "../routes";
+import { downloadBinaryFile, openBinaryFile } from "../lib/api";
 import { cn } from "../lib/utils";
+import { fetchCountryOptions, fetchStateOptions } from "../lib/customForms";
 import { EmptyStatePanel, DetailPanel, StatCard, StatusPill } from "./MemberDetailPage.parts";
 import { useMemberDetailPage } from "./MemberDetailPage.hooks";
-import { getCustomFormFieldSpanClass, getCustomFormGridClass } from "./MembershipRegisterPage/MembershipRegisterWizard.logic";
+import { getCustomFormFieldSpanClass, getCustomFormGridClass, getCustomFormControlType, getCustomQuestionControlType } from "./MembershipRegisterPage/MembershipRegisterWizard.logic";
+import type { MembershipMemberCustomFormAnswer, MembershipMemberCustomQuestionAnswer } from "../types/membership";
+import type { MembershipRegistrationCustomQuestionOption } from "../types/membershipRegistration";
 
 type MemberTone = "slate" | "cyan" | "emerald" | "amber" | "rose";
 
@@ -34,6 +38,29 @@ function getStatusTone(status: string): MemberTone {
     default:
       return "slate";
   }
+}
+
+function parseSelectedValues(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) {
+    return [];
+  }
+
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item).trim()).filter(Boolean);
+      }
+    } catch {
+      // Fall through to the delimiter-based parser below.
+    }
+  }
+
+  return trimmed
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export function MemberDetailPage() {
@@ -207,11 +234,11 @@ export function MemberDetailPage() {
                 ) : null}
               </DetailPanel>
 
-              <DetailPanel
-                title="Custom forms"
-                description="Responses are rendered using the same form grid and spacing from registration."
-              >
-                {customFormSections.length > 0 ? (
+              {customFormSections.length > 0 ? (
+                <DetailPanel
+                  title="Custom forms"
+                  description="Responses are rendered using the same form grid and spacing from registration."
+                >
                   <div className="space-y-6">
                     {customFormSections.map((section) => (
                       <div key={section.id} className="space-y-4">
@@ -223,7 +250,7 @@ export function MemberDetailPage() {
                         </div>
 
                         <div className={getCustomFormGridClass()}>
-                          {section.items.map((item) => (
+                          {section.items.map((item, index) => (
                             <article
                               key={`${item.fieldUniqueId ?? item.fieldLabel}-${item.value}`}
                               className={cn(
@@ -240,9 +267,7 @@ export function MemberDetailPage() {
                               </div>
 
                               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                                <p className="text-sm leading-6 text-slate-700">
-                                  {renderCustomFormValue(item.value, item.fieldType)}
-                                </p>
+                                {renderCustomFormAnswer(item, section.items, index)}
                               </div>
                             </article>
                           ))}
@@ -250,19 +275,14 @@ export function MemberDetailPage() {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <EmptyStatePanel
-                    title="No custom form responses"
-                    description="This membership record does not currently include any saved form responses."
-                  />
-                )}
-              </DetailPanel>
+                </DetailPanel>
+              ) : null}
 
-              <DetailPanel
-                title="Custom questions"
-                description="Individual question responses captured at registration time."
-              >
-                {customQuestionResponses.length > 0 ? (
+              {customQuestionResponses.length > 0 ? (
+                <DetailPanel
+                  title="Custom questions"
+                  description="Individual question responses captured at registration time."
+                >
                   <div className="grid gap-4 md:grid-cols-2">
                     {customQuestionResponses.map((item) => (
                       <article key={item.questionUniqueId || item.questionLabel} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -274,19 +294,13 @@ export function MemberDetailPage() {
                         </h3>
                         <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
                           {item.optionLabel ? <p><span className="font-medium text-slate-900">Selected:</span> {item.optionLabel}</p> : null}
-                          {item.value ? <p>{item.value}</p> : null}
-                          {item.fileStorageId ? <p className="text-xs font-medium text-slate-500">File attachment #{item.fileStorageId}</p> : null}
+                          {renderCustomQuestionAnswer(item)}
                         </div>
                       </article>
                     ))}
                   </div>
-                ) : (
-                  <EmptyStatePanel
-                    title="No custom question responses"
-                    description="No question answers were returned for this member record."
-                  />
-                )}
-              </DetailPanel>
+                </DetailPanel>
+              ) : null}
             </div>
 
             <aside className="space-y-6">
@@ -386,29 +400,476 @@ function InfoRow({
   );
 }
 
-function renderCustomFormValue(value: string, fieldType: string | null) {
+function renderCustomFormAnswer(
+  item: MembershipMemberCustomFormAnswer & { fieldDefinition: MembershipRegistrationCustomFormField | null },
+  sectionItems: Array<MembershipMemberCustomFormAnswer & { fieldDefinition: MembershipRegistrationCustomFormField | null }>,
+  index: number,
+) {
+  if (item.fileStorageUniqueId) {
+    return (
+      <AttachmentCard
+        fileUniqueId={item.fileStorageUniqueId}
+        fileName={item.fileOriginalFileName}
+        contentType={item.fileContentType}
+        fileSize={item.fileSize}
+        fallbackLabel={item.value || item.fieldLabel}
+      />
+    );
+  }
+
+  const controlType = item.fieldDefinition
+    ? getCustomFormControlType(item.fieldDefinition.formControlTypeId)
+    : normalizeControlType(item.fieldType);
+
+  switch (controlType) {
+    case "checkbox":
+      return <ReadOnlyCheckboxValue value={item.value} />;
+    case "radio":
+      return <ReadOnlyRadioValue value={item.value} options={item.fieldDefinition?.options ?? []} />;
+    case "multiselect":
+      return <ReadOnlyMultiSelectValue value={item.value} options={item.fieldDefinition?.options ?? []} />;
+    case "country":
+      return <ReadOnlyCountryValue value={item.value} />;
+    case "state":
+      return (
+        <ReadOnlyStateValue
+          countryValue={getNearestCountryValue(sectionItems, index)}
+          value={item.value}
+        />
+      );
+    case "password":
+      return <ReadOnlyPasswordValue value={item.value} />;
+    case "textarea":
+      return <ReadOnlyTextareaValue value={item.value} />;
+    default:
+      return <p className="text-sm leading-6 text-slate-700">{renderCustomFormValue(item.value)}</p>;
+  }
+}
+
+function renderCustomQuestionAnswer(
+  item: MembershipMemberCustomQuestionAnswer & { questionDefinition: MembershipRegistrationCustomQuestion | null },
+) {
+  if (item.fileStorageUniqueId) {
+    return (
+      <AttachmentCard
+        fileUniqueId={item.fileStorageUniqueId}
+        fileName={item.fileOriginalFileName}
+        contentType={item.fileContentType}
+        fileSize={item.fileSize}
+        fallbackLabel={item.value || item.questionLabel}
+      />
+    );
+  }
+
+  const controlType = item.questionDefinition
+    ? getCustomQuestionControlType(item.questionDefinition.controlType)
+    : normalizeControlType(item.controlType);
+
+  switch (controlType) {
+    case "checkbox":
+      return <ReadOnlyCheckboxValue value={item.value ?? ""} />;
+    case "radio":
+      return <ReadOnlyRadioValue value={item.value ?? item.optionLabel ?? ""} options={item.questionDefinition?.options ?? []} />;
+    case "multiselect":
+      return <ReadOnlyMultiSelectValue value={item.value ?? ""} options={item.questionDefinition?.options ?? []} />;
+    case "country":
+      return <ReadOnlyCountryValue value={item.value ?? ""} />;
+    case "state":
+      return <ReadOnlyStateValue countryValue={null} value={item.value ?? ""} />;
+    case "password":
+      return <ReadOnlyPasswordValue value={item.value ?? ""} />;
+    case "textarea":
+      return <ReadOnlyTextareaValue value={item.value ?? ""} />;
+    default:
+      return item.value ? <p>{item.value}</p> : null;
+  }
+}
+
+function ReadOnlyCheckboxValue({ value }: { value: string }) {
+  const checked = value.trim().toLowerCase() === "true" || value.trim() === "1";
+
+  return (
+    <label className="inline-flex items-center gap-3 text-sm font-medium text-slate-700">
+      <input type="checkbox" checked={checked} readOnly disabled className="h-4 w-4 accent-cyan-600" />
+      <span>{checked ? "Checked" : "Unchecked"}</span>
+    </label>
+  );
+}
+
+function ReadOnlyPasswordValue({ value }: { value: string }) {
+  return (
+    <input
+      type="password"
+      value={value}
+      readOnly
+      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+    />
+  );
+}
+
+function ReadOnlyTextareaValue({ value }: { value: string }) {
+  return (
+    <textarea
+      value={value}
+      readOnly
+      rows={4}
+      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none"
+    />
+  );
+}
+
+function ReadOnlyRadioValue({
+  value,
+  options,
+}: {
+  value: string;
+  options: MembershipRegistrationCustomQuestionOption[];
+}) {
+  const selectedValues = parseSelectedValues(value);
+  const fallbackValue = value.trim();
+
+  if (options.length === 0) {
+    return <p className="text-sm leading-6 text-slate-700">{fallbackValue || "No value provided"}</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {options.map((option) => {
+        const isSelected =
+          selectedValues.includes(option.value) ||
+          selectedValues.includes(option.uniqueId) ||
+          selectedValues.includes(option.displayText) ||
+          fallbackValue === option.value ||
+          fallbackValue === option.uniqueId ||
+          fallbackValue === option.displayText;
+
+        return (
+          <label key={option.uniqueId} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <input type="radio" checked={isSelected} readOnly disabled className="h-4 w-4 accent-cyan-600" />
+            <span>{option.displayText}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReadOnlyMultiSelectValue({
+  value,
+  options,
+}: {
+  value: string;
+  options: MembershipRegistrationCustomQuestionOption[];
+}) {
+  const selectedValues = parseSelectedValues(value);
+
+  if (options.length === 0) {
+    return selectedValues.length > 0 ? (
+      <span className="inline-flex flex-wrap gap-2">
+        {selectedValues.map((item) => (
+          <span key={item} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+            {item}
+          </span>
+        ))}
+      </span>
+    ) : (
+      <p className="text-sm leading-6 text-slate-400">No value provided</p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {options.map((option) => {
+        const isSelected =
+          selectedValues.includes(option.value) ||
+          selectedValues.includes(option.uniqueId) ||
+          selectedValues.includes(option.displayText);
+
+        return (
+          <label key={option.uniqueId} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <input type="checkbox" checked={isSelected} readOnly disabled className="h-4 w-4 accent-cyan-600" />
+            <span>{option.displayText}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReadOnlyCountryValue({ value }: { value: string }) {
+  const [options, setOptions] = useState<Array<{ label: string; value: string }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetchCountryOptions().then((nextOptions) => {
+      if (!cancelled) {
+        setOptions(nextOptions);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resolvedOptions = useMemo(() => {
+    if (!value.trim()) {
+      return options;
+    }
+
+    return options.some((option) => option.value === value)
+      ? options
+      : [{ label: value, value }, ...options];
+  }, [options, value]);
+
+  return (
+    <select
+      value={value}
+      disabled
+      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+    >
+      <option value="">{resolvedOptions.length > 0 ? "Select country" : value || "No value provided"}</option>
+      {resolvedOptions.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function ReadOnlyStateValue({
+  countryValue,
+  value,
+}: {
+  countryValue: string | null;
+  value: string;
+}) {
+  const [options, setOptions] = useState<Array<{ label: string; value: string }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!countryValue?.trim()) {
+      setOptions([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void fetchStateOptions(countryValue).then((nextOptions) => {
+      if (!cancelled) {
+        setOptions(nextOptions);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [countryValue]);
+
+  const resolvedOptions = useMemo(() => {
+    if (!value.trim()) {
+      return options;
+    }
+
+    return options.some((option) => option.value === value)
+      ? options
+      : [{ label: value, value }, ...options];
+  }, [options, value]);
+
+  return (
+    <select
+      value={value}
+      disabled
+      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+    >
+      <option value="">
+        {countryValue?.trim()
+          ? resolvedOptions.length > 0
+            ? "Select state"
+            : value || "No value provided"
+          : value || "Select a country first"}
+      </option>
+      {resolvedOptions.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function AttachmentCard({
+  fileUniqueId,
+  fileName,
+  contentType,
+  fileSize,
+  fallbackLabel,
+}: {
+  fileUniqueId: string;
+  fileName: string | null;
+  contentType: string | null;
+  fileSize: number | null;
+  fallbackLabel: string;
+}) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const isImage = Boolean(contentType?.toLowerCase().startsWith("image/"));
+  const displayName = fileName || fallbackLabel || "Attachment";
+  const viewUrl = `/api/organizer/membership/type/members/files/${fileUniqueId}`;
+  const downloadUrl = `/api/organizer/membership/type/members/files/${fileUniqueId}/download`;
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    if (!isImage) {
+      setPreviewUrl(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void openBinaryFile(viewUrl)
+      .then((url) => {
+        if (cancelled) {
+          window.URL.revokeObjectURL(url);
+          return;
+        }
+
+        objectUrl = url;
+        setPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPreviewUrl(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [isImage, viewUrl]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm">
+          {isImage ? <Image size={18} /> : <FileText size={18} />}
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="truncate font-medium text-slate-900">{displayName}</p>
+          <p className="text-xs text-slate-500">{formatAttachmentMeta(contentType, fileSize)}</p>
+        </div>
+      </div>
+
+      {isImage ? (
+        previewUrl ? (
+          <button
+            type="button"
+            onClick={() => {
+              window.open(previewUrl, "_blank", "noopener,noreferrer");
+            }}
+            className="block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white"
+          >
+            <img src={previewUrl} alt={displayName} className="max-h-64 w-full object-cover" />
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
+            Loading preview...
+          </div>
+        )
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (isImage && previewUrl) {
+              window.open(previewUrl, "_blank", "noopener,noreferrer");
+              return;
+            }
+
+            void openBinaryFile(viewUrl).then((url) => {
+              window.open(url, "_blank", "noopener,noreferrer");
+              window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+            });
+          }}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+        >
+          <ExternalLink size={14} />
+          Open
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void downloadBinaryFile(downloadUrl, fileName || fallbackLabel || "download");
+          }}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+        >
+          <Download size={14} />
+          Download
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatAttachmentMeta(contentType: string | null, fileSize: number | null) {
+  const contentTypeLabel = contentType?.trim() || "Unknown type";
+  const sizeLabel = fileSize !== null ? formatFileSize(fileSize) : "Unknown size";
+  return `${contentTypeLabel} • ${sizeLabel}`;
+}
+
+function formatFileSize(fileSize: number) {
+  if (fileSize < 1024) {
+    return `${fileSize} B`;
+  }
+
+  if (fileSize < 1024 * 1024) {
+    return `${(fileSize / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderCustomFormValue(value: string) {
   const trimmedValue = value.trim();
 
   if (!trimmedValue) {
     return <span className="text-slate-400">No value provided</span>;
   }
 
-  switch ((fieldType || "").toLowerCase()) {
-    case "checkbox":
-      return trimmedValue.toLowerCase() === "true" ? "Checked" : "Unchecked";
-    case "multiselect":
-      return (
-        <span className="inline-flex flex-wrap gap-2">
-          {trimmedValue.split(",").map((item) => (
-            <span key={item.trim()} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-              {item.trim()}
-            </span>
-          ))}
-        </span>
-      );
-    case "textarea":
-      return <span className="whitespace-pre-wrap">{trimmedValue}</span>;
-    default:
-      return <span className="whitespace-pre-wrap">{trimmedValue}</span>;
+  return <span className="whitespace-pre-wrap">{trimmedValue}</span>;
+}
+
+function getNearestCountryValue(
+  items: Array<MembershipMemberCustomFormAnswer & { fieldDefinition: MembershipRegistrationCustomFormField | null }>,
+  currentIndex: number,
+) {
+  for (let index = currentIndex - 1; index >= 0; index -= 1) {
+    const candidate = items[index];
+    if (!candidate) {
+      continue;
+    }
+
+    const candidateType = candidate.fieldDefinition
+      ? getCustomFormControlType(candidate.fieldDefinition.formControlTypeId)
+      : normalizeControlType(candidate.fieldType);
+
+    if (candidateType !== "country") {
+      continue;
+    }
+
+    const candidateValue = candidate.value?.trim();
+    if (candidateValue) {
+      return candidateValue;
+    }
   }
+
+  return null;
 }
