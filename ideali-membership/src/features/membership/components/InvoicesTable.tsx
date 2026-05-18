@@ -18,7 +18,7 @@ type InvoicesTableProps = {
   invoices: MembershipInvoiceListItem[];
   isLoading?: boolean;
   sortBy?: MembershipInvoiceSortBy;
-  sortOrder?: "asc" | "desc";
+  sortOrder?: "asc" | "desc" | null;
   onSort: (sortBy: MembershipInvoiceSortBy) => void;
   onClearSort: () => void;
 };
@@ -175,9 +175,6 @@ function SkeletonRow() {
         </div>
       </td>
       <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-        <div className="h-6 w-32 animate-pulse rounded-full bg-slate-200/80" />
-      </td>
-      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
         <div className="h-4 w-36 animate-pulse rounded-full bg-slate-200/80" />
       </td>
       <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
@@ -198,7 +195,6 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
     () => [
       { label: "Invoice", key: "invoiceNumber" as const },
       { label: "Member", key: "memberName" as const },
-      { label: "Payment Method", sortable: false },
       { label: "Status", key: "status" as const },
       { label: "Invoice Date/Time", key: "invoiceDateUtc" as const },
       { label: "Total", key: "totalAmount" as const, align: "right" as const },
@@ -269,7 +265,10 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                         )}
                       >
                         {column.label}
-                        <SortIcon active={active} order={sortOrder ?? "asc"} />
+                        <SortIcon
+                          active={active}
+                          order={sortOrder ?? (column.key === "invoiceDateUtc" ? "desc" : "asc")}
+                        />
                       </button>
                     )}
                   </th>
@@ -294,13 +293,16 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                     <InvoiceDetailMenu invoice={invoice} />
                   </td>
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <Link
                         to={buildMembershipInvoiceDetailPath(invoice.invoiceId)}
-                        className="text-sm font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4 transition hover:text-cyan-800 hover:decoration-cyan-400"
+                        className="block text-sm font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4 transition hover:text-cyan-800 hover:decoration-cyan-400"
                       >
                         {invoice.invoiceNo}
                       </Link>
+                      <span className="inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
+                        {formatMembershipInvoicePaymentMethodLabel(invoice.paymentMethod)}
+                      </span>
                     </div>
                   </td>
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
@@ -315,11 +317,6 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                         </span>
                       </div>
                     </div>
-                  </td>
-                  <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-                    <span className="text-sm font-medium text-slate-700">
-                      {formatMembershipInvoicePaymentMethodLabel(invoice.paymentMethod)}
-                    </span>
                   </td>
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
                     <StatusPill
@@ -337,7 +334,7 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-sm text-slate-500">
+                <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-500">
                   No invoices found.
                 </td>
               </tr>

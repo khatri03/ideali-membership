@@ -1,6 +1,6 @@
 import { Filter } from "lucide-react";
 import { buildMembershipInvoiceDetailPath, buildMembershipMemberDetailPath } from "../../../routes";
-import { DetailPanel, EmptyStatePanel, StatCard, StatusPill } from "../../../pages/MemberDetailPage.parts";
+import { DetailPanel, EmptyStatePanel, StatusPill } from "../../../pages/MemberDetailPage.parts";
 import {
   formatMembershipInvoiceAmount,
   formatMembershipInvoiceDateLabel,
@@ -31,7 +31,6 @@ export function MembershipInvoicesPage() {
     isMembershipTypesLoading,
     sortBy,
     sortOrder,
-    summary,
     totalRecordsCount,
     membershipTypeOptions,
     membershipInvoiceStatusOptions,
@@ -70,53 +69,7 @@ export function MembershipInvoicesPage() {
               A live, searchable workspace for membership invoices, balances, and billing operations.
             </p>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[28rem]">
-            <div className="rounded-3xl border border-cyan-100 bg-cyan-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                Open balance on page
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                {formatMembershipInvoiceAmount(summary.totalBalanceDue, "$")}
-              </p>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
-                Invoice value on page
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                {formatMembershipInvoiceAmount(summary.totalAmount, "$")}
-              </p>
-            </div>
-          </div>
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Invoices on page"
-          value={String(invoices.length)}
-          detail="Records currently returned from the server."
-          tone="cyan"
-        />
-        <StatCard
-          label="Open balance"
-          value={formatMembershipInvoiceAmount(summary.totalBalanceDue, "$")}
-          detail="Remaining amount across the visible page."
-          tone="rose"
-        />
-        <StatCard
-          label="Paid invoices"
-          value={String(summary.paidCount)}
-          detail="Invoices already settled on this page."
-          tone="emerald"
-        />
-        <StatCard
-          label="Pending invoices"
-          value={String(summary.pendingCount)}
-          detail="Unpaid invoices currently returned by the API."
-          tone="amber"
-        />
       </div>
 
       <DetailPanel
@@ -193,10 +146,13 @@ export function MembershipInvoicesPage() {
                           <div>
                             <a
                               href={buildMembershipInvoiceDetailPath(invoice.invoiceId)}
-                              className="text-base font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4"
+                              className="block text-base font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4"
                             >
                               {invoice.invoiceNo}
                             </a>
+                            <div className="mt-2 inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
+                              {invoice.paymentMethod ?? "Not available"}
+                            </div>
                             <p className="mt-1 text-sm text-slate-600">{invoice.memberName}</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
@@ -215,7 +171,6 @@ export function MembershipInvoicesPage() {
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
                           <InfoTile label="Invoice Date/Time" value={formatMembershipInvoiceDateLabel(invoice.invoiceDateUtc)} />
-                          <InfoTile label="Payment Method" value={invoice.paymentMethod ?? "Not available"} />
                           <InfoTile label="Total" value={formatMembershipInvoiceAmount(invoice.totalAmount, invoice.currencySymbol)} />
                         </div>
 

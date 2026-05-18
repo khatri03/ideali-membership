@@ -36,8 +36,12 @@ function readSortBy(value: string | null): MembershipInvoiceSortBy {
   }
 }
 
-function readSortOrder(value: string | null): "asc" | "desc" {
-  return value === "desc" ? "desc" : "asc";
+function readSortOrder(value: string | null): "asc" | "desc" | null {
+  if (value === "asc" || value === "desc") {
+    return value;
+  }
+
+  return null;
 }
 
 function readStatusFilters(searchParams: URLSearchParams) {
@@ -291,20 +295,6 @@ export function useMembershipInvoicesPage() {
   const safePageNo = invoicesQuery.data?.pageNo ?? pageNo;
   const safePageSize = invoicesQuery.data?.pageSize ?? pageSize;
 
-  const summary = useMemo(() => {
-    const totalBalanceDue = invoices.reduce((sum, invoice) => sum + (invoice.balanceAmount ?? 0), 0);
-    const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-    const paidCount = invoices.filter((invoice) => invoice.invoiceStatus === "Paid").length;
-    const pendingCount = invoices.filter((invoice) => invoice.invoiceStatus === "PendingPayment").length;
-
-    return {
-      totalBalanceDue,
-      totalAmount,
-      paidCount,
-      pendingCount,
-    };
-  }, [invoices]);
-
   useEffect(() => {
     setDraftSearchTerm(searchTerm);
   }, [searchTerm, searchParamsKey]);
@@ -410,7 +400,6 @@ export function useMembershipInvoicesPage() {
     hasPendingPaymentMethodChanges,
     sortBy,
     sortOrder,
-    summary,
     totalRecordsCount,
     pageSizeOptions: PAGE_SIZE_OPTIONS,
     membershipTypeOptions: membershipTypeOptionsQuery.data ?? [],
