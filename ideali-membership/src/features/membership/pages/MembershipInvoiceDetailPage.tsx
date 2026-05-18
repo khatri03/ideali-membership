@@ -192,7 +192,22 @@ export function MembershipInvoiceDetailPage() {
                     {invoice.invoiceNo}
                   </h1>
                   <div className="space-y-3">
-                    <HeaderMetaItem icon={<UserRound size={16} />} value={billingContactName} />
+                    <HeaderMetaItem
+                      icon={<UserRound size={16} />}
+                      value={memberUniqueId ? (
+                        <a
+                          href={buildMembershipMemberDetailPath(memberUniqueId)}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="font-semibold text-cyan-700 transition hover:text-cyan-800 hover:underline"
+                          title="Open member profile"
+                        >
+                          {billingContactName}
+                        </a>
+                      ) : (
+                        billingContactName
+                      )}
+                    />
                     <HeaderMetaItem icon={<Mail size={16} />} value={billingEmail} />
                     <HeaderMetaItem icon={<Phone size={16} />} value={billingPhone} />
                     <HeaderMetaItem icon={<MapPin size={16} />} value={billingAddressLine} nowrapOnWide />
@@ -235,31 +250,32 @@ export function MembershipInvoiceDetailPage() {
                 </a>
               ) : null}
             </div>
+            <div className="grid w-full gap-3 sm:grid-cols-2">
+              <StatCard
+                label="Invoice amount"
+                value={formatMembershipInvoiceAmount(invoice.invoiceAmount, "$")}
+                tone="cyan"
+              />
+              <StatCard
+                label="Method Method"
+                value={latestPaymentMethodLabel}
+                tone="emerald"
+              />
+            </div>
+            <div className="grid w-full gap-3 sm:grid-cols-2">
+              <StatCard
+                label="Membership name"
+                value={invoiceContextName}
+                tone="slate"
+              />
+              <StatCard
+                label="Invoice Date"
+                value={formatMembershipInvoiceDateLabel(invoice.createdOnUtc)}
+                tone="amber"
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Invoice amount"
-          value={formatMembershipInvoiceAmount(invoice.invoiceAmount, "$")}
-          tone="cyan"
-        />
-        <StatCard
-          label="Membership name"
-          value={invoiceContextName}
-          tone="slate"
-        />
-        <StatCard
-          label="Payment method used"
-          value={latestPaymentMethodLabel}
-          tone="emerald"
-        />
-        <StatCard
-          label="Invoice Date"
-          value={formatMembershipInvoiceDateLabel(invoice.createdOnUtc)}
-          tone="amber"
-        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,0.9fr)]">
@@ -488,7 +504,7 @@ function HeaderMetaItem({
   nowrapOnWide = false,
 }: {
   icon: ReactNode;
-  value: string;
+  value: ReactNode;
   nowrapOnWide?: boolean;
 }) {
   return (
