@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router-dom";
 import { APP_ROUTES, buildMembershipMembersPath } from "../../../../routes";
+import {
+  MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY,
+  fetchPendingApprovalCount,
+} from "../../../../lib/membershipMembers";
 
 interface SideNavProps {
   onNavigate: () => void;
@@ -11,6 +16,8 @@ interface MembershipNavItem {
   to: string;
   comingSoon?: boolean;
 }
+
+const STALE_TIME_1_MIN_MS = 60 * 1000;
 
 function isMembershipNavItemActive(item: MembershipNavItem, locationPathname: string, locationSearch: string) {
   const itemPath = item.to.split("?")[0];
@@ -54,6 +61,12 @@ export function SideNav({ onNavigate }: SideNavProps) {
   const location = useLocation();
   const isMembershipRoute = location.pathname.startsWith(APP_ROUTES.membership);
   const [isMembershipExpanded, setIsMembershipExpanded] = useState(isMembershipRoute);
+  const pendingApprovalCountQuery = useQuery({
+    queryKey: MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY,
+    queryFn: fetchPendingApprovalCount,
+    staleTime: STALE_TIME_1_MIN_MS,
+  });
+  const pendingApprovalCount = pendingApprovalCountQuery.data ?? 0;
 
   useEffect(() => {
     if (isMembershipRoute) {
@@ -118,21 +131,27 @@ export function SideNav({ onNavigate }: SideNavProps) {
                 >
                   {() => {
                     const isActive = isMembershipNavItemActive(item, location.pathname, location.search);
+                    const isPendingApprovalsItem = item.label === "Pending Approvals";
 
                     return (
-                    <>
-                      <span>{item.label}</span>
-                      {item.comingSoon ? (
-                        <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                          Soon
-                        </span>
-                      ) : null}
-                      {isActive ? (
-                        <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                          Active
-                        </span>
-                      ) : null}
-                    </>
+                      <>
+                        <span>{item.label}</span>
+                        {isPendingApprovalsItem && pendingApprovalCount > 0 ? (
+                          <span className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700">
+                            {pendingApprovalCount}
+                          </span>
+                        ) : null}
+                        {item.comingSoon ? (
+                          <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                            Soon
+                          </span>
+                        ) : null}
+                        {isActive ? (
+                          <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                            Active
+                          </span>
+                        ) : null}
+                      </>
                     );
                   }}
                 </NavLink>

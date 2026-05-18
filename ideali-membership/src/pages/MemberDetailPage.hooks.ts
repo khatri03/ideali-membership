@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { formatUtcToLocalDateTime } from "../lib/dateTime";
 import {
   approveMembershipMember,
+  MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY,
   fetchMembershipMemberDetail,
   fetchMembershipStatusOptions,
   rejectMembershipMember,
@@ -192,6 +193,7 @@ function mapCustomQuestionResponses(
 export function useMemberDetailPage() {
   const { memberUniqueId } = useParams<{ memberUniqueId?: string }>();
   const [isUpdatingMembershipStatus, setIsUpdatingMembershipStatus] = useState(false);
+  const queryClient = useQueryClient();
 
   const memberQuery = useQuery({
     queryKey: ["membership-member-detail", memberUniqueId ?? ""],
@@ -343,6 +345,7 @@ export function useMemberDetailPage() {
         showToast("Member rejected successfully.", "success");
       }
 
+      await queryClient.invalidateQueries({ queryKey: MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY });
       await memberQuery.refetch();
       return true;
     } catch (error) {

@@ -9,6 +9,8 @@ import type {
 } from "../types/membership";
 import { readResponseData, readText } from "./parseUtils";
 
+export const MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY = ["membership-pending-approval-count"] as const;
+
 function readNullableText(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
@@ -359,6 +361,12 @@ export async function fetchMembershipStatusOptions() {
       value: readText((item as { Value?: unknown; value?: unknown }).Value ?? (item as { Value?: unknown; value?: unknown }).value),
     }))
     .filter((item) => item.label.length > 0 && item.value.length > 0);
+}
+
+export async function fetchPendingApprovalCount() {
+  const payload = await getJson<unknown>("/api/organizer/membership/type/pending-approvals/count");
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  return readNumber(responseData?.Data ?? responseData?.data ?? responseData?.Value ?? responseData?.value, 0);
 }
 
 export async function fetchMembershipTypeOptions() {
