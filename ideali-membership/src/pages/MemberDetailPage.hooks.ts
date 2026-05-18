@@ -25,6 +25,14 @@ type CustomQuestionItemView = MembershipMemberCustomQuestionAnswer & {
   questionDefinition: MembershipRegistrationCustomQuestion | null;
 };
 
+type AddressFieldIconKey = "type" | "line1" | "line2" | "city" | "state" | "country" | "postal";
+
+type AddressFieldView = {
+  label: string;
+  value: string;
+  iconKey: AddressFieldIconKey;
+};
+
 type CustomFormSectionView = {
   id: string;
   title: string;
@@ -186,7 +194,7 @@ export function useMemberDetailPage() {
   });
 
   const member = memberQuery.data ?? null;
-  const membershipTypeUniqueId = member?.membershipTypeUniqueId ?? null;
+  const membershipTypeUniqueId = member?.membership.membershipTypeUniqueId ?? null;
 
   const membershipStatusOptionsQuery = useQuery({
     queryKey: ["membership-status-options"],
@@ -212,7 +220,7 @@ export function useMemberDetailPage() {
       return "Unknown";
     }
 
-    return membershipStatusLabelMap.get(member.membershipStatus) ?? (member.membershipStatus || "Unknown");
+    return membershipStatusLabelMap.get(member.membership.membershipStatus) ?? (member.membership.membershipStatus || "Unknown");
   }, [member, membershipStatusLabelMap]);
 
   const customFormSections = useMemo(() => {
@@ -237,8 +245,8 @@ export function useMemberDetailPage() {
     );
   }, [member, registrationInfo]);
 
-  const membershipStartLabel = member?.membershipStartUtc
-    ? formatUtcToLocalDateTime(member.membershipStartUtc)
+  const membershipStartLabel = member?.membership.membershipStartUtc
+    ? formatUtcToLocalDateTime(member.membership.membershipStartUtc)
     : "Not available";
 
   const statCards = useMemo(() => {
@@ -249,13 +257,13 @@ export function useMemberDetailPage() {
     return [
       {
         label: "Active Memebrship",
-        value: member.activeMembershipName || "Not assigned",
+        value: member.membership.activeMembershipName || "Not assigned",
         tone: "cyan" as const,
       },
       {
         label: "Status",
         value: membershipStatusLabel,
-        tone: getStatusTone(member.membershipStatus),
+        tone: getStatusTone(member.membership.membershipStatus),
       },
       {
         label: getMembershipStartCardLabel(membershipStatusLabel),
@@ -264,23 +272,26 @@ export function useMemberDetailPage() {
       },
       {
         label: "Expiry",
-        value: formatUtcToLocalDateTime(member.membershipExpiryUtc),
+        value: formatUtcToLocalDateTime(member.membership.membershipExpiryUtc),
         tone: "amber" as const,
       },
     ];
   }, [member, membershipStartLabel, membershipStatusLabel]);
 
-  const addressLines = useMemo(() => {
+  const addressFields = useMemo<AddressFieldView[]>(() => {
     if (!member) {
       return [];
     }
 
     return [
-      member.streetLine1,
-      member.streetLine2,
-      [member.cityName, member.stateName, member.zipCode].filter(Boolean).join(", "),
-      member.countryName,
-    ].filter((line): line is string => Boolean(line && line.trim().length > 0));
+      { label: "Type", value: member.address.type || "Primary", iconKey: "type" },
+      { label: "Address Line 1", value: member.address.streetLine1 || "Not provided", iconKey: "line1" },
+      { label: "Address Line 2", value: member.address.streetLine2 || "Not provided", iconKey: "line2" },
+      { label: "City", value: member.address.city || "Not provided", iconKey: "city" },
+      { label: "State", value: member.address.state || "Not provided", iconKey: "state" },
+      { label: "Country", value: member.address.country || "Not provided", iconKey: "country" },
+      { label: "Zip/Postal Code", value: member.address.zipCode || "Not provided", iconKey: "postal" },
+    ];
   }, [member]);
 
   const fullName = useMemo(() => {
@@ -288,7 +299,10 @@ export function useMemberDetailPage() {
       return "Member detail";
     }
 
-    return member.memberFullName;
+    const firstName = member.contact.firstName?.trim() ?? "";
+    const middleName = member.contact.middleName?.trim() ?? "";
+    const lastName = member.contact.lastName?.trim() ?? "";
+    return [firstName, middleName, lastName].filter(Boolean).join(" ").trim() || "Member detail";
   }, [member]);
 
   const error = memberUniqueId
@@ -298,7 +312,7 @@ export function useMemberDetailPage() {
         ? registrationInfoQuery.error.message
         : null
     : "Member ID is missing.";
-  const membershipExpiryLabel = member ? formatUtcToLocalDateTime(member.membershipExpiryUtc) : "No expiry";
+  const membershipExpiryLabel = member ? formatUtcToLocalDateTime(member.membership.membershipExpiryUtc) : "No expiry";
 
   return {
     memberUniqueId,
@@ -309,7 +323,7 @@ export function useMemberDetailPage() {
     statCards,
     customFormSections,
     customQuestionResponses,
-    addressLines,
+    addressFields,
     membershipExpiryLabel,
     membershipStartLabel,
     isLoading: memberQuery.isPending || memberQuery.isFetching || registrationInfoQuery.isPending || registrationInfoQuery.isFetching,

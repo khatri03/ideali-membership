@@ -17,6 +17,10 @@ function readNullableNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function readRecord(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
 function readNumber(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
@@ -90,6 +94,22 @@ function readCustomQuestionAnswers(value: unknown) {
 function pickMemberDetailRecord(responseData: Record<string, unknown> | null) {
   const nested = responseData?.MemberDetail ?? responseData?.memberDetail ?? responseData?.MembershipDetail ?? responseData?.membershipDetail;
   return (nested && typeof nested === "object" ? (nested as Record<string, unknown>) : responseData) ?? null;
+}
+
+function readMemberSection(record: Record<string, unknown>, key: string, legacyKeys: unknown[] = []) {
+  const nested = readRecord(record[key]);
+  if (nested) {
+    return nested;
+  }
+
+  for (const legacyKey of legacyKeys) {
+    const legacyRecord = readRecord(record[String(legacyKey)]);
+    if (legacyRecord) {
+      return legacyRecord;
+    }
+  }
+
+  return null;
 }
 
 function readMemberUniqueId(record: Record<string, unknown>) {
@@ -229,6 +249,20 @@ export async function fetchMembershipMemberDetail(memberUniqueId: string) {
       detailRecord.customQuestionsResponses,
   );
 
+  const profileRecord = readMemberSection(detailRecord, "Profile", ["profile"]);
+  const contactRecord = readMemberSection(detailRecord, "Contact", ["contact"]);
+  const addressRecord = readMemberSection(detailRecord, "Address", ["address"]);
+  const membershipRecord = readMemberSection(detailRecord, "Membership", ["membership"]);
+
+  const contactFirstName = readNullableText(
+    contactRecord?.FirstName ?? contactRecord?.firstName ?? detailRecord.FirstName ?? detailRecord.firstName,
+  );
+  const contactMiddleName = readNullableText(
+    contactRecord?.MiddleName ?? contactRecord?.middleName ?? detailRecord.MiddleName ?? detailRecord.middleName,
+  );
+  const contactLastName = readNullableText(
+    contactRecord?.LastName ?? contactRecord?.lastName ?? detailRecord.LastName ?? detailRecord.lastName,
+  );
   const memberFullName = readText(
     detailRecord.MemberFullName ??
       detailRecord.memberFullName ??
@@ -237,50 +271,72 @@ export async function fetchMembershipMemberDetail(memberUniqueId: string) {
       detailRecord.Name ??
       detailRecord.name,
   );
-
-  if (!memberFullName) {
-    throw new Error("Unexpected member detail response.");
-  }
+  const fullName =
+    [contactFirstName, contactMiddleName, contactLastName].filter(Boolean).join(" ").trim() ||
+    memberFullName ||
+    "Member detail";
 
   return {
     uniqueId: readMemberUniqueId(detailRecord) || memberUniqueId,
-    membershipTypeUniqueId: readNullableText(
-      detailRecord.MembershipTypeUniqueId ??
-        detailRecord.membershipTypeUniqueId ??
-        detailRecord.ActiveMembershipTypeUniqueId ??
-        detailRecord.activeMembershipTypeUniqueId,
-    ),
-    memberFullName,
-    activeMembershipName: readText(
-      detailRecord.ActiveMembershipName ??
-        detailRecord.activeMembershipName ??
-        detailRecord.MembershipName ??
-        detailRecord.membershipName,
-    ),
-    membershipStatus: readText(detailRecord.MembershipStatus ?? detailRecord.membershipStatus),
-    email: readText(detailRecord.Email ?? detailRecord.email),
-    membershipExpiryUtc: readNullableText(detailRecord.MembershipExpiryUtc ?? detailRecord.membershipExpiryUtc),
-    membershipStartUtc: readNullableText(detailRecord.MembershipStartUtc ?? detailRecord.membershipStartUtc),
-    memberPhotoUrl: readNullableText(
-      detailRecord.MemberPhotoUrl ??
-        detailRecord.memberPhotoUrl ??
-        detailRecord.ProfilePhotoUrl ??
-        detailRecord.profilePhotoUrl ??
-        detailRecord.AvatarUrl ??
-        detailRecord.avatarUrl,
-    ),
-    contactPrefix: readNullableText(detailRecord.ContactPrefix ?? detailRecord.contactPrefix),
-    firstName: readNullableText(detailRecord.FirstName ?? detailRecord.firstName),
-    middleName: readNullableText(detailRecord.MiddleName ?? detailRecord.middleName),
-    lastName: readNullableText(detailRecord.LastName ?? detailRecord.lastName),
-    cellPhone: readNullableText(detailRecord.CellPhone ?? detailRecord.cellPhone),
-    streetLine1: readNullableText(detailRecord.StreetLine1 ?? detailRecord.streetLine1),
-    streetLine2: readNullableText(detailRecord.StreetLine2 ?? detailRecord.streetLine2),
-    cityName: readNullableText(detailRecord.CityName ?? detailRecord.cityName),
-    stateName: readNullableText(detailRecord.StateName ?? detailRecord.stateName),
-    countryName: readNullableText(detailRecord.CountryName ?? detailRecord.countryName),
-    zipCode: readNullableText(detailRecord.ZipCode ?? detailRecord.zipCode),
-    notes: readNullableText(detailRecord.Notes ?? detailRecord.notes),
+    profile: {
+      photoUrl: readNullableText(
+        profileRecord?.PhotoUrl ??
+          profileRecord?.photoUrl ??
+          detailRecord.MemberPhotoUrl ??
+          detailRecord.memberPhotoUrl ??
+          detailRecord.ProfilePhotoUrl ??
+          detailRecord.profilePhotoUrl ??
+          detailRecord.AvatarUrl ??
+          detailRecord.avatarUrl,
+      ),
+    },
+    contact: {
+      prefix: readNullableText(contactRecord?.Prefix ?? contactRecord?.prefix ?? detailRecord.ContactPrefix ?? detailRecord.contactPrefix),
+      firstName: contactFirstName,
+      middleName: contactMiddleName,
+      lastName: contactLastName,
+      email: readText(contactRecord?.Email ?? contactRecord?.email ?? detailRecord.Email ?? detailRecord.email),
+      cellPhone: readNullableText(contactRecord?.CellPhone ?? contactRecord?.cellPhone ?? detailRecord.CellPhone ?? detailRecord.cellPhone),
+    },
+    address: {
+      type: readText(addressRecord?.Type ?? addressRecord?.type ?? detailRecord.AddressType ?? detailRecord.addressType ?? "Primary"),
+      streetLine1: readNullableText(addressRecord?.StreetLine1 ?? addressRecord?.streetLine1 ?? detailRecord.StreetLine1 ?? detailRecord.streetLine1),
+      streetLine2: readNullableText(addressRecord?.StreetLine2 ?? addressRecord?.streetLine2 ?? detailRecord.StreetLine2 ?? detailRecord.streetLine2),
+      city: readNullableText(addressRecord?.City ?? addressRecord?.city ?? detailRecord.CityName ?? detailRecord.cityName),
+      state: readNullableText(addressRecord?.State ?? addressRecord?.state ?? detailRecord.StateName ?? detailRecord.stateName),
+      country: readNullableText(addressRecord?.Country ?? addressRecord?.country ?? detailRecord.CountryName ?? detailRecord.countryName),
+      zipCode: readNullableText(addressRecord?.ZipCode ?? addressRecord?.zipCode ?? detailRecord.ZipCode ?? detailRecord.zipCode),
+    },
+    membership: {
+      membershipTypeUniqueId: readNullableText(
+        membershipRecord?.MembershipTypeUniqueId ??
+          membershipRecord?.membershipTypeUniqueId ??
+          detailRecord.MembershipTypeUniqueId ??
+          detailRecord.membershipTypeUniqueId ??
+          detailRecord.ActiveMembershipTypeUniqueId ??
+          detailRecord.activeMembershipTypeUniqueId,
+      ),
+      activeMembershipName: readText(
+        membershipRecord?.ActiveMembershipName ??
+          membershipRecord?.activeMembershipName ??
+          membershipRecord?.MembershipName ??
+          membershipRecord?.membershipName ??
+          detailRecord.ActiveMembershipName ??
+          detailRecord.activeMembershipName ??
+          detailRecord.MembershipName ??
+          detailRecord.membershipName,
+      ),
+      membershipStatus: readText(
+        membershipRecord?.MembershipStatus ?? membershipRecord?.membershipStatus ?? detailRecord.MembershipStatus ?? detailRecord.membershipStatus,
+      ),
+      membershipStartUtc: readNullableText(
+        membershipRecord?.MembershipStartUtc ?? membershipRecord?.membershipStartUtc ?? detailRecord.MembershipStartUtc ?? detailRecord.membershipStartUtc,
+      ),
+      membershipExpiryUtc: readNullableText(
+        membershipRecord?.MembershipExpiryUtc ?? membershipRecord?.membershipExpiryUtc ?? detailRecord.MembershipExpiryUtc ?? detailRecord.membershipExpiryUtc,
+      ),
+      notes: readNullableText(membershipRecord?.Notes ?? membershipRecord?.notes ?? detailRecord.Notes ?? detailRecord.notes),
+    },
     customFormResponses,
     customQuestionResponses,
   } satisfies MembershipMemberDetailItem;

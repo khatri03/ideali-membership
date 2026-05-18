@@ -163,6 +163,38 @@ export interface MembershipMemberListItem {
   membershipExpiryUtc: string | null;
 }
 
+export interface MembershipMemberProfile {
+  photoUrl: string | null;
+}
+
+export interface MembershipMemberContact {
+  prefix: string | null;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
+  email: string;
+  cellPhone: string | null;
+}
+
+export interface MembershipMemberAddress {
+  type: string;
+  streetLine1: string | null;
+  streetLine2: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  zipCode: string | null;
+}
+
+export interface MembershipMemberMembership {
+  membershipTypeUniqueId: string | null;
+  activeMembershipName: string;
+  membershipStatus: string;
+  membershipStartUtc: string | null;
+  membershipExpiryUtc: string | null;
+  notes: string | null;
+}
+
 export interface MembershipMemberFileAttachment {
   fileStorageId: number | null;
   fileStorageUniqueId: string | null;
@@ -195,26 +227,10 @@ export interface MembershipMemberCustomQuestionAnswer extends MembershipMemberFi
 
 export interface MembershipMemberDetailItem {
   uniqueId: string;
-  membershipTypeUniqueId: string | null;
-  memberFullName: string;
-  activeMembershipName: string;
-  membershipStatus: string;
-  email: string;
-  membershipExpiryUtc: string | null;
-  membershipStartUtc: string | null;
-  memberPhotoUrl: string | null;
-  contactPrefix: string | null;
-  firstName: string | null;
-  middleName: string | null;
-  lastName: string | null;
-  cellPhone: string | null;
-  streetLine1: string | null;
-  streetLine2: string | null;
-  cityName: string | null;
-  stateName: string | null;
-  countryName: string | null;
-  zipCode: string | null;
-  notes: string | null;
+  profile: MembershipMemberProfile;
+  contact: MembershipMemberContact;
+  address: MembershipMemberAddress;
+  membership: MembershipMemberMembership;
   customFormResponses: MembershipMemberCustomFormAnswer[];
   customQuestionResponses: MembershipMemberCustomQuestionAnswer[];
 }

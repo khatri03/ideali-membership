@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Download, ExternalLink, FileText, Image, Mail, Phone, UserRound } from "lucide-react";
+import { ArrowLeft, Building2, Download, ExternalLink, FileText, Globe2, Hash, Home, Image, Landmark, Mail, MapPinned, Phone, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { APP_ROUTES } from "../routes";
 import { downloadBinaryFile, openBinaryFile } from "../lib/api";
@@ -45,6 +45,27 @@ function getStatusTone(status: string): MemberTone {
   }
 }
 
+function getAddressFieldIcon(fieldLabel: string) {
+  switch (fieldLabel) {
+    case "Type":
+      return <Home size={16} />;
+    case "Address Line 1":
+      return <MapPinned size={16} />;
+    case "Address Line 2":
+      return <FileText size={16} />;
+    case "City":
+      return <Building2 size={16} />;
+    case "State":
+      return <Landmark size={16} />;
+    case "Country":
+      return <Globe2 size={16} />;
+    case "Zip/Postal Code":
+      return <Hash size={16} />;
+    default:
+      return <FileText size={16} />;
+  }
+}
+
 function parseSelectedValues(value: string | null | undefined) {
   const trimmed = value?.trim() ?? "";
   if (!trimmed) {
@@ -74,11 +95,10 @@ export function MemberDetailPage() {
     member,
     memberUniqueId,
     fullName,
-    membershipStatusLabel,
     statCards,
     customFormSections,
     customQuestionResponses,
-    addressLines,
+    addressFields,
     membershipExpiryLabel,
     membershipStartLabel,
     isLoading,
@@ -130,9 +150,9 @@ export function MemberDetailPage() {
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
               <div className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-full border border-cyan-100 bg-gradient-to-br from-cyan-600 to-sky-500 text-xl font-semibold text-white shadow-lg shadow-cyan-100 sm:h-24 sm:w-24">
-                {member?.memberPhotoUrl ? (
+                {member?.profile.photoUrl ? (
                   <img
-                    src={member.memberPhotoUrl}
+                    src={member.profile.photoUrl}
                     alt={fullName}
                     className="h-full w-full rounded-full object-cover"
                   />
@@ -243,17 +263,22 @@ export function MemberDetailPage() {
                       description="Core identity information and communication channels that help organizers verify the member at a glance."
                     >
                       <div className="grid gap-4 md:grid-cols-2">
-                        <InfoRow icon={<UserRound size={16} />} label="Name" value={member.memberFullName} />
-                        <InfoRow icon={<Mail size={16} />} label="Email" value={member.email} href={`mailto:${member.email}`} />
-                        <InfoRow icon={<Phone size={16} />} label="Phone" value={member.cellPhone || "Not provided"} href={member.cellPhone ? `tel:${member.cellPhone}` : undefined} />
+                        <InfoRow icon={<UserRound size={16} />} label="Name" value={fullName} />
+                        <InfoRow icon={<Mail size={16} />} label="Email" value={member.contact.email} href={`mailto:${member.contact.email}`} />
+                        <InfoRow icon={<Phone size={16} />} label="Phone" value={member.contact.cellPhone || "Not provided"} href={member.contact.cellPhone ? `tel:${member.contact.cellPhone}` : undefined} />
                       </div>
 
-                      {addressLines.length > 0 ? (
+                      {addressFields.length > 0 ? (
                         <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address</p>
-                          <div className="mt-3 space-y-1 text-sm leading-6 text-slate-700">
-                            {addressLines.map((line) => (
-                              <p key={line}>{line}</p>
+                          <div className="mt-4 grid gap-4 md:grid-cols-2">
+                            {addressFields.map((field) => (
+                              <InfoRow
+                                key={field.label}
+                                icon={getAddressFieldIcon(field.label)}
+                                label={field.label}
+                                value={field.value}
+                              />
                             ))}
                           </div>
                         </div>
@@ -268,7 +293,7 @@ export function MemberDetailPage() {
                       <div className="space-y-4">
                         <div className="rounded-3xl border border-slate-200 bg-white p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Current plan</p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">{member.activeMembershipName || "Not assigned"}</p>
+                          <p className="mt-2 text-lg font-semibold text-slate-900">{member.membership.activeMembershipName || "Not assigned"}</p>
                         </div>
                         <div className="rounded-3xl border border-slate-200 bg-white p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Expiry</p>
@@ -276,8 +301,8 @@ export function MemberDetailPage() {
                         </div>
                         <div className="rounded-3xl border border-slate-200 bg-white p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Record notes</p>
-                          <p className={cn("mt-2 text-sm leading-6", member.notes ? "text-slate-700" : "text-slate-500")}>
-                            {member.notes || "No notes provided with this member record."}
+                          <p className={cn("mt-2 text-sm leading-6", member.membership.notes ? "text-slate-700" : "text-slate-500")}>
+                            {member.membership.notes || "No notes provided with this member record."}
                           </p>
                         </div>
                       </div>
