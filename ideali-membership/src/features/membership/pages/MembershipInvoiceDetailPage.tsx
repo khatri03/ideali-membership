@@ -3,10 +3,10 @@ import {
   ArrowLeft,
   CalendarDays,
   Copy,
-  Download,
   Mail,
+  Phone,
+  MapPin,
   Printer,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -159,7 +159,9 @@ export function MembershipInvoiceDetailPage() {
 
   const billingContactName = formatMembershipInvoiceContactName(invoice.contact);
   const billingEmail = formatMembershipInvoicePrimaryEmail(invoice.contact);
+  const billingPhone = invoice.contact?.cellPhone ?? invoice.contact?.workPhone ?? invoice.contact?.homePhone ?? "Not available";
   const billingAddress = formatMembershipInvoiceContactAddress(invoice.contact);
+  const billingAddressLine = billingAddress.replace(/\s*\n+\s*/g, ", ");
   const invoiceContextName = invoice.invoiceContext?.name ?? "Membership invoice";
   const memberUniqueId = invoice.invoiceContext?.memberUniqueId ?? null;
   const latestPaymentMethodLabel = getMembershipInvoicePaymentMethodLabel(invoice);
@@ -189,6 +191,12 @@ export function MembershipInvoiceDetailPage() {
                   <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
                     {invoice.invoiceNo}
                   </h1>
+                  <div className="space-y-3">
+                    <HeaderMetaItem icon={<UserRound size={16} />} value={billingContactName} />
+                    <HeaderMetaItem icon={<Mail size={16} />} value={billingEmail} />
+                    <HeaderMetaItem icon={<Phone size={16} />} value={billingPhone} />
+                    <HeaderMetaItem icon={<MapPin size={16} />} value={billingAddressLine} nowrapOnWide />
+                  </div>
                 </div>
               </div>
             </div>
@@ -214,15 +222,6 @@ export function MembershipInvoiceDetailPage() {
               >
                 <Printer size={18} />
               </button>
-              <button
-                type="button"
-                onClick={() => showToast("Export will be connected to the invoice export API when available.", "info")}
-                title="Export preview"
-                aria-label="Export preview"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-              >
-                <Download size={18} />
-              </button>
               {memberUniqueId ? (
                 <a
                   href={buildMembershipMemberDetailPath(memberUniqueId)}
@@ -235,13 +234,6 @@ export function MembershipInvoiceDetailPage() {
                   <UserRound size={18} />
                 </a>
               ) : null}
-            </div>
-
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                <UserRound size={16} />
-              </span>
-              <span>{billingContactName}</span>
             </div>
           </div>
         </div>
@@ -259,7 +251,12 @@ export function MembershipInvoiceDetailPage() {
           tone="slate"
         />
         <StatCard
-          label="Created on"
+          label="Payment method used"
+          value={latestPaymentMethodLabel}
+          tone="emerald"
+        />
+        <StatCard
+          label="Invoice Date"
           value={formatMembershipInvoiceDateLabel(invoice.createdOnUtc)}
           tone="amber"
         />
@@ -286,8 +283,8 @@ export function MembershipInvoiceDetailPage() {
           <DetailPanel
             title="Line items"
           >
-            <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white">
-              <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto rounded-[1.5rem] border border-slate-200 bg-white">
+              <table className="min-w-[44rem] w-full border-collapse text-sm">
                 <thead className="bg-slate-50">
                   <tr className="border-b border-slate-200">
                     <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -481,6 +478,32 @@ function DetailBlock({
         {label}
       </div>
       <p className="mt-3 text-sm font-medium leading-6 text-slate-700">{value}</p>
+    </div>
+  );
+}
+
+function HeaderMetaItem({
+  icon,
+  value,
+  nowrapOnWide = false,
+}: {
+  icon: ReactNode;
+  value: string;
+  nowrapOnWide?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+        {icon}
+      </span>
+      <span
+        className={cn(
+          "min-w-0 flex-1 break-words text-sm font-medium text-slate-700",
+          nowrapOnWide ? "leading-8 xl:truncate xl:whitespace-nowrap" : "leading-8",
+        )}
+      >
+        {value}
+      </span>
     </div>
   );
 }
