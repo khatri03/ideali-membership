@@ -365,8 +365,8 @@ export async function fetchMembershipStatusOptions() {
 
 export async function fetchPendingApprovalCount() {
   const payload = await getJson<unknown>("/api/organizer/membership/type/pending-approvals/count");
-  const responseData = readResponseData(payload) as Record<string, unknown> | null;
-  return readNumber(responseData?.Data ?? responseData?.data ?? responseData?.Value ?? responseData?.value, 0);
+  const responseData = readResponseData(payload);
+  return readNumber(responseData, 0);
 }
 
 export async function fetchMembershipTypeOptions() {
