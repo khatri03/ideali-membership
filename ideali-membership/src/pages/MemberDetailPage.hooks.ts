@@ -1,9 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { formatUtcToLocalDateTime } from "../lib/dateTime";
-import { fetchMembershipMemberDetail, fetchMembershipStatusOptions } from "../lib/membershipMembers";
+import {
+  approveMembershipMember,
+  fetchMembershipMemberDetail,
+  fetchMembershipStatusOptions,
+  rejectMembershipMember,
+} from "../lib/membershipMembers";
 import { getMembershipRegistrationInfo } from "../lib/membershipRegistration";
+import { showToast } from "../shared/components/toast/Toast";
 import type {
   MembershipMemberCustomFormAnswer,
   MembershipMemberCustomQuestionAnswer,
@@ -185,6 +191,7 @@ function mapCustomQuestionResponses(
 
 export function useMemberDetailPage() {
   const { memberUniqueId } = useParams<{ memberUniqueId?: string }>();
+  const [isUpdatingMembershipStatus, setIsUpdatingMembershipStatus] = useState(false);
 
   const memberQuery = useQuery({
     queryKey: ["membership-member-detail", memberUniqueId ?? ""],
@@ -222,6 +229,7 @@ export function useMemberDetailPage() {
 
     return membershipStatusLabelMap.get(member.membership.membershipStatus) ?? (member.membership.membershipStatus || "Unknown");
   }, [member, membershipStatusLabelMap]);
+  const isPendingApproval = normalizeStatusValue(member?.membership.membershipStatus ?? "") === "pendingapproval";
 
   const customFormSections = useMemo(() => {
     if (!member) {
@@ -314,6 +322,38 @@ export function useMemberDetailPage() {
     : "Member ID is missing.";
   const membershipExpiryLabel = member ? formatUtcToLocalDateTime(member.membership.membershipExpiryUtc) : "No expiry";
 
+  async function updateMembershipStatus(action: "approve" | "reject") {
+    if (!memberUniqueId || !member) {
+      return false;
+    }
+
+    if (!isPendingApproval) {
+      showToast("Only pending approval members can be updated.", "error");
+      return false;
+    }
+
+    setIsUpdatingMembershipStatus(true);
+
+    try {
+      if (action === "approve") {
+        await approveMembershipMember(memberUniqueId);
+        showToast("Member approved successfully.", "success");
+      } else {
+        await rejectMembershipMember(memberUniqueId);
+        showToast("Member rejected successfully.", "success");
+      }
+
+      await memberQuery.refetch();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update member status.";
+      showToast(message, "error");
+      return false;
+    } finally {
+      setIsUpdatingMembershipStatus(false);
+    }
+  }
+
   return {
     memberUniqueId,
     member,
@@ -326,6 +366,9 @@ export function useMemberDetailPage() {
     addressFields,
     membershipExpiryLabel,
     membershipStartLabel,
+    isPendingApproval,
+    isUpdatingMembershipStatus,
+    updateMembershipStatus,
     isLoading: memberQuery.isPending || memberQuery.isFetching || registrationInfoQuery.isPending || registrationInfoQuery.isFetching,
     error,
     refetch: async () => {

@@ -1,4 +1,4 @@
-import { getJson } from "./api";
+import { getJson, postJson } from "./api";
 import type {
   MembershipMemberCustomFormAnswer,
   MembershipMemberCustomQuestionAnswer,
@@ -378,4 +378,12 @@ export async function fetchMembershipTypeOptions() {
       value: readText((item as { Value?: unknown; value?: unknown }).Value ?? (item as { Value?: unknown; value?: unknown }).value),
     }))
     .filter((item) => item.label.length > 0 && item.value.length > 0);
+}
+
+export async function approveMembershipMember(memberUniqueId: string) {
+  await postJson<unknown>(`/api/organizer/membership/type/members/${memberUniqueId}/approve`, {});
+}
+
+export async function rejectMembershipMember(memberUniqueId: string) {
+  await postJson<unknown>(`/api/organizer/membership/type/members/${memberUniqueId}/reject`, {});
 }

@@ -1,5 +1,6 @@
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Building2, Download, ExternalLink, FileText, Globe2, Hash, Home, Image, Landmark, Mail, MapPinned, Phone, UserRound } from "lucide-react";
+import { ArrowLeft, Building2, CheckCircle2, CircleX, Download, ExternalLink, FileText, Globe2, Hash, Home, Image, Landmark, Mail, MapPinned, Phone, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { APP_ROUTES } from "../routes";
 import { downloadBinaryFile, openBinaryFile } from "../lib/api";
@@ -12,6 +13,7 @@ import type { MembershipMemberCustomFormAnswer, MembershipMemberCustomQuestionAn
 import type { MembershipRegistrationCustomQuestionOption } from "../types/membershipRegistration";
 
 type MemberTone = "slate" | "cyan" | "emerald" | "amber" | "rose";
+type ModerationAction = "approve" | "reject";
 const MEMBER_DETAIL_TAB_ID = "member-detail";
 
 function getInitials(value: string) {
@@ -91,6 +93,7 @@ function parseSelectedValues(value: string | null | undefined) {
 
 export function MemberDetailPage() {
   const [activeDetailTabId, setActiveDetailTabId] = useState<string>(MEMBER_DETAIL_TAB_ID);
+  const [pendingModerationAction, setPendingModerationAction] = useState<ModerationAction | null>(null);
   const {
     member,
     memberUniqueId,
@@ -101,6 +104,9 @@ export function MemberDetailPage() {
     addressFields,
     membershipExpiryLabel,
     membershipStartLabel,
+    isPendingApproval,
+    isUpdatingMembershipStatus,
+    updateMembershipStatus,
     isLoading,
     error,
     refetch,
@@ -123,6 +129,18 @@ export function MemberDetailPage() {
   );
 
   const isMemberDetailTabActive = activeDetailTabId === MEMBER_DETAIL_TAB_ID;
+  const moderationModalAction = pendingModerationAction;
+
+  async function confirmModerationAction() {
+    if (!moderationModalAction) {
+      return;
+    }
+
+    const succeeded = await updateMembershipStatus(moderationModalAction);
+    if (succeeded) {
+      setPendingModerationAction(null);
+    }
+  }
 
   if (error && !memberUniqueId) {
     return (
@@ -139,7 +157,7 @@ export function MemberDetailPage() {
       <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-cyan-50 via-white to-transparent lg:block" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-4">
+          <div className="space-y-4 lg:max-w-3xl">
             <Link
               to={APP_ROUTES.membershipMembers}
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
@@ -173,11 +191,29 @@ export function MemberDetailPage() {
                     Review the member&apos;s profile, membership status, and submitted registration responses in one place.
                   </p>
                 </div>
-
               </div>
             </div>
           </div>
-
+          {isPendingApproval ? (
+            <div className="flex flex-wrap items-center justify-end gap-3 lg:ml-auto">
+              <button
+                type="button"
+                onClick={() => setPendingModerationAction("approve")}
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <CheckCircle2 size={16} />
+                Approve
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingModerationAction("reject")}
+                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-5 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
+              >
+                <CircleX size={16} />
+                Reject
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -305,6 +341,7 @@ export function MemberDetailPage() {
                             {member.membership.notes || "No notes provided with this member record."}
                           </p>
                         </div>
+
                       </div>
                     </DetailPanel>
                   </div>
@@ -376,6 +413,16 @@ export function MemberDetailPage() {
           />
         </div>
       )}
+
+      {moderationModalAction ? (
+        <ModerationConfirmModal
+          action={moderationModalAction}
+          memberName={fullName}
+          isSaving={isUpdatingMembershipStatus}
+          onCancel={() => setPendingModerationAction(null)}
+          onConfirm={() => void confirmModerationAction()}
+        />
+      ) : null}
     </section>
   );
 }
@@ -834,6 +881,73 @@ function AttachmentCard({
         </button>
       </div>
     </div>
+  );
+}
+
+function ModerationConfirmModal({
+  action,
+  memberName,
+  isSaving,
+  onCancel,
+  onConfirm,
+}: {
+  action: ModerationAction;
+  memberName: string;
+  isSaving: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const isApprove = action === "approve";
+  const title = isApprove ? "Approve member" : "Reject member";
+  const description = isApprove
+    ? `You are about to approve ${memberName}. This will move the member to Active status.`
+    : `You are about to reject ${memberName}. This will move the member to Rejected status.`;
+  const confirmLabel = isApprove ? "Confirm Approve" : "Confirm Reject";
+  const icon = isApprove ? (
+    <CheckCircle2 className="h-5 w-5" />
+  ) : (
+    <CircleX className="h-5 w-5" />
+  );
+  const iconClassName = isApprove ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700";
+  const confirmButtonClassName = isApprove
+    ? "bg-emerald-600 hover:bg-emerald-700"
+    : "bg-rose-600 hover:bg-rose-700";
+
+  return createPortal(
+    <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", iconClassName)}>{icon}</div>
+
+        <h3 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">{title}</h3>
+        <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          Please confirm this action before it is sent to the backend.
+        </p>
+
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSaving}
+            className={cn(
+              "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60",
+              confirmButtonClassName,
+            )}
+          >
+            {isSaving ? "Working..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
