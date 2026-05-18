@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, CalendarDays, Download, ExternalLink, FileText, Image, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink, FileText, Image, Mail, Phone, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { APP_ROUTES } from "../routes";
 import { downloadBinaryFile, openBinaryFile } from "../lib/api";
@@ -129,12 +129,12 @@ export function MemberDetailPage() {
             </Link>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <div className="grid h-16 w-16 place-items-center rounded-[1.5rem] border border-cyan-100 bg-gradient-to-br from-cyan-600 to-sky-500 text-lg font-semibold text-white shadow-lg shadow-cyan-100">
+              <div className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-full border border-cyan-100 bg-gradient-to-br from-cyan-600 to-sky-500 text-xl font-semibold text-white shadow-lg shadow-cyan-100 sm:h-24 sm:w-24">
                 {member?.memberPhotoUrl ? (
                   <img
                     src={member.memberPhotoUrl}
                     alt={fullName}
-                    className="h-full w-full rounded-[1.5rem] object-cover"
+                    className="h-full w-full rounded-full object-cover"
                   />
                 ) : (
                   getInitials(fullName)
@@ -154,49 +154,10 @@ export function MemberDetailPage() {
                   </p>
                 </div>
 
-                {member ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusPill label={membershipStatusLabel} tone={getStatusTone(member.membershipStatus)} />
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-                      {member.activeMembershipName || "Membership not assigned"}
-                    </span>
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500">
-                      ID {member.uniqueId}
-                    </span>
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
 
-          {member ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <a
-                href={`mailto:${member.email}`}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
-              >
-                <Mail size={16} />
-                Email member
-              </a>
-              {member.cellPhone ? (
-                <a
-                  href={`tel:${member.cellPhone}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-                >
-                  <Phone size={16} />
-                  Call member
-                </a>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => void navigator.clipboard?.writeText(member.uniqueId)}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-              >
-                <ShieldCheck size={16} />
-                Copy member ID
-              </button>
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -285,12 +246,6 @@ export function MemberDetailPage() {
                         <InfoRow icon={<UserRound size={16} />} label="Name" value={member.memberFullName} />
                         <InfoRow icon={<Mail size={16} />} label="Email" value={member.email} href={`mailto:${member.email}`} />
                         <InfoRow icon={<Phone size={16} />} label="Phone" value={member.cellPhone || "Not provided"} href={member.cellPhone ? `tel:${member.cellPhone}` : undefined} />
-                        <InfoRow icon={<CalendarDays size={16} />} label="Membership start" value={membershipStartLabel} />
-                      </div>
-
-                      <div className="mt-5 grid gap-4 md:grid-cols-2">
-                        <InfoRow icon={<FileText size={16} />} label="Member ID" value={member.uniqueId} mono />
-                        <InfoRow icon={<ShieldCheck size={16} />} label="Status" value={membershipStatusLabel} />
                       </div>
 
                       {addressLines.length > 0 ? (
