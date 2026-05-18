@@ -150,6 +150,9 @@ export function MembershipTypesPage() {
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Signup
                     </th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Pending Approvals
+                    </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Tenure
                     </th>

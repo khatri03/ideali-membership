@@ -63,7 +63,7 @@ export function SideNav({ onNavigate }: SideNavProps) {
   const [isMembershipExpanded, setIsMembershipExpanded] = useState(isMembershipRoute);
   const pendingApprovalCountQuery = useQuery({
     queryKey: MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY,
-    queryFn: fetchPendingApprovalCount,
+    queryFn: () => fetchPendingApprovalCount(),
     staleTime: STALE_TIME_1_MIN_MS,
   });
   const pendingApprovalCount = pendingApprovalCountQuery.data ?? 0;

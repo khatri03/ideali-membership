@@ -363,8 +363,12 @@ export async function fetchMembershipStatusOptions() {
     .filter((item) => item.label.length > 0 && item.value.length > 0);
 }
 
-export async function fetchPendingApprovalCount() {
-  const payload = await getJson<unknown>("/api/organizer/membership/type/pending-approvals/count");
+export async function fetchPendingApprovalCount(membershipTypeUniqueId?: string | null) {
+  const payload = await getJson<unknown>(
+    membershipTypeUniqueId
+      ? `/api/organizer/membership/type/pending-approvals/${membershipTypeUniqueId}/count`
+      : "/api/organizer/membership/type/pending-approvals/count",
+  );
   const responseData = readResponseData(payload);
   return readNumber(responseData, 0);
 }

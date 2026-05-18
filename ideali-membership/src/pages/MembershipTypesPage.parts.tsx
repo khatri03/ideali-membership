@@ -1,11 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
 import { BadgeInfo, Check, ChevronRight, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { APP_ROUTES, buildMembershipRegisterPath, buildMembershipWizardStepPath } from "../routes";
+import {
+  APP_ROUTES,
+  buildMembershipMembersPath,
+  buildMembershipRegisterPath,
+  buildMembershipWizardStepPath,
+} from "../routes";
+import { fetchPendingApprovalCount } from "../lib/membershipMembers";
 import { saveMembershipReviewStep } from "../lib/membershipWizard";
 import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
 import {
@@ -62,6 +69,20 @@ function StatusIcon() {
 
 function XBadgeIcon() {
   return <X className="h-4 w-4" />;
+}
+
+function readMembershipTypeUniqueId(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const candidate = record.value ?? record.Value ?? record.uniqueId ?? record.UniqueId;
+    return typeof candidate === "string" ? candidate : "";
+  }
+
+  return "";
 }
 
 function InfoIcon() {
@@ -150,6 +171,38 @@ export function MembershipMetaPill({
       {value}
     </span>
   );
+}
+
+export function PendingApprovalCountCell({ membershipTypeUniqueId }: { membershipTypeUniqueId: unknown }) {
+  const uniqueId = readMembershipTypeUniqueId(membershipTypeUniqueId);
+  const pendingApprovalCountQuery = useQuery({
+    queryKey: ["membership-pending-approval-count", uniqueId],
+    queryFn: () => fetchPendingApprovalCount(uniqueId),
+    staleTime: 60 * 1000,
+    enabled: uniqueId.length > 0,
+  });
+
+  const pendingApprovalCount = pendingApprovalCountQuery.data ?? 0;
+
+  if (!uniqueId) {
+    return <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">-</span>;
+  }
+
+  if (pendingApprovalCount > 0) {
+    return (
+      <Link
+        to={buildMembershipMembersPath({
+          membershipStatuses: ["PendingApproval"],
+          membershipTypeUniqueIds: [uniqueId],
+        })}
+        className="inline-flex min-w-10 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+      >
+        {pendingApprovalCount}
+      </Link>
+    );
+  }
+
+  return <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">-</span>;
 }
 
 export function renderTenureExpiryCaseLabel(label: string | null) {
@@ -485,7 +538,7 @@ export function MembershipTypeActionsMenu({
 
     const rect = targetElement.getBoundingClientRect();
     const submenuWidth = 240;
-    const submenuHeight = 144;
+    const submenuHeight = 192;
     const gap = 8;
     const spaceRight = window.innerWidth - rect.right;
     const spaceLeft = rect.left;
@@ -661,7 +714,7 @@ export function MembershipTypeActionsMenu({
                       setIsMemberOpen(false);
                     }}
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                  >
+                    >
                     <Users className="h-4 w-4" />
                     Members
                   </Link>
@@ -793,6 +846,9 @@ export function MembershipTypeRow({
       </td>
       <td className="border-r border-slate-200 px-4 py-4 align-middle">
         <AvailabilityBadge value={item.availableForSignUp} />
+      </td>
+      <td className="border-r border-slate-200 px-4 py-4 text-center align-middle">
+        <PendingApprovalCountCell membershipTypeUniqueId={item.value} />
       </td>
       <td className="px-4 py-4 align-middle">
         <div className="flex flex-col gap-1">
