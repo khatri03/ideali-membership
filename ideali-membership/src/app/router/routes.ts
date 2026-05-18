@@ -11,6 +11,8 @@ export const APP_ROUTES = {
   membershipTypes: "/organizer/membership/type/list",
   membershipMembers: "/organizer/membership/type/members",
   membershipMemberDetail: "/organizer/membership/type/members/:memberUniqueId/detail",
+  membershipInvoices: "/organizer/membership/type/invoices",
+  membershipInvoiceDetail: "/organizer/membership/type/invoices/:invoiceUniqueId/detail",
   membershipPendingApprovals: "/organizer/membership/type/pending-approvals",
   dndPlayground: "/organizer/dnd-playground",
   membershipWizard: "/organizer/membership/type/wizard",
@@ -103,4 +105,46 @@ export function buildMembershipMembersPath(query?: {
 
   const search = searchParams.toString();
   return search ? `${APP_ROUTES.membershipMembers}?${search}` : APP_ROUTES.membershipMembers;
+}
+
+export function buildMembershipInvoicesPath(query?: {
+  searchTerm?: string;
+  status?: string;
+  pageNo?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const searchParams = new URLSearchParams();
+
+  if (query?.searchTerm?.trim()) {
+    searchParams.set("searchTerm", query.searchTerm.trim());
+  }
+
+  if (query?.status?.trim()) {
+    searchParams.set("status", query.status.trim());
+  }
+
+  if (query?.pageNo) {
+    searchParams.set("pageNo", String(query.pageNo));
+  }
+
+  if (query?.pageSize) {
+    searchParams.set("pageSize", String(query.pageSize));
+  }
+
+  if (query?.sortBy?.trim()) {
+    searchParams.set("sortBy", query.sortBy.trim());
+  }
+
+  if (query?.sortOrder) {
+    searchParams.set("sortOrder", query.sortOrder);
+  }
+
+  const search = searchParams.toString();
+  return search ? `${APP_ROUTES.membershipInvoices}?${search}` : APP_ROUTES.membershipInvoices;
+}
+
+export function buildMembershipInvoiceDetailPath(invoiceUniqueId: string) {
+  return generatePath(APP_ROUTES.membershipInvoiceDetail as string, { invoiceUniqueId });
 }

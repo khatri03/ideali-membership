@@ -44,6 +44,10 @@ function isMembershipNavItemActive(item: MembershipNavItem, locationPathname: st
     return !isPendingApprovalsShortcut;
   }
 
+  if (item.label === "Invoices") {
+    return locationPathname.startsWith(APP_ROUTES.membershipInvoices);
+  }
+
   return locationPathname === itemPath;
 }
 
@@ -55,6 +59,7 @@ const membershipItems: MembershipNavItem[] = [
     label: "Pending Approvals",
     to: buildMembershipMembersPath({ membershipStatuses: ["PendingApproval"] }),
   },
+  { label: "Invoices", to: APP_ROUTES.membershipInvoices },
 ];
 
 export function SideNav({ onNavigate }: SideNavProps) {

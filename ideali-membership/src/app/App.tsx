@@ -21,6 +21,8 @@ import {
   DashboardPage,
   DnDGridSortExamplePage,
   MemberDetailPage,
+  MembershipInvoiceDetailPage,
+  MembershipInvoicesPage,
   MembersPage,
   MembershipAdvanceSettingsStepPage,
   MembershipBannerStepPage,
@@ -106,6 +108,9 @@ function RouterApp() {
                 <Route path="members" element={<MembersPage />} />
                 <Route path="members/:memberUniqueId/detail" element={<MemberDetailPage />} />
                 <Route path="members/:memberUniqueId" element={<MemberDetailPage />} />
+                <Route path="invoices" element={<MembershipInvoicesPage />} />
+                <Route path="invoices/:invoiceUniqueId/detail" element={<MembershipInvoiceDetailPage />} />
+                <Route path="invoices/:invoiceUniqueId" element={<Navigate to="detail" replace />} />
                 <Route
                   path="pending-approvals"
                   element={<Navigate to={buildMembershipMembersPath({ membershipStatuses: ["PendingApproval"] })} replace />}
