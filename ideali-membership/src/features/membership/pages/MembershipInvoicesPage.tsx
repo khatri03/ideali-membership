@@ -153,7 +153,6 @@ export function MembershipInvoicesPage() {
                             <div className="mt-2 inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
                               {invoice.paymentMethod ?? "Not available"}
                             </div>
-                            <p className="mt-1 text-sm text-slate-600">{invoice.memberName}</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
                                 {invoice.membershipName}

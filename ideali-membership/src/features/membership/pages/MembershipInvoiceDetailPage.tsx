@@ -1,7 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import {
   ArrowLeft,
-  Banknote,
   CalendarDays,
   Copy,
   Download,
@@ -15,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { APP_ROUTES, buildMembershipMemberDetailPath } from "../../../routes";
 import { showToast } from "../../../shared/components/toast/Toast";
 import { cn } from "../../../lib/utils";
-import { DetailPanel, EmptyStatePanel, StatCard, StatusPill } from "../../../pages/MemberDetailPage.parts";
+import { DetailPanel, EmptyStatePanel, StatCard } from "../../../pages/MemberDetailPage.parts";
 import {
   fetchMembershipInvoiceDetail,
   formatMembershipInvoiceAmount,
@@ -190,75 +189,60 @@ export function MembershipInvoiceDetailPage() {
                   <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
                     {invoice.invoiceNo}
                   </h1>
-                  <p className="max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
-                    {billingContactName} - {invoiceContextName}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <StatusPill
-                    label={getMembershipInvoiceStatusLabel(invoice.invoiceStatus)}
-                    tone={getMembershipInvoiceStatusTone(invoice.invoiceStatus)}
-                  />
-                  {latestPaymentMethodLabel !== "Not available" ? (
-                    <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800">
-                      Payment: {latestPaymentMethodLabel}
-                    </span>
-                  ) : null}
-                  {memberUniqueId ? (
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                      Member linked
-                    </span>
-                  ) : (
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                      Standalone record
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[28rem]">
-            <button
-              type="button"
-              onClick={copyInvoiceNumber}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-            >
-              <Copy size={16} />
-              Copy number
-            </button>
-            <button
-              type="button"
-              onClick={printInvoice}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-            >
-              <Printer size={16} />
-              Print invoice
-            </button>
-            <button
-              type="button"
-              onClick={() => showToast("Export will be connected to the invoice export API when available.", "info")}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-            >
-              <Download size={16} />
-              Export preview
-            </button>
-            {memberUniqueId ? (
-              <a
-                href={buildMembershipMemberDetailPath(memberUniqueId)}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700"
+          <div className="flex flex-col items-end gap-3 xl:min-w-[28rem]">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={copyInvoiceNumber}
+                title="Copy number"
+                aria-label="Copy invoice number"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
               >
+                <Copy size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={printInvoice}
+                title="Print invoice"
+                aria-label="Print invoice"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+              >
+                <Printer size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={() => showToast("Export will be connected to the invoice export API when available.", "info")}
+                title="Export preview"
+                aria-label="Export preview"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+              >
+                <Download size={18} />
+              </button>
+              {memberUniqueId ? (
+                <a
+                  href={buildMembershipMemberDetailPath(memberUniqueId)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  title="Open member profile"
+                  aria-label="Open member profile"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-sm transition hover:bg-cyan-700"
+                >
+                  <UserRound size={18} />
+                </a>
+              ) : null}
+            </div>
+
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                 <UserRound size={16} />
-                Open member profile
-              </a>
-            ) : (
-              <span className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-500">
-                <UserRound size={16} />
-                No member link
               </span>
-            )}
+              <span>{billingContactName}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -267,25 +251,16 @@ export function MembershipInvoiceDetailPage() {
         <StatCard
           label="Invoice amount"
           value={formatMembershipInvoiceAmount(invoice.invoiceAmount, "$")}
-          detail="Total billed on the invoice."
           tone="cyan"
         />
         <StatCard
-          label="Amount paid"
-          value={formatMembershipInvoiceAmount(paymentTotal, "$")}
-          detail="Payments recorded against this invoice."
-          tone="emerald"
-        />
-        <StatCard
-          label="Balance due"
-          value={formatMembershipInvoiceAmount(outstandingBalance, "$")}
-          detail="Outstanding amount awaiting settlement."
-          tone={outstandingBalance > 0 ? "rose" : "slate"}
+          label="Membership name"
+          value={invoiceContextName}
+          tone="slate"
         />
         <StatCard
           label="Created on"
           value={formatMembershipInvoiceDateLabel(invoice.createdOnUtc)}
-          detail="Record creation timestamp from the backend."
           tone="amber"
         />
       </div>
@@ -294,23 +269,10 @@ export function MembershipInvoiceDetailPage() {
         <div className="space-y-6">
           <DetailPanel
             title="Invoice summary"
-            description="Billing contact, membership context, and invoice metadata in one place."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <DetailBlock icon={<UserRound size={16} />} label="Billing contact" value={billingContactName} />
               <DetailBlock icon={<Mail size={16} />} label="Billing email" value={billingEmail} />
-              <DetailBlock icon={<Banknote size={16} />} label="Invoice type" value={invoice.invoiceType} />
-              <DetailBlock
-                icon={<CalendarDays size={16} />}
-                label="Invoice date"
-                value={formatMembershipInvoiceDateLabel(invoice.invoiceDate)}
-              />
-              <DetailBlock icon={<ShieldCheck size={16} />} label="Created by" value={invoice.createdBy} />
-              <DetailBlock
-                icon={<CalendarDays size={16} />}
-                label="Last updated"
-                value={invoice.updatedOnUtc ? formatMembershipInvoiceDateLabel(invoice.updatedOnUtc) : "Not updated"}
-              />
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -318,24 +280,11 @@ export function MembershipInvoiceDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Billing address</p>
                 <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{billingAddress}</pre>
               </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Membership context</p>
-                <div className="mt-3 space-y-1 text-sm leading-6 text-slate-700">
-                  <p className="font-semibold text-slate-900">{invoiceContextName}</p>
-                  <p>{invoice.invoiceContext?.module ?? "Membership"}</p>
-                  <p>{invoice.invoiceContext?.isMemberInvoice ? "Member invoice" : "Organization invoice"}</p>
-                  {invoice.invoiceContext?.uniqueId ? (
-                    <p className="text-slate-500">Membership type ID: {invoice.invoiceContext.uniqueId}</p>
-                  ) : null}
-                </div>
-              </div>
             </div>
           </DetailPanel>
 
           <DetailPanel
             title="Line items"
-            description="A transparent breakdown of every charge, tax, and service component."
           >
             <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white">
               <table className="w-full border-collapse text-sm">
@@ -406,7 +355,6 @@ export function MembershipInvoiceDetailPage() {
 
           <DetailPanel
             title="Activity trail"
-            description="A chronological view of payments, notes, and lifecycle events."
           >
             <div className="space-y-4">
               {timeline.map((item) => (
@@ -429,7 +377,6 @@ export function MembershipInvoiceDetailPage() {
         <aside className="space-y-6">
           <DetailPanel
             title="Collection snapshot"
-            description="Key financial facts for the finance and support teams."
           >
             <div className="space-y-3">
               <MiniMetric label="Status" value={getMembershipInvoiceStatusLabel(invoice.invoiceStatus)} />
@@ -451,7 +398,6 @@ export function MembershipInvoiceDetailPage() {
 
           <DetailPanel
             title="Payments"
-            description="A record of payment attempts and successful collections."
           >
             <div className="space-y-3">
               {invoice.payments.length > 0 ? (
@@ -474,7 +420,6 @@ export function MembershipInvoiceDetailPage() {
               ) : (
                 <EmptyStatePanel
                   title="No payments yet"
-                  description="This invoice has not received any recorded payments."
                 />
               )}
             </div>
@@ -482,7 +427,6 @@ export function MembershipInvoiceDetailPage() {
 
           <DetailPanel
             title="Notes"
-            description="Internal context captured alongside the invoice record."
           >
             <div className="space-y-3">
               {invoice.notes.length > 0 ? (
@@ -496,14 +440,13 @@ export function MembershipInvoiceDetailPage() {
               ) : (
                 <EmptyStatePanel
                   title="No notes captured"
-                  description="There are no internal invoice notes yet."
                 />
               )}
             </div>
           </DetailPanel>
 
           {invoice.logoUrl ? (
-            <DetailPanel title="Branding" description="The organizer logo applied to this invoice.">
+            <DetailPanel title="Branding">
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                 <img
                   src={invoice.logoUrl}
