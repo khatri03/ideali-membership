@@ -259,7 +259,7 @@ export function MemberDetailPage() {
                 "inline-flex flex-1 items-center justify-center gap-2 rounded-t-lg px-4 py-2.5 text-sm transition-colors duration-150",
                 isMemberDetailTabActive
                   ? "-mb-px border-x border-b border-t-2 border-x-slate-200 border-b-white border-t-cyan-600 bg-white font-semibold text-slate-900"
-                  : "border border-transparent font-medium text-slate-500 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-700",
+                  : "border border-slate-200 bg-slate-50/60 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700",
               )}
             >
               <UserRound size={14} className="shrink-0" />
@@ -280,7 +280,7 @@ export function MemberDetailPage() {
                     "inline-flex flex-1 items-center justify-center gap-2 rounded-t-lg px-4 py-2.5 text-sm transition-colors duration-150",
                     isActive
                       ? "-mb-px border-x border-b border-t-2 border-x-slate-200 border-b-white border-t-cyan-600 bg-white font-semibold text-slate-900"
-                      : "border border-transparent font-medium text-slate-500 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-700",
+                      : "border border-slate-200 bg-slate-50/60 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700",
                   )}
                 >
                   <span>{section.title}</span>
