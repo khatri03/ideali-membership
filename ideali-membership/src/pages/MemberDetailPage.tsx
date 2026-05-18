@@ -297,7 +297,6 @@ export function MemberDetailPage() {
                     <DetailPanel
                       className="h-full"
                       title="Profile and contact"
-                      description="Core identity information and communication channels that help organizers verify the member at a glance."
                     >
                       <div className="grid gap-4 md:grid-cols-2">
                         <InfoRow icon={<UserRound size={16} />} label="Name" value={fullName} />
@@ -374,10 +373,6 @@ export function MemberDetailPage() {
                 </div>
                 ) : activeCustomFormSection ? (
                   <div key={activeCustomFormSection.id} className="space-y-4">
-                    {activeCustomFormSection.description ? (
-                      <p className="text-sm leading-6 text-slate-600">{activeCustomFormSection.description}</p>
-                    ) : null}
-
                     <div className={getCustomFormGridClass()}>
                       {activeCustomFormSection.items.map((item, index) => (
                         <article
