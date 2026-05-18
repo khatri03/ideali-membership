@@ -1,12 +1,11 @@
-import { Filter, Search } from "lucide-react";
-import { cn } from "../../../lib/utils";
+import { Filter } from "lucide-react";
 import { buildMembershipInvoiceDetailPath, buildMembershipMemberDetailPath } from "../../../routes";
 import { DetailPanel, EmptyStatePanel, StatCard, StatusPill } from "../../../pages/MemberDetailPage.parts";
 import {
   formatMembershipInvoiceAmount,
   formatMembershipInvoiceDateLabel,
 } from "../lib/membershipInvoices";
-import { InvoicesPagination, InvoicesTable } from "../components";
+import { InvoicesFilters, InvoicesPagination, InvoicesTable } from "../components";
 import { useMembershipInvoicesPage } from "./MembershipInvoicesPage.hooks";
 
 export function MembershipInvoicesPage() {
@@ -16,21 +15,31 @@ export function MembershipInvoicesPage() {
     pageNo,
     pageSize,
     searchTerm,
-    statusFilter,
+    draftSearchTerm,
+    draftMembershipTypeUniqueIds,
+    selectedStatusFilters,
+    selectedMembershipTypeUniqueIds,
+    draftStatusFilters,
+    defaultStatusFilters,
+    hasPendingFilterChanges,
+    isMembershipTypesLoading,
     sortBy,
     sortOrder,
     summary,
     totalRecordsCount,
+    membershipTypeOptions,
     membershipInvoiceStatusOptions,
     isLoading,
     error,
-    setSearchTerm,
-    setStatusFilter,
+    setDraftSearchTerm,
+    setDraftMembershipTypeUniqueIds,
+    setDraftStatusFilters,
+    applyFilters,
+    clearFilters,
     setSortBy,
     clearSort,
     setPageNo,
     setPageSize,
-    clearFilters,
     getInvoiceStatusLabel,
     getInvoiceStatusTone,
   } = useMembershipInvoicesPage();
@@ -115,58 +124,25 @@ export function MembershipInvoicesPage() {
         }
       >
         <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
-            <label className="relative block">
-              <span className="sr-only">Search invoices</span>
-              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search invoice number, member, membership, or email"
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
-              />
-            </label>
-
-            <label className="block">
-              <span className="sr-only">Filter invoices by status</span>
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
-              >
-                {membershipInvoiceStatusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {membershipInvoiceStatusOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setStatusFilter(option.value)}
-                className={cn(
-                  "inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                  statusFilter === option.value
-                    ? "border-cyan-200 bg-cyan-50 text-cyan-800"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800",
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-
-          {isLoading ? (
-            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-8 text-sm text-slate-500">
-              Loading invoices from the backend...
-            </div>
-          ) : null}
+          <InvoicesFilters
+            draftSearchTerm={draftSearchTerm}
+            draftMembershipTypeUniqueIds={draftMembershipTypeUniqueIds}
+            draftStatusFilters={draftStatusFilters}
+            hasPendingFilterChanges={hasPendingFilterChanges}
+            isMembershipTypesLoading={isMembershipTypesLoading}
+            isInvoicesFetching={isLoading}
+            selectedSearchTerm={searchTerm}
+            selectedMembershipTypeUniqueIds={selectedMembershipTypeUniqueIds}
+            selectedStatusFilters={selectedStatusFilters}
+            defaultStatusFilters={defaultStatusFilters}
+            membershipTypeOptions={membershipTypeOptions}
+            statusOptions={membershipInvoiceStatusOptions}
+            onApplyFilters={applyFilters}
+            onClearFilters={clearFilters}
+            onDraftSearchTermChange={setDraftSearchTerm}
+            onDraftMembershipTypeUniqueIdsChange={setDraftMembershipTypeUniqueIds}
+            onDraftStatusFiltersChange={(value) => setDraftStatusFilters(value as typeof selectedStatusFilters)}
+          />
 
           {error ? (
             <div className="rounded-[1.75rem] border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700">
@@ -174,64 +150,76 @@ export function MembershipInvoicesPage() {
             </div>
           ) : null}
 
-          {!isLoading && !error ? (
+          {!error ? (
             <>
               <InvoicesTable
                 invoices={invoices}
+                isLoading={isLoading}
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onSort={setSortBy}
                 onClearSort={clearSort}
               />
 
-              <div className="space-y-3 lg:hidden">
-                {invoices.length > 0 ? (
-                  invoices.map((invoice) => (
-                    <article
-                      key={invoice.invoiceId}
-                      className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <a
-                            href={buildMembershipInvoiceDetailPath(invoice.invoiceId)}
-                            className="text-base font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4"
-                          >
-                            {invoice.invoiceNo}
-                          </a>
-                          <p className="mt-1 text-sm text-slate-600">{invoice.memberName}</p>
-                          <p className="mt-1 text-xs text-slate-500">{invoice.membershipName}</p>
+              {!isLoading ? (
+                <div className="space-y-3 lg:hidden">
+                  {invoices.length > 0 ? (
+                    invoices.map((invoice) => (
+                      <article
+                        key={invoice.invoiceId}
+                        className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <a
+                              href={buildMembershipInvoiceDetailPath(invoice.invoiceId)}
+                              className="text-base font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4"
+                            >
+                              {invoice.invoiceNo}
+                            </a>
+                            <p className="mt-1 text-sm text-slate-600">{invoice.memberName}</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
+                                {invoice.membershipName}
+                              </span>
+                              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                                {invoice.memberEmail}
+                              </span>
+                            </div>
+                          </div>
+                          <StatusPill
+                            label={getInvoiceStatusLabel(invoice.invoiceStatus)}
+                            tone={getInvoiceStatusTone(invoice.invoiceStatus)}
+                          />
                         </div>
-                        <StatusPill label={getInvoiceStatusLabel(invoice.invoiceStatus)} tone={getInvoiceStatusTone(invoice.invoiceStatus)} />
-                      </div>
 
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        <InfoTile label="Invoice Date" value={formatMembershipInvoiceDateLabel(invoice.invoiceDateUtc)} />
-                        <InfoTile label="Total" value={formatMembershipInvoiceAmount(invoice.totalAmount, invoice.currencySymbol)} />
-                        <InfoTile label="Balance" value={formatMembershipInvoiceAmount(invoice.balanceAmount ?? 0, invoice.currencySymbol)} />
-                      </div>
-
-                      {invoice.memberUniqueId ? (
-                        <div className="mt-4">
-                          <a
-                            href={buildMembershipMemberDetailPath(invoice.memberUniqueId)}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-                          >
-                            Open member profile
-                          </a>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <InfoTile label="Invoice Date/Time" value={formatMembershipInvoiceDateLabel(invoice.invoiceDateUtc)} />
+                          <InfoTile label="Total" value={formatMembershipInvoiceAmount(invoice.totalAmount, invoice.currencySymbol)} />
                         </div>
-                      ) : null}
-                    </article>
-                  ))
-                ) : (
-                  <EmptyStatePanel
-                    title="No invoices match these filters"
-                    description="Try broadening the search or clearing the status filter to bring records back into view."
-                  />
-                )}
-              </div>
+
+                        {invoice.memberUniqueId ? (
+                          <div className="mt-4">
+                            <a
+                              href={buildMembershipMemberDetailPath(invoice.memberUniqueId)}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                            >
+                              Open member profile
+                            </a>
+                          </div>
+                        ) : null}
+                      </article>
+                    ))
+                  ) : (
+                    <EmptyStatePanel
+                      title="No invoices match these filters"
+                      description="Try broadening the search or clearing the status filter to bring records back into view."
+                    />
+                  )}
+                </div>
+              ) : null}
             </>
           ) : null}
 

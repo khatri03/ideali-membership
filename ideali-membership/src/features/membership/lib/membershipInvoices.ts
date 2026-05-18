@@ -1,4 +1,5 @@
 import { getJson } from "../../../lib/api";
+import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
 import { readResponseData, readText, readNumber } from "../../../lib/parseUtils";
 import type {
   MembershipInvoiceDetailContact,
@@ -12,13 +13,6 @@ import type {
   MembershipInvoiceStatus,
 } from "../types/invoice";
 import type { PageResult } from "../types/membership";
-
-const INVOICE_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  timeZone: "Asia/Karachi",
-};
 
 function readNullableText(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
@@ -40,22 +34,31 @@ function readStatus(value: unknown): string {
   return typeof value === "string" && value.length > 0 ? value : "PendingPayment";
 }
 
+export function isMembershipInvoiceStatus(value: string): value is MembershipInvoiceStatus {
+  return value === "PendingPayment"
+    || value === "PartiallyPaid"
+    || value === "Paid"
+    || value === "Cancelled"
+    || value === "Refund"
+    || value === "AdjustedInSystem";
+}
+
 function buildQueryString(
   pageNo: number,
   pageSize: number,
-  status?: MembershipInvoiceStatus | "All" | null,
+  status?: MembershipInvoiceStatus[] | "All" | null,
   searchTerm?: string | null,
   sortBy?: MembershipInvoiceSortBy | null,
   sortOrder?: "asc" | "desc" | null,
-  membershipTypeUniqueId?: string | null,
+  membershipTypeUniqueIds?: string[] | null,
 ) {
   const searchParams = new URLSearchParams({
     pageNo: String(pageNo),
     pageSize: String(pageSize),
   });
 
-  if (status && status !== "All") {
-    searchParams.set("status", status);
+  if (Array.isArray(status) && status.length > 0) {
+    status.forEach((item) => searchParams.append("status", item));
   }
 
   const normalizedSearchTerm = searchTerm?.trim();
@@ -71,8 +74,13 @@ function buildQueryString(
     searchParams.set("sortOrder", sortOrder);
   }
 
-  if (membershipTypeUniqueId) {
-    searchParams.set("membershipTypeUniqueId", membershipTypeUniqueId);
+  if (Array.isArray(membershipTypeUniqueIds)) {
+    membershipTypeUniqueIds
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+      .forEach((membershipTypeUniqueId) => {
+        searchParams.append("membershipTypeUniqueIds", membershipTypeUniqueId);
+      });
   }
 
   return searchParams.toString();
@@ -267,16 +275,6 @@ function buildInvoiceDetailItem(record: Record<string, unknown>): MembershipInvo
   };
 }
 
-export const MEMBERSHIP_INVOICE_STATUS_OPTIONS: Array<{ label: string; value: MembershipInvoiceStatus | "All" }> = [
-  { label: "All statuses", value: "All" },
-  { label: "Pending payment", value: "PendingPayment" },
-  { label: "Partially paid", value: "PartiallyPaid" },
-  { label: "Paid", value: "Paid" },
-  { label: "Cancelled", value: "Cancelled" },
-  { label: "Refund", value: "Refund" },
-  { label: "Adjusted in system", value: "AdjustedInSystem" },
-];
-
 export function getMembershipInvoiceStatusTone(status: MembershipInvoiceStatus | string) {
   switch (status) {
     case "Paid":
@@ -318,16 +316,7 @@ export function formatMembershipInvoiceAmount(amount: number | null | undefined,
 }
 
 export function formatMembershipInvoiceDateLabel(value: string | null | undefined) {
-  if (!value) {
-    return "Not available";
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-GB", INVOICE_DATE_OPTIONS).format(parsedDate);
+  return formatUtcToLocalDateTime(value ?? null, { timeZone: null, fallbackLabel: "Not available" });
 }
 
 export function formatMembershipInvoiceContactName(contact: MembershipInvoiceDetailContact | null | undefined) {
@@ -370,14 +359,14 @@ export function getMembershipInvoicePaymentMethodLabel(detail: MembershipInvoice
 export async function fetchMembershipInvoices(
   pageNo: number,
   pageSize: number,
-  status?: MembershipInvoiceStatus | "All" | null,
+  status?: MembershipInvoiceStatus[] | "All" | null,
   searchTerm?: string | null,
   sortBy?: MembershipInvoiceSortBy | null,
   sortOrder?: "asc" | "desc" | null,
-  membershipTypeUniqueId?: string | null,
+  membershipTypeUniqueIds?: string[] | null,
 ) {
   const payload = await getJson<unknown>(
-    `/api/invoice/membership/list?${buildQueryString(pageNo, pageSize, status, searchTerm, sortBy, sortOrder, membershipTypeUniqueId)}`,
+    `/api/invoice/membership/list?${buildQueryString(pageNo, pageSize, status, searchTerm, sortBy, sortOrder, membershipTypeUniqueIds)}`,
   );
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
@@ -392,6 +381,27 @@ export async function fetchMembershipInvoices(
   };
 
   return pageResult;
+}
+
+export async function fetchMembershipInvoiceStatusOptions() {
+  const payload = await getJson<unknown>("/api/invoice/membership/status-options");
+  const responseData = readResponseData(payload);
+
+  return readList(responseData).flatMap((item) => {
+    const record = readRecord(item);
+    if (!record) {
+      return [];
+    }
+
+    const label = readText(record.Text ?? record.text);
+    const value = readText(record.Value ?? record.value);
+
+    if (!label || !isMembershipInvoiceStatus(value)) {
+      return [];
+    }
+
+    return [{ label, value }];
+  });
 }
 
 export async function fetchMembershipInvoiceDetail(invoiceUniqueId: string) {

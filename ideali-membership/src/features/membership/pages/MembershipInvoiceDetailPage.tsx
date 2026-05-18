@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { APP_ROUTES, buildMembershipMemberDetailPath } from "../../../routes";
 import { showToast } from "../../../shared/components/toast/Toast";
