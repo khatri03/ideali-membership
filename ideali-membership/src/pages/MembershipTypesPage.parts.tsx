@@ -12,7 +12,7 @@ import {
   buildMembershipRegisterPath,
   buildMembershipWizardStepPath,
 } from "../routes";
-import { fetchPendingApprovalCount } from "../lib/membershipMembers";
+import { fetchActiveMemberCount, fetchPendingApprovalCount } from "../lib/membershipMembers";
 import { saveMembershipReviewStep } from "../lib/membershipWizard";
 import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
 import {
@@ -83,6 +83,14 @@ function readMembershipTypeUniqueId(value: unknown) {
   }
 
   return "";
+}
+
+function CountCellSkeleton() {
+  return (
+    <span className="inline-flex min-w-14 items-center justify-center">
+      <span className="h-5 w-10 animate-pulse rounded-full bg-slate-200/80" />
+    </span>
+  );
 }
 
 function InfoIcon() {
@@ -184,6 +192,10 @@ export function PendingApprovalCountCell({ membershipTypeUniqueId }: { membershi
 
   const pendingApprovalCount = pendingApprovalCountQuery.data ?? 0;
 
+  if (pendingApprovalCountQuery.isLoading || pendingApprovalCountQuery.isFetching) {
+    return <CountCellSkeleton />;
+  }
+
   if (!uniqueId) {
     return <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">-</span>;
   }
@@ -205,6 +217,46 @@ export function PendingApprovalCountCell({ membershipTypeUniqueId }: { membershi
   return (
     <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">
       No Pending Approvals
+    </span>
+  );
+}
+
+export function ActiveMemberCountCell({ membershipTypeUniqueId }: { membershipTypeUniqueId: unknown }) {
+  const uniqueId = readMembershipTypeUniqueId(membershipTypeUniqueId);
+  const activeMemberCountQuery = useQuery({
+    queryKey: ["membership-active-member-count", uniqueId],
+    queryFn: () => fetchActiveMemberCount(uniqueId),
+    staleTime: 60 * 1000,
+    enabled: uniqueId.length > 0,
+  });
+
+  const activeMemberCount = activeMemberCountQuery.data ?? 0;
+
+  if (activeMemberCountQuery.isLoading || activeMemberCountQuery.isFetching) {
+    return <CountCellSkeleton />;
+  }
+
+  if (!uniqueId) {
+    return <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">-</span>;
+  }
+
+  if (activeMemberCount > 0) {
+    return (
+      <Link
+        to={buildMembershipMembersPath({
+          membershipStatuses: ["Active"],
+          membershipTypeUniqueIds: [uniqueId],
+        })}
+        className="inline-flex min-w-10 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+      >
+        {activeMemberCount}
+      </Link>
+    );
+  }
+
+  return (
+    <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">
+      No Active Members
     </span>
   );
 }
@@ -849,8 +901,8 @@ export function MembershipTypeRow({
       <td className="border-r border-slate-200 px-4 py-4 text-right align-middle">
         <p className="text-sm font-semibold tabular-nums text-slate-900">{price}</p>
       </td>
-      <td className="border-r border-slate-200 px-4 py-4 align-middle">
-        <AvailabilityBadge value={item.availableForSignUp} />
+      <td className="border-r border-slate-200 px-4 py-4 text-center align-middle">
+        <ActiveMemberCountCell membershipTypeUniqueId={item.value} />
       </td>
       <td className="border-r border-slate-200 px-4 py-4 text-center align-middle">
         <PendingApprovalCountCell membershipTypeUniqueId={item.value} />

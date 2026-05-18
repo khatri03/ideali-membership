@@ -373,6 +373,16 @@ export async function fetchPendingApprovalCount(membershipTypeUniqueId?: string 
   return readNumber(responseData, 0);
 }
 
+export async function fetchActiveMemberCount(membershipTypeUniqueId?: string | null) {
+  const payload = await getJson<unknown>(
+    membershipTypeUniqueId
+      ? `/api/organizer/membership/type/active-members/${membershipTypeUniqueId}/count`
+      : "/api/organizer/membership/type/active-members/count",
+  );
+  const responseData = readResponseData(payload);
+  return readNumber(responseData, 0);
+}
+
 export async function fetchMembershipTypeOptions() {
   const payload = await getJson<unknown>("/api/organizer/membership/type/options");
   const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null | Array<unknown>;
