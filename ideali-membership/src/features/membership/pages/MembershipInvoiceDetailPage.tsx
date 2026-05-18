@@ -191,7 +191,7 @@ export function MembershipInvoiceDetailPage() {
                   <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
                     {invoice.invoiceNo}
                   </h1>
-                  <div className="space-y-3">
+                  <div className="space-y-1.5">
                     <HeaderMetaItem
                       icon={<UserRound size={16} />}
                       value={memberUniqueId ? (
@@ -509,13 +509,13 @@ function HeaderMetaItem({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
         {icon}
       </span>
       <span
         className={cn(
           "min-w-0 flex-1 break-words text-sm font-medium text-slate-700",
-          nowrapOnWide ? "leading-8 xl:truncate xl:whitespace-nowrap" : "leading-8",
+          nowrapOnWide ? "leading-6 xl:truncate xl:whitespace-nowrap" : "leading-6",
         )}
       >
         {value}
