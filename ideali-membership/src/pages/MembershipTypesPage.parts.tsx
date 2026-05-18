@@ -202,7 +202,11 @@ export function PendingApprovalCountCell({ membershipTypeUniqueId }: { membershi
     );
   }
 
-  return <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">-</span>;
+  return (
+    <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">
+      No Pending Approvals
+    </span>
+  );
 }
 
 export function renderTenureExpiryCaseLabel(label: string | null) {
@@ -706,9 +710,10 @@ export function MembershipTypeActionsMenu({
                   onMouseLeave={scheduleMemberClose}
                 >
                   <Link
-                    to={`${APP_ROUTES.membershipMembers}?${new URLSearchParams({
-                      membershipTypeUniqueIds: item.value,
-                    }).toString()}`}
+                    to={buildMembershipMembersPath({
+                      membershipStatuses: ["Active"],
+                      membershipTypeUniqueIds: [item.value],
+                    })}
                     onClick={() => {
                       setIsOpen(false);
                       setIsMemberOpen(false);
@@ -716,7 +721,7 @@ export function MembershipTypeActionsMenu({
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                     >
                     <Users className="h-4 w-4" />
-                    Members
+                    Active Members
                   </Link>
 
                   <button
