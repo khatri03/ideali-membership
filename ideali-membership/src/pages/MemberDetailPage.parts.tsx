@@ -11,7 +11,7 @@ type DetailPanelProps = {
 
 type StatCardProps = {
   label: string;
-  value: string;
+  value: ReactNode;
   detail?: string;
   tone?: "slate" | "cyan" | "emerald" | "amber" | "rose";
 };
@@ -51,7 +51,7 @@ export function StatCard({ label, value, detail, tone = "slate" }: StatCardProps
   return (
     <article className={cn("rounded-3xl border p-5 shadow-sm", STAT_TONE_CLASSES[tone])}>
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
       {detail ? <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p> : null}
     </article>
   );

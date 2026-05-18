@@ -96,6 +96,103 @@ export function MembershipInvoiceDetailPage() {
   const timeline = useMemo(() => (invoice ? buildInvoiceTimeline(invoice) : []), [invoice]);
   const latestPaymentDate = invoice ? getLatestPaymentDate(invoice) : null;
   const latestNoteDate = invoice ? getLatestNoteDate(invoice) : null;
+  const discountCouponCode = invoice?.discountCouponCode ?? null;
+  const discountLineItemAmount = Math.abs(invoice?.discountAmount ?? 0);
+  const getLineItemAmount = (item: MembershipInvoiceDetailItem["invoiceItems"][number]) => {
+    if (item.description.startsWith("Discount coupon:")) {
+      return item.total;
+    }
+
+    return item.total + (item.discountAmount ?? 0);
+  };
+
+  const getLineItemRate = (item: MembershipInvoiceDetailItem["invoiceItems"][number]) => {
+    if (item.description === "Sub total" || item.description === "Net Total") {
+      return "—";
+    }
+
+    return formatMembershipInvoiceAmount(item.unitPrice, "$");
+  };
+  const lineItems = useMemo(() => {
+    if (!invoice) {
+      return [];
+    }
+
+    if (!discountCouponCode || discountLineItemAmount <= 0) {
+      return invoice.invoiceItems;
+    }
+
+    const discountLineItem = {
+      description: `Discount coupon: ${discountCouponCode}`,
+      unitPrice: 0,
+      quantity: 1,
+      total: -discountLineItemAmount,
+      invoiceItemStatus: "Applied",
+      discountAmount: null,
+      discountRate: null,
+      taxCharges: {
+        rate: 0,
+        description: "Discount",
+        amount: 0,
+      },
+      serviceCharges: {
+        rate: 0,
+        description: "Discount",
+        amount: 0,
+      },
+      itemType: 0,
+    };
+
+    const isTipLineItem = (item: MembershipInvoiceDetailItem["invoiceItems"][number]) =>
+      item.itemType === 1 || item.description.trim().toLowerCase() === "tip";
+
+    const purchasedItems = invoice.invoiceItems.filter((item) => !isTipLineItem(item));
+    const tipItems = invoice.invoiceItems.filter((item) => isTipLineItem(item));
+    const purchasedSubtotal = purchasedItems.reduce((sum, item) => sum + getLineItemAmount(item), 0);
+    const tipTotal = tipItems.reduce((sum, item) => sum + getLineItemAmount(item), 0);
+    const subtotalLineItem = {
+      description: "Sub total",
+      unitPrice: 0,
+      quantity: 1,
+      total: Math.max(purchasedSubtotal - discountLineItemAmount, 0),
+      invoiceItemStatus: "Applied",
+      discountAmount: null,
+      discountRate: null,
+      taxCharges: {
+        rate: 0,
+        description: "Subtotal",
+        amount: 0,
+      },
+      serviceCharges: {
+        rate: 0,
+        description: "Subtotal",
+        amount: 0,
+      },
+      itemType: 0,
+    };
+    const netTotalLineItem = {
+      description: "Net Total",
+      unitPrice: 0,
+      quantity: 1,
+      total: Math.max(subtotalLineItem.total + tipTotal, 0),
+      invoiceItemStatus: "Applied",
+      discountAmount: null,
+      discountRate: null,
+      taxCharges: {
+        rate: 0,
+        description: "Net total",
+        amount: 0,
+      },
+      serviceCharges: {
+        rate: 0,
+        description: "Net total",
+        amount: 0,
+      },
+      itemType: 0,
+    };
+
+    return [...purchasedItems, discountLineItem, subtotalLineItem, ...tipItems, netTotalLineItem];
+  }, [discountCouponCode, discountLineItemAmount, invoice, getLineItemAmount]);
 
   async function copyInvoiceNumber() {
     if (!invoice) {
@@ -324,30 +421,72 @@ export function MembershipInvoiceDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoice.invoiceItems.map((item, index) => (
+                  {lineItems.map((item, index) => (
                     <tr
                       key={`${item.description}-${index}`}
                       className={cn(
                         "border-b border-slate-200/70",
-                        index % 2 === 0 ? "bg-white" : "bg-slate-50/60",
+                        item.description.startsWith("Discount coupon:")
+                          ? "bg-amber-50/80 text-amber-950"
+                          : item.description === "Sub total"
+                            ? "border-cyan-300 bg-cyan-50/70"
+                            : item.description === "Net Total"
+                              ? "border-slate-300 bg-slate-200/70"
+                            : index % 2 === 0
+                              ? "bg-white"
+                              : "bg-slate-50/60",
                       )}
                     >
                       <td className="px-4 py-3">
-                        <div className="font-medium text-slate-900">{item.description}</div>
-                        <p className="mt-1 text-xs text-slate-500">Status: {item.invoiceItemStatus}</p>
+                        <div
+                          className={cn(
+                            "font-medium",
+                            item.description.startsWith("Discount coupon:")
+                              ? "text-amber-900"
+                              : item.description === "Sub total"
+                                ? "text-cyan-950"
+                                : item.description === "Net Total"
+                                  ? "text-slate-950"
+                                : "text-slate-900",
+                          )}
+                        >
+                          {item.description}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-slate-700">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-slate-700">
-                        {formatMembershipInvoiceAmount(item.unitPrice, "$")}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
-                        {formatMembershipInvoiceAmount(item.taxCharges.amount ?? 0, "$")}
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
-                        {formatMembershipInvoiceAmount(item.serviceCharges.amount ?? 0, "$")}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                        {formatMembershipInvoiceAmount(item.total, "$")}
+                      {item.description.startsWith("Discount coupon:") || item.description === "Sub total" || item.description === "Net Total" ? (
+                        <>
+                          <td className="px-4 py-3 text-right text-slate-700" />
+                          <td className="px-4 py-3 text-right text-slate-700" />
+                          <td className="px-4 py-3 text-right text-slate-700" />
+                          <td className="px-4 py-3 text-right text-slate-700" />
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 text-right text-slate-700">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {getLineItemRate(item)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {formatMembershipInvoiceAmount(item.taxCharges.amount ?? 0, "$")}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            {formatMembershipInvoiceAmount(item.serviceCharges.amount ?? 0, "$")}
+                          </td>
+                        </>
+                      )}
+                      <td
+                        className={cn(
+                          "px-4 py-3 text-right font-semibold",
+                        item.description.startsWith("Discount coupon:")
+                          ? "text-amber-900"
+                          : item.description === "Sub total"
+                            ? "text-cyan-950"
+                            : item.description === "Net Total"
+                              ? "text-slate-950"
+                            : "text-slate-900",
+                      )}
+                      >
+                        {formatMembershipInvoiceAmount(getLineItemAmount(item), "$")}
                       </td>
                     </tr>
                   ))}
@@ -362,82 +501,12 @@ export function MembershipInvoiceDetailPage() {
                 label="Service charges"
                 value={formatMembershipInvoiceAmount(invoice.serviceCharges ?? 0, "$")}
               />
-              <CompactTotal label="Discount" value={formatMembershipInvoiceAmount(invoice.discountAmount ?? 0, "$")} />
             </div>
           </DetailPanel>
 
-          <DetailPanel
-            title="Activity trail"
-          >
-            <div className="space-y-4">
-              {timeline.map((item) => (
-                <article key={`${item.title}-${item.occurredAtUtc}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="text-base font-semibold text-slate-900">{item.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p>
-                    </div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {formatMembershipInvoiceDateLabel(item.occurredAtUtc)}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </DetailPanel>
         </div>
 
         <aside className="space-y-6">
-          <DetailPanel
-            title="Collection snapshot"
-          >
-            <div className="space-y-3">
-              <MiniMetric label="Status" value={getMembershipInvoiceStatusLabel(invoice.invoiceStatus)} />
-              <MiniMetric
-                label="Last payment"
-                value={latestPaymentDate ? formatMembershipInvoiceDateLabel(latestPaymentDate) : "No payments recorded"}
-              />
-              <MiniMetric label="Payment method" value={latestPaymentMethodLabel} />
-              <MiniMetric
-                label="Last note"
-                value={latestNoteDate ? formatMembershipInvoiceDateLabel(latestNoteDate) : "No notes recorded"}
-              />
-              <MiniMetric
-                label="Contact phone"
-                value={invoice.contact?.cellPhone ?? invoice.contact?.workPhone ?? invoice.contact?.homePhone ?? "Not available"}
-              />
-            </div>
-          </DetailPanel>
-
-          <DetailPanel
-            title="Payments"
-          >
-            <div className="space-y-3">
-              {invoice.payments.length > 0 ? (
-                invoice.payments.map((payment) => (
-                  <div key={`${payment.referenceNo ?? payment.createdOnUtc}-${payment.paymentDateUtc}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{payment.paymentMethod}</p>
-                        <p className="mt-1 text-xs text-slate-500">{payment.paymentStatus}</p>
-                      </div>
-                      <p className="text-sm font-semibold text-slate-900">{formatMembershipInvoiceAmount(payment.amount, "$")}</p>
-                    </div>
-                    <div className="mt-3 space-y-1 text-sm leading-6 text-slate-700">
-                      <p>{formatMembershipInvoiceDateLabel(payment.paymentDateUtc)}</p>
-                      {payment.referenceNo ? <p>Reference: {payment.referenceNo}</p> : null}
-                      {payment.note ? <p>{payment.note}</p> : null}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <EmptyStatePanel
-                  title="No payments yet"
-                />
-              )}
-            </div>
-          </DetailPanel>
-
           <DetailPanel
             title="Notes"
           >
@@ -453,23 +522,12 @@ export function MembershipInvoiceDetailPage() {
               ) : (
                 <EmptyStatePanel
                   title="No notes captured"
+                  description="Captured invoice notes will appear here when they are added."
                 />
               )}
             </div>
           </DetailPanel>
 
-          {invoice.logoUrl ? (
-            <DetailPanel title="Branding">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <img
-                  src={invoice.logoUrl}
-                  alt="Organizer logo"
-                  className="h-16 w-auto object-contain"
-                  loading="lazy"
-                />
-              </div>
-            </DetailPanel>
-          ) : null}
         </aside>
       </div>
     </section>
@@ -527,14 +585,17 @@ function HeaderMetaItem({
 function CompactTotal({
   label,
   value,
+  detail,
 }: {
   label: string;
   value: string;
+  detail?: string;
 }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
       <p className="mt-2 text-lg font-semibold text-slate-900">{value}</p>
+      {detail ? <p className="mt-1 text-xs font-medium text-slate-500">{detail}</p> : null}
     </div>
   );
 }

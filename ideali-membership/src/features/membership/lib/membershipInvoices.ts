@@ -354,6 +354,7 @@ function buildInvoiceDetailItem(record: Record<string, unknown>): MembershipInvo
     taxAmount: readNullableNumber(record.TaxAmount ?? record.taxAmount),
     serviceCharges: readNullableNumber(record.ServiceCharges ?? record.serviceCharges),
     discountAmount: readNullableNumber(record.DiscountAmount ?? record.discountAmount),
+    discountCouponCode: readNullableText(record.DiscountCouponCode ?? record.discountCouponCode),
     createdBy: readText(record.CreatedBy ?? record.createdBy),
     createdOnUtc: readText(record.CreatedOnUtc ?? record.createdOnUtc),
     updatedBy: readNullableText(record.UpdatedBy ?? record.updatedBy),
@@ -424,11 +425,19 @@ export function formatMembershipInvoiceContactAddress(contact: MembershipInvoice
     return "Not available";
   }
 
+  const cityStateZipCountry = [
+    contact.address.city,
+    contact.address.state,
+    contact.address.zipCode,
+    contact.address.country,
+  ]
+    .filter((part): part is string => Boolean(part && part.trim().length > 0))
+    .join(", ");
+
   const parts = [
     contact.address.streetLine1,
     contact.address.streetLine2,
-    [contact.address.city, contact.address.state, contact.address.zipCode].filter(Boolean).join(", "),
-    contact.address.country,
+    cityStateZipCountry,
   ]
     .filter((part): part is string => Boolean(part && part.trim().length > 0));
 
