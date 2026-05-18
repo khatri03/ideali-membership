@@ -72,3 +72,35 @@ export function buildCustomFormEditPath(customFormUniqueId: string) {
 export function buildMembershipMemberDetailPath(memberUniqueId: string) {
   return generatePath(APP_ROUTES.membershipMemberDetail as string, { memberUniqueId });
 }
+
+export function buildMembershipMembersPath(query?: {
+  membershipStatuses?: string[];
+  membershipTypeUniqueIds?: string[];
+  pageNo?: number;
+  pageSize?: number;
+}) {
+  const searchParams = new URLSearchParams();
+
+  if (query?.membershipStatuses?.length) {
+    query.membershipStatuses.forEach((membershipStatus) => {
+      searchParams.append("membershipStatuses", membershipStatus);
+    });
+  }
+
+  if (query?.membershipTypeUniqueIds?.length) {
+    query.membershipTypeUniqueIds.forEach((membershipTypeUniqueId) => {
+      searchParams.append("membershipTypeUniqueIds", membershipTypeUniqueId);
+    });
+  }
+
+  if (query?.pageNo) {
+    searchParams.set("pageNo", String(query.pageNo));
+  }
+
+  if (query?.pageSize) {
+    searchParams.set("pageSize", String(query.pageSize));
+  }
+
+  const search = searchParams.toString();
+  return search ? `${APP_ROUTES.membershipMembers}?${search}` : APP_ROUTES.membershipMembers;
+}

@@ -8,6 +8,7 @@ import { MembershipRegisterPage } from "../features/membership/pages/MembershipR
 import { ErrorBoundary } from "../shared/components/ErrorBoundary/ErrorBoundary";
 import {
   APP_ROUTES,
+  buildMembershipMembersPath,
   buildMembershipRegisterPath,
 } from "./router/routes";
 import {
@@ -35,7 +36,6 @@ import {
   MembershipTitleStepPage,
   MembershipTypesPage,
   MembershipWizardResumePage,
-  SimplePage,
 } from "./router/lazyPages";
 
 function PageSpinner() {
@@ -108,13 +108,7 @@ function RouterApp() {
                 <Route path="members/:memberUniqueId" element={<MemberDetailPage />} />
                 <Route
                   path="pending-approvals"
-                  element={
-                    <SimplePage
-                      title="Pending Approvals"
-                      badgeLabel="Soon"
-                      description="Pending approvals are coming soon. This area will handle review and approval workflows."
-                    />
-                  }
+                  element={<Navigate to={buildMembershipMembersPath({ membershipStatuses: ["PendingApproval"] })} replace />}
                 />
               </Route>
               <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />

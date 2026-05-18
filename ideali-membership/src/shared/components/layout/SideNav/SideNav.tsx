@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { APP_ROUTES } from "../../../../routes";
+import { APP_ROUTES, buildMembershipMembersPath } from "../../../../routes";
 
 interface SideNavProps {
   onNavigate: () => void;
@@ -12,11 +12,42 @@ interface MembershipNavItem {
   comingSoon?: boolean;
 }
 
+function isMembershipNavItemActive(item: MembershipNavItem, locationPathname: string, locationSearch: string) {
+  const itemPath = item.to.split("?")[0];
+
+  if (item.label === "Pending Approvals") {
+    if (locationPathname !== APP_ROUTES.membershipMembers) {
+      return false;
+    }
+
+    const searchParams = new URLSearchParams(locationSearch);
+    return searchParams.getAll("membershipStatuses").some((value) => value === "PendingApproval");
+  }
+
+  if (item.label === "Members") {
+    if (locationPathname !== APP_ROUTES.membershipMembers) {
+      return false;
+    }
+
+    const searchParams = new URLSearchParams(locationSearch);
+    const isPendingApprovalsShortcut = searchParams
+      .getAll("membershipStatuses")
+      .some((value) => value === "PendingApproval");
+
+    return !isPendingApprovalsShortcut;
+  }
+
+  return locationPathname === itemPath;
+}
+
 const membershipItems: MembershipNavItem[] = [
   { label: "Dashboard", to: APP_ROUTES.membershipDashboard },
   { label: "Types", to: APP_ROUTES.membershipTypes },
-  { label: "Members", to: APP_ROUTES.membershipMembers, comingSoon: true },
-  { label: "Pending Approvals", to: APP_ROUTES.membershipPendingApprovals, comingSoon: true },
+  { label: "Members", to: APP_ROUTES.membershipMembers },
+  {
+    label: "Pending Approvals",
+    to: buildMembershipMembersPath({ membershipStatuses: ["PendingApproval"] }),
+  },
 ];
 
 export function SideNav({ onNavigate }: SideNavProps) {
@@ -75,18 +106,20 @@ export function SideNav({ onNavigate }: SideNavProps) {
                 <NavLink
                   key={item.label}
                   to={item.to}
-                  end={item.to === APP_ROUTES.membershipDashboard}
                   onClick={onNavigate}
-                  className={({ isActive }) =>
+                  className={() =>
                     [
                       "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
-                      isActive
+                      isMembershipNavItemActive(item, location.pathname, location.search)
                         ? "bg-cyan-500/10 text-cyan-800"
                         : "text-slate-700 hover:bg-slate-100",
                     ].join(" ")
                   }
                 >
-                  {({ isActive }) => (
+                  {() => {
+                    const isActive = isMembershipNavItemActive(item, location.pathname, location.search);
+
+                    return (
                     <>
                       <span>{item.label}</span>
                       {item.comingSoon ? (
@@ -100,7 +133,8 @@ export function SideNav({ onNavigate }: SideNavProps) {
                         </span>
                       ) : null}
                     </>
-                  )}
+                    );
+                  }}
                 </NavLink>
               ))}
             </div>
