@@ -654,7 +654,7 @@ export function MembershipTypeActionsMenu({
                 >
                   <Link
                     to={`${APP_ROUTES.membershipMembers}?${new URLSearchParams({
-                      membershipTypeUniqueId: item.value,
+                      membershipTypeUniqueIds: item.value,
                     }).toString()}`}
                     onClick={() => {
                       setIsOpen(false);

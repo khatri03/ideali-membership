@@ -25,6 +25,10 @@ type MembersFiltersProps = {
   onDraftSearchTermChange: (value: string) => void;
 };
 
+function normalizeUniqueIds(values: string[]) {
+  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))].sort();
+}
+
 export function MembersFilters({
   membershipStatusOptions,
   draftMembershipStatuses,
@@ -86,7 +90,11 @@ export function MembersFilters({
               Membership Types
             </label>
             <MultiSelectInput
-              value={draftMembershipTypeUniqueIds}
+              value={
+                hasPendingFilterChanges
+                  ? normalizeUniqueIds(draftMembershipTypeUniqueIds)
+                  : normalizeUniqueIds(selectedMembershipTypeUniqueIds)
+              }
               onChange={onDraftMembershipTypeUniqueIdsChange}
               options={membershipTypeOptions}
               placeholder="All membership types"

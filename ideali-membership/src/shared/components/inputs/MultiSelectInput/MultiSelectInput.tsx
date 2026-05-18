@@ -16,6 +16,10 @@ type MultiSelectInputProps = {
   onBlur?: () => void;
 };
 
+function normalizeOptionValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
 const selectStyles: StylesConfig<MultiSelectOption, true> = {
   control: (base, state) => ({
     ...base,
@@ -121,7 +125,8 @@ export function MultiSelectInput({
   inputId,
   onBlur,
 }: MultiSelectInputProps) {
-  const selectedOptions = options.filter((option) => value.includes(option.value));
+  const selectedValueSet = new Set(value.map(normalizeOptionValue));
+  const selectedOptions = options.filter((option) => selectedValueSet.has(normalizeOptionValue(option.value)));
 
   return (
     <Select<MultiSelectOption, true>
