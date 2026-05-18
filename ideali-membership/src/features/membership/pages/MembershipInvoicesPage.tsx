@@ -20,6 +20,12 @@ export function MembershipInvoicesPage() {
     selectedStatusFilters,
     selectedMembershipTypeUniqueIds,
     draftStatusFilters,
+    draftPaymentMethodFilters,
+    draftInvoiceDateFrom,
+    draftInvoiceDateTo,
+    selectedPaymentMethodFilters,
+    selectedInvoiceDateFrom,
+    selectedInvoiceDateTo,
     defaultStatusFilters,
     hasPendingFilterChanges,
     isMembershipTypesLoading,
@@ -29,11 +35,15 @@ export function MembershipInvoicesPage() {
     totalRecordsCount,
     membershipTypeOptions,
     membershipInvoiceStatusOptions,
+    paymentMethodOptions,
     isLoading,
     error,
     setDraftSearchTerm,
     setDraftMembershipTypeUniqueIds,
     setDraftStatusFilters,
+    setDraftPaymentMethodFilters,
+    setDraftInvoiceDateFrom,
+    setDraftInvoiceDateTo,
     applyFilters,
     clearFilters,
     setSortBy,
@@ -128,20 +138,30 @@ export function MembershipInvoicesPage() {
             draftSearchTerm={draftSearchTerm}
             draftMembershipTypeUniqueIds={draftMembershipTypeUniqueIds}
             draftStatusFilters={draftStatusFilters}
+            draftPaymentMethodFilters={draftPaymentMethodFilters}
+            draftInvoiceDateFrom={draftInvoiceDateFrom}
+            draftInvoiceDateTo={draftInvoiceDateTo}
             hasPendingFilterChanges={hasPendingFilterChanges}
             isMembershipTypesLoading={isMembershipTypesLoading}
             isInvoicesFetching={isLoading}
             selectedSearchTerm={searchTerm}
             selectedMembershipTypeUniqueIds={selectedMembershipTypeUniqueIds}
             selectedStatusFilters={selectedStatusFilters}
+            selectedPaymentMethodFilters={selectedPaymentMethodFilters}
+            selectedInvoiceDateFrom={selectedInvoiceDateFrom}
+            selectedInvoiceDateTo={selectedInvoiceDateTo}
             defaultStatusFilters={defaultStatusFilters}
             membershipTypeOptions={membershipTypeOptions}
             statusOptions={membershipInvoiceStatusOptions}
+            paymentMethodOptions={paymentMethodOptions}
             onApplyFilters={applyFilters}
             onClearFilters={clearFilters}
             onDraftSearchTermChange={setDraftSearchTerm}
             onDraftMembershipTypeUniqueIdsChange={setDraftMembershipTypeUniqueIds}
             onDraftStatusFiltersChange={(value) => setDraftStatusFilters(value as typeof selectedStatusFilters)}
+            onDraftPaymentMethodFiltersChange={(value) => setDraftPaymentMethodFilters(value as typeof selectedPaymentMethodFilters)}
+            onDraftInvoiceDateFromChange={setDraftInvoiceDateFrom}
+            onDraftInvoiceDateToChange={setDraftInvoiceDateTo}
           />
 
           {error ? (
@@ -195,6 +215,7 @@ export function MembershipInvoicesPage() {
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
                           <InfoTile label="Invoice Date/Time" value={formatMembershipInvoiceDateLabel(invoice.invoiceDateUtc)} />
+                          <InfoTile label="Payment Method" value={invoice.paymentMethod ?? "Not available"} />
                           <InfoTile label="Total" value={formatMembershipInvoiceAmount(invoice.totalAmount, invoice.currencySymbol)} />
                         </div>
 

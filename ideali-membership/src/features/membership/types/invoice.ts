@@ -6,6 +6,15 @@ export type MembershipInvoiceStatus =
   | "Refund"
   | "AdjustedInSystem";
 
+export type MembershipInvoicePaymentMethod =
+  | "CreditCard"
+  | "ElectronicCheck"
+  | "Cheque"
+  | "Ach"
+  | "Pad"
+  | "TapToPay"
+  | "WalletPay";
+
 export type MembershipInvoiceSortBy =
   | "invoiceNumber"
   | "memberName"
@@ -30,6 +39,7 @@ export interface MembershipInvoiceListItem {
   serviceCharges: number | null;
   totalAmount: number;
   balanceAmount: number | null;
+  paymentMethod: string | null;
   currencySymbol: string;
   lastActivityUtc: string | null;
   quickBooksInvoiceId: string | null;

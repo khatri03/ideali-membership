@@ -163,6 +163,7 @@ export function MembershipInvoiceDetailPage() {
   const billingAddress = formatMembershipInvoiceContactAddress(invoice.contact);
   const invoiceContextName = invoice.invoiceContext?.name ?? "Membership invoice";
   const memberUniqueId = invoice.invoiceContext?.memberUniqueId ?? null;
+  const latestPaymentMethodLabel = getMembershipInvoicePaymentMethodLabel(invoice);
   const outstandingBalance = invoice.balanceAmount ?? 0;
   const subtotal = Math.max((invoice.invoiceAmount ?? 0) - (invoice.taxAmount ?? 0) - (invoice.serviceCharges ?? 0) + (invoice.discountAmount ?? 0), 0);
 
@@ -198,6 +199,11 @@ export function MembershipInvoiceDetailPage() {
                     label={getMembershipInvoiceStatusLabel(invoice.invoiceStatus)}
                     tone={getMembershipInvoiceStatusTone(invoice.invoiceStatus)}
                   />
+                  {latestPaymentMethodLabel !== "Not available" ? (
+                    <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800">
+                      Payment: {latestPaymentMethodLabel}
+                    </span>
+                  ) : null}
                   {memberUniqueId ? (
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                       Member linked
@@ -431,7 +437,7 @@ export function MembershipInvoiceDetailPage() {
                 label="Last payment"
                 value={latestPaymentDate ? formatMembershipInvoiceDateLabel(latestPaymentDate) : "No payments recorded"}
               />
-              <MiniMetric label="Latest payment method" value={getMembershipInvoicePaymentMethodLabel(invoice)} />
+              <MiniMetric label="Payment method" value={latestPaymentMethodLabel} />
               <MiniMetric
                 label="Last note"
                 value={latestNoteDate ? formatMembershipInvoiceDateLabel(latestNoteDate) : "No notes recorded"}

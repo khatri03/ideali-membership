@@ -8,11 +8,33 @@ import type {
   MembershipInvoiceDetailPayment,
   MembershipInvoiceDetailNote,
   MembershipInvoiceDetailContext,
+  MembershipInvoicePaymentMethod,
   MembershipInvoiceListItem,
   MembershipInvoiceSortBy,
   MembershipInvoiceStatus,
 } from "../types/invoice";
 import type { PageResult } from "../types/membership";
+import type { MembersFilterOption } from "../components/MembersFilters";
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CreditCard: "Debit/Credit Card",
+  ElectronicCheck: "Electronic Check",
+  Cheque: "Cheque",
+  Ach: "ACH-USD",
+  Pad: "PAD-CAD",
+  TapToPay: "Tap to Pay",
+  WalletPay: "Apple/Google Pay",
+};
+
+const PAYMENT_METHOD_ID_TO_NAME: Record<number, keyof typeof PAYMENT_METHOD_LABELS> = {
+  1: "CreditCard",
+  2: "ElectronicCheck",
+  3: "Cheque",
+  4: "Ach",
+  5: "Pad",
+  6: "TapToPay",
+  7: "WalletPay",
+};
 
 function readNullableText(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
@@ -28,6 +50,33 @@ function readRecord(value: unknown) {
 
 function readList(value: unknown) {
   return Array.isArray(value) ? value : [];
+}
+
+function readPaymentMethodLabel(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const name = PAYMENT_METHOD_ID_TO_NAME[value];
+    return name ? PAYMENT_METHOD_LABELS[name] ?? null : null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (PAYMENT_METHOD_LABELS[trimmed]) {
+      return PAYMENT_METHOD_LABELS[trimmed] ?? null;
+    }
+
+    const matchedName = Object.entries(PAYMENT_METHOD_LABELS).find(([, label]) => label === trimmed)?.[0];
+    return matchedName ? PAYMENT_METHOD_LABELS[matchedName] ?? null : trimmed;
+  }
+
+  return null;
+}
+
+export function formatMembershipInvoicePaymentMethodLabel(value: unknown) {
+  return readPaymentMethodLabel(value) ?? "Not available";
 }
 
 function readStatus(value: unknown): string {
@@ -47,6 +96,9 @@ function buildQueryString(
   pageNo: number,
   pageSize: number,
   status?: MembershipInvoiceStatus[] | "All" | null,
+  paymentMethods?: MembershipInvoicePaymentMethod[] | null,
+  invoiceDateFrom?: string | null,
+  invoiceDateTo?: string | null,
   searchTerm?: string | null,
   sortBy?: MembershipInvoiceSortBy | null,
   sortOrder?: "asc" | "desc" | null,
@@ -59,6 +111,18 @@ function buildQueryString(
 
   if (Array.isArray(status) && status.length > 0) {
     status.forEach((item) => searchParams.append("status", item));
+  }
+
+  if (Array.isArray(paymentMethods) && paymentMethods.length > 0) {
+    paymentMethods.forEach((item) => searchParams.append("paymentMethods", item));
+  }
+
+  if (invoiceDateFrom) {
+    searchParams.set("invoiceDateFrom", invoiceDateFrom);
+  }
+
+  if (invoiceDateTo) {
+    searchParams.set("invoiceDateTo", invoiceDateTo);
   }
 
   const normalizedSearchTerm = searchTerm?.trim();
@@ -211,7 +275,7 @@ function readPayments(value: unknown): MembershipInvoiceDetailPayment[] {
 
       return {
         amount: readNumber(record.Amount ?? record.amount) ?? 0,
-        paymentMethod: readText(record.PaymentMethod ?? record.paymentMethod),
+        paymentMethod: formatMembershipInvoicePaymentMethodLabel(record.PaymentMethod ?? record.paymentMethod),
         paymentStatus: readText(record.PaymentStatus ?? record.paymentStatus),
         referenceNo: readNullableText(record.ReferenceNo ?? record.referenceNo),
         note: readNullableText(record.Note ?? record.note),
@@ -226,6 +290,33 @@ function readPayments(value: unknown): MembershipInvoiceDetailPayment[] {
 function buildCurrencySymbol(value: unknown) {
   const text = readText(value).trim().toUpperCase();
   return text === "CAD" ? "C$" : "$";
+}
+
+function readPaymentMethodOptions(value: unknown): MembersFilterOption[] {
+  return readList(value)
+    .map((item): MembersFilterOption | null => {
+      const record = readRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      const enumName = readText(record.Text ?? record.text);
+      const numericValue = readNullableNumber(record.Value ?? record.value);
+      const valueFromId = numericValue !== null ? PAYMENT_METHOD_ID_TO_NAME[numericValue] ?? null : null;
+      const optionValue = enumName || valueFromId;
+      const label = formatMembershipInvoicePaymentMethodLabel(enumName || valueFromId);
+
+      if (!label || !optionValue) {
+        return null;
+      }
+
+      return {
+        label,
+        value: optionValue,
+      };
+    })
+    .filter((item): item is MembersFilterOption => item !== null)
+    .sort((left, right) => left.label.localeCompare(right.label));
 }
 
 function buildInvoiceListItem(record: Record<string, unknown>): MembershipInvoiceListItem {
@@ -243,6 +334,7 @@ function buildInvoiceListItem(record: Record<string, unknown>): MembershipInvoic
     serviceCharges: readNullableNumber(record.ServiceCharges ?? record.serviceCharges),
     totalAmount: readNumber(record.TotalAmount ?? record.totalAmount) ?? 0,
     balanceAmount: readNullableNumber(record.BalanceAmount ?? record.balanceAmount),
+    paymentMethod: readPaymentMethodLabel(record.PaymentMethod ?? record.paymentMethod) ?? null,
     currencySymbol: buildCurrencySymbol(record.CurrencySymbol ?? record.currencySymbol),
     lastActivityUtc: readNullableText(record.LastActivityUtc ?? record.lastActivityUtc),
     quickBooksInvoiceId: readNullableText(record.QuickBooksInvoiceId ?? record.quickBooksInvoiceId),
@@ -360,13 +452,27 @@ export async function fetchMembershipInvoices(
   pageNo: number,
   pageSize: number,
   status?: MembershipInvoiceStatus[] | "All" | null,
+  paymentMethods?: MembershipInvoicePaymentMethod[] | null,
+  invoiceDateFrom?: string | null,
+  invoiceDateTo?: string | null,
   searchTerm?: string | null,
   sortBy?: MembershipInvoiceSortBy | null,
   sortOrder?: "asc" | "desc" | null,
   membershipTypeUniqueIds?: string[] | null,
 ) {
   const payload = await getJson<unknown>(
-    `/api/invoice/membership/list?${buildQueryString(pageNo, pageSize, status, searchTerm, sortBy, sortOrder, membershipTypeUniqueIds)}`,
+    `/api/invoice/membership/list?${buildQueryString(
+      pageNo,
+      pageSize,
+      status,
+      paymentMethods,
+      invoiceDateFrom,
+      invoiceDateTo,
+      searchTerm,
+      sortBy,
+      sortOrder,
+      membershipTypeUniqueIds,
+    )}`,
   );
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
@@ -402,6 +508,13 @@ export async function fetchMembershipInvoiceStatusOptions() {
 
     return [{ label, value }];
   });
+}
+
+export async function fetchMembershipInvoicePaymentMethodOptions() {
+  const payload = await getJson<unknown>("/api/admin/list-items/payment-methods");
+  const responseData = readResponseData(payload);
+
+  return readPaymentMethodOptions(responseData);
 }
 
 export async function fetchMembershipInvoiceDetail(invoiceUniqueId: string) {

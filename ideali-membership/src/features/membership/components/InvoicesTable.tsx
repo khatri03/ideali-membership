@@ -4,10 +4,15 @@ import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { buildMembershipInvoiceDetailPath, buildMembershipMemberDetailPath } from "../../../routes";
 import { cn } from "../../../lib/utils";
-import { formatMembershipInvoiceAmount, formatMembershipInvoiceDateLabel } from "../lib/membershipInvoices";
+import {
+  formatMembershipInvoiceAmount,
+  formatMembershipInvoiceDateLabel,
+  formatMembershipInvoicePaymentMethodLabel,
+  getMembershipInvoiceStatusLabel,
+  getMembershipInvoiceStatusTone,
+} from "../lib/membershipInvoices";
 import type { MembershipInvoiceListItem, MembershipInvoiceSortBy } from "../types/invoice";
 import { StatusPill } from "../../../pages/MemberDetailPage.parts";
-import { getMembershipInvoiceStatusLabel, getMembershipInvoiceStatusTone } from "../lib/membershipInvoices";
 
 type InvoicesTableProps = {
   invoices: MembershipInvoiceListItem[];
@@ -16,6 +21,13 @@ type InvoicesTableProps = {
   sortOrder?: "asc" | "desc";
   onSort: (sortBy: MembershipInvoiceSortBy) => void;
   onClearSort: () => void;
+};
+
+type InvoiceTableColumn = {
+  label: string;
+  key?: MembershipInvoiceSortBy;
+  align?: "right";
+  sortable?: boolean;
 };
 
 function DotsIcon() {
@@ -163,6 +175,9 @@ function SkeletonRow() {
         </div>
       </td>
       <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
+        <div className="h-6 w-32 animate-pulse rounded-full bg-slate-200/80" />
+      </td>
+      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
         <div className="h-4 w-36 animate-pulse rounded-full bg-slate-200/80" />
       </td>
       <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
@@ -183,10 +198,11 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
     () => [
       { label: "Invoice", key: "invoiceNumber" as const },
       { label: "Member", key: "memberName" as const },
+      { label: "Payment Method", sortable: false },
       { label: "Status", key: "status" as const },
       { label: "Invoice Date/Time", key: "invoiceDateUtc" as const },
       { label: "Total", key: "totalAmount" as const, align: "right" as const },
-    ],
+    ] satisfies InvoiceTableColumn[],
     [],
   );
 
@@ -228,7 +244,7 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                 </span>
               </th>
               {columns.map((column) => {
-                const active = sortBy === column.key;
+                const active = column.sortable !== false && column.key ? sortBy === column.key : false;
                 return (
                   <th
                     key={column.label}
@@ -238,18 +254,24 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                       column.align === "right" ? "text-right" : "text-left",
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => onSort(column.key)}
-                      title={getSortTooltip(column.key, column.label)}
-                      className={cn(
-                        "inline-flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700",
-                        column.align === "right" ? "justify-end" : "justify-start",
-                      )}
-                    >
-                      {column.label}
-                      <SortIcon active={active} order={sortOrder ?? "asc"} />
-                    </button>
+                    {column.sortable === false || !column.key ? (
+                      <span className="inline-flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700">
+                        {column.label}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onSort(column.key)}
+                        title={getSortTooltip(column.key, column.label)}
+                        className={cn(
+                          "inline-flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700",
+                          column.align === "right" ? "justify-end" : "justify-start",
+                        )}
+                      >
+                        {column.label}
+                        <SortIcon active={active} order={sortOrder ?? "asc"} />
+                      </button>
+                    )}
                   </th>
                 );
               })}
@@ -295,6 +317,11 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                     </div>
                   </td>
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
+                    <span className="text-sm font-medium text-slate-700">
+                      {formatMembershipInvoicePaymentMethodLabel(invoice.paymentMethod)}
+                    </span>
+                  </td>
+                  <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
                     <StatusPill
                       label={getMembershipInvoiceStatusLabel(invoice.invoiceStatus)}
                       tone={getMembershipInvoiceStatusTone(invoice.invoiceStatus)}
@@ -310,7 +337,7 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-500">
+                <td colSpan={7} className="px-6 py-8 text-center text-sm text-slate-500">
                   No invoices found.
                 </td>
               </tr>
