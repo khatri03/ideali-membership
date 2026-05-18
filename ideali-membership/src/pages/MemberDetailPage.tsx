@@ -248,7 +248,7 @@ export function MemberDetailPage() {
           <div
             role="tablist"
             aria-label="Member detail tabs"
-            className="flex w-full flex-wrap items-stretch gap-2 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-2"
+            className="flex w-full items-end overflow-x-auto border-b border-slate-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <button
               type="button"
@@ -256,12 +256,13 @@ export function MemberDetailPage() {
               aria-selected={isMemberDetailTabActive}
               onClick={() => setActiveDetailTabId(MEMBER_DETAIL_TAB_ID)}
               className={cn(
-                "inline-flex min-w-[12rem] flex-1 basis-0 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-center transition",
+                "inline-flex flex-1 items-center justify-center gap-2 rounded-t-lg px-4 py-2.5 text-sm transition-colors duration-150",
                 isMemberDetailTabActive
-                  ? "bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-200"
-                  : "text-slate-600 hover:bg-white hover:text-slate-900",
+                  ? "-mb-px border-x border-b border-t-2 border-x-slate-200 border-b-white border-t-cyan-600 bg-white font-semibold text-slate-900"
+                  : "border border-transparent font-medium text-slate-500 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-700",
               )}
             >
+              <UserRound size={14} className="shrink-0" />
               <span>Member Detail</span>
             </button>
 
@@ -272,15 +273,15 @@ export function MemberDetailPage() {
                 <button
                   key={section.id}
                   type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActiveDetailTabId(section.id)}
-                className={cn(
-                  "inline-flex min-w-[12rem] flex-1 basis-0 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-center transition",
-                  isActive
-                    ? "bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-200"
-                    : "text-slate-600 hover:bg-white hover:text-slate-900",
-                )}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveDetailTabId(section.id)}
+                  className={cn(
+                    "inline-flex flex-1 items-center justify-center gap-2 rounded-t-lg px-4 py-2.5 text-sm transition-colors duration-150",
+                    isActive
+                      ? "-mb-px border-x border-b border-t-2 border-x-slate-200 border-b-white border-t-cyan-600 bg-white font-semibold text-slate-900"
+                      : "border border-transparent font-medium text-slate-500 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-700",
+                  )}
                 >
                   <span>{section.title}</span>
                 </button>
