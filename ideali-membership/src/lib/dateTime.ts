@@ -2,12 +2,13 @@ export function formatUtcToLocalDateTime(
   value: string | null,
   options?: {
     locale?: string;
-    timeZone?: string;
+    timeZone?: string | null;
     includeSeconds?: boolean;
+    fallbackLabel?: string;
   },
 ) {
   if (!value) {
-    return "No expiry";
+    return options?.fallbackLabel ?? "No expiry";
   }
 
   const parsedDate = parseUtcDate(value);
@@ -16,8 +17,7 @@ export function formatUtcToLocalDateTime(
   }
 
   const locale = options?.locale ?? "en-GB";
-  const timeZone = options?.timeZone ?? "Asia/Karachi";
-  const parts = new Intl.DateTimeFormat(locale, {
+  const dateFormatOptions: Intl.DateTimeFormatOptions = {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -25,8 +25,13 @@ export function formatUtcToLocalDateTime(
     minute: "2-digit",
     second: options?.includeSeconds ? "2-digit" : undefined,
     hour12: true,
-    timeZone,
-  }).formatToParts(parsedDate);
+  };
+
+  if (options?.timeZone !== null) {
+    dateFormatOptions.timeZone = options?.timeZone ?? "Asia/Karachi";
+  }
+
+  const parts = new Intl.DateTimeFormat(locale, dateFormatOptions).formatToParts(parsedDate);
 
   const day = parts.find((item) => item.type === "day")?.value ?? "";
   const month = parts.find((item) => item.type === "month")?.value ?? "";

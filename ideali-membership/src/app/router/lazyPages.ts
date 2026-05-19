@@ -15,6 +15,12 @@ export const MembersPage = React.lazy(() =>
 export const MemberDetailPage = React.lazy(() =>
   import("../../features/membership/pages/MemberDetailPage").then((m) => ({ default: m.MemberDetailPage })),
 );
+export const MembershipInvoicesPage = React.lazy(() =>
+  import("../../features/membership/pages/MembershipInvoicesPage").then((m) => ({ default: m.MembershipInvoicesPage })),
+);
+export const MembershipInvoiceDetailPage = React.lazy(() =>
+  import("../../features/membership/pages/MembershipInvoiceDetailPage").then((m) => ({ default: m.MembershipInvoiceDetailPage })),
+);
 export const CustomFormsPage = React.lazy(() =>
   import("../../pages/CustomFormsPage").then((m) => ({ default: m.CustomFormsPage })),
 );

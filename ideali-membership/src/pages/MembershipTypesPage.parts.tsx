@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Badge, Box, HStack, Menu, Portal, Stack, Table, Text } from "@chakra-ui/react";
-import { BadgeInfo, Check, ChevronRight, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
+import { BadgeInfo, Check, ChevronRight, FileText, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
