@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { NavLink, useLocation } from "react-router-dom";
 import { APP_ROUTES, buildMembershipMembersPath } from "../../../../routes";
 import {
@@ -75,150 +76,171 @@ export function SideNav({ onNavigate }: SideNavProps) {
   }, [isMembershipRoute]);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 w-72 border-r border-slate-200 bg-white/95 p-5 shadow-xl lg:sticky lg:top-[73px] lg:h-[calc(100vh-73px)] lg:shadow-none">
-      <div className="flex items-center justify-between lg:hidden">
-        <p className="text-sm font-semibold tracking-[0.2em] text-cyan-700 uppercase">
+    <Box
+      as="aside"
+      position={{ base: "fixed", lg: "sticky" }}
+      top={{ lg: "88px" }}
+      left={0}
+      zIndex={40}
+      w={{ base: "18rem", lg: "20rem" }}
+      maxH={{ base: "100vh", lg: "calc(100vh - 88px)" }}
+      overflowY="auto"
+      rounded="3xl"
+      borderWidth="1px"
+      borderColor="slate.200"
+      bg="whiteAlpha.950"
+      p={6}
+      shadow={{ base: "2xl", lg: "sm" }}
+      backdropFilter="blur(18px)"
+    >
+      <HStack justify="space-between" display={{ base: "flex", lg: "none" }}>
+        <Text fontSize="sm" fontWeight="semibold" letterSpacing="0.18em" color="cyan.800" textTransform="uppercase">
           Navigation
-        </p>
-        <button
-          type="button"
-          onClick={onNavigate}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600"
-        >
+        </Text>
+        <Button size="sm" variant="outline" rounded="full" borderColor="slate.200" color="slate.600" onClick={onNavigate}>
           Close
-        </button>
-      </div>
+        </Button>
+      </HStack>
 
-      <nav className="mt-6 space-y-3 lg:mt-0">
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-2">
-          <button
-            type="button"
-            onClick={() => setIsMembershipExpanded((current) => !current)}
-            className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-white"
+      <Stack gap={3} mt={{ base: 6, lg: 0 }}>
+        <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="slate.50" p={2}>
+              <Button
+                type="button"
+                onClick={() => setIsMembershipExpanded((current) => !current)}
+                w="full"
+                justifyContent="space-between"
+                rounded="2xl"
+            variant="ghost"
+            px={3}
+            py={3}
+            fontSize="sm"
+            fontWeight="semibold"
+            color="slate.900"
             aria-expanded={isMembershipExpanded}
             aria-controls="membership-nav-group"
+            _hover={{ bg: "white" }}
           >
             <span>Membership</span>
-            <span
-              className={[
-                "text-slate-500 transition-transform",
-                isMembershipExpanded ? "rotate-180" : "",
-              ].join(" ")}
-              aria-hidden="true"
+            <Text
+              as="span"
+              color="slate.500"
+              transform={isMembershipExpanded ? "rotate(180deg)" : "rotate(0deg)"}
+              transition="transform 0.2s ease"
             >
               v
-            </span>
-          </button>
+            </Text>
+          </Button>
 
           {isMembershipExpanded ? (
-            <div
-              id="membership-nav-group"
-              className="mt-2 space-y-2"
-            >
+            <Stack id="membership-nav-group" gap={2} mt={2}>
               {membershipItems.map((item) => (
-                <NavLink
-                  key={item.label}
-                  to={item.to}
-                  onClick={onNavigate}
-                  className={() =>
-                    [
-                      "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
-                      isMembershipNavItemActive(item, location.pathname, location.search)
-                        ? "bg-cyan-500/10 text-cyan-800"
-                        : "text-slate-700 hover:bg-slate-100",
-                    ].join(" ")
-                  }
-                >
+                <NavLink key={item.label} to={item.to} onClick={onNavigate}>
                   {() => {
                     const isActive = isMembershipNavItemActive(item, location.pathname, location.search);
                     const isPendingApprovalsItem = item.label === "Pending Approvals";
 
                     return (
-                      <>
-                        <span>{item.label}</span>
-                        {isPendingApprovalsItem && pendingApprovalCount > 0 ? (
-                          <span className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                            {pendingApprovalCount}
-                          </span>
-                        ) : null}
-                        {item.comingSoon ? (
-                          <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                            Soon
-                          </span>
-                        ) : null}
-                        {isActive ? (
-                          <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                            Active
-                          </span>
-                        ) : null}
-                      </>
+                      <HStack
+                        justify="space-between"
+                        rounded="2xl"
+                        px={4}
+                        py={3}
+                        fontSize="sm"
+                        fontWeight="medium"
+                        transition="all 0.2s ease"
+                        bg={isActive ? "cyan.50" : "transparent"}
+                        color={isActive ? "cyan.800" : "slate.700"}
+                        _hover={{ bg: isActive ? "cyan.50" : "slate.100" }}
+                      >
+                        <Text>{item.label}</Text>
+                        <HStack gap={2}>
+                          {isPendingApprovalsItem && pendingApprovalCount > 0 ? (
+                            <Badge rounded="full" px={2} py={0.5} bg="amber.100" color="amber.700" fontSize="10px">
+                              {pendingApprovalCount}
+                            </Badge>
+                          ) : null}
+                          {item.comingSoon ? (
+                            <Badge rounded="full" px={2} py={0.5} bg="amber.100" color="amber.700" fontSize="10px">
+                              Soon
+                            </Badge>
+                          ) : null}
+                          {isActive ? (
+                            <Badge rounded="full" px={2} py={0.5} bg="cyan.500" color="white" fontSize="10px">
+                              Active
+                            </Badge>
+                          ) : null}
+                        </HStack>
+                      </HStack>
                     );
                   }}
                 </NavLink>
               ))}
-            </div>
+            </Stack>
           ) : null}
-        </div>
+        </Box>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
-          <NavLink
-            to={APP_ROUTES.customForms}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              [
-                "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
-                isActive
-                  ? "bg-cyan-500/10 text-cyan-800"
-                  : "text-slate-700 hover:bg-slate-100",
-              ].join(" ")
-            }
-          >
+        <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="white" p={2} shadow="sm">
+          <NavLink to={APP_ROUTES.customForms} onClick={onNavigate}>
             {({ isActive }) => (
-              <>
-                <span>Custom Forms</span>
+              <HStack
+                justify="space-between"
+                rounded="2xl"
+                px={4}
+                py={3}
+                fontSize="sm"
+                fontWeight="medium"
+                transition="all 0.2s ease"
+                bg={isActive ? "cyan.50" : "transparent"}
+                color={isActive ? "cyan.800" : "slate.700"}
+                _hover={{ bg: isActive ? "cyan.50" : "slate.100" }}
+              >
+                <Text>Custom Forms</Text>
                 {isActive ? (
-                  <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                  <Badge rounded="full" px={2} py={0.5} bg="cyan.500" color="white" fontSize="10px">
                     Active
-                  </span>
+                  </Badge>
                 ) : null}
-              </>
+              </HStack>
             )}
           </NavLink>
-        </div>
+        </Box>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
-          <NavLink
-            to={APP_ROUTES.dndPlayground}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              [
-                "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
-                isActive
-                  ? "bg-cyan-500/10 text-cyan-800"
-                  : "text-slate-700 hover:bg-slate-100",
-              ].join(" ")
-            }
-          >
+        <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="white" p={2} shadow="sm">
+          <NavLink to={APP_ROUTES.dndPlayground} onClick={onNavigate}>
             {({ isActive }) => (
-              <>
-                <span>Dnd Playground</span>
+              <HStack
+                justify="space-between"
+                rounded="2xl"
+                px={4}
+                py={3}
+                fontSize="sm"
+                fontWeight="medium"
+                transition="all 0.2s ease"
+                bg={isActive ? "cyan.50" : "transparent"}
+                color={isActive ? "cyan.800" : "slate.700"}
+                _hover={{ bg: isActive ? "cyan.50" : "slate.100" }}
+              >
+                <Text>Dnd Playground</Text>
                 {isActive ? (
-                  <span className="rounded-full bg-cyan-500 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                  <Badge rounded="full" px={2} py={0.5} bg="cyan.500" color="white" fontSize="10px">
                     Active
-                  </span>
+                  </Badge>
                 ) : null}
-              </>
+              </HStack>
             )}
           </NavLink>
-        </div>
-      </nav>
+        </Box>
+      </Stack>
 
-      <div className="mt-8 rounded-3xl border border-cyan-100 bg-cyan-50 p-4">
-        <p className="text-sm font-semibold text-slate-900">Quick note</p>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+      <Box mt={8} rounded="3xl" borderWidth="1px" borderColor="cyan.100" bg="cyan.50" p={5}>
+        <Text fontSize="sm" fontWeight="semibold" color="slate.900">
+          Quick note
+        </Text>
+        <Box my={3} h="1px" bg="cyan.100" />
+        <Text fontSize="sm" lineHeight="1.7" color="slate.600">
           Keep membership actions grouped together so the structure stays easy to scan.
-        </p>
-      </div>
-    </aside>
+        </Text>
+      </Box>
+    </Box>
   );
 }

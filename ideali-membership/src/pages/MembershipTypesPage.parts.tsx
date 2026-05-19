@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Badge, Box, HStack, Menu, Portal, Stack, Table, Text } from "@chakra-ui/react";
 import { BadgeInfo, Check, ChevronRight, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -443,170 +444,9 @@ export function MembershipTypeActionsMenu({
   item: MembershipTypeListItem;
   onRefresh: () => Promise<void>;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isMemberOpen, setIsMemberOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [memberMenuPosition, setMemberMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
-  const statusMenuRef = useRef<HTMLDivElement>(null);
-  const memberRef = useRef<HTMLDivElement>(null);
-  const memberMenuRef = useRef<HTMLDivElement>(null);
   const confirmModalRef = useRef<HTMLDivElement>(null);
-  const statusCloseTimerRef = useRef<number | null>(null);
-  const memberCloseTimerRef = useRef<number | null>(null);
-
-  function clearStatusCloseTimer() {
-    if (statusCloseTimerRef.current !== null) {
-      window.clearTimeout(statusCloseTimerRef.current);
-      statusCloseTimerRef.current = null;
-    }
-  }
-
-  function scheduleStatusClose() {
-    clearStatusCloseTimer();
-    statusCloseTimerRef.current = window.setTimeout(() => {
-      setIsStatusOpen(false);
-    }, 180);
-  }
-
-  function clearMemberCloseTimer() {
-    if (memberCloseTimerRef.current !== null) {
-      window.clearTimeout(memberCloseTimerRef.current);
-      memberCloseTimerRef.current = null;
-    }
-  }
-
-  function scheduleMemberClose() {
-    clearMemberCloseTimer();
-    memberCloseTimerRef.current = window.setTimeout(() => {
-      setIsMemberOpen(false);
-    }, 180);
-  }
-
-  useEffect(() => {
-    function handleDocumentClick(event: MouseEvent) {
-      const target = event.target as Node;
-      const clickedButton = buttonRef.current?.contains(target) ?? false;
-      const clickedMenu = menuRef.current?.contains(target) ?? false;
-      const clickedStatus = statusRef.current?.contains(target) ?? false;
-      const clickedStatusMenu = statusMenuRef.current?.contains(target) ?? false;
-      const clickedMember = memberRef.current?.contains(target) ?? false;
-      const clickedMemberMenu = memberMenuRef.current?.contains(target) ?? false;
-      const clickedConfirmModal = confirmModalRef.current?.contains(target) ?? false;
-
-      if (
-        !clickedButton &&
-        !clickedMenu &&
-        !clickedStatus &&
-        !clickedStatusMenu &&
-        !clickedMember &&
-        !clickedMemberMenu &&
-        !clickedConfirmModal
-      ) {
-        setIsOpen(false);
-        setIsStatusOpen(false);
-        setIsMemberOpen(false);
-        setPendingStatus(null);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-        setIsStatusOpen(false);
-        setIsMemberOpen(false);
-        setPendingStatus(null);
-      }
-    }
-
-    document.addEventListener("mousedown", handleDocumentClick);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      clearStatusCloseTimer();
-      clearMemberCloseTimer();
-      document.removeEventListener("mousedown", handleDocumentClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  function openMenu() {
-    const buttonRect = buttonRef.current?.getBoundingClientRect();
-    if (!buttonRect) {
-      setIsOpen(true);
-      return;
-    }
-
-    const menuHeight = canShowMemberMenu(item.setupState) && canShowStatusMenu(item.setupState)
-      ? 224
-      : canShowMemberMenu(item.setupState) || canShowStatusMenu(item.setupState)
-        ? 176
-        : 128;
-    const menuWidth = 224;
-    const gap = 8;
-    const spaceBelow = window.innerHeight - buttonRect.bottom;
-    const spaceAbove = buttonRect.top;
-    const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
-
-    setMenuPosition({
-      top: openUpward ? Math.max(gap, buttonRect.top - menuHeight - gap) : buttonRect.bottom + gap,
-      left: Math.max(gap, Math.min(buttonRect.left, window.innerWidth - menuWidth - gap)),
-    });
-    setIsOpen(true);
-    setIsStatusOpen(false);
-    setIsMemberOpen(false);
-    setPendingStatus(null);
-    clearStatusCloseTimer();
-    clearMemberCloseTimer();
-  }
-
-  function openStatusMenu(targetElement: HTMLDivElement | null) {
-    if (!targetElement) {
-      return;
-    }
-
-    const rect = targetElement.getBoundingClientRect();
-    const submenuWidth = 180;
-    const submenuHeight = 96;
-    const gap = 8;
-    const spaceRight = window.innerWidth - rect.right;
-    const spaceLeft = rect.left;
-    const openLeft = spaceRight < submenuWidth + gap && spaceLeft > submenuWidth + gap;
-
-    setStatusMenuPosition({
-      top: Math.max(gap, Math.min(rect.top, window.innerHeight - submenuHeight - gap)),
-      left: openLeft ? rect.left - submenuWidth - gap : rect.right + gap,
-    });
-    setIsStatusOpen(true);
-    clearStatusCloseTimer();
-  }
-
-  function openMemberMenu(targetElement: HTMLDivElement | null) {
-    if (!targetElement) {
-      return;
-    }
-
-    const rect = targetElement.getBoundingClientRect();
-    const submenuWidth = 240;
-    const submenuHeight = 192;
-    const gap = 8;
-    const spaceRight = window.innerWidth - rect.right;
-    const spaceLeft = rect.left;
-    const openLeft = spaceRight < submenuWidth + gap && spaceLeft > submenuWidth + gap;
-
-    setMemberMenuPosition({
-      top: Math.max(gap, Math.min(rect.top, window.innerHeight - submenuHeight - gap)),
-      left: openLeft ? rect.left - submenuWidth - gap : rect.right + gap,
-    });
-    setIsMemberOpen(true);
-    clearMemberCloseTimer();
-  }
 
   async function handleCopyRegistrationLink() {
     const registrationUrl = `${window.location.origin}${buildMembershipRegisterPath(item.value)}`;
@@ -614,8 +454,6 @@ export function MembershipTypeActionsMenu({
     try {
       await navigator.clipboard.writeText(registrationUrl);
       showToast("Registration link copied to clipboard.");
-      setIsOpen(false);
-      setIsMemberOpen(false);
     } catch {
       showToast("Unable to copy the registration link.");
     }
@@ -627,9 +465,6 @@ export function MembershipTypeActionsMenu({
     try {
       await saveMembershipReviewStep({ availableForSignUp }, 11, item.value);
       await onRefresh();
-      setIsOpen(false);
-      setIsStatusOpen(false);
-      setIsMemberOpen(false);
     } finally {
       setIsNavigating(false);
     }
@@ -637,9 +472,6 @@ export function MembershipTypeActionsMenu({
 
   function requestStatusChange(availableForSignUp: boolean) {
     setPendingStatus(availableForSignUp);
-    setIsStatusOpen(false);
-    setIsMemberOpen(false);
-    setIsOpen(false);
   }
 
   function confirmStatusChange() {
@@ -651,210 +483,223 @@ export function MembershipTypeActionsMenu({
   }
 
   return (
-    <div ref={menuRef} className="relative inline-flex">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => {
-          if (isOpen) {
-            setIsOpen(false);
-            return;
-          }
+    <Menu.Root positioning={{ placement: "bottom-start", gutter: 8 }}>
+      <Menu.Trigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+          aria-label={`Open actions for ${item.text}`}
+        >
+          <DotsIcon />
+        </button>
+      </Menu.Trigger>
 
-          openMenu();
-        }}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        aria-label={`Open actions for ${item.text}`}
-      >
-        <DotsIcon />
-      </button>
-
-      {isOpen && menuPosition
-        ? createPortal(
-            <>
-              <div
-                ref={menuRef}
-                className="fixed z-[1000] w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
-                style={{
-                  top: `${menuPosition.top}px`,
-                  left: `${menuPosition.left}px`,
-                }}
-              >
-                <Link
-                  to={buildMembershipWizardStepPath(APP_ROUTES.membershipWizardResume, item.value)}
-                  onClick={() => {
-                    setIsOpen(false);
-                    setIsStatusOpen(false);
-                    setIsMemberOpen(false);
-                    setPendingStatus(null);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-normal text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                >
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content
+            minW="13rem"
+            rounded="xl"
+            borderWidth="1px"
+            borderColor="slate.200"
+            bg="white"
+            p="1.5"
+            shadow="xl"
+          >
+            <Menu.Item
+              value={`edit-${item.value}`}
+              rounded="lg"
+              px="3"
+              py="2.5"
+              color="slate.700"
+              _highlighted={{ bg: "slate.50", color: "slate.950" }}
+              asChild
+            >
+              <Link to={buildMembershipWizardStepPath(APP_ROUTES.membershipWizardResume, item.value)}>
+                <HStack gap="2.5">
                   <EditIcon />
-                  Edit
-                </Link>
+                  <Text fontSize="sm" fontWeight="medium">Edit</Text>
+                </HStack>
+              </Link>
+            </Menu.Item>
 
-                {canShowMemberMenu(item.setupState) ? (
-                  <div
-                    ref={memberRef}
-                    className="relative"
-                    onMouseEnter={() => {
-                      clearMemberCloseTimer();
-                      openMemberMenu(memberRef.current);
-                    }}
-                    onMouseLeave={scheduleMemberClose}
-                  >
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                      aria-haspopup="menu"
-                      aria-expanded={isMemberOpen}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Member
-                      </span>
-                      <ChevronRightIcon />
-                    </button>
-                  </div>
-                ) : null}
+            {canShowMemberMenu(item.setupState) ? (
+              <Menu.Root positioning={{ placement: "right-start", gutter: 6 }}>
+                <Menu.TriggerItem
+                  value={`member-${item.value}`}
+                  rounded="lg"
+                  px="3"
+                  py="2.5"
+                  color="slate.700"
+                  _highlighted={{ bg: "slate.50", color: "slate.950" }}
+                >
+                  <HStack w="full" justify="space-between">
+                    <HStack gap="2.5">
+                      <Users size={15} />
+                      <Text fontSize="sm" fontWeight="medium">Member</Text>
+                    </HStack>
+                    <ChevronRight size={14} />
+                  </HStack>
+                </Menu.TriggerItem>
 
-                {canShowStatusMenu(item.setupState) ? (
-                  <>
-                    <div className="my-1 border-t border-slate-200" />
-                    <div
-                      ref={statusRef}
-                      className="relative"
-                      onMouseEnter={() => {
-                        clearStatusCloseTimer();
-                        openStatusMenu(statusRef.current);
-                      }}
-                      onMouseLeave={scheduleStatusClose}
+                <Portal>
+                  <Menu.Positioner>
+                    <Menu.Content
+                      minW="14rem"
+                      rounded="xl"
+                      borderWidth="1px"
+                      borderColor="slate.200"
+                      bg="white"
+                      p="1.5"
+                      shadow="xl"
                     >
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                        aria-haspopup="menu"
-                        aria-expanded={isStatusOpen}
+                      <Menu.Item
+                        value={`members-active-${item.value}`}
+                        rounded="lg"
+                        px="3"
+                        py="2.5"
+                        color="slate.700"
+                        _highlighted={{ bg: "slate.50", color: "slate.950" }}
+                        asChild
                       >
-                        <span className="flex items-center gap-2">
-                          <StatusIcon />
-                          Status
-                        </span>
-                        <ChevronRightIcon />
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </div>
+                        <Link
+                          to={buildMembershipMembersPath({
+                            membershipStatuses: ["Active"],
+                            membershipTypeUniqueIds: [item.value],
+                          })}
+                        >
+                          <HStack gap="2.5">
+                            <Users size={15} />
+                            <Text fontSize="sm" fontWeight="medium">Active Members</Text>
+                          </HStack>
+                        </Link>
+                      </Menu.Item>
 
-              {isMemberOpen && memberMenuPosition ? (
-                <div
-                  ref={memberMenuRef}
-                  className="fixed z-[1001] w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
-                  style={{
-                    top: `${memberMenuPosition.top}px`,
-                    left: `${memberMenuPosition.left}px`,
-                  }}
-                  onMouseEnter={clearMemberCloseTimer}
-                  onMouseLeave={scheduleMemberClose}
-                >
-                  <Link
-                    to={buildMembershipMembersPath({
-                      membershipStatuses: ["Active"],
-                      membershipTypeUniqueIds: [item.value],
-                    })}
-                    onClick={() => {
-                      setIsOpen(false);
-                      setIsMemberOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                    >
-                    <Users className="h-4 w-4" />
-                    Active Members
-                  </Link>
+                      <Menu.Item
+                        value={`copy-signup-${item.value}`}
+                        rounded="lg"
+                        px="3"
+                        py="2.5"
+                        color="slate.700"
+                        _highlighted={{ bg: "slate.50", color: "slate.950" }}
+                        onSelect={() => {
+                          void handleCopyRegistrationLink();
+                        }}
+                      >
+                        <HStack gap="2.5">
+                          <Link2 size={15} />
+                          <Text fontSize="sm" fontWeight="medium">Copy Sign-Up Link</Text>
+                        </HStack>
+                      </Menu.Item>
 
-                  <button
-                    type="button"
-                    onClick={() => void handleCopyRegistrationLink()}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                      <Menu.Separator my="1.5" borderColor="slate.200" />
+
+                      <Menu.Item
+                        value={`add-member-${item.value}`}
+                        rounded="lg"
+                        px="3"
+                        py="2.5"
+                        color={canCopyRegistrationLink(item) ? "slate.700" : "slate.400"}
+                        disabled={!canCopyRegistrationLink(item)}
+                        _highlighted={{ bg: "slate.50", color: "slate.950" }}
+                        asChild={canCopyRegistrationLink(item)}
+                      >
+                        {canCopyRegistrationLink(item) ? (
+                          <Link to={buildMembershipRegisterPath(item.value)} target="_blank" rel="noreferrer">
+                            <HStack gap="2.5">
+                              <UserPlus size={15} />
+                              <Text fontSize="sm" fontWeight="medium">Add</Text>
+                            </HStack>
+                          </Link>
+                        ) : (
+                          <HStack gap="2.5">
+                            <UserPlus size={15} />
+                            <Text fontSize="sm" fontWeight="medium">Add</Text>
+                          </HStack>
+                        )}
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Portal>
+              </Menu.Root>
+            ) : null}
+
+            {canShowStatusMenu(item.setupState) ? (
+              <>
+                <Menu.Separator my="1.5" borderColor="slate.200" />
+                <Menu.Root positioning={{ placement: "right-start", gutter: 6 }}>
+                  <Menu.TriggerItem
+                    value={`status-${item.value}`}
+                    rounded="lg"
+                    px="3"
+                    py="2.5"
+                    color="slate.700"
+                    _highlighted={{ bg: "slate.50", color: "slate.950" }}
                   >
-                    <Link2 className="h-4 w-4" />
-                    Copy Sign-Up Link
-                  </button>
+                    <HStack w="full" justify="space-between">
+                      <HStack gap="2.5">
+                        <StatusIcon />
+                        <Text fontSize="sm" fontWeight="medium">Status</Text>
+                      </HStack>
+                      <ChevronRight size={14} />
+                    </HStack>
+                  </Menu.TriggerItem>
 
-                  <div className="my-1 border-t border-slate-200" />
+                  <Portal>
+                    <Menu.Positioner>
+                      <Menu.Content
+                        minW="11rem"
+                        rounded="xl"
+                        borderWidth="1px"
+                        borderColor="slate.200"
+                        bg="white"
+                        p="1.5"
+                        shadow="xl"
+                      >
+                        <Menu.Item
+                          value={`status-online-${item.value}`}
+                          rounded="lg"
+                          px="3"
+                          py="2.5"
+                          color="slate.700"
+                          disabled={isNavigating}
+                          _highlighted={{ bg: "slate.50", color: "slate.950" }}
+                          onSelect={() => requestStatusChange(true)}
+                        >
+                          <HStack gap="2.5">
+                            <Box color={item.availableForSignUp ? "emerald.600" : "transparent"}>
+                              <MenuCheckIcon />
+                            </Box>
+                            <Text fontSize="sm" fontWeight="medium">Online</Text>
+                          </HStack>
+                        </Menu.Item>
 
-                  {canCopyRegistrationLink(item) ? (
-                    <Link
-                      to={buildMembershipRegisterPath(item.value)}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => {
-                        setIsOpen(false);
-                        setIsMemberOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Add
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      className="flex w-full cursor-not-allowed items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition"
-                      aria-disabled="true"
-                      title="Registration is not open yet."
-                    >
-                      <UserPlus className="h-4 w-4 text-slate-300" />
-                      Add
-                    </button>
-                  )}
-                </div>
-              ) : null}
+                        <Menu.Item
+                          value={`status-offline-${item.value}`}
+                          rounded="lg"
+                          px="3"
+                          py="2.5"
+                          color="slate.700"
+                          disabled={isNavigating}
+                          _highlighted={{ bg: "slate.50", color: "slate.950" }}
+                          onSelect={() => requestStatusChange(false)}
+                        >
+                          <HStack gap="2.5">
+                            <Box color={!item.availableForSignUp ? "slate.500" : "transparent"}>
+                              <MenuCheckIcon />
+                            </Box>
+                            <Text fontSize="sm" fontWeight="medium">Offline</Text>
+                          </HStack>
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+              </>
+            ) : null}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
 
-              {isStatusOpen && statusMenuPosition ? (
-                <div
-                  ref={statusMenuRef}
-                  className="fixed z-[1001] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
-                  style={{
-                    top: `${statusMenuPosition.top}px`,
-                    left: `${statusMenuPosition.left}px`,
-                  }}
-                  onMouseEnter={clearStatusCloseTimer}
-                  onMouseLeave={scheduleStatusClose}
-                >
-                  <button
-                    type="button"
-                    onClick={() => requestStatusChange(true)}
-                    disabled={isNavigating}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className={item.availableForSignUp ? "text-emerald-600" : "invisible"}>
-                      <MenuCheckIcon />
-                    </span>
-                    Online
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => requestStatusChange(false)}
-                    disabled={isNavigating}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className={!item.availableForSignUp ? "text-slate-500" : "invisible"}>
-                      <MenuCheckIcon />
-                    </span>
-                    Offline
-                  </button>
-                </div>
-              ) : null}
-            </>,
-            document.body,
-          )
-        : null}
       {pendingStatus !== null ? (
         <StatusChangeConfirmModal
           membershipTypeName={item.text}
@@ -864,7 +709,7 @@ export function MembershipTypeActionsMenu({
           modalRef={confirmModalRef}
         />
       ) : null}
-    </div>
+    </Menu.Root>
   );
 }
 
@@ -881,43 +726,61 @@ export function MembershipTypeRow({
   const tenureExpiryCaseLabel = getTenureExpiryCaseLabel(item);
 
   return (
-    <tr className="border-b border-slate-200 last:border-b-0">
-      <td className="w-16 border-r border-slate-200 px-4 py-4 align-middle">
+    <Table.Row
+      borderBottomWidth="1px"
+      borderColor="slate.200"
+      bg="white"
+      _even={{ bg: "slate.50" }}
+      _hover={{ bg: "cyan.50" }}
+      _last={{ borderBottomWidth: 0 }}
+    >
+      <Table.Cell w="18" px={5} py={6} verticalAlign="middle">
         <MembershipTypeActionsMenu item={item} onRefresh={onRefresh} />
-      </td>
-      <td className="border-r border-slate-200 px-4 py-4 align-middle">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-slate-900">{item.text}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <MembershipMetaPill
-              value={getSetupStatePillValue(item.setupState)}
-              tone={getSetupStatePillTone(item.setupState)}
-            />
+      </Table.Cell>
+      <Table.Cell px={5} py={6} verticalAlign="middle">
+        <Stack gap={2} align="start">
+          <Text fontSize="md" fontWeight="semibold" color="slate.950" lineHeight="1.2">
+            {item.text}
+          </Text>
+          <HStack gap={2} flexWrap="wrap">
+            <Badge rounded="full" px={3} py={1} bg="cyan.50" color="cyan.800" fontSize="xs" fontWeight="semibold">
+              {getSetupStatePillValue(item.setupState)}
+            </Badge>
             <MembershipMetaPill value={item.paymentMerchant} />
             <MembershipMetaPill value={item.paymentCurrencyCode?.trim() || item.paymentCurrencySymbol?.trim() || null} />
-          </div>
-        </div>
-      </td>
-      <td className="border-r border-slate-200 px-4 py-4 text-right align-middle">
-        <p className="text-sm font-semibold tabular-nums text-slate-900">{price}</p>
-      </td>
-      <td className="border-r border-slate-200 px-4 py-4 text-center align-middle">
-        <ActiveMemberCountCell membershipTypeUniqueId={item.value} />
-      </td>
-      <td className="border-r border-slate-200 px-4 py-4 text-center align-middle">
-        <PendingApprovalCountCell membershipTypeUniqueId={item.value} />
-      </td>
-      <td className="px-4 py-4 align-middle">
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold text-slate-700">{tenureDisplayLabel}</p>
-          {tenureExpiryCaseLabel ? (
-            <p className="text-xs font-medium text-slate-500">{renderTenureExpiryCaseLabel(tenureExpiryCaseLabel)}</p>
+          </HStack>
+        </Stack>
+      </Table.Cell>
+      <Table.Cell px={5} py={6} verticalAlign="middle" textAlign="right">
+        <Stack gap={1} align="end">
+          <Text fontSize="md" fontWeight="semibold" color="slate.950">
+            {price}
+          </Text>
+        </Stack>
+      </Table.Cell>
+      <Table.Cell px={5} py={6} verticalAlign="middle" textAlign="center">
+        <Box display="flex" justifyContent="center">
+          <ActiveMemberCountCell membershipTypeUniqueId={item.value} />
+        </Box>
+      </Table.Cell>
+      <Table.Cell px={5} py={6} verticalAlign="middle" textAlign="center">
+        <Box display="flex" justifyContent="center">
+          <PendingApprovalCountCell membershipTypeUniqueId={item.value} />
+        </Box>
+      </Table.Cell>
+      <Table.Cell px={5} py={6} verticalAlign="middle">
+        <Stack gap={1.5}>
+          <Text fontSize="sm" fontWeight="semibold" color="slate.800">
+            {tenureDisplayLabel}
+          </Text>
+          {tenureExpiryCaseLabel ? <Text fontSize="xs" color="slate.500">{renderTenureExpiryCaseLabel(tenureExpiryCaseLabel)}</Text> : null}
+          {tenureWindowLabel ? (
+            <Badge rounded="full" px={3} py={1} bg="amber.50" color="amber.700" fontSize="xs" fontWeight="semibold" alignSelf="flex-start">
+              {tenureWindowLabel}
+            </Badge>
           ) : null}
-          <div className="flex flex-wrap items-center gap-2">
-            {tenureWindowLabel ? <MembershipMetaPill value={tenureWindowLabel} tone="warning" /> : null}
-          </div>
-        </div>
-      </td>
-    </tr>
+        </Stack>
+      </Table.Cell>
+    </Table.Row>
   );
 }

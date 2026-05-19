@@ -1,3 +1,4 @@
+import { Badge, Box, Button, Container, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { useAuth } from "../../../../features/auth/AuthContext";
 
 interface TopBarProps {
@@ -9,60 +10,81 @@ export function TopBar({ isNavVisible, onNavToggle }: TopBarProps) {
   const { session, signOut } = useAuth();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <button
-          type="button"
-          onClick={onNavToggle}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-          aria-label={isNavVisible ? "Hide navigation sidebar" : "Show navigation sidebar"}
-          aria-pressed={isNavVisible}
-        >
-          <span className="space-y-1">
-            <span className="block h-0.5 w-4 rounded-full bg-current" />
-            <span className="block h-0.5 w-4 rounded-full bg-current" />
-            <span className="block h-0.5 w-4 rounded-full bg-current" />
-          </span>
-          <span className="hidden sm:inline">
-            {isNavVisible ? "Hide sidebar" : "Show sidebar"}
-          </span>
-        </button>
-
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-500/10 text-cyan-700">
-            <span className="text-sm font-bold">I</span>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-[0.2em] text-cyan-700 uppercase">
-              Ideali Membership
-            </p>
-            <p className="truncate text-sm text-slate-500">
-              Signed in as {session?.userDetail.name || session?.userDetail.email}
-            </p>
-          </div>
-        </div>
-
-        <div className="hidden items-center gap-3 md:flex">
-          {session?.organizerDetail.emailBrandingEnabled ? (
-            <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700">
-              Branding enabled
-            </span>
-          ) : null}
-          <button
+    <Box
+      as="header"
+      position="sticky"
+      top={0}
+      zIndex={30}
+      borderBottomWidth="1px"
+      borderColor="slate.200"
+      bg="whiteAlpha.900"
+      backdropFilter="blur(18px)"
+    >
+      <Container maxW="8xl" px={{ base: 4, sm: 6, xl: 10 }} py={4}>
+        <Flex align="center" gap={4}>
+          <Button
             type="button"
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            onClick={onNavToggle}
+            variant="outline"
+            rounded="xl"
+            borderColor="slate.200"
+            color="slate.700"
+            px={3}
+            py={2}
+            aria-label={isNavVisible ? "Hide navigation sidebar" : "Show navigation sidebar"}
+            aria-pressed={isNavVisible}
+            _hover={{ bg: "slate.100" }}
           >
-            Profile
-          </button>
-          <button
-            type="button"
-            onClick={signOut}
-            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
-    </header>
+            <Stack gap={1} mr={2}>
+              <Box h="0.5" w="4" rounded="full" bg="currentColor" />
+              <Box h="0.5" w="4" rounded="full" bg="currentColor" />
+              <Box h="0.5" w="4" rounded="full" bg="currentColor" />
+            </Stack>
+            <Text display={{ base: "none", sm: "inline" }} fontSize="sm" fontWeight="medium">
+              {isNavVisible ? "Hide sidebar" : "Show sidebar"}
+            </Text>
+          </Button>
+
+          <HStack minW={0} flex="1" gap={3}>
+            <Box
+              display="grid"
+              placeItems="center"
+              h="11"
+              w="11"
+              rounded="2xl"
+              bg="cyan.50"
+              color="cyan.800"
+              borderWidth="1px"
+              borderColor="cyan.100"
+              fontWeight="bold"
+            >
+              I
+            </Box>
+            <Box minW={0}>
+              <Text truncate fontSize="sm" fontWeight="semibold" letterSpacing="0.18em" color="cyan.800" textTransform="uppercase">
+                Ideali Membership
+              </Text>
+              <Text truncate fontSize="sm" color="slate.500">
+                Signed in as {session?.userDetail.name || session?.userDetail.email}
+              </Text>
+            </Box>
+          </HStack>
+
+          <HStack display={{ base: "none", md: "flex" }} gap={3}>
+            {session?.organizerDetail.emailBrandingEnabled ? (
+              <Badge rounded="full" px={3} py={1} bg="cyan.50" color="cyan.800" fontSize="xs" fontWeight="semibold">
+                Branding enabled
+              </Badge>
+            ) : null}
+            <Button variant="outline" rounded="full" borderColor="slate.200" color="slate.700" _hover={{ bg: "slate.100" }}>
+              Profile
+            </Button>
+            <Button onClick={signOut} rounded="full" bg="slate.900" color="white" _hover={{ bg: "slate.800" }}>
+              Sign out
+            </Button>
+          </HStack>
+        </Flex>
+      </Container>
+    </Box>
   );
 }

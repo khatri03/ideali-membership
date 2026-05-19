@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { arrayMove } from "@dnd-kit/sortable";
+import { Badge, Box, Button, Heading, HStack, Stack, Table, Text } from "@chakra-ui/react";
 import { APP_ROUTES } from "../routes";
 import { getMembershipTypeOrderList, getMembershipTypes, saveMembershipTypeOrderList } from "../lib/membershipWizard";
 import type { MembershipTypeOrderListItem } from "../types/membership";
@@ -10,6 +11,7 @@ import { showToast } from "./MembershipTypesPage.helpers";
 import { MembershipTypeRow, OrderConfirmModal } from "./MembershipTypesPage.parts";
 
 export function MembershipTypesPage() {
+  const navigate = useNavigate();
   const { data: types = [], isLoading, error, refetch: refetchTypes } = useQuery({
     queryKey: ["membership-types"],
     queryFn: getMembershipTypes,
@@ -94,84 +96,133 @@ export function MembershipTypesPage() {
   }, [isOrderModalOpen]);
 
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Types</h1>
-          <p className="mt-3 max-w-2xl text-slate-600">
+    <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="whiteAlpha.900" p={{ base: 6, lg: 8 }} shadow="sm">
+      <Stack gap={4} direction={{ base: "column", sm: "row" }} align={{ base: "stretch", sm: "start" }} justify="space-between">
+        <Box maxW="3xl">
+          <Badge
+            rounded="full"
+            px={4}
+            py={2}
+            bg="cyan.50"
+            color="cyan.800"
+            borderWidth="1px"
+            borderColor="cyan.100"
+            fontSize="sm"
+            fontWeight="semibold"
+          >
+            Membership types
+          </Badge>
+          <Heading as="h1" mt={4} size={{ base: "3xl", lg: "4xl" }} letterSpacing="-0.04em" lineHeight="0.95">
+            Types
+          </Heading>
+          <Text mt={4} maxW="2xl" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8" color="slate.600">
             Membership types will be managed here.
-          </p>
-        </div>
+          </Text>
+        </Box>
 
-        <Link
-          to={APP_ROUTES.membershipWizardTitle}
-          className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+        <Button
+          type="button"
+          onClick={() => navigate(APP_ROUTES.membershipWizardTitle)}
+          rounded="full"
+          bg="slate.900"
+          color="white"
+          px={5}
+          py={3}
+          fontSize="sm"
+          fontWeight="semibold"
+          _hover={{ bg: "slate.800" }}
         >
           Create
-        </Link>
-      </div>
+        </Button>
+      </Stack>
 
-      <div className="mt-8 flex justify-end">
-        <button
+      <HStack justify="end" mt={8}>
+        <Button
           type="button"
           onClick={openOrderModal}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+          rounded="full"
+          borderWidth="1px"
+          borderColor="slate.200"
+          bg="white"
+          color="slate.500"
+          h="11"
+          w="11"
+          minW="11"
+          px={0}
+          _hover={{ bg: "slate.100", color: "slate.900" }}
           aria-label="Change order"
           title="Change order"
         >
-          <ArrowUpDown className="h-5 w-5" />
-        </button>
-      </div>
+          <ArrowUpDown size={20} />
+        </Button>
+      </HStack>
 
-      <div className="mt-8">
+      <Box mt={8}>
         {isLoading ? (
-          <div className="rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">
-            Loading membership types...
-          </div>
+          <Box rounded="3xl" borderWidth="1px" borderStyle="dashed" borderColor="slate.200" bg="slate.50" px={5} py={10} textAlign="center">
+            <Text fontSize="sm" color="slate.500">
+              Loading membership types...
+            </Text>
+          </Box>
         ) : error ? (
-          <div className="rounded-[1.75rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700">
-            {error.message || "Unable to load membership types."}
-          </div>
+          <Box rounded="3xl" borderWidth="1px" borderColor="red.200" bg="red.50" px={5} py={4} color="red.700">
+            <Text fontSize="sm" fontWeight="medium">
+              {error.message || "Unable to load membership types."}
+            </Text>
+          </Box>
         ) : types.length > 0 ? (
-          <div className="overflow-visible rounded-[1.75rem] border border-slate-200 bg-slate-50 shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-100/80">
-                  <tr>
-                    <th scope="col" className="w-16 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="white" shadow="lg" overflowX="auto">
+            <Table.Root minW="1120px" tableLayout="auto">
+              <Table.Header bg="slate.50">
+                <Table.Row>
+                  <Table.ColumnHeader w="18" px={5} py={4} textAlign="left">
+                    <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="slate.500">
                       Actions
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    </Text>
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={5} py={4} textAlign="left">
+                    <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="slate.500">
                       Membership Type
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    </Text>
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={5} py={4} textAlign="right">
+                    <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="slate.500">
                       Pricing
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    </Text>
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={5} py={4} textAlign="center">
+                    <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="slate.500">
                       Active Members
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    </Text>
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={5} py={4} textAlign="center">
+                    <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="slate.500">
                       Pending Approvals
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    </Text>
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={5} py={4} textAlign="left">
+                    <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="slate.500">
                       Tenure
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
-                  {types.map((item) => (
-                    <MembershipTypeRow key={item.value} item={item} onRefresh={refreshTypes} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    </Text>
+                  </Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body bg="white">
+                {types.map((item) => (
+                  <MembershipTypeRow key={item.value} item={item} onRefresh={refreshTypes} />
+                ))}
+              </Table.Body>
+            </Table.Root>
+          </Box>
         ) : (
-          <div className="rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">
-            No membership types found.
-          </div>
+          <Box rounded="3xl" borderWidth="1px" borderStyle="dashed" borderColor="slate.200" bg="slate.50" px={5} py={10} textAlign="center">
+            <Text fontSize="sm" color="slate.500">
+              No membership types found.
+            </Text>
+          </Box>
         )}
-      </div>
+      </Box>
+
       {isOrderModalOpen ? (
         <OrderConfirmModal
           onCancel={() => setIsOrderModalOpen(false)}
@@ -184,6 +235,6 @@ export function MembershipTypesPage() {
           onSave={saveOrder}
         />
       ) : null}
-    </section>
+    </Box>
   );
 }

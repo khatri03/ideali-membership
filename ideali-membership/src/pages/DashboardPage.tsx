@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Badge, Box, Button, Heading, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { APP_ROUTES } from "../routes";
 
 const metrics = [
@@ -20,103 +21,136 @@ const quickActions = [
 ];
 
 export function DashboardPage() {
-  return (
-    <section className="grid w-full gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-      <div className="space-y-6">
-        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-700">
-            <span className="h-2 w-2 rounded-full bg-cyan-500" />
-            Protected dashboard
-          </div>
+  const navigate = useNavigate();
 
-          <div className="mt-5 space-y-4">
-            <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+  return (
+    <Box display="grid" gap={{ base: 6, xl: 8 }} xl={{ gridTemplateColumns: "minmax(0, 1.35fr) minmax(360px, 0.85fr)" }}>
+      <Stack gap={6}>
+        <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="whiteAlpha.900" p={{ base: 7, lg: 10 }} shadow="sm">
+          <Badge
+            rounded="full"
+            px={4}
+            py={2}
+            bg="cyan.50"
+            color="cyan.800"
+            borderWidth="1px"
+            borderColor="cyan.100"
+            fontSize="sm"
+            fontWeight="semibold"
+          >
+            Protected dashboard
+          </Badge>
+
+          <Stack gap={5} mt={6}>
+            <Heading as="h1" size={{ base: "3xl", lg: "4xl" }} letterSpacing="-0.04em" lineHeight="0.95">
               Welcome to the dashboard.
-            </h1>
-            <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              This area is only available after authentication. The route now
-              stays visible in the URL so navigation works like a real app.
-            </p>
-            <Link
-              to={APP_ROUTES.membershipWizardTitle}
-              className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+            </Heading>
+            <Text maxW="3xl" fontSize={{ base: "md", lg: "lg" }} lineHeight="1.85" color="slate.600">
+              This area is only available after authentication. The route stays visible in the URL so navigation works like a real app.
+            </Text>
+            <Button
+              type="button"
+              alignSelf="flex-start"
+              rounded="full"
+              bg="slate.900"
+              px={5}
+              py={3}
+              fontSize="sm"
+              fontWeight="semibold"
+              color="white"
+              _hover={{ bg: "slate.800" }}
+              onClick={() => navigate(APP_ROUTES.membershipWizardTitle)}
             >
               Open membership wizard
-            </Link>
-          </div>
-        </div>
+            </Button>
+          </Stack>
+        </Box>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <SimpleGrid columns={{ base: 1, sm: 3 }} gap={5}>
           {metrics.map((metric) => (
-            <article
-              key={metric.label}
-              className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm"
-            >
-              <p className="text-sm text-slate-500">{metric.label}</p>
-              <div className="mt-3 flex items-end justify-between gap-4">
-                <span className="text-3xl font-semibold text-slate-900">
+            <Box key={metric.label} rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="whiteAlpha.900" p={6} shadow="sm">
+              <Text fontSize="sm" color="slate.500">
+                {metric.label}
+              </Text>
+              <HStack mt={3} align="end" justify="space-between">
+                <Text fontSize="3xl" fontWeight="semibold" color="slate.900">
                   {metric.value}
-                </span>
-                <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                </Text>
+                <Badge rounded="full" px={2.5} py={1} bg="emerald.50" color="emerald.700" fontSize="xs" fontWeight="medium">
                   {metric.delta}
-                </span>
-              </div>
-            </article>
+                </Badge>
+              </HStack>
+            </Box>
           ))}
-        </div>
+        </SimpleGrid>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <SimpleGrid columns={{ base: 1, md: 3 }} gap={5}>
           {quickActions.map((item) => (
-            <button
+            <Button
               key={item}
               type="button"
-              className="rounded-3xl border border-slate-200 bg-white/90 px-4 py-5 text-left text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50"
+              rounded="3xl"
+              borderWidth="1px"
+              borderColor="slate.200"
+              bg="whiteAlpha.900"
+              px={5}
+              py={8}
+              h="auto"
+              justifyContent="flex-start"
+              textAlign="left"
+              color="slate.700"
+              fontWeight="medium"
+              _hover={{ borderColor: "cyan.300", bg: "cyan.50" }}
             >
               {item}
-            </button>
+            </Button>
           ))}
-        </div>
-      </div>
+        </SimpleGrid>
+      </Stack>
 
-      <aside className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-slate-500">Overview</p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-900">
+      <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="whiteAlpha.900" p={{ base: 7, lg: 10 }} shadow="sm">
+        <HStack justify="space-between" align="start">
+          <Box>
+            <Text fontSize="sm" color="slate.500">
+              Overview
+            </Text>
+            <Heading as="h2" mt={1} size="xl" letterSpacing="-0.03em">
               Today&apos;s summary
-            </h2>
-          </div>
-          <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700">
+            </Heading>
+          </Box>
+          <Badge rounded="full" px={3} py={1} bg="cyan.50" color="cyan.800" fontSize="xs" fontWeight="semibold">
             Live
-          </span>
-        </div>
+          </Badge>
+        </HStack>
 
-        <div className="mt-6 space-y-4">
+        <Stack gap={4} mt={7}>
           {activity.map((item) => (
-            <div
-              key={item.title}
-              className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
-            >
-              <div className="mt-1 h-2.5 w-2.5 rounded-full bg-cyan-500" />
-              <div>
-                <p className="font-medium text-slate-900">{item.title}</p>
-                <p className="text-sm text-slate-500">{item.detail}</p>
-              </div>
-            </div>
+            <HStack key={item.title} align="start" gap={4} rounded="2xl" borderWidth="1px" borderColor="slate.200" bg="slate.50" p={4}>
+              <Box mt={1} h="2.5" w="2.5" rounded="full" bg="cyan.500" flexShrink={0} />
+              <Stack gap={1}>
+                <Text fontWeight="medium" color="slate.900">
+                  {item.title}
+                </Text>
+                <Text fontSize="sm" color="slate.500">
+                  {item.detail}
+                </Text>
+              </Stack>
+            </HStack>
           ))}
-        </div>
+        </Stack>
 
-        <div className="mt-6 rounded-3xl border border-cyan-400/20 bg-cyan-50 p-5">
-          <p className="text-sm text-cyan-700">Session status</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">
+        <Box mt={7} rounded="3xl" borderWidth="1px" borderColor="cyan.100" bg="cyan.50" p={6}>
+          <Text fontSize="sm" color="cyan.700">
+            Session status
+          </Text>
+          <Text mt={2} fontSize="lg" fontWeight="semibold" color="slate.900">
             Authenticated and ready.
-          </p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Your access token and refresh token are stored locally for the
-            current session.
-          </p>
-        </div>
-      </aside>
-    </section>
+          </Text>
+          <Text mt={2} fontSize="sm" lineHeight="1.7" color="slate.600">
+            Your access token and refresh token are stored locally for the current session.
+          </Text>
+        </Box>
+      </Box>
+    </Box>
   );
 }

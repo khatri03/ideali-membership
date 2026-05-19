@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Badge, Box, Button, Container, Heading, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { useAuth } from "../AuthContext";
-import { PasswordInput } from "../../../components/inputs/PasswordInput/PasswordInput";
+import { PasswordInput } from "../../../shared/components/inputs/PasswordInput/PasswordInput";
 
 export function LoginScreen() {
   const { status, loginError, pendingChallenge, signIn, verifyTwoFactor } = useAuth();
@@ -12,141 +13,252 @@ export function LoginScreen() {
   const isTwoFactorStep = status === "pending-2fa" && pendingChallenge;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-[-8rem] h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute right-[-10rem] top-1/4 h-80 w-80 rounded-full bg-indigo-500/10 blur-3xl" />
-      </div>
+    <Box
+      position="relative"
+      minH="100vh"
+      overflow="hidden"
+      bgGradient="linear(180deg, #f7fbff 0%, #edf5ff 100%)"
+      color="slate.900"
+    >
+      <Box pointerEvents="none" position="absolute" inset={0}>
+        <Box
+          position="absolute"
+          left="50%"
+          top="-8rem"
+          h="32rem"
+          w="32rem"
+          transform="translateX(-50%)"
+          rounded="full"
+          bg="cyan.200"
+          filter="blur(96px)"
+          opacity={0.55}
+        />
+        <Box
+          position="absolute"
+          right="-10rem"
+          top="25%"
+          h="20rem"
+          w="20rem"
+          rounded="full"
+          bg="indigo.100"
+          filter="blur(96px)"
+          opacity={0.7}
+        />
+      </Box>
 
-      <div className="relative mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-6 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
-        <section className="max-w-2xl space-y-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-700">
-            <span className="h-2 w-2 rounded-full bg-cyan-500" />
-            Secure access for membership operations
-          </div>
-
-          <div className="space-y-5">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-7xl">
-              Sign in to manage members, billing, and operations.
-            </h1>
-            <p className="max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-              The rest of the application stays protected until a user is authenticated. If 2FA is enabled, we will guide them through that
-              step before unlocking the dashboard.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              "JWT + refresh token flow",
-              "2FA verification support",
-              "Protected app shell",
-            ].map((item) => (
-              <div key={item} className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-                <p className="text-sm text-slate-700">{item}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-2xl shadow-slate-200/40 backdrop-blur sm:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-slate-500">Welcome back</p>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900">
-                {isTwoFactorStep ? "Verify your code" : "Sign in to continue"}
-              </h2>
-            </div>
-            <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700">
-              Protected
-            </span>
-          </div>
-
-          {loginError ? (
-            <div className="mt-6 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {loginError}
-            </div>
-          ) : null}
-
-          {!isTwoFactorStep ? (
-            <form
-              className="mt-6 space-y-4"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                await signIn(userName, password);
-              }}
+      <Container position="relative" maxW="7xl" py={{ base: 10, lg: 16 }} px={{ base: 4, sm: 6, lg: 8 }}>
+        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={{ base: 10, xl: 16 }} alignItems="center" minH="100vh">
+          <Stack gap={8} maxW="2xl">
+            <Badge
+              alignSelf="flex-start"
+              rounded="full"
+              px={4}
+              py={2}
+              bg="cyan.50"
+              color="cyan.800"
+              borderWidth="1px"
+              borderColor="cyan.100"
+              fontSize="sm"
+              fontWeight="semibold"
+              letterSpacing="0.02em"
             >
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">
-                  Email address
-                </span>
-                <input
-                  type="email"
-                  value={userName}
-                  onChange={(event) => setUserName(event.target.value)}
-                  required
-                  autoComplete="email"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20"
-                  placeholder="name@company.com"
-                />
-              </label>
+              Secure access for membership operations
+            </Badge>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">
-                  Password
-                </span>
-                <PasswordInput
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  autoComplete="current-password"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20"
-                  placeholder="Enter your password"
-                />
-              </label>
+            <Stack gap={5}>
+              <Heading as="h1" size="4xl" lineHeight="0.95" letterSpacing="-0.04em">
+                Sign in to manage members, billing, and operations.
+              </Heading>
+              <Text fontSize={{ base: "md", lg: "lg" }} lineHeight="1.8" color="slate.600" maxW="xl">
+                The application stays protected until a user is authenticated. If 2FA is enabled, we guide them through that step before
+                unlocking the dashboard.
+              </Text>
+            </Stack>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-2 w-full rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? "Signing in..." : "Sign in"}
-              </button>
-            </form>
-          ) : (
-            <form
-              className="mt-6 space-y-4"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                await verifyTwoFactor(emailCode);
-              }}
-            >
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">
-                  Email code
-                </span>
-                <input
-                  type="text"
-                  value={emailCode}
-                  onChange={(event) => setEmailCode(event.target.value)}
-                  required
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20"
-                  placeholder="Enter the code sent to your email"
-                />
-              </label>
+            <SimpleGrid columns={{ base: 1, sm: 3 }} gap={4}>
+              {["JWT + refresh token flow", "2FA verification support", "Protected app shell"].map((item) => (
+                <Box
+                  key={item}
+                  rounded="3xl"
+                  borderWidth="1px"
+                  borderColor="slate.200"
+                  bg="whiteAlpha.800"
+                  px={4}
+                  py={5}
+                  shadow="sm"
+                  backdropFilter="blur(16px)"
+                >
+                  <Text fontSize="sm" color="slate.700" lineHeight="1.7">
+                    {item}
+                  </Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Stack>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-2 w-full rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? "Verifying..." : "Verify code"}
-              </button>
-            </form>
-          )}
-        </section>
-      </div>
-    </div>
+          <Box
+            rounded="3xl"
+            borderWidth="1px"
+            borderColor="slate.200"
+            bg="whiteAlpha.900"
+            p={{ base: 6, sm: 8 }}
+            shadow="2xl"
+            shadowColor="slate.200"
+            backdropFilter="blur(20px)"
+          >
+            <Stack gap={6}>
+              <Stack direction="row" alignItems="start" justifyContent="space-between" gap={4}>
+                <Stack gap={1}>
+                  <Text fontSize="sm" color="slate.500">
+                    Welcome back
+                  </Text>
+                  <Heading as="h2" size="xl" letterSpacing="-0.03em">
+                    {isTwoFactorStep ? "Verify your code" : "Sign in to continue"}
+                  </Heading>
+                </Stack>
+                <Badge rounded="full" px={3} py={1} bg="cyan.50" color="cyan.800" fontSize="xs" fontWeight="semibold">
+                  Protected
+                </Badge>
+              </Stack>
+
+              {loginError ? (
+                <Box rounded="2xl" borderWidth="1px" borderColor="red.200" bg="red.50" px={4} py={3} color="red.700">
+                  <Text fontSize="sm" fontWeight="medium">
+                    {loginError}
+                  </Text>
+                </Box>
+              ) : null}
+
+              {!isTwoFactorStep ? (
+                <Stack
+                  as="form"
+                  gap={4}
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    await signIn(userName, password);
+                  }}
+                >
+                  <Box as="label" display="grid" gap={2}>
+                    <Text fontSize="sm" fontWeight="semibold" color="slate.700">
+                      Email address
+                    </Text>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      value={userName}
+                      onChange={(event) => setUserName(event.target.value)}
+                      required
+                      autoComplete="email"
+                      placeholder="name@company.com"
+                      px={4}
+                      py={3}
+                      rounded="xl"
+                      borderWidth="1px"
+                      borderColor="slate.200"
+                      bg="slate.50"
+                      color="slate.900"
+                      outline="none"
+                      transition="all 0.2s ease"
+                      _placeholder={{ color: "slate.400" }}
+                      _focusVisible={{
+                        borderColor: "cyan.500",
+                        boxShadow: "0 0 0 4px rgba(34, 211, 238, 0.18)",
+                      }}
+                    />
+                  </Box>
+
+                  <Box as="label" display="grid" gap={2}>
+                    <Text fontSize="sm" fontWeight="semibold" color="slate.700">
+                      Password
+                    </Text>
+                    <PasswordInput
+                      id="login-password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      required
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
+                    />
+                  </Box>
+
+                  <Button
+                    type="submit"
+                    loading={isSubmitting}
+                    loadingText="Signing in"
+                    w="full"
+                    rounded="xl"
+                    bg="slate.900"
+                    color="white"
+                    py={3}
+                    fontSize="sm"
+                    fontWeight="semibold"
+                    _hover={{ bg: "slate.800" }}
+                    _active={{ bg: "slate.950" }}
+                  >
+                    Sign in
+                  </Button>
+                </Stack>
+              ) : (
+                <Stack
+                  as="form"
+                  gap={4}
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    await verifyTwoFactor(emailCode);
+                  }}
+                >
+                  <Box as="label" display="grid" gap={2}>
+                    <Text fontSize="sm" fontWeight="semibold" color="slate.700">
+                      Email code
+                    </Text>
+                    <Input
+                      id="login-code"
+                      type="text"
+                      value={emailCode}
+                      onChange={(event) => setEmailCode(event.target.value)}
+                      required
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="Enter the code sent to your email"
+                      px={4}
+                      py={3}
+                      rounded="xl"
+                      borderWidth="1px"
+                      borderColor="slate.200"
+                      bg="slate.50"
+                      color="slate.900"
+                      outline="none"
+                      transition="all 0.2s ease"
+                      _placeholder={{ color: "slate.400" }}
+                      _focusVisible={{
+                        borderColor: "cyan.500",
+                        boxShadow: "0 0 0 4px rgba(34, 211, 238, 0.18)",
+                      }}
+                    />
+                  </Box>
+
+                  <Button
+                    type="submit"
+                    loading={isSubmitting}
+                    loadingText="Verifying"
+                    w="full"
+                    rounded="xl"
+                    bg="slate.900"
+                    color="white"
+                    py={3}
+                    fontSize="sm"
+                    fontWeight="semibold"
+                    _hover={{ bg: "slate.800" }}
+                    _active={{ bg: "slate.950" }}
+                  >
+                    Verify code
+                  </Button>
+                </Stack>
+              )}
+            </Stack>
+          </Box>
+        </SimpleGrid>
+      </Container>
+    </Box>
   );
 }
