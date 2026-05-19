@@ -142,6 +142,7 @@ export interface MembershipInvoiceDetailItem {
   serviceCharges: number | null;
   discountAmount: number | null;
   discountCouponCode: string | null;
+  currencySymbol: string | null;
   createdBy: string;
   createdOnUtc: string;
   updatedBy: string | null;

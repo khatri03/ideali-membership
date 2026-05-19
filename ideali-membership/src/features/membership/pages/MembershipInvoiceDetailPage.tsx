@@ -18,52 +18,83 @@ import { cn } from "../../../lib/utils";
 import { showToast } from "../../../shared/components/toast/Toast";
 import { DetailPanel, EmptyStatePanel, StatCard } from "../../../pages/MemberDetailPage.parts";
 import { fetchMembershipMemberDetail } from "../../../lib/membershipMembers";
-import type { MembershipMemberDetailItem } from "../../../types/membership";
-import type { MembershipInvoiceDetailLineItem } from "../types/invoice";
+import type { MembershipInvoiceDetailItem, MembershipInvoiceDetailLineItem, MembershipInvoiceSummaryItem } from "../types/invoice";
 import {
   addMembershipInvoiceNote,
   fetchMembershipInvoiceLineItems,
   fetchMembershipInvoiceNotes,
+  fetchMembershipInvoiceView,
   fetchMembershipInvoiceSummary,
   formatMembershipInvoiceAmount,
   formatMembershipInvoiceDateLabel,
+  getMembershipInvoicePaymentMethodLabel,
 } from "../lib/membershipInvoices";
 
 const STALE_TIME_5_MIN_MS = 5 * 60 * 1000;
 
-export function MembershipInvoiceDetailPage() {
+type ContactLike = {
+  prefix?: string | null;
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  primaryEmail?: string | null;
+  secondaryEmail?: string | null;
+  workEmail?: string | null;
+  cellPhone?: string | null;
+  homePhone?: string | null;
+  workPhone?: string | null;
+  address?: {
+    streetLine1?: string | null;
+    streetLine2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    zipCode?: string | null;
+  } | null;
+};
+
+export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublicView?: boolean } = {}) {
   const { invoiceUniqueId } = useParams<{ invoiceUniqueId?: string }>();
   const queryClient = useQueryClient();
   const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
 
-  const summaryQuery = useQuery({
-    queryKey: ["membership-invoice-summary", invoiceUniqueId ?? ""],
-    queryFn: () => fetchMembershipInvoiceSummary(invoiceUniqueId ?? ""),
-    enabled: Boolean(invoiceUniqueId),
+  const publicDetailQuery = useQuery({
+    queryKey: ["membership-invoice-view", invoiceUniqueId ?? ""],
+    queryFn: () => fetchMembershipInvoiceView(invoiceUniqueId ?? ""),
+    enabled: isPublicView && Boolean(invoiceUniqueId),
     staleTime: STALE_TIME_5_MIN_MS,
   });
 
-  const summary = summaryQuery.data ?? null;
+  const summaryQuery = useQuery({
+    queryKey: ["membership-invoice-summary", invoiceUniqueId ?? ""],
+    queryFn: () => fetchMembershipInvoiceSummary(invoiceUniqueId ?? ""),
+    enabled: !isPublicView && Boolean(invoiceUniqueId),
+    staleTime: STALE_TIME_5_MIN_MS,
+  });
+
+  const publicDetail = publicDetailQuery.data ?? null;
+  const summary = isPublicView ? buildInvoiceSummaryFromDetail(publicDetail) : summaryQuery.data ?? null;
 
   const memberQuery = useQuery({
     queryKey: ["membership-invoice-member-detail", summary?.memberUniqueId ?? ""],
     queryFn: () => fetchMembershipMemberDetail(summary?.memberUniqueId ?? ""),
-    enabled: Boolean(summary?.memberUniqueId),
+    enabled: !isPublicView && Boolean(summary?.memberUniqueId),
     staleTime: STALE_TIME_5_MIN_MS,
   });
 
   const lineItemsQuery = useQuery({
     queryKey: ["membership-invoice-line-items", invoiceUniqueId ?? ""],
     queryFn: () => fetchMembershipInvoiceLineItems(invoiceUniqueId ?? ""),
-    enabled: Boolean(invoiceUniqueId),
+    enabled: !isPublicView && Boolean(invoiceUniqueId),
     staleTime: STALE_TIME_5_MIN_MS,
   });
 
   const notesQuery = useQuery({
     queryKey: ["membership-invoice-notes", invoiceUniqueId ?? ""],
     queryFn: () => fetchMembershipInvoiceNotes(invoiceUniqueId ?? ""),
-    enabled: Boolean(invoiceUniqueId),
+    enabled: !isPublicView && Boolean(invoiceUniqueId),
     staleTime: STALE_TIME_5_MIN_MS,
   });
 
@@ -81,8 +112,10 @@ export function MembershipInvoiceDetailPage() {
   });
 
   const member = memberQuery.data ?? null;
-  const notes = notesQuery.data ?? [];
-  const rawLineItems = lineItemsQuery.data ?? [];
+  const memberContact: ContactLike | null = isPublicView ? publicDetail?.contact ?? null : member?.contact ?? null;
+  const memberAddress = isPublicView ? publicDetail?.contact?.address ?? null : member?.address ?? null;
+  const notes = isPublicView ? publicDetail?.notes ?? [] : notesQuery.data ?? [];
+  const rawLineItems = isPublicView ? publicDetail?.invoiceItems ?? [] : lineItemsQuery.data ?? [];
   const discountCouponCode = summary?.discountCouponCode ?? null;
   const discountLineItemAmount = Math.abs(summary?.discountAmount ?? 0);
   const currencySymbol = summary?.currencySymbol ?? "$";
@@ -246,22 +279,27 @@ export function MembershipInvoiceDetailPage() {
     );
   }
 
-  if (summaryQuery.isLoading) {
+  const detailQuery = isPublicView ? publicDetailQuery : summaryQuery;
+  const isMemberLoading = isPublicView ? publicDetailQuery.isLoading : memberQuery.isLoading;
+  const isLineItemsLoading = isPublicView ? publicDetailQuery.isLoading : lineItemsQuery.isLoading;
+  const isNotesLoading = isPublicView ? publicDetailQuery.isLoading : notesQuery.isLoading;
+
+  if (detailQuery.isLoading) {
     return (
       <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-8 text-sm text-slate-500">
-          Loading invoice summary from the backend...
+          Loading invoice detail from the backend...
         </div>
       </section>
     );
   }
 
-  if (summaryQuery.error) {
+  if (detailQuery.error) {
     return (
       <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <EmptyStatePanel
           title="Invoice not available"
-          description={summaryQuery.error instanceof Error ? summaryQuery.error.message : "Unable to load invoice summary."}
+          description={detailQuery.error instanceof Error ? detailQuery.error.message : "Unable to load invoice detail."}
         />
       </section>
     );
@@ -284,13 +322,15 @@ export function MembershipInvoiceDetailPage() {
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-cyan-50 via-white to-transparent lg:block" />
         <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="space-y-4 xl:max-w-4xl">
-            <Link
-              to={APP_ROUTES.membershipInvoices}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-            >
-              <ArrowLeft size={16} />
-              Back to invoices
-            </Link>
+            {isPublicView ? null : (
+              <Link
+                to={APP_ROUTES.membershipInvoices}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+              >
+                <ArrowLeft size={16} />
+                Back to invoices
+              </Link>
+            )}
 
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
@@ -300,7 +340,9 @@ export function MembershipInvoiceDetailPage() {
                 {summary.invoiceNo}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                Summary, member detail, line items, and notes are loaded separately for a lighter detail view.
+                {isPublicView
+                  ? "Public invoice view with the full invoice record rendered without the app shell."
+                  : "Summary, member detail, line items, and notes are loaded separately for a lighter detail view."}
               </p>
             </div>
           </div>
@@ -373,7 +415,7 @@ export function MembershipInvoiceDetailPage() {
           <DetailPanel
             title="Member detail"
           >
-            {memberQuery.isLoading ? (
+            {isMemberLoading ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {[...Array(4)].map((_, index) => (
                   <div key={index} className="animate-pulse rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -383,13 +425,13 @@ export function MembershipInvoiceDetailPage() {
                   </div>
                 ))}
               </div>
-            ) : member ? (
+            ) : memberContact ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailBlock
                   icon={<UserRound size={16} />}
                   label="Member name"
                   value={
-                    memberUniqueId ? (
+                    !isPublicView && memberUniqueId ? (
                       <a
                         href={buildMembershipMemberDetailPath(memberUniqueId)}
                         target="_blank"
@@ -397,16 +439,16 @@ export function MembershipInvoiceDetailPage() {
                         className="font-semibold text-cyan-700 transition hover:text-cyan-800 hover:underline"
                         title="Open member profile"
                       >
-                        {formatMemberName(member)}
+                        {formatMemberName(memberContact)}
                       </a>
                     ) : (
-                      formatMemberName(member)
+                      formatMemberName(memberContact)
                     )
                   }
                 />
-                <DetailBlock icon={<Mail size={16} />} label="Email" value={formatMemberEmail(member)} />
-                <DetailBlock icon={<Phone size={16} />} label="Phone" value={formatMemberPhone(member)} />
-                <AddressDetailBlock icon={<MapPin size={16} />} label="Address" address={member.address} />
+                <DetailBlock icon={<Mail size={16} />} label="Email" value={formatMemberEmail(memberContact)} />
+                <DetailBlock icon={<Phone size={16} />} label="Phone" value={formatMemberPhone(memberContact)} />
+                <AddressDetailBlock icon={<MapPin size={16} />} label="Address" address={memberAddress} />
               </div>
             ) : (
               <EmptyStatePanel
@@ -417,7 +459,7 @@ export function MembershipInvoiceDetailPage() {
           </DetailPanel>
 
           <DetailPanel title="Line items">
-            {lineItemsQuery.isLoading ? (
+            {isLineItemsLoading ? (
               <div className="overflow-x-auto rounded-[1.5rem] border border-slate-200 bg-white">
                 <table className="min-w-[44rem] w-full border-collapse text-sm">
                   <thead className="bg-slate-50">
@@ -541,18 +583,20 @@ export function MembershipInvoiceDetailPage() {
           <DetailPanel
             title="Notes"
             action={
-              <button
-                type="button"
-                onClick={openAddNoteModal}
-                className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
-              >
-                <MessageSquarePlus size={14} />
-                Add Note
-              </button>
+              isPublicView ? null : (
+                <button
+                  type="button"
+                  onClick={openAddNoteModal}
+                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
+                >
+                  <MessageSquarePlus size={14} />
+                  Add Note
+                </button>
+              )
             }
           >
             <div className="space-y-3">
-              {notesQuery.isLoading ? (
+              {isNotesLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, index) => (
                     <div
@@ -609,31 +653,51 @@ export function MembershipInvoiceDetailPage() {
   );
 }
 
-function formatMemberName(member: MembershipMemberDetailItem | null | undefined) {
-  if (!member) {
+function buildInvoiceSummaryFromDetail(detail: MembershipInvoiceDetailItem | null): MembershipInvoiceSummaryItem | null {
+  if (!detail) {
+    return null;
+  }
+
+  return {
+    uniqueId: detail.uniqueId,
+    invoiceNo: detail.invoiceNo,
+    invoiceDate: detail.invoiceDate,
+    invoiceAmount: detail.invoiceAmount,
+    discountAmount: detail.discountAmount,
+    discountCouponCode: detail.discountCouponCode,
+    balanceAmount: detail.balanceAmount,
+    paymentMethod: getMembershipInvoicePaymentMethodLabel(detail),
+    membershipName: detail.invoiceContext?.name ?? "Not available",
+    memberUniqueId: detail.invoiceContext?.memberUniqueId ?? null,
+    currencySymbol: detail.currencySymbol ?? "$",
+  };
+}
+
+function formatMemberName(contact: ContactLike | null | undefined) {
+  if (!contact) {
     return "Not available";
   }
 
-  return [member.contact.prefix, member.contact.firstName, member.contact.middleName, member.contact.lastName]
+  return [contact.prefix, contact.firstName, contact.middleName, contact.lastName]
     .filter((part): part is string => Boolean(part && part.trim().length > 0))
     .join(" ")
     .trim() || "Not available";
 }
 
-function formatMemberEmail(member: MembershipMemberDetailItem | null | undefined) {
-  if (!member) {
+function formatMemberEmail(contact: ContactLike | null | undefined) {
+  if (!contact) {
     return "Not available";
   }
 
-  return member.contact.email || "Not available";
+  return contact.email || contact.primaryEmail || contact.secondaryEmail || contact.workEmail || "Not available";
 }
 
-function formatMemberPhone(member: MembershipMemberDetailItem | null | undefined) {
-  if (!member) {
+function formatMemberPhone(contact: ContactLike | null | undefined) {
+  if (!contact) {
     return "Not available";
   }
 
-  return member.contact.cellPhone || "Not available";
+  return contact.cellPhone || contact.workPhone || contact.homePhone || "Not available";
 }
 
 function DetailBlock({
@@ -665,7 +729,7 @@ function AddressDetailBlock({
 }: {
   icon: ReactNode;
   label: string;
-  address: MembershipMemberDetailItem["address"] | null | undefined;
+  address: ContactLike["address"] | null | undefined;
 }) {
   const rows = [
     { label: "Street line 1", value: address?.streetLine1 },

@@ -88,6 +88,7 @@ function RouterApp() {
         <Routes>
           <Route path={APP_ROUTES.membershipRegisterCountdown} element={<MembershipRegisterCountdownPage />} />
           <Route path={APP_ROUTES.membershipRegister} element={<MembershipRegisterPage />} />
+          <Route path={APP_ROUTES.membershipInvoiceView} element={<MembershipInvoiceDetailPage isPublicView />} />
           <Route path={APP_ROUTES.root} element={<AppHome />} />
           <Route path={APP_ROUTES.login} element={<LoginRoute />} />
           <Route

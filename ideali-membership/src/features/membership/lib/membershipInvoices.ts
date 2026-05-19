@@ -356,6 +356,7 @@ function buildInvoiceDetailItem(record: Record<string, unknown>): MembershipInvo
     serviceCharges: readNullableNumber(record.ServiceCharges ?? record.serviceCharges),
     discountAmount: readNullableNumber(record.DiscountAmount ?? record.discountAmount),
     discountCouponCode: readNullableText(record.DiscountCouponCode ?? record.discountCouponCode),
+    currencySymbol: readNullableText(record.CurrencySymbol ?? record.currencySymbol),
     createdBy: readText(record.CreatedBy ?? record.createdBy),
     createdOnUtc: readText(record.CreatedOnUtc ?? record.createdOnUtc),
     updatedBy: readNullableText(record.UpdatedBy ?? record.updatedBy),
@@ -545,6 +546,17 @@ export async function fetchMembershipInvoicePaymentMethodOptions() {
 
 export async function fetchMembershipInvoiceDetail(invoiceUniqueId: string) {
   const payload = await getJson<unknown>(`/api/invoice/membership/${invoiceUniqueId}/detail`);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  if (!responseData) {
+    throw new Error("Unable to load invoice detail.");
+  }
+
+  return buildInvoiceDetailItem(responseData);
+}
+
+export async function fetchMembershipInvoiceView(invoiceUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/invoice/membership/${invoiceUniqueId}/view`);
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
   if (!responseData) {
