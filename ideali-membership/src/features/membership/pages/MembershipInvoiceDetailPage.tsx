@@ -372,19 +372,6 @@ export function MembershipInvoiceDetailPage() {
         <div className="space-y-6">
           <DetailPanel
             title="Member detail"
-            action={
-              memberUniqueId ? (
-                <a
-                  href={buildMembershipMemberDetailPath(memberUniqueId)}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
-                >
-                  <UserRound size={14} />
-                  Open member profile
-                </a>
-              ) : null
-            }
           >
             {memberQuery.isLoading ? (
               <div className="grid gap-4 md:grid-cols-2">
@@ -419,11 +406,7 @@ export function MembershipInvoiceDetailPage() {
                 />
                 <DetailBlock icon={<Mail size={16} />} label="Email" value={formatMemberEmail(member)} />
                 <DetailBlock icon={<Phone size={16} />} label="Phone" value={formatMemberPhone(member)} />
-                <DetailBlock
-                  icon={<MapPin size={16} />}
-                  label="Address"
-                  value={<pre className="whitespace-pre-wrap text-sm font-medium leading-6 text-slate-700">{formatMemberAddress(member)}</pre>}
-                />
+                <AddressDetailBlock icon={<MapPin size={16} />} label="Address" address={member.address} />
               </div>
             ) : (
               <EmptyStatePanel
@@ -653,21 +636,6 @@ function formatMemberPhone(member: MembershipMemberDetailItem | null | undefined
   return member.contact.cellPhone || "Not available";
 }
 
-function formatMemberAddress(member: MembershipMemberDetailItem | null | undefined) {
-  if (!member) {
-    return "Not available";
-  }
-
-  const cityStateZipCountry = [member.address.city, member.address.state, member.address.zipCode, member.address.country]
-    .filter((part): part is string => Boolean(part && part.trim().length > 0))
-    .join(", ");
-
-  const parts = [member.address.streetLine1, member.address.streetLine2, cityStateZipCountry]
-    .filter((part): part is string => Boolean(part && part.trim().length > 0));
-
-  return parts.length > 0 ? parts.join("\n") : "Not available";
-}
-
 function DetailBlock({
   icon,
   label,
@@ -686,6 +654,49 @@ function DetailBlock({
         {label}
       </div>
       <div className="mt-3 text-sm font-medium leading-6 text-slate-700">{value}</div>
+    </div>
+  );
+}
+
+function AddressDetailBlock({
+  icon,
+  label,
+  address,
+}: {
+  icon: ReactNode;
+  label: string;
+  address: MembershipMemberDetailItem["address"] | null | undefined;
+}) {
+  const rows = [
+    { label: "Street line 1", value: address?.streetLine1 },
+    { label: "Street line 2", value: address?.streetLine2 },
+    { label: "City", value: address?.city },
+    { label: "State", value: address?.state },
+    { label: "ZIP", value: address?.zipCode },
+    { label: "Country", value: address?.country },
+  ].filter((row) => Boolean(row.value && row.value.trim().length > 0));
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:col-span-2">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+          {icon}
+        </span>
+        {label}
+      </div>
+
+      {rows.length > 0 ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {rows.map((row) => (
+            <div key={row.label} className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{row.label}</div>
+              <div className="mt-1 text-sm font-medium leading-6 text-slate-700">{row.value}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm font-medium leading-6 text-slate-700">Not available</p>
+      )}
     </div>
   );
 }
