@@ -1,22 +1,26 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
-  CalendarDays,
   Copy,
+  Loader2,
   Mail,
+  MessageSquarePlus,
   Phone,
   MapPin,
   Printer,
+  X,
   UserRound,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { APP_ROUTES, buildMembershipMemberDetailPath } from "../../../routes";
 import { showToast } from "../../../shared/components/toast/Toast";
 import { cn } from "../../../lib/utils";
 import { DetailPanel, EmptyStatePanel, StatCard } from "../../../pages/MemberDetailPage.parts";
 import {
   fetchMembershipInvoiceDetail,
+  fetchMembershipInvoiceNotes,
+  addMembershipInvoiceNote,
   formatMembershipInvoiceAmount,
   formatMembershipInvoiceContactAddress,
   formatMembershipInvoiceContactName,
@@ -30,58 +34,11 @@ import type { MembershipInvoiceDetailItem } from "../types/invoice";
 
 const STALE_TIME_5_MIN_MS = 5 * 60 * 1000;
 
-function sumPayments(invoice: MembershipInvoiceDetailItem) {
-  return invoice.payments.reduce((sum, payment) => sum + payment.amount, 0);
-}
-
-function getLatestPaymentDate(invoice: MembershipInvoiceDetailItem) {
-  return [...invoice.payments]
-    .sort((left, right) => right.paymentDateUtc.localeCompare(left.paymentDateUtc))[0]?.paymentDateUtc ?? null;
-}
-
-function getLatestNoteDate(invoice: MembershipInvoiceDetailItem) {
-  return [...invoice.notes]
-    .sort((left, right) => right.createdOnUtc.localeCompare(left.createdOnUtc))[0]?.createdOnUtc ?? null;
-}
-
-function buildInvoiceTimeline(invoice: MembershipInvoiceDetailItem) {
-  const items: Array<{ title: string; description: string; occurredAtUtc: string }> = [
-    {
-      title: "Invoice created",
-      description: `Created by ${invoice.createdBy}.`,
-      occurredAtUtc: invoice.createdOnUtc,
-    },
-  ];
-
-  if (invoice.updatedOnUtc && invoice.updatedBy) {
-    items.push({
-      title: "Invoice updated",
-      description: `Last updated by ${invoice.updatedBy}.`,
-      occurredAtUtc: invoice.updatedOnUtc,
-    });
-  }
-
-  invoice.payments.forEach((payment) => {
-    items.push({
-      title: `${payment.paymentStatus} payment recorded`,
-      description: `${payment.paymentMethod} - ${formatMembershipInvoiceAmount(payment.amount, "$")}`,
-      occurredAtUtc: payment.paymentDateUtc,
-    });
-  });
-
-  invoice.notes.forEach((note) => {
-    items.push({
-      title: "Invoice note added",
-      description: `${note.createdBy}: ${note.note}`,
-      occurredAtUtc: note.createdOnUtc,
-    });
-  });
-
-  return items.sort((left, right) => right.occurredAtUtc.localeCompare(left.occurredAtUtc));
-}
-
 export function MembershipInvoiceDetailPage() {
   const { invoiceUniqueId } = useParams<{ invoiceUniqueId?: string }>();
+  const queryClient = useQueryClient();
+  const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
 
   const invoiceQuery = useQuery({
     queryKey: ["membership-invoice-detail", invoiceUniqueId ?? ""],
@@ -90,12 +47,32 @@ export function MembershipInvoiceDetailPage() {
     staleTime: STALE_TIME_5_MIN_MS,
   });
 
-  const invoice = invoiceQuery.data ?? null;
+  const notesQuery = useQuery({
+    queryKey: ["membership-invoice-notes", invoiceUniqueId ?? ""],
+    queryFn: () => fetchMembershipInvoiceNotes(invoiceUniqueId ?? ""),
+    enabled: Boolean(invoiceUniqueId),
+    staleTime: STALE_TIME_5_MIN_MS,
+  });
 
-  const paymentTotal = useMemo(() => (invoice ? sumPayments(invoice) : 0), [invoice]);
-  const timeline = useMemo(() => (invoice ? buildInvoiceTimeline(invoice) : []), [invoice]);
-  const latestPaymentDate = invoice ? getLatestPaymentDate(invoice) : null;
-  const latestNoteDate = invoice ? getLatestNoteDate(invoice) : null;
+  const addNoteMutation = useMutation({
+    mutationFn: (note: string) => addMembershipInvoiceNote(invoiceUniqueId ?? "", note),
+    onSuccess: async () => {
+      setIsAddNoteModalOpen(false);
+      setNoteDraft("");
+      showToast("Invoice note saved.", "success");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["membership-invoice-detail", invoiceUniqueId ?? ""] }),
+        queryClient.invalidateQueries({ queryKey: ["membership-invoice-notes", invoiceUniqueId ?? ""] }),
+      ]);
+    },
+    onError: (error) => {
+      showToast(error instanceof Error ? error.message : "Unable to save the note.", "error");
+    },
+  });
+
+  const invoice = invoiceQuery.data ?? null;
+  const notes = notesQuery.data ?? invoice?.notes ?? [];
+
   const discountCouponCode = invoice?.discountCouponCode ?? null;
   const discountLineItemAmount = Math.abs(invoice?.discountAmount ?? 0);
   const getLineItemAmount = (item: MembershipInvoiceDetailItem["invoiceItems"][number]) => {
@@ -262,8 +239,36 @@ export function MembershipInvoiceDetailPage() {
   const invoiceContextName = invoice.invoiceContext?.name ?? "Membership invoice";
   const memberUniqueId = invoice.invoiceContext?.memberUniqueId ?? null;
   const latestPaymentMethodLabel = getMembershipInvoicePaymentMethodLabel(invoice);
-  const outstandingBalance = invoice.balanceAmount ?? 0;
-  const subtotal = Math.max((invoice.invoiceAmount ?? 0) - (invoice.taxAmount ?? 0) - (invoice.serviceCharges ?? 0) + (invoice.discountAmount ?? 0), 0);
+
+  function openAddNoteModal() {
+    setNoteDraft("");
+    setIsAddNoteModalOpen(true);
+  }
+
+  function closeAddNoteModal() {
+    if (addNoteMutation.isPending) {
+      return;
+    }
+
+    setIsAddNoteModalOpen(false);
+    setNoteDraft("");
+  }
+
+  async function handleSaveNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextNote = noteDraft.trim();
+    if (!nextNote) {
+      showToast("Please enter a note before saving.", "error");
+      return;
+    }
+
+    if (!invoiceUniqueId) {
+      return;
+    }
+
+    await addNoteMutation.mutateAsync(nextNote);
+  }
 
   return (
     <section className="space-y-6">
@@ -501,15 +506,51 @@ export function MembershipInvoiceDetailPage() {
         <aside className="space-y-6">
           <DetailPanel
             title="Notes"
+            action={
+              <button
+                type="button"
+                onClick={openAddNoteModal}
+                className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
+              >
+                <MessageSquarePlus size={14} />
+                Add Note
+              </button>
+            }
           >
             <div className="space-y-3">
-              {invoice.notes.length > 0 ? (
-                invoice.notes.map((note) => (
-                  <div key={`${note.createdBy}-${note.createdOnUtc}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{note.createdBy}</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">{note.note}</p>
-                    <p className="mt-2 text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
-                  </div>
+              {notesQuery.isLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, index) => (
+                    <div
+                      key={index}
+                      className="animate-pulse rounded-3xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="h-3 w-24 rounded-full bg-slate-200" />
+                      <div className="mt-3 h-4 w-full rounded-full bg-slate-200" />
+                      <div className="mt-2 h-4 w-4/5 rounded-full bg-slate-200" />
+                      <div className="mt-4 h-3 w-32 rounded-full bg-slate-200" />
+                    </div>
+                  ))}
+                </div>
+              ) : notes.length > 0 ? (
+                notes.map((note) => (
+                  <article
+                    key={`${note.createdBy}-${note.createdOnUtc}`}
+                    className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                          <UserRound size={18} />
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
+                          <p className="text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
+                  </article>
                 ))
               ) : (
                 <EmptyStatePanel
@@ -522,6 +563,15 @@ export function MembershipInvoiceDetailPage() {
 
         </aside>
       </div>
+
+      <InvoiceNoteModal
+        isOpen={isAddNoteModalOpen}
+        noteDraft={noteDraft}
+        isSaving={addNoteMutation.isPending}
+        onNoteDraftChange={setNoteDraft}
+        onCancel={closeAddNoteModal}
+        onSave={handleSaveNote}
+      />
     </section>
   );
 }
@@ -603,6 +653,93 @@ function MiniMetric({
     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
       <p className="mt-2 text-sm font-medium leading-6 text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function InvoiceNoteModal({
+  isOpen,
+  noteDraft,
+  isSaving,
+  onNoteDraftChange,
+  onCancel,
+  onSave,
+}: {
+  isOpen: boolean;
+  noteDraft: string;
+  isSaving: boolean;
+  onNoteDraftChange: (value: string) => void;
+  onCancel: () => void;
+  onSave: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+}) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm" onClick={onCancel} role="presentation">
+      <form
+        className="w-full max-w-2xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
+        onSubmit={onSave}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Add note</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Record a billing note</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Keep an internal note on this invoice. The latest note will surface at the top immediately after saving.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            aria-label="Close modal"
+            title="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <label className="mb-2 block text-sm font-semibold text-slate-900" htmlFor="invoice-note">
+            Note
+          </label>
+          <textarea
+            id="invoice-note"
+            value={noteDraft}
+            onChange={(event) => onNoteDraftChange(event.target.value)}
+            placeholder="Write a clear internal note about this invoice..."
+            maxLength={400}
+            rows={7}
+            className="min-h-[10rem] w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+          />
+          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+            <span>Maximum 400 characters</span>
+            <span>{noteDraft.length}/400</span>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving || noteDraft.trim().length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+            Save
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

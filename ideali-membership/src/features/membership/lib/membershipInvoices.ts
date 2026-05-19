@@ -1,4 +1,4 @@
-import { getJson } from "../../../lib/api";
+import { getJson, postJson } from "../../../lib/api";
 import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
 import { readResponseData, readText, readNumber } from "../../../lib/parseUtils";
 import type {
@@ -535,4 +535,15 @@ export async function fetchMembershipInvoiceDetail(invoiceUniqueId: string) {
   }
 
   return buildInvoiceDetailItem(responseData);
+}
+
+export async function fetchMembershipInvoiceNotes(invoiceUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/invoice/${invoiceUniqueId}/notes`);
+  const responseData = readResponseData(payload);
+
+  return readNotes(responseData);
+}
+
+export async function addMembershipInvoiceNote(invoiceUniqueId: string, note: string) {
+  await postJson<unknown>(`/api/invoice/${invoiceUniqueId}/add-note`, { note });
 }
