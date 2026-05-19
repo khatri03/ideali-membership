@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeInfo, Check, ChevronRight, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
+import { BadgeInfo, Check, ChevronRight, FileText, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   APP_ROUTES,
+  buildMembershipInvoicesPath,
   buildMembershipMembersPath,
   buildMembershipRegisterPath,
   buildMembershipWizardStepPath,
@@ -17,6 +18,7 @@ import { saveMembershipReviewStep } from "../lib/membershipWizard";
 import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
 import {
   canCopyRegistrationLink,
+  canShowInvoicesMenu,
   canShowMemberMenu,
   canShowStatusMenu,
   constrainOrderDragToParent,
@@ -647,7 +649,9 @@ export function MembershipTypeActionsMenu({
       return;
     }
 
-    void handleStatusChange(pendingStatus);
+    const nextStatus = pendingStatus;
+    setPendingStatus(null);
+    void handleStatusChange(nextStatus);
   }
 
   return (
@@ -691,10 +695,28 @@ export function MembershipTypeActionsMenu({
                     setPendingStatus(null);
                   }}
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-normal text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                >
+                  >
                   <EditIcon />
                   Edit
                 </Link>
+
+                {canShowInvoicesMenu(item.setupState) ? (
+                  <Link
+                    to={buildMembershipInvoicesPath({
+                      membershipTypeUniqueIds: [item.value],
+                    })}
+                    onClick={() => {
+                      setIsOpen(false);
+                      setIsStatusOpen(false);
+                      setIsMemberOpen(false);
+                      setPendingStatus(null);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-normal text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Invoices
+                  </Link>
+                ) : null}
 
                 {canShowMemberMenu(item.setupState) ? (
                   <div

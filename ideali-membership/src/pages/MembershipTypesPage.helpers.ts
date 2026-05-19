@@ -190,6 +190,10 @@ export function canShowMemberMenu(setupState: string) {
   return setupState === "Published";
 }
 
+export function canShowInvoicesMenu(setupState: string) {
+  return setupState === "Published";
+}
+
 export function canCopyRegistrationLink(item: MembershipTypeListItem) {
   if (item.setupState !== "Published" || !item.availableForSignUp) {
     return false;

@@ -494,14 +494,6 @@ export function MembershipInvoiceDetailPage() {
               </table>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <CompactTotal label="Subtotal" value={formatMembershipInvoiceAmount(subtotal, "$")} />
-              <CompactTotal label="Tax" value={formatMembershipInvoiceAmount(invoice.taxAmount ?? 0, "$")} />
-              <CompactTotal
-                label="Service charges"
-                value={formatMembershipInvoiceAmount(invoice.serviceCharges ?? 0, "$")}
-              />
-            </div>
           </DetailPanel>
 
         </div>

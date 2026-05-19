@@ -110,6 +110,7 @@ export function buildMembershipMembersPath(query?: {
 export function buildMembershipInvoicesPath(query?: {
   searchTerm?: string;
   status?: string;
+  membershipTypeUniqueIds?: string[];
   pageNo?: number;
   pageSize?: number;
   sortBy?: string;
@@ -123,6 +124,12 @@ export function buildMembershipInvoicesPath(query?: {
 
   if (query?.status?.trim()) {
     searchParams.set("status", query.status.trim());
+  }
+
+  if (query?.membershipTypeUniqueIds?.length) {
+    query.membershipTypeUniqueIds.forEach((membershipTypeUniqueId) => {
+      searchParams.append("membershipTypeUniqueIds", membershipTypeUniqueId);
+    });
   }
 
   if (query?.pageNo) {
