@@ -191,14 +191,14 @@ function SkeletonRow() {
 }
 
 export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, onSort, onClearSort }: InvoicesTableProps) {
-  const columns = useMemo(
+  const columns: InvoiceTableColumn[] = useMemo(
     () => [
       { label: "Invoice", key: "invoiceNumber" as const },
       { label: "Member", key: "memberName" as const },
       { label: "Status", key: "status" as const },
       { label: "Invoice Date/Time", key: "invoiceDateUtc" as const },
       { label: "Total", key: "totalAmount" as const, align: "right" as const },
-    ] satisfies InvoiceTableColumn[],
+    ],
     [],
   );
 
@@ -255,9 +255,13 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                         {column.label}
                       </span>
                     ) : (
+                      (() => {
+                        const sortKey = column.key;
+
+                        return (
                       <button
                         type="button"
-                        onClick={() => onSort(column.key)}
+                        onClick={() => onSort(sortKey)}
                         title={getSortTooltip(column.key, column.label)}
                         className={cn(
                           "inline-flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700",
@@ -270,6 +274,8 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                           order={sortOrder ?? (column.key === "invoiceDateUtc" ? "desc" : "asc")}
                         />
                       </button>
+                        );
+                      })()
                     )}
                   </th>
                 );

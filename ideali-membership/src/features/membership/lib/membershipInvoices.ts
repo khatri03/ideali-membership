@@ -8,6 +8,7 @@ import type {
   MembershipInvoiceDetailPayment,
   MembershipInvoiceDetailNote,
   MembershipInvoiceDetailContext,
+  MembershipInvoiceSummaryItem,
   MembershipInvoicePaymentMethod,
   MembershipInvoiceListItem,
   MembershipInvoiceSortBy,
@@ -368,6 +369,22 @@ function buildInvoiceDetailItem(record: Record<string, unknown>): MembershipInvo
   };
 }
 
+function buildInvoiceSummaryItem(record: Record<string, unknown>): MembershipInvoiceSummaryItem {
+  return {
+    uniqueId: readText(record.UniqueId ?? record.uniqueId),
+    invoiceNo: readText(record.InvoiceNo ?? record.invoiceNo),
+    invoiceDate: readText(record.InvoiceDate ?? record.invoiceDate),
+    invoiceAmount: readNumber(record.InvoiceAmount ?? record.invoiceAmount) ?? 0,
+    discountAmount: readNullableNumber(record.DiscountAmount ?? record.discountAmount),
+    discountCouponCode: readNullableText(record.DiscountCouponCode ?? record.discountCouponCode),
+    balanceAmount: readNullableNumber(record.BalanceAmount ?? record.balanceAmount),
+    paymentMethod: formatMembershipInvoicePaymentMethodLabel(record.PaymentMethod ?? record.paymentMethod),
+    membershipName: readText(record.MembershipName ?? record.membershipName),
+    memberUniqueId: readNullableText(record.MemberUniqueId ?? record.memberUniqueId),
+    currencySymbol: readNullableText(record.CurrencySymbol ?? record.currencySymbol),
+  };
+}
+
 export function getMembershipInvoiceStatusTone(status: MembershipInvoiceStatus | string) {
   switch (status) {
     case "Paid":
@@ -535,6 +552,55 @@ export async function fetchMembershipInvoiceDetail(invoiceUniqueId: string) {
   }
 
   return buildInvoiceDetailItem(responseData);
+}
+
+export async function fetchMembershipInvoiceSummary(invoiceUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/invoice/membership/${invoiceUniqueId}/summary`);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  if (!responseData) {
+    throw new Error("Unable to load invoice summary.");
+  }
+
+  return buildInvoiceSummaryItem(responseData);
+}
+
+export async function fetchMembershipInvoiceLineItems(invoiceUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/invoice/membership/${invoiceUniqueId}/line-items`);
+  const responseData = readResponseData(payload);
+
+  return readList(responseData)
+    .map((item): MembershipInvoiceDetailLineItem | null => {
+      const record = readRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      const taxCharges = readRecord(record.TaxCharges ?? record.taxCharges);
+      const serviceCharges = readRecord(record.ServiceCharges ?? record.serviceCharges);
+
+      return {
+        description: readText(record.Description ?? record.description),
+        unitPrice: readNumber(record.UnitPrice ?? record.unitPrice) ?? 0,
+        quantity: Math.trunc(readNumber(record.Quantity ?? record.quantity) ?? 0),
+        total: readNumber(record.Total ?? record.total) ?? 0,
+        invoiceItemStatus: readText(record.InvoiceItemStatus ?? record.invoiceItemStatus),
+        discountAmount: readNullableNumber(record.DiscountAmount ?? record.discountAmount),
+        discountRate: readNullableNumber(record.DiscountRate ?? record.discountRate),
+        taxCharges: {
+          rate: readNullableNumber(taxCharges?.Rate ?? taxCharges?.rate),
+          description: readNullableText(taxCharges?.Description ?? taxCharges?.description),
+          amount: readNullableNumber(taxCharges?.Amount ?? taxCharges?.amount),
+        },
+        serviceCharges: {
+          rate: readNullableNumber(serviceCharges?.Rate ?? serviceCharges?.rate),
+          description: readNullableText(serviceCharges?.Description ?? serviceCharges?.description),
+          amount: readNullableNumber(serviceCharges?.Amount ?? serviceCharges?.amount),
+        },
+        itemType: Math.trunc(readNumber(record.ItemType ?? record.itemType) ?? 0),
+      };
+    })
+    .filter((item): item is MembershipInvoiceDetailLineItem => Boolean(item?.description));
 }
 
 export async function fetchMembershipInvoiceNotes(invoiceUniqueId: string) {

@@ -116,6 +116,20 @@ export interface MembershipInvoiceDetailPayment {
   createdOnUtc: string;
 }
 
+export interface MembershipInvoiceSummaryItem {
+  uniqueId: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  invoiceAmount: number;
+  discountAmount: number | null;
+  discountCouponCode: string | null;
+  balanceAmount: number | null;
+  paymentMethod: string | null;
+  membershipName: string;
+  memberUniqueId: string | null;
+  currencySymbol: string | null;
+}
+
 export interface MembershipInvoiceDetailItem {
   uniqueId: string;
   invoiceNo: string;
