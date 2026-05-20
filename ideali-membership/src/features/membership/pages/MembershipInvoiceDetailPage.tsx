@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
   Copy,
+  FileText,
   Loader2,
   Mail,
   MessageSquarePlus,
@@ -21,6 +22,7 @@ import { fetchMembershipMemberDetail } from "../../../lib/membershipMembers";
 import type { MembershipInvoiceDetailItem, MembershipInvoiceDetailLineItem, MembershipInvoiceSummaryItem } from "../types/invoice";
 import {
   addMembershipInvoiceNote,
+  downloadMembershipInvoicePdf,
   fetchMembershipInvoiceLineItems,
   fetchMembershipInvoiceNotes,
   fetchMembershipInvoiceView,
@@ -59,6 +61,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
   const queryClient = useQueryClient();
   const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const publicDetailQuery = useQuery({
     queryKey: ["membership-invoice-view", invoiceUniqueId ?? ""],
@@ -111,11 +114,44 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
     },
   });
 
+  async function copyInvoiceNumber() {
+    if (!summary) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(summary.invoiceNo);
+      showToast("Invoice number copied to clipboard.", "success");
+    } catch {
+      showToast("Unable to copy the invoice number from this browser context.", "error");
+    }
+  }
+
+  function printInvoice() {
+    window.print();
+  }
+
+  async function downloadPdf() {
+    if (!invoiceUniqueId || !summary) {
+      return;
+    }
+
+    setIsDownloadingPdf(true);
+    try {
+      await downloadMembershipInvoicePdf(invoiceUniqueId, summary.invoiceNo);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Unable to download the PDF.", "error");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  }
+
   const member = memberQuery.data ?? null;
   const memberContact: ContactLike | null = isPublicView ? publicDetail?.contact ?? null : member?.contact ?? null;
   const memberAddress = isPublicView ? publicDetail?.contact?.address ?? null : member?.address ?? null;
   const notes = isPublicView ? publicDetail?.notes ?? [] : notesQuery.data ?? [];
   const rawLineItems = isPublicView ? publicDetail?.invoiceItems ?? [] : lineItemsQuery.data ?? [];
+  const isPdfMode = typeof window !== "undefined" && window.location.search.includes("pdf=true");
   const discountCouponCode = summary?.discountCouponCode ?? null;
   const discountLineItemAmount = Math.abs(summary?.discountAmount ?? 0);
   const currencySymbol = summary?.currencySymbol ?? "$";
@@ -221,23 +257,6 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
     return [...purchasedItems, discountLineItem, subtotalLineItem, ...tipItems, netTotalLineItem];
   }, [discountCouponCode, discountLineItemAmount, rawLineItems]);
 
-  async function copyInvoiceNumber() {
-    if (!summary) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(summary.invoiceNo);
-      showToast("Invoice number copied to clipboard.", "success");
-    } catch {
-      showToast("Unable to copy the invoice number from this browser context.", "error");
-    }
-  }
-
-  function printInvoice() {
-    window.print();
-  }
-
   function openAddNoteModal() {
     setNoteDraft("");
     setIsAddNoteModalOpen(true);
@@ -320,17 +339,17 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
     <section className="space-y-6">
       <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-cyan-50 via-white to-transparent lg:block" />
-        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-4 xl:max-w-4xl">
-            {isPublicView ? null : (
+          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-4 xl:max-w-4xl">
+              {isPublicView ? null : (
               <Link
                 to={APP_ROUTES.membershipInvoices}
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
               >
                 <ArrowLeft size={16} />
                 Back to invoices
-              </Link>
-            )}
+                </Link>
+              )}
 
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
@@ -348,38 +367,54 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
           </div>
 
           <div className="flex flex-col items-end gap-3 xl:min-w-[28rem]">
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={copyInvoiceNumber}
-                title="Copy number"
-                aria-label="Copy invoice number"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-              >
-                <Copy size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={printInvoice}
-                title="Print invoice"
-                aria-label="Print invoice"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-              >
-                <Printer size={18} />
-              </button>
-              {memberUniqueId ? (
-                <a
-                  href={buildMembershipMemberDetailPath(memberUniqueId)}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  title="Open member profile"
-                  aria-label="Open member profile"
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-sm transition hover:bg-cyan-700"
+            {isPdfMode ? null : isPublicView ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => void downloadPdf()}
+                  title="Download PDF"
+                  aria-label="Download PDF"
+                  disabled={isDownloadingPdf}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <UserRound size={18} />
-                </a>
-              ) : null}
-            </div>
+                  <FileText size={16} />
+                  {isDownloadingPdf ? "Preparing PDF..." : "PDF"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={copyInvoiceNumber}
+                  title="Copy number"
+                  aria-label="Copy invoice number"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                >
+                  <Copy size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={printInvoice}
+                  title="Print invoice"
+                  aria-label="Print invoice"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                >
+                  <Printer size={18} />
+                </button>
+                {memberUniqueId ? (
+                  <a
+                    href={buildMembershipMemberDetailPath(memberUniqueId)}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    title="Open member profile"
+                    aria-label="Open member profile"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-sm transition hover:bg-cyan-700"
+                  >
+                    <UserRound size={18} />
+                  </a>
+                ) : null}
+              </div>
+            )}
 
             <div className="grid w-full gap-3 sm:grid-cols-2">
               <StatCard

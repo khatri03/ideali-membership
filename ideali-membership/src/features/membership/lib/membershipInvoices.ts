@@ -1,6 +1,8 @@
 import { getJson, postJson } from "../../../lib/api";
+import { downloadBinaryFile } from "../../../lib/api";
 import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
 import { readResponseData, readText, readNumber } from "../../../lib/parseUtils";
+import { buildPublicMembershipInvoiceViewPath } from "../../../routes";
 import type {
   MembershipInvoiceDetailContact,
   MembershipInvoiceDetailItem,
@@ -624,4 +626,12 @@ export async function fetchMembershipInvoiceNotes(invoiceUniqueId: string) {
 
 export async function addMembershipInvoiceNote(invoiceUniqueId: string, note: string) {
   await postJson<unknown>(`/api/invoice/${invoiceUniqueId}/add-note`, { note });
+}
+
+export async function downloadMembershipInvoicePdf(invoiceUniqueId: string, invoiceNo?: string | null) {
+  const viewUrl = new URL(`${buildPublicMembershipInvoiceViewPath(invoiceUniqueId)}?pdf=true`, window.location.origin).toString();
+  const url = `/api/pdf/public/from-url?url=${encodeURIComponent(viewUrl)}`;
+  const fileName = invoiceNo?.trim() ? `invoice-${invoiceNo.trim()}.pdf` : `invoice-${invoiceUniqueId}.pdf`;
+
+  await downloadBinaryFile(url, fileName);
 }

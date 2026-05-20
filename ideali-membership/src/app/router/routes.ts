@@ -14,6 +14,7 @@ export const APP_ROUTES = {
   membershipInvoices: "/organizer/membership/type/invoices",
   membershipInvoiceDetail: "/organizer/membership/type/invoices/:invoiceUniqueId/detail",
   membershipInvoiceView: "/organizer/membership/type/invoices/:invoiceUniqueId/view",
+  publicMembershipInvoiceView: "/public/membership-invoice/:invoiceUniqueId/view",
   membershipPendingApprovals: "/organizer/membership/type/pending-approvals",
   dndPlayground: "/organizer/dnd-playground",
   membershipWizard: "/organizer/membership/type/wizard",
@@ -159,4 +160,8 @@ export function buildMembershipInvoiceDetailPath(invoiceUniqueId: string) {
 
 export function buildMembershipInvoiceViewPath(invoiceUniqueId: string) {
   return generatePath(APP_ROUTES.membershipInvoiceView as string, { invoiceUniqueId });
+}
+
+export function buildPublicMembershipInvoiceViewPath(invoiceUniqueId: string) {
+  return generatePath(APP_ROUTES.publicMembershipInvoiceView as string, { invoiceUniqueId });
 }
