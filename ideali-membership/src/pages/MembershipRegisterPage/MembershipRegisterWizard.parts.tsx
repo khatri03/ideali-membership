@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { MembershipTheme } from "./MembershipRegisterPage.types";
 import { formatStepNumber } from "./MembershipRegisterWizard.utils";
 
+function toRgba(theme: MembershipTheme, alpha: number) {
+  return `rgba(${theme.accentRgb.r}, ${theme.accentRgb.g}, ${theme.accentRgb.b}, ${alpha})`;
+}
+
 export function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg
@@ -244,11 +248,21 @@ export function StepBadge({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "relative flex min-w-30 flex-1 flex-col items-center gap-1.5 rounded-none border-0 px-2 py-2 text-center transition sm:min-w-40 sm:gap-2 sm:px-3",
+        "relative flex min-w-30 flex-1 flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition sm:min-w-40 sm:px-4 sm:py-3.5",
         disabled ? "cursor-not-allowed opacity-50" : "hover:opacity-100",
       ].join(" ")}
       style={{
-        background: "transparent",
+        borderColor: active
+          ? toRgba(theme, 0.22)
+          : completed
+            ? toRgba(theme, 0.18)
+            : "transparent",
+        background:
+          active
+            ? toRgba(theme, 0.08)
+            : completed
+              ? "rgba(248, 250, 252, 0.92)"
+              : "transparent",
       }}
     >
       <div

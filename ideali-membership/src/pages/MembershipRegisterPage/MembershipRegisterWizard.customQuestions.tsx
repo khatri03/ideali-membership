@@ -64,18 +64,18 @@ function CustomQuestionFieldCard({
 
   return (
     <div
-      className={`group relative space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass}`.trim()}
+      className={`group relative space-y-3`.trim()}
       style={{
         borderColor: theme.cardBorder,
-        background: theme.tileBackground,
+        background: "transparent",
       }}
       title={tooltipText || undefined}
     >
       <div className="space-y-1">
         <div className="flex items-start gap-2">
           <p
-            className="text-sm font-semibold"
-            style={{ color: theme.tileValueColor }}
+            className="text-sm font-semibold tracking-tight"
+            style={{ color: theme.titleColor }}
           >
             {question.label}
             {question.required ? (
@@ -178,7 +178,7 @@ function CustomQuestionFieldCard({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className={`flex w-full items-center gap-4 rounded-3xl px-4 py-4 text-left transition hover:shadow-sm sm:px-5 ${dashedBorderClass}`.trim()}
+            className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition hover:shadow-sm sm:px-5 ${dashedBorderClass}`.trim()}
             style={{
               borderColor: isDragging ? theme.level1 : theme.cardBorder,
               background: isDragging ? theme.level3 : theme.cardBackground,

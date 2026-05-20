@@ -25,7 +25,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [isCustomFormBuilderRoute]);
 
   return (
-    <Flex minH="100vh" direction="column" overflowX="hidden" bgGradient="linear(180deg, #f8fbff 0%, #eef6ff 100%)" color="slate.900">
+    <Flex minH="100vh" direction="column" overflowX="hidden" bg="app.bg" color="app.text">
       <TopBar isNavVisible={isNavVisible} onNavToggle={() => setIsNavVisible((current) => !current)} />
 
       <Box flex="1" px={{ base: 4, sm: 6, xl: 10 }} py={{ base: 6, lg: 8 }}>

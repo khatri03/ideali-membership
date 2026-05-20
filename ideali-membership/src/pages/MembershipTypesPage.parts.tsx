@@ -523,9 +523,8 @@ export function MembershipTypeActionsMenu({
             </Menu.Item>
 
             {canShowMemberMenu(item.setupState) ? (
-              <Menu.Root positioning={{ placement: "right-start", gutter: 6 }}>
+                <Menu.Root positioning={{ placement: "right-start", gutter: 6 }}>
                 <Menu.TriggerItem
-                  value={`member-${item.value}`}
                   rounded="lg"
                   px="3"
                   py="2.5"
@@ -626,12 +625,11 @@ export function MembershipTypeActionsMenu({
             {canShowStatusMenu(item.setupState) ? (
               <>
                 <Menu.Separator my="1.5" borderColor="slate.200" />
-                <Menu.Root positioning={{ placement: "right-start", gutter: 6 }}>
-                  <Menu.TriggerItem
-                    value={`status-${item.value}`}
-                    rounded="lg"
-                    px="3"
-                    py="2.5"
+              <Menu.Root positioning={{ placement: "right-start", gutter: 6 }}>
+                <Menu.TriggerItem
+                  rounded="lg"
+                  px="3"
+                  py="2.5"
                     color="slate.700"
                     _highlighted={{ bg: "slate.50", color: "slate.950" }}
                   >

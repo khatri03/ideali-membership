@@ -87,7 +87,14 @@ export function YourInformationStep({
 
   return (
     <>
-      <div className="space-y-6">
+      <div
+        className="space-y-8 rounded-4xl border px-5 py-5 shadow-sm sm:px-6 sm:py-6"
+        style={{
+          borderColor: theme.cardBorder,
+          background: theme.cardBackground,
+          boxShadow: `0 18px 46px -34px ${theme.cardShadow}`,
+        }}
+      >
         <div className="space-y-4">
           <SectionTitle
             title="User Login"
@@ -107,10 +114,11 @@ export function YourInformationStep({
                 value={form.email}
                 onChange={(event) => setField("email", event.target.value)}
                 placeholder="name@example.com"
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{
                   borderColor: theme.cardBorder,
                   color: theme.titleColor,
+                  boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                 }}
               />
             </WizardField>
@@ -126,10 +134,11 @@ export function YourInformationStep({
                   value={form.password}
                   onChange={(event) => setField("password", event.target.value)}
                   placeholder="Create password"
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{
                     borderColor: theme.cardBorder,
                     color: theme.titleColor,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                   }}
                 />
               </WizardField>
@@ -146,10 +155,11 @@ export function YourInformationStep({
                     setField("confirmPassword", event.target.value)
                   }
                   placeholder="Confirm password"
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{
                     borderColor: theme.cardBorder,
                     color: theme.titleColor,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                   }}
                 />
               </WizardField>
@@ -158,7 +168,7 @@ export function YourInformationStep({
         </div>
 
         <div
-          className="my-6 w-full border-t border-solid"
+          className="my-2 w-full border-t border-solid"
           style={{ borderColor: theme.cardBorder }}
           aria-hidden="true"
         />
@@ -187,10 +197,11 @@ export function YourInformationStep({
                   disabled={
                     isLoadingPrefixOptions && prefixOptions.length === 0
                   }
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{
                     borderColor: theme.cardBorder,
                     color: theme.titleColor,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                   }}
                 >
                   <option value="">
@@ -218,10 +229,11 @@ export function YourInformationStep({
                     setField("firstName", event.target.value)
                   }
                   placeholder="First name"
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{
                     borderColor: theme.cardBorder,
                     color: theme.titleColor,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                   }}
                 />
               </WizardField>
@@ -234,10 +246,11 @@ export function YourInformationStep({
                     setField("middleName", event.target.value)
                   }
                   placeholder="Middle name"
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{
                     borderColor: theme.cardBorder,
                     color: theme.titleColor,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                   }}
                 />
               </WizardField>
@@ -253,10 +266,11 @@ export function YourInformationStep({
                   value={form.lastName}
                   onChange={(event) => setField("lastName", event.target.value)}
                   placeholder="Last name"
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{
                     borderColor: theme.cardBorder,
                     color: theme.titleColor,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                   }}
                 />
               </WizardField>
@@ -270,10 +284,11 @@ export function YourInformationStep({
                   value={form.cellPhone}
                   onChange={(value) => setField("cellPhone", value)}
                   placeholder="(555) 123-4567"
-                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                  className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                   style={{
                     borderColor: theme.cardBorder,
                     color: theme.titleColor,
+                    boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                   }}
                 />
               </WizardField>
@@ -282,7 +297,7 @@ export function YourInformationStep({
         </div>
 
         <div
-          className="my-6 w-full border-t border-solid"
+          className="my-2 w-full border-t border-solid"
           style={{ borderColor: theme.cardBorder }}
           aria-hidden="true"
         />
@@ -309,10 +324,11 @@ export function YourInformationStep({
                 disabled={
                   isLoadingAddressTypeOptions && addressTypeOptions.length === 0
                 }
-                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/20 ${getFieldBorderClass(showBorders)}`.trim()}
+                className={`w-full rounded-2xl bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-cyan-500/18 ${getFieldBorderClass(showBorders)}`.trim()}
                 style={{
                   borderColor: theme.cardBorder,
                   color: theme.titleColor,
+                  boxShadow: `0 1px 2px rgba(15, 23, 42, 0.02)`,
                 }}
               >
                 <option value="">

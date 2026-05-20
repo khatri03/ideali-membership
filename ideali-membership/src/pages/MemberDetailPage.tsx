@@ -2,15 +2,20 @@ import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, Building2, CheckCircle2, CircleX, Download, ExternalLink, FileText, Globe2, Hash, Home, Image, Landmark, Mail, MapPinned, Phone, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Badge, Box, Button, Flex, Grid, Heading, HStack, Input, SimpleGrid, Stack, Text, Textarea } from "@chakra-ui/react";
 import { APP_ROUTES } from "../routes";
 import { downloadBinaryFile, openBinaryFile } from "../lib/api";
 import { cn } from "../lib/utils";
 import { fetchCountryOptions, fetchStateOptions } from "../lib/customForms";
 import { EmptyStatePanel, DetailPanel, StatCard, StatusPill } from "./MemberDetailPage.parts";
 import { useMemberDetailPage } from "./MemberDetailPage.hooks";
-import { getCustomFormFieldSpanClass, getCustomFormGridClass, getCustomFormControlType, getCustomQuestionControlType } from "./MembershipRegisterPage/MembershipRegisterWizard.logic";
+import { getCustomFormControlType, getCustomQuestionControlType } from "./MembershipRegisterPage/MembershipRegisterWizard.logic";
 import type { MembershipMemberCustomFormAnswer, MembershipMemberCustomQuestionAnswer } from "../types/membership";
-import type { MembershipRegistrationCustomQuestionOption } from "../types/membershipRegistration";
+import type {
+  MembershipRegistrationCustomFormField,
+  MembershipRegistrationCustomQuestion,
+  MembershipRegistrationCustomQuestionOption,
+} from "../types/membershipRegistration";
 
 type MemberTone = "slate" | "cyan" | "emerald" | "amber" | "rose";
 type ModerationAction = "approve" | "reject";
@@ -28,6 +33,10 @@ function getInitials(value: string) {
 
 function normalizeStatusValue(value: string) {
   return value.replace(/[\s_-]+/g, "").toLowerCase();
+}
+
+function normalizeControlType(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
 }
 
 function getStatusTone(status: string): MemberTone {
@@ -65,6 +74,21 @@ function getAddressFieldIcon(fieldLabel: string) {
       return <Hash size={16} />;
     default:
       return <FileText size={16} />;
+  }
+}
+
+function getCustomFormFieldGridColumn(layoutColumn: number, fieldLayoutColumn: number | null) {
+  const resolvedLayoutColumn = Math.max(1, Math.min(4, fieldLayoutColumn ?? layoutColumn));
+
+  switch (resolvedLayoutColumn) {
+    case 2:
+      return { base: "span 1", md: "span 6" };
+    case 3:
+      return { base: "span 1", md: "span 6", lg: "span 4" };
+    case 4:
+      return { base: "span 1", md: "span 6", lg: "span 3" };
+    default:
+      return { base: "span 1", md: "span 12" };
   }
 }
 
@@ -144,170 +168,241 @@ export function MemberDetailPage() {
 
   if (error && !memberUniqueId) {
     return (
-      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium text-rose-700">
+      <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
+        <Box rounded="app.card" borderWidth="1px" borderColor="rose.200" bg="rose.50" px={4} py={4} color="rose.700">
           {error}
-        </div>
-      </section>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <section className="space-y-6">
-      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-cyan-50 via-white to-transparent lg:block" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-4 lg:max-w-3xl">
-            <Link
-              to={APP_ROUTES.membershipMembers}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-            >
-              <ArrowLeft size={16} />
-              Back to members
+    <Stack gap={6}>
+      <Box position="relative" overflow="hidden" rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
+        <Box position="absolute" insetY={0} right={0} display={{ base: "none", lg: "block" }} w="1/3" bgGradient="linear(to-l, brand.50, app.surface)" />
+        <Flex position="relative" direction={{ base: "column", lg: "row" }} gap={6} align="start" justify="space-between">
+          <Stack gap={4} maxW="3xl">
+            <Link to={APP_ROUTES.membershipMembers}>
+              <Button
+                type="button"
+                variant="outline"
+                rounded="full"
+                borderColor="app.border"
+                bg="app.surface"
+                color="app.text"
+                px={4}
+                py={2}
+                fontSize="sm"
+                fontWeight="semibold"
+                gap={2}
+                _hover={{ borderColor: "brand.200", bg: "brand.50", color: "brand.800" }}
+              >
+                <ArrowLeft size={16} />
+                Back to members
+              </Button>
             </Link>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <div className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-full border border-cyan-100 bg-gradient-to-br from-cyan-600 to-sky-500 text-xl font-semibold text-white shadow-lg shadow-cyan-100 sm:h-24 sm:w-24">
+            <Flex direction={{ base: "column", sm: "row" }} gap={4} align={{ sm: "start" }}>
+              <Box display="flex" h={{ base: "5rem", sm: "6rem" }} w={{ base: "5rem", sm: "6rem" }} flex="none" alignItems="center" justifyContent="center" overflow="hidden" rounded="full" borderWidth="1px" borderColor="brand.100" bgGradient="linear(to-br, brand.700, cyan.500)" color="white" fontSize="xl" fontWeight="semibold" shadow="0 10px 24px rgba(34, 211, 238, 0.2)">
                 {member?.profile.photoUrl ? (
                   <img
                     src={member.profile.photoUrl}
                     alt={fullName}
-                    className="h-full w-full rounded-full object-cover"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: "9999px",
+                    }}
                   />
                 ) : (
                   getInitials(fullName)
                 )}
-              </div>
+              </Box>
 
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
+              <Stack gap={3}>
+                <Box>
+                  <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.24em" color="brand.700" textTransform="uppercase">
                     Member detail
-                  </p>
-                  <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                  </Text>
+                  <Heading as="h1" mt={3} size={{ base: "2xl", sm: "3xl" }} letterSpacing="-0.04em" color="app.text">
                     {fullName}
-                  </h1>
-                  <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
+                  </Heading>
+                  <Text mt={3} maxW="3xl" fontSize={{ base: "sm", sm: "md" }} lineHeight="1.8" color="app.muted">
                     Review the member&apos;s profile, membership status, and submitted registration responses in one place.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+                  </Text>
+                </Box>
+              </Stack>
+            </Flex>
+          </Stack>
           {isPendingApproval ? (
-            <div className="flex flex-wrap items-center justify-end gap-3 lg:ml-auto">
-              <button
+            <HStack flexWrap="wrap" justify="end" gap={3} ml={{ lg: "auto" }}>
+              <Button
                 type="button"
                 onClick={() => setPendingModerationAction("approve")}
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                rounded="full"
+                bg="emerald.600"
+                color="white"
+                px={5}
+                py={2.5}
+                fontSize="sm"
+                fontWeight="semibold"
+                _hover={{ bg: "emerald.700" }}
               >
                 <CheckCircle2 size={16} />
                 Approve
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setPendingModerationAction("reject")}
-                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-5 py-2.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
+                rounded="full"
+                bg="rose.600"
+                color="white"
+                px={5}
+                py={2.5}
+                fontSize="sm"
+                fontWeight="semibold"
+                shadow="sm"
+                _hover={{ bg: "rose.700" }}
               >
                 <CircleX size={16} />
                 Reject
-              </button>
-            </div>
+              </Button>
+            </HStack>
           ) : null}
-        </div>
-      </div>
+        </Flex>
+      </Box>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="h-28 animate-pulse rounded-3xl bg-slate-100" />
-          <div className="h-28 animate-pulse rounded-3xl bg-slate-100" />
-          <div className="h-28 animate-pulse rounded-3xl bg-slate-100" />
-          <div className="h-28 animate-pulse rounded-3xl bg-slate-100" />
-        </div>
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={4}>
+          <Box h="28" rounded="3xl" bg="slate.100" />
+          <Box h="28" rounded="3xl" bg="slate.100" />
+          <Box h="28" rounded="3xl" bg="slate.100" />
+          <Box h="28" rounded="3xl" bg="slate.100" />
+        </SimpleGrid>
       ) : error ? (
-        <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-sm font-medium text-rose-700">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>{error}</div>
-            <button
+        <Box rounded="app.panel" borderWidth="1px" borderColor="rose.200" bg="rose.50" p={6} color="rose.700">
+          <Flex direction={{ base: "column", sm: "row" }} gap={3} align={{ sm: "center" }} justify="space-between">
+            <Box>{error}</Box>
+            <Button
               type="button"
               onClick={() => void refetch()}
-              className="inline-flex items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+              rounded="full"
+              bg="rose.600"
+              color="white"
+              px={5}
+              py={2.5}
+              fontSize="sm"
+              fontWeight="semibold"
+              _hover={{ bg: "rose.700" }}
             >
               Retry
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Flex>
+        </Box>
       ) : member ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={4}>
             {statCards.map((card) => (
-              <StatCard key={card.label} label={card.label} value={card.value} detail={card.detail} tone={card.tone} />
+              <StatCard key={card.label} label={card.label} value={card.value} tone={card.tone} />
             ))}
-          </div>
+          </SimpleGrid>
 
-          <div
+          <Box
             role="tablist"
             aria-label="Member detail tabs"
-            className="flex w-full items-end overflow-x-auto border-b border-slate-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            display="flex"
+            w="full"
+            alignItems="end"
+            overflowX="auto"
+            borderBottomWidth="1px"
+            borderColor="app.border"
+            style={{ scrollbarWidth: "none" }}
           >
-            <button
+            <Button
               type="button"
               role="tab"
               aria-selected={isMemberDetailTabActive}
               onClick={() => setActiveDetailTabId(MEMBER_DETAIL_TAB_ID)}
-              className={cn(
-                "inline-flex flex-1 items-center justify-center gap-2 rounded-t-lg px-4 py-2.5 text-sm transition-colors duration-150",
-                isMemberDetailTabActive
-                  ? "-mb-px border-x border-b border-t-2 border-x-slate-200 border-b-white border-t-cyan-600 bg-white font-semibold text-slate-900"
-                  : "border border-slate-200 bg-slate-50/60 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700",
-              )}
+              flex="1"
+              justifyContent="center"
+              gap={2}
+              roundedTop="lg"
+              roundedBottom="none"
+              px={4}
+              py={2.5}
+              fontSize="sm"
+              fontWeight={isMemberDetailTabActive ? "semibold" : "medium"}
+              bg={isMemberDetailTabActive ? "app.surface" : "app.surfaceAlt"}
+              color={isMemberDetailTabActive ? "app.text" : "app.muted"}
+              borderWidth="1px"
+              borderColor="app.border"
+              borderBottomColor={isMemberDetailTabActive ? "app.surface" : "app.border"}
+              borderTopWidth={isMemberDetailTabActive ? "2px" : "1px"}
+              borderTopColor={isMemberDetailTabActive ? "brand.600" : "app.border"}
+              mt={isMemberDetailTabActive ? "-1px" : 0}
+              _hover={{ bg: isMemberDetailTabActive ? "app.surface" : "app.surfaceAlt" }}
             >
-              <UserRound size={14} className="shrink-0" />
+              <UserRound size={14} style={{ flexShrink: 0 }} />
               <span>Member Detail</span>
-            </button>
+            </Button>
 
             {customFormSections.map((section) => {
               const isActive = section.id === activeCustomFormSection?.id;
 
               return (
-                <button
+                <Button
                   key={section.id}
                   type="button"
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveDetailTabId(section.id)}
-                  className={cn(
-                    "inline-flex flex-1 items-center justify-center gap-2 rounded-t-lg px-4 py-2.5 text-sm transition-colors duration-150",
-                    isActive
-                      ? "-mb-px border-x border-b border-t-2 border-x-slate-200 border-b-white border-t-cyan-600 bg-white font-semibold text-slate-900"
-                      : "border border-slate-200 bg-slate-50/60 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700",
-                  )}
+                  flex="1"
+                  justifyContent="center"
+                  gap={2}
+                  roundedTop="lg"
+                  roundedBottom="none"
+                  px={4}
+                  py={2.5}
+                  fontSize="sm"
+                  fontWeight={isActive ? "semibold" : "medium"}
+                  bg={isActive ? "app.surface" : "app.surfaceAlt"}
+                  color={isActive ? "app.text" : "app.muted"}
+                  borderWidth="1px"
+                  borderColor="app.border"
+                  borderBottomColor={isActive ? "app.surface" : "app.border"}
+                  borderTopWidth={isActive ? "2px" : "1px"}
+                  borderTopColor={isActive ? "brand.600" : "app.border"}
+                  mt={isActive ? "-1px" : 0}
+                  _hover={{ bg: isActive ? "app.surface" : "app.surfaceAlt" }}
                 >
                   <span>{section.title}</span>
-                </button>
+                </Button>
               );
             })}
-          </div>
+          </Box>
 
-          <div className="space-y-6">
-            <div className="space-y-6">
+          <Stack gap={6}>
+            <Stack gap={6}>
               {isMemberDetailTabActive ? (
-                <div className="space-y-6">
-                  <div className="grid items-stretch gap-6 xl:grid-cols-2">
+                <Stack gap={6}>
+                  <Grid gap={6} alignItems="stretch" templateColumns={{ base: "1fr", xl: "repeat(2, minmax(0, 1fr))" }}>
                     <DetailPanel
-                      className="h-full"
+                      height="full"
                       title="Profile and contact"
                     >
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <Grid gap={4} templateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }}>
                         <InfoRow icon={<UserRound size={16} />} label="Name" value={fullName} />
                         <InfoRow icon={<Mail size={16} />} label="Email" value={member.contact.email} href={`mailto:${member.contact.email}`} />
                         <InfoRow icon={<Phone size={16} />} label="Phone" value={member.contact.cellPhone || "Not provided"} href={member.contact.cellPhone ? `tel:${member.contact.cellPhone}` : undefined} />
-                      </div>
+                      </Grid>
 
                       {addressFields.length > 0 ? (
-                        <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address</p>
-                          <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <Box mt={5} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" p={4}>
+                          <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.subtle">
+                            Address
+                          </Text>
+                          <Grid mt={4} gap={4} templateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }}>
                             {addressFields.map((field) => (
                               <InfoRow
                                 key={field.label}
@@ -316,98 +411,111 @@ export function MemberDetailPage() {
                                 value={field.value}
                               />
                             ))}
-                          </div>
-                        </div>
+                          </Grid>
+                        </Box>
                       ) : null}
                     </DetailPanel>
 
                     <DetailPanel
-                      className="h-full"
+                      height="full"
                       title="Membership snapshot"
                       description="A concise view of the member's current standing and the most important lifecycle dates."
                     >
-                      <div className="space-y-4">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Current plan</p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">{member.membership.activeMembershipName || "Not assigned"}</p>
-                        </div>
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Expiry</p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">{membershipExpiryLabel}</p>
-                        </div>
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Record notes</p>
-                          <p className={cn("mt-2 text-sm leading-6", member.membership.notes ? "text-slate-700" : "text-slate-500")}>
+                      <Stack gap={4}>
+                        <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" p={4}>
+                          <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.subtle">
+                            Current plan
+                          </Text>
+                          <Text mt={2} fontSize="lg" fontWeight="semibold" color="app.text">
+                            {member.membership.activeMembershipName || "Not assigned"}
+                          </Text>
+                        </Box>
+                        <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" p={4}>
+                          <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.subtle">
+                            Expiry
+                          </Text>
+                          <Text mt={2} fontSize="lg" fontWeight="semibold" color="app.text">
+                            {membershipExpiryLabel}
+                          </Text>
+                        </Box>
+                        <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" p={4}>
+                          <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.subtle">
+                            Record notes
+                          </Text>
+                          <Text mt={2} fontSize="sm" lineHeight="1.7" color={member.membership.notes ? "app.text" : "app.muted"}>
                             {member.membership.notes || "No notes provided with this member record."}
-                          </p>
-                        </div>
-
-                      </div>
+                          </Text>
+                        </Box>
+                      </Stack>
                     </DetailPanel>
-                  </div>
+                  </Grid>
 
                   {customQuestionResponses.length > 0 ? (
                     <DetailPanel
                       title="Custom questions"
                       description="Individual question responses captured at registration time."
                     >
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <Grid gap={4} templateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }}>
                         {customQuestionResponses.map((item) => (
-                          <article key={item.questionUniqueId || item.questionLabel} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <Box as="article" key={item.questionUniqueId || item.questionLabel} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" p={4}>
+                            <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.subtle">
                               {item.controlType || "Question"}
-                            </p>
-                            <h3 className="mt-2 text-base font-semibold text-slate-900">
+                            </Text>
+                            <Text as="h3" mt={2} fontSize="md" fontWeight="semibold" color="app.text">
                               {item.questionLabel || "Unnamed question"}
-                            </h3>
-                            <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
-                              {item.optionLabel ? <p><span className="font-medium text-slate-900">Selected:</span> {item.optionLabel}</p> : null}
+                            </Text>
+                            <Stack mt={4} gap={2} fontSize="sm" lineHeight="1.7" color="app.muted">
+                              {item.optionLabel ? <Text><Text as="span" fontWeight="medium" color="app.text">Selected:</Text> {item.optionLabel}</Text> : null}
                               {renderCustomQuestionAnswer(item)}
-                            </div>
-                          </article>
+                            </Stack>
+                          </Box>
                         ))}
-                      </div>
+                      </Grid>
                     </DetailPanel>
                   ) : null}
 
-                </div>
+                </Stack>
                 ) : activeCustomFormSection ? (
-                  <div key={activeCustomFormSection.id} className="space-y-4">
-                    <div className={getCustomFormGridClass()}>
+                  <Stack key={activeCustomFormSection.id} gap={4}>
+                    <Grid gap={4} templateColumns={{ base: "1fr", md: "repeat(12, minmax(0, 1fr))" }}>
                       {activeCustomFormSection.items.map((item, index) => (
-                        <article
+                        <Box
+                          as="article"
                           key={`${item.fieldUniqueId ?? item.fieldLabel}-${item.value}`}
-                          className={cn(
-                            "group relative space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5",
-                            getCustomFormFieldSpanClass(activeCustomFormSection.layoutColumn, item.fieldLayoutColumn),
-                          )}
+                          gridColumn={getCustomFormFieldGridColumn(activeCustomFormSection.layoutColumn, item.fieldLayoutColumn)}
+                          position="relative"
+                          rounded="app.card"
+                          borderWidth="1px"
+                          borderColor="app.border"
+                          bg="app.surfaceAlt"
+                          p={{ base: 4, sm: 5 }}
                         >
-                          <div className="space-y-1">
-                            <div className="flex items-start gap-2">
-                              <p className="text-sm font-semibold text-slate-900">
+                          <Stack gap={1}>
+                            <Flex align="start" gap={2}>
+                              <Text fontSize="sm" fontWeight="semibold" color="app.text">
                                 {item.fieldLabel || "Unnamed field"}
-                              </p>
-                            </div>
-                          </div>
+                              </Text>
+                            </Flex>
+                          </Stack>
 
-                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                          <Box mt={3} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" px={4} py={3}>
                             {renderCustomFormAnswer(item, activeCustomFormSection.items, index)}
-                          </div>
-                        </article>
+                          </Box>
+                        </Box>
                       ))}
-                    </div>
-                  </div>
+                    </Grid>
+                  </Stack>
                 ) : null}
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </>
       ) : (
-        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+        <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
           <EmptyStatePanel
             title="Member record unavailable"
             description="We couldn't find a member record to show. Try returning to the members list and opening another profile."
           />
-        </div>
+        </Box>
       )}
 
       {moderationModalAction ? (
@@ -419,7 +527,7 @@ export function MemberDetailPage() {
           onConfirm={() => void confirmModerationAction()}
         />
       ) : null}
-    </section>
+    </Stack>
   );
 }
 
@@ -437,17 +545,19 @@ function InfoRow({
   mono?: boolean;
 }) {
   const content = (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+    <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" p={4} shadow="sm">
+      <Flex align="center" gap={2}>
+        <Box as="span" display="inline-flex" h={7} w={7} alignItems="center" justifyContent="center" rounded="full" bg="app.surfaceAlt" color="app.muted">
           {icon}
-        </span>
-        {label}
-      </div>
-      <p className={cn("mt-3 text-sm leading-6 text-slate-700", mono ? "font-mono text-xs break-all" : "font-medium")}>
+        </Box>
+        <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.subtle">
+          {label}
+        </Text>
+      </Flex>
+      <Text mt={3} fontSize="sm" lineHeight="1.7" color="app.text" fontFamily={mono ? "mono" : "inherit"} wordBreak={mono ? "break-all" : "normal"} fontWeight={mono ? "normal" : "medium"}>
         {value}
-      </p>
-    </div>
+      </Text>
+    </Box>
   );
 
   if (!href) {
@@ -455,7 +565,13 @@ function InfoRow({
   }
 
   return (
-    <a href={href} className="block transition hover:-translate-y-0.5 hover:shadow-md">
+    <a
+      href={href}
+      style={{
+        display: "block",
+        transition: "all 0.2s ease",
+      }}
+    >
       {content}
     </a>
   );
@@ -503,7 +619,7 @@ function renderCustomFormAnswer(
     case "textarea":
       return <ReadOnlyTextareaValue value={item.value} />;
     default:
-      return <p className="text-sm leading-6 text-slate-700">{renderCustomFormValue(item.value)}</p>;
+      return <Text fontSize="sm" lineHeight="1.7" color="app.text">{renderCustomFormValue(item.value)}</Text>;
   }
 }
 
@@ -550,31 +666,51 @@ function ReadOnlyCheckboxValue({ value }: { value: string }) {
   const checked = value.trim().toLowerCase() === "true" || value.trim() === "1";
 
   return (
-    <label className="inline-flex items-center gap-3 text-sm font-medium text-slate-700">
-      <input type="checkbox" checked={checked} readOnly disabled className="h-4 w-4 accent-cyan-600" />
-      <span>{checked ? "Checked" : "Unchecked"}</span>
-    </label>
+    <HStack gap={3} fontSize="sm" fontWeight="medium" color="app.text">
+      <input
+        type="checkbox"
+        checked={checked}
+        readOnly
+        disabled
+        style={{
+          width: "1rem",
+          height: "1rem",
+          accentColor: "#06b6d4",
+          flexShrink: 0,
+        }}
+      />
+      <Text>{checked ? "Checked" : "Unchecked"}</Text>
+    </HStack>
   );
 }
 
 function ReadOnlyPasswordValue({ value }: { value: string }) {
   return (
-    <input
+    <Input
       type="password"
       value={value}
       readOnly
-      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+      variant="subtle"
+      size="md"
+      bg="app.surfaceAlt"
+      borderColor="app.border"
+      color="app.text"
     />
   );
 }
 
 function ReadOnlyTextareaValue({ value }: { value: string }) {
   return (
-    <textarea
+    <Textarea
       value={value}
       readOnly
       rows={4}
-      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none"
+      variant="subtle"
+      bg="app.surfaceAlt"
+      borderColor="app.border"
+      color="app.text"
+      fontSize="sm"
+      lineHeight="1.7"
     />
   );
 }
@@ -590,11 +726,11 @@ function ReadOnlyRadioValue({
   const fallbackValue = value.trim();
 
   if (options.length === 0) {
-    return <p className="text-sm leading-6 text-slate-700">{fallbackValue || "No value provided"}</p>;
+    return <Text fontSize="sm" lineHeight="1.7" color="app.text">{fallbackValue || "No value provided"}</Text>;
   }
 
   return (
-    <div className="space-y-2">
+    <Stack gap={2}>
       {options.map((option) => {
         const isSelected =
           selectedValues.includes(option.value) ||
@@ -605,13 +741,24 @@ function ReadOnlyRadioValue({
           fallbackValue === option.displayText;
 
         return (
-          <label key={option.uniqueId} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <input type="radio" checked={isSelected} readOnly disabled className="h-4 w-4 accent-cyan-600" />
-            <span>{option.displayText}</span>
-          </label>
+          <HStack key={option.uniqueId} gap={3} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" px={3} py={2} fontSize="sm" color="app.text">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              readOnly
+              disabled
+              style={{
+                width: "1rem",
+                height: "1rem",
+                accentColor: "#06b6d4",
+                flexShrink: 0,
+              }}
+            />
+            <Text>{option.displayText}</Text>
+          </HStack>
         );
       })}
-    </div>
+    </Stack>
   );
 }
 
@@ -626,20 +773,20 @@ function ReadOnlyMultiSelectValue({
 
   if (options.length === 0) {
     return selectedValues.length > 0 ? (
-      <span className="inline-flex flex-wrap gap-2">
+      <HStack flexWrap="wrap" gap={2}>
         {selectedValues.map((item) => (
-          <span key={item} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+          <Box key={item} rounded="app.pill" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" px={3} py={1} fontSize="xs" fontWeight="medium" color="app.text">
             {item}
-          </span>
+          </Box>
         ))}
-      </span>
+      </HStack>
     ) : (
-      <p className="text-sm leading-6 text-slate-400">No value provided</p>
+      <Text fontSize="sm" lineHeight="1.7" color="app.muted">No value provided</Text>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <Stack gap={2}>
       {options.map((option) => {
         const isSelected =
           selectedValues.includes(option.value) ||
@@ -647,13 +794,24 @@ function ReadOnlyMultiSelectValue({
           selectedValues.includes(option.displayText);
 
         return (
-          <label key={option.uniqueId} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <input type="checkbox" checked={isSelected} readOnly disabled className="h-4 w-4 accent-cyan-600" />
-            <span>{option.displayText}</span>
-          </label>
+          <HStack key={option.uniqueId} gap={3} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" px={3} py={2} fontSize="sm" color="app.text">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              readOnly
+              disabled
+              style={{
+                width: "1rem",
+                height: "1rem",
+                accentColor: "#06b6d4",
+                flexShrink: 0,
+              }}
+            />
+            <Text>{option.displayText}</Text>
+          </HStack>
         );
       })}
-    </div>
+    </Stack>
   );
 }
 
@@ -688,7 +846,16 @@ function ReadOnlyCountryValue({ value }: { value: string }) {
     <select
       value={value}
       disabled
-      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+      style={{
+        width: "100%",
+        minHeight: "2.75rem",
+        borderRadius: "0.75rem",
+        border: "1px solid var(--chakra-colors-app-border)",
+        background: "var(--chakra-colors-app-surface-alt)",
+        color: "var(--chakra-colors-app-text)",
+        paddingInline: "0.75rem",
+        fontSize: "0.875rem",
+      }}
     >
       <option value="">{resolvedOptions.length > 0 ? "Select country" : value || "No value provided"}</option>
       {resolvedOptions.map((option) => (
@@ -744,7 +911,16 @@ function ReadOnlyStateValue({
     <select
       value={value}
       disabled
-      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
+      style={{
+        width: "100%",
+        minHeight: "2.75rem",
+        borderRadius: "0.75rem",
+        border: "1px solid var(--chakra-colors-app-border)",
+        background: "var(--chakra-colors-app-surface-alt)",
+        color: "var(--chakra-colors-app-text)",
+        paddingInline: "0.75rem",
+        fontSize: "0.875rem",
+      }}
     >
       <option value="">
         {countryValue?.trim()
@@ -817,16 +993,16 @@ function AttachmentCard({
   }, [isImage, viewUrl]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm">
+    <Stack gap={3}>
+      <Flex align="start" gap={3} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" p={3}>
+        <Flex h="2.5rem" w="2.5rem" shrink={0} align="center" justify="center" rounded="xl" bg="app.surface" color="app.muted" shadow="sm">
           {isImage ? <Image size={18} /> : <FileText size={18} />}
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="truncate font-medium text-slate-900">{displayName}</p>
-          <p className="text-xs text-slate-500">{formatAttachmentMeta(contentType, fileSize)}</p>
-        </div>
-      </div>
+        </Flex>
+        <Box minW={0} flex={1}>
+          <Text truncate fontWeight="medium" color="app.text">{displayName}</Text>
+          <Text fontSize="xs" color="app.muted">{formatAttachmentMeta(contentType, fileSize)}</Text>
+        </Box>
+      </Flex>
 
       {isImage ? (
         previewUrl ? (
@@ -835,19 +1011,36 @@ function AttachmentCard({
             onClick={() => {
               window.open(previewUrl, "_blank", "noopener,noreferrer");
             }}
-            className="block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white"
+            style={{
+              display: "block",
+              width: "100%",
+              overflow: "hidden",
+              borderRadius: "var(--chakra-radii-app-card)",
+              border: "1px solid var(--chakra-colors-app-border)",
+              background: "var(--chakra-colors-app-surface)",
+              padding: 0,
+            }}
           >
-            <img src={previewUrl} alt={displayName} className="max-h-64 w-full object-cover" />
+            <img
+              src={previewUrl}
+              alt={displayName}
+              style={{
+                display: "block",
+                width: "100%",
+                maxHeight: "16rem",
+                objectFit: "cover",
+              }}
+            />
           </button>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">
+          <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" px={4} py={6} fontSize="sm" color="app.muted">
             Loading preview...
-          </div>
+          </Box>
         )
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        <button
+      <HStack flexWrap="wrap" gap={2}>
+        <Button
           type="button"
           onClick={() => {
             if (isImage && previewUrl) {
@@ -860,23 +1053,27 @@ function AttachmentCard({
               window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
             });
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+          size="sm"
+          variant="outline"
+          colorPalette="cyan"
         >
           <ExternalLink size={14} />
           Open
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => {
             void downloadBinaryFile(downloadUrl, fileName || fallbackLabel || "download");
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+          size="sm"
+          variant="outline"
+          colorPalette="cyan"
         >
           <Download size={14} />
           Download
-        </button>
-      </div>
-    </div>
+        </Button>
+      </HStack>
+    </Stack>
   );
 }
 
@@ -900,49 +1097,46 @@ function ModerationConfirmModal({
     : `You are about to reject ${memberName}. This will move the member to Rejected status.`;
   const confirmLabel = isApprove ? "Confirm Approve" : "Confirm Reject";
   const icon = isApprove ? (
-    <CheckCircle2 className="h-5 w-5" />
+    <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
   ) : (
-    <CircleX className="h-5 w-5" />
+    <CircleX size={20} style={{ flexShrink: 0 }} />
   );
-  const iconClassName = isApprove ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700";
-  const confirmButtonClassName = isApprove
-    ? "bg-emerald-600 hover:bg-emerald-700"
-    : "bg-rose-600 hover:bg-rose-700";
-
   return createPortal(
-    <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl">
-        <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", iconClassName)}>{icon}</div>
+    <Box position="fixed" inset={0} zIndex={1200} display="flex" alignItems="center" justifyContent="center" bg="rgba(15, 23, 42, 0.5)" px={4} py={6} backdropFilter="blur(6px)">
+      <Box w="full" maxW="md" rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="2xl">
+        <Flex h={12} w={12} align="center" justify="center" rounded="2xl" bg={isApprove ? "emerald.50" : "rose.50"} color={isApprove ? "emerald.700" : "rose.700"}>
+          {icon}
+        </Flex>
 
-        <h3 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">{title}</h3>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
+        <Text mt={4} fontSize="2xl" fontWeight="semibold" letterSpacing="-0.03em" color="app.text">{title}</Text>
+        <Text mt={3} fontSize="sm" lineHeight="1.7" color="app.muted">{description}</Text>
+        <Text mt={3} fontSize="sm" lineHeight="1.7" color="app.muted">
           Please confirm this action before it is sent to the backend.
-        </p>
+        </Text>
 
-        <div className="mt-8 flex items-center justify-between gap-3">
-          <button
+        <Flex mt={8} align="center" justify="space-between" gap={3}>
+          <Button
             type="button"
             onClick={onCancel}
             disabled={isSaving}
-            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            variant="outline"
+            colorPalette="slate"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={onConfirm}
             disabled={isSaving}
-            className={cn(
-              "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60",
-              confirmButtonClassName,
-            )}
+            bg={isApprove ? "emerald.600" : "rose.600"}
+            color="white"
+            _hover={{ bg: isApprove ? "emerald.700" : "rose.700" }}
           >
             {isSaving ? "Working..." : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>,
+          </Button>
+        </Flex>
+      </Box>
+    </Box>,
     document.body,
   );
 }
@@ -969,10 +1163,10 @@ function renderCustomFormValue(value: string) {
   const trimmedValue = value.trim();
 
   if (!trimmedValue) {
-    return <span className="text-slate-400">No value provided</span>;
+    return <Text color="app.muted">No value provided</Text>;
   }
 
-  return <span className="whitespace-pre-wrap">{trimmedValue}</span>;
+  return <Text whiteSpace="pre-wrap">{trimmedValue}</Text>;
 }
 
 function getNearestCountryValue(

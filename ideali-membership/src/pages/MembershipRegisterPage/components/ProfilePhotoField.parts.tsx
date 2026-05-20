@@ -49,7 +49,7 @@ export function AvatarEditorModal({
   previewDimensions: { width: number; height: number } | null;
   isDragging: boolean;
   isSaving: boolean;
-  cropViewportRef: RefObject<HTMLDivElement | null>;
+  cropViewportRef: RefObject<HTMLDivElement>;
   theme: MembershipTheme;
   onClose: () => void;
   onSave: () => void;

@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Box, Button, HStack, Menu, Portal, Stack, Table, Text } from "@chakra-ui/react";
 import { buildMembershipInvoiceDetailPath, buildMembershipMemberDetailPath } from "../../../routes";
-import { cn } from "../../../lib/utils";
 import {
   formatMembershipInvoiceAmount,
   formatMembershipInvoiceDateLabel,
@@ -27,12 +26,11 @@ type InvoiceTableColumn = {
   label: string;
   key?: MembershipInvoiceSortBy;
   align?: "right";
-  sortable?: boolean;
 };
 
 function DotsIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 fill-current">
+    <svg viewBox="0 0 20 20" aria-hidden="true" width="20" height="20" style={{ fill: "currentColor" }}>
       <circle cx="4" cy="10" r="1.5" />
       <circle cx="10" cy="10" r="1.5" />
       <circle cx="16" cy="10" r="1.5" />
@@ -48,145 +46,125 @@ function SortIcon({
   order: "asc" | "desc";
 }) {
   if (!active) {
-    return <ArrowUpDown size={14} className="text-slate-400" />;
+    return <ArrowUpDown size={14} color="var(--chakra-colors-slate-400)" />;
   }
 
   return order === "asc" ? (
-    <ArrowUp size={14} className="text-cyan-700" />
+    <ArrowUp size={14} color="var(--chakra-colors-brand-700)" />
   ) : (
-    <ArrowDown size={14} className="text-cyan-700" />
+    <ArrowDown size={14} color="var(--chakra-colors-brand-700)" />
   );
 }
 
 function InvoiceDetailMenu({ invoice }: { invoice: MembershipInvoiceListItem }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node;
-      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
-        return;
-      }
-
-      setIsOpen(false);
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  function openMenu() {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) {
-      setIsOpen(true);
-      return;
-    }
-
-    const gap = 8;
-    const menuWidth = 192;
-    const menuHeight = invoice.memberUniqueId ? 96 : 48;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
-
-    setMenuPosition({
-      top: openUpward ? Math.max(gap, rect.top - menuHeight - gap) : rect.bottom + gap,
-      left: Math.max(gap, Math.min(rect.left, window.innerWidth - menuWidth - gap)),
-    });
-    setIsOpen(true);
-  }
-
   return (
-    <div className="relative inline-flex">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={openMenu}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        aria-label={`Open detail actions for invoice ${invoice.invoiceNo}`}
-        title="Detail"
-      >
-        <DotsIcon />
-      </button>
+    <Menu.Root positioning={{ placement: "bottom-start", gutter: 8 }}>
+      <Menu.Trigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          rounded="full"
+          h="10"
+          w="10"
+          minW="10"
+          p="0"
+          borderWidth="1px"
+          borderColor="app.border"
+          bg="app.surface"
+          color="app.muted"
+          shadow="sm"
+          _hover={{ borderColor: "brand.200", bg: "brand.50", color: "brand.700" }}
+          aria-haspopup="menu"
+          aria-label={`Open detail actions for invoice ${invoice.invoiceNo}`}
+          title="Detail"
+        >
+          <DotsIcon />
+        </Button>
+      </Menu.Trigger>
 
-      {isOpen && menuPosition
-        ? createPortal(
-            <div
-              ref={menuRef}
-              className="fixed z-[1200] w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-2xl shadow-slate-900/10"
-              style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content
+            minW="14rem"
+            rounded="xl"
+            borderWidth="1px"
+            borderColor="app.border"
+            bg="app.surface"
+            p="1.5"
+            shadow="xl"
+          >
+            <Menu.Item
+              value={`invoice-detail-${invoice.invoiceId}`}
+              rounded="lg"
+              px="3"
+              py="2.5"
+              color="app.text"
+              _highlighted={{ bg: "app.surfaceAlt", color: "app.text" }}
+              asChild
             >
-              <Link
-                to={buildMembershipInvoiceDetailPath(invoice.invoiceId)}
-                onClick={() => setIsOpen(false)}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                Detail
+              <Link to={buildMembershipInvoiceDetailPath(invoice.invoiceId)}>
+                <Text fontSize="sm" fontWeight="medium">
+                  Detail
+                </Text>
               </Link>
-              {invoice.memberUniqueId ? (
+            </Menu.Item>
+            {invoice.memberUniqueId ? (
+              <Menu.Item
+                value={`member-profile-${invoice.memberUniqueId}`}
+                rounded="lg"
+                px="3"
+                py="2.5"
+                color="app.text"
+                _highlighted={{ bg: "app.surfaceAlt", color: "app.text" }}
+                asChild
+              >
                 <a
                   href={buildMembershipMemberDetailPath(invoice.memberUniqueId)}
                   target="_blank"
                   rel="noreferrer noopener"
-                  onClick={() => setIsOpen(false)}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                 >
-                  Member Profile
+                  <Text fontSize="sm" fontWeight="medium">
+                    Member Profile
+                  </Text>
                 </a>
-              ) : null}
-            </div>,
-            document.body,
-          )
-        : null}
-    </div>
+              </Menu.Item>
+            ) : null}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
   );
 }
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200/70">
-      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-        <div className="h-10 w-10 animate-pulse rounded-full bg-slate-200/80" />
-      </td>
-      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-        <div className="h-4 w-24 animate-pulse rounded-full bg-slate-200/80" />
-      </td>
-      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-        <div className="space-y-2">
-          <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200/80" />
-          <div className="h-3 w-40 animate-pulse rounded-full bg-slate-200/70" />
-          <div className="h-3 w-28 animate-pulse rounded-full bg-slate-200/70" />
-        </div>
-      </td>
-      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-        <div className="h-4 w-36 animate-pulse rounded-full bg-slate-200/80" />
-      </td>
-      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-        <div className="h-6 w-28 animate-pulse rounded-full bg-slate-200/80" />
-      </td>
-      <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-        <div className="ml-auto h-4 w-24 animate-pulse rounded-full bg-slate-200/80" />
-      </td>
-      <td className="px-3 py-4 sm:px-4">
-        <div className="ml-auto h-8 w-24 animate-pulse rounded-full bg-slate-200/80" />
-      </td>
-    </tr>
+    <Table.Row borderBottomWidth="1px" borderColor="app.border">
+      <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+        <Box h="10" w="10" rounded="full" bg="slate.200/80" animation="pulse 1.4s ease-in-out infinite" />
+      </Table.Cell>
+      <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+        <Box h="4" w="24" rounded="full" bg="slate.200/80" animation="pulse 1.4s ease-in-out infinite" />
+      </Table.Cell>
+      <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+        <Stack gap={2}>
+          <Box h="4" w="32" rounded="full" bg="slate.200/80" animation="pulse 1.4s ease-in-out infinite" />
+          <Box h="3" w="40" rounded="full" bg="slate.200/70" animation="pulse 1.4s ease-in-out infinite" />
+          <Box h="3" w="28" rounded="full" bg="slate.200/70" animation="pulse 1.4s ease-in-out infinite" />
+        </Stack>
+      </Table.Cell>
+      <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+        <Box h="4" w="36" rounded="full" bg="slate.200/80" animation="pulse 1.4s ease-in-out infinite" />
+      </Table.Cell>
+      <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+        <Box h="6" w="28" rounded="full" bg="slate.200/80" animation="pulse 1.4s ease-in-out infinite" />
+      </Table.Cell>
+      <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+        <Box ml="auto" h="4" w="24" rounded="full" bg="slate.200/80" animation="pulse 1.4s ease-in-out infinite" />
+      </Table.Cell>
+      <Table.Cell px={4} py={4}>
+        <Box ml="auto" h="8" w="24" rounded="full" bg="slate.200/80" animation="pulse 1.4s ease-in-out infinite" />
+      </Table.Cell>
+    </Table.Row>
   );
 }
 
@@ -215,139 +193,170 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
   }
 
   return (
-    <div className="space-y-3">
+    <Stack gap={3}>
       {sortBy ? (
-        <div className="flex items-center justify-end">
-          <button
+        <Box display="flex" justifyContent="end">
+          <Button
             type="button"
             onClick={onClearSort}
             title="Clear current sort"
-            className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-cyan-100"
+            variant="outline"
+            rounded="full"
+            borderColor="brand.100"
+            bg="brand.50"
+            color="app.text"
+            shadow="sm"
+            _hover={{ bg: "brand.100", borderColor: "brand.200" }}
           >
-            <X size={14} />
-            Clear Sort
-          </button>
-        </div>
+            <HStack gap={2}>
+              <X size={14} />
+              <Text fontSize="sm" fontWeight="medium">
+                Clear Sort
+              </Text>
+            </HStack>
+          </Button>
+        </Box>
       ) : null}
 
-      <div className="max-h-[38rem] overflow-auto rounded-[1.75rem] border border-cyan-100 bg-white/95 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.3)]">
-        <table aria-label="Membership invoices" className="w-full border-collapse text-sm">
-          <thead className="sticky top-0 z-10 backdrop-blur">
-            <tr className="border-b border-cyan-100 bg-cyan-50/80">
-              <th scope="col" className="h-12 border-b border-r border-cyan-200 px-3 text-left sm:px-4">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700">
+      <Box maxH="38rem" overflow="auto" rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" shadow="app.panel">
+        <Table.Root aria-label="Membership invoices" minW="1120px" tableLayout="fixed">
+          <Table.Header position="sticky" top="0" zIndex="1" bg="brand.50" backdropFilter="blur(8px)">
+            <Table.Row borderBottomWidth="1px" borderColor="brand.100">
+              <Table.ColumnHeader h="12" borderRightWidth="1px" borderColor="brand.100" px={4} textAlign="left">
+                <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.12em" textTransform="uppercase" color="app.muted">
                   Actions
-                </span>
-              </th>
+                </Text>
+              </Table.ColumnHeader>
               {columns.map((column) => {
-                const active = column.sortable !== false && column.key ? sortBy === column.key : false;
+                const active = column.key ? sortBy === column.key : false;
                 return (
-                  <th
+                  <Table.ColumnHeader
                     key={column.label}
-                    scope="col"
-                    className={cn(
-                      "h-12 border-b border-r border-cyan-200 px-3 sm:px-4",
-                      column.align === "right" ? "text-right" : "text-left",
-                    )}
+                    h="12"
+                    borderRightWidth="1px"
+                    borderColor="brand.100"
+                    px={4}
+                    textAlign={column.align === "right" ? "right" : "left"}
                   >
-                    {column.sortable === false || !column.key ? (
-                      <span className="inline-flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700">
-                        {column.label}
-                      </span>
-                    ) : (
-                      (() => {
-                        const sortKey = column.key;
-
-                        return (
-                      <button
+                    {column.key ? (
+                      <Button
                         type="button"
-                        onClick={() => onSort(sortKey)}
-                        title={getSortTooltip(column.key, column.label)}
-                        className={cn(
-                          "inline-flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700",
-                          column.align === "right" ? "justify-end" : "justify-start",
-                        )}
+                        onClick={() => onSort(column.key!)}
+                        title={getSortTooltip(column.key!, column.label)}
+                        variant="ghost"
+                        display="inline-flex"
+                        w="full"
+                        justifyContent={column.align === "right" ? "end" : "start"}
+                        gap={1.5}
+                        px={0}
+                        py={0}
+                        fontSize="xs"
+                        fontWeight="semibold"
+                        letterSpacing="0.12em"
+                        textTransform="uppercase"
+                        color="app.muted"
+                        _hover={{ color: "brand.800" }}
                       >
                         {column.label}
-                        <SortIcon
-                          active={active}
-                          order={sortOrder ?? (column.key === "invoiceDateUtc" ? "desc" : "asc")}
-                        />
-                      </button>
-                        );
-                      })()
+                        <SortIcon active={active} order={sortOrder ?? (column.key === "invoiceDateUtc" ? "desc" : "asc")} />
+                      </Button>
+                    ) : (
+                      <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.12em" textTransform="uppercase" color="app.muted">
+                        {column.label}
+                      </Text>
                     )}
-                  </th>
+                  </Table.ColumnHeader>
                 );
               })}
-            </tr>
-          </thead>
+            </Table.Row>
+          </Table.Header>
 
-          <tbody>
+          <Table.Body>
             {isLoading ? (
               Array.from({ length: 6 }).map((_, index) => <SkeletonRow key={`invoice-skeleton-${index}`} />)
             ) : invoices.length > 0 ? (
               invoices.map((invoice, index) => (
-                <tr
+                <Table.Row
                   key={invoice.invoiceId}
-                  className={cn(
-                    "border-b border-slate-200/70 hover:bg-cyan-50/40",
-                    index % 2 === 0 ? "bg-white" : "bg-slate-50/45",
-                  )}
+                  borderBottomWidth="1px"
+                  borderColor="app.border"
+                  bg={index % 2 === 0 ? "white" : "app.surfaceAlt"}
+                  _hover={{ bg: "brand.50" }}
                 >
-                  <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
+                  <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
                     <InvoiceDetailMenu invoice={invoice} />
-                  </td>
-                  <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-                    <div className="space-y-2">
+                  </Table.Cell>
+                  <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+                    <Stack gap={2}>
                       <Link
                         to={buildMembershipInvoiceDetailPath(invoice.invoiceId)}
-                        className="block text-sm font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4 transition hover:text-cyan-800 hover:decoration-cyan-400"
+                      style={{
+                        fontWeight: 600,
+                        color: "var(--chakra-colors-brand-700)",
+                        textDecoration: "underline",
+                        textDecorationColor: "var(--chakra-colors-brand-200)",
+                        textUnderlineOffset: "4px",
+                        transition: "color 0.15s ease, text-decoration-color 0.15s ease",
+                      }}
+                    >
+                      {invoice.invoiceNo}
+                    </Link>
+                      <Box
+                        display="inline-flex"
+                        w="fit-content"
+                        rounded="full"
+                        borderWidth="1px"
+                        borderColor="brand.100"
+                        bg="brand.50"
+                        px={2.5}
+                        py={1}
+                        fontSize="11px"
+                        fontWeight="semibold"
+                        color="brand.800"
                       >
-                        {invoice.invoiceNo}
-                      </Link>
-                      <span className="inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
                         {formatMembershipInvoicePaymentMethodLabel(invoice.paymentMethod)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-                    <div className="space-y-2">
-                      <div className="font-semibold text-slate-900">{invoice.memberName}</div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
+                      </Box>
+                    </Stack>
+                  </Table.Cell>
+                  <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
+                    <Stack gap={2}>
+                      <Text fontWeight="semibold" color="app.text">
+                        {invoice.memberName}
+                      </Text>
+                      <HStack flexWrap="wrap" gap={2}>
+                        <Box rounded="full" borderWidth="1px" borderColor="brand.100" bg="brand.50" px={2.5} py={1} fontSize="11px" fontWeight="semibold" color="brand.800">
                           {invoice.membershipName}
-                        </span>
-                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                        </Box>
+                        <Box rounded="full" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" px={2.5} py={1} fontSize="11px" fontWeight="medium" color="app.muted">
                           {invoice.memberEmail}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
+                        </Box>
+                      </HStack>
+                    </Stack>
+                  </Table.Cell>
+                  <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4}>
                     <StatusPill
                       label={getMembershipInvoiceStatusLabel(invoice.invoiceStatus)}
                       tone={getMembershipInvoiceStatusTone(invoice.invoiceStatus)}
                     />
-                  </td>
-                  <td className="border-r border-slate-200/70 px-3 py-4 text-slate-700 sm:px-4">
+                  </Table.Cell>
+                  <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4} color="app.text">
                     {formatMembershipInvoiceDateLabel(invoice.invoiceDateUtc)}
-                  </td>
-                  <td className="border-r border-slate-200/70 px-3 py-4 text-right font-semibold text-slate-900 sm:px-4">
+                  </Table.Cell>
+                  <Table.Cell borderRightWidth="1px" borderColor="app.border" px={4} py={4} textAlign="right" fontWeight="semibold" color="app.text">
                     {formatMembershipInvoiceAmount(invoice.totalAmount, invoice.currencySymbol)}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))
             ) : (
-              <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-500">
+              <Table.Row>
+                <Table.Cell colSpan={6} px={6} py={8} textAlign="center" color="app.muted">
                   No invoices found.
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </Table.Body>
+        </Table.Root>
+      </Box>
+    </Stack>
   );
 }

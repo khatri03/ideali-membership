@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { cn } from "../lib/utils";
+import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 
 type DetailPanelProps = {
   title: string;
   description?: string;
   children: ReactNode;
   action?: ReactNode;
-  className?: string;
+  height?: string;
 };
 
 type StatCardProps = {
@@ -21,63 +21,104 @@ type EmptyStatePanelProps = {
   description: string;
 };
 
-type StatusTone = NonNullable<StatCardProps["tone"]>;
-
-const STAT_TONE_CLASSES: Record<NonNullable<StatCardProps["tone"]>, string> = {
-  slate: "border-slate-200 bg-slate-50 text-slate-900",
-  cyan: "border-cyan-100 bg-cyan-50 text-cyan-900",
-  emerald: "border-emerald-100 bg-emerald-50 text-emerald-900",
-  amber: "border-amber-100 bg-amber-50 text-amber-900",
-  rose: "border-rose-100 bg-rose-50 text-rose-900",
-};
-
-export function DetailPanel({ title, description, children, action, className }: DetailPanelProps) {
+export function DetailPanel({ title, description, children, action, height }: DetailPanelProps) {
   return (
-    <section className={cn("rounded-[2rem] border border-slate-200 bg-white/95 p-6 shadow-sm", className)}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h2>
-          {description ? <p className="max-w-2xl text-sm leading-6 text-slate-600">{description}</p> : null}
-        </div>
-        {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
-      </div>
+    <Box
+      as="section"
+      rounded="app.panel"
+      borderWidth="1px"
+      borderColor="app.border"
+      bg="app.surface"
+      p={{ base: 5, md: 6 }}
+      shadow="app.panel"
+      height={height}
+    >
+      <Flex direction={{ base: "column", sm: "row" }} gap={4} align={{ sm: "flex-start" }} justify="space-between">
+        <Stack gap={2}>
+          <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="semibold" letterSpacing="-0.02em" color="app.text">
+            {title}
+          </Text>
+          {description ? (
+            <Text maxW="2xl" fontSize="sm" lineHeight="1.7" color="app.muted">
+              {description}
+            </Text>
+          ) : null}
+        </Stack>
+        {action ? <Flex shrink={0} align="center" gap={2}>{action}</Flex> : null}
+      </Flex>
 
-      <div className="mt-6">{children}</div>
-    </section>
+      <Box mt={6}>{children}</Box>
+    </Box>
   );
 }
 
 export function StatCard({ label, value, detail, tone = "slate" }: StatCardProps) {
   return (
-    <article className={cn("rounded-3xl border p-5 shadow-sm", STAT_TONE_CLASSES[tone])}>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
-      {detail ? <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p> : null}
-    </article>
+    <Box
+      as="article"
+      rounded="app.card"
+      borderWidth="1px"
+      borderColor="app.border"
+      bg={tone === "slate" ? "app.surface" : `${tone}.50`}
+      p={5}
+      shadow="sm"
+      position="relative"
+      overflow="hidden"
+      _before={{
+        content: '""',
+        position: "absolute",
+        insetInlineStart: 0,
+        top: 0,
+        bottom: 0,
+        w: "4px",
+        bg: tone === "slate" ? "app.borderStrong" : `${tone}.400`,
+      }}
+    >
+      <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.subtle">
+        {label}
+      </Text>
+      <Text mt={3} fontSize="2xl" fontWeight="semibold" letterSpacing="-0.03em" color="app.text">
+        {value}
+      </Text>
+      {detail ? (
+        <Text mt={2} fontSize="sm" lineHeight="1.7" color="app.muted">
+          {detail}
+        </Text>
+      ) : null}
+    </Box>
   );
 }
 
 export function EmptyStatePanel({ title, description }: EmptyStatePanelProps) {
   return (
-    <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
-      <p className="text-base font-semibold text-slate-900">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
-    </div>
+    <Box rounded="app.card" borderWidth="1px" borderStyle="dashed" borderColor="app.border" bg="app.surfaceAlt" px={5} py={10} textAlign="center">
+      <Text fontSize="md" fontWeight="semibold" color="app.text">
+        {title}
+      </Text>
+      <Text mt={2} fontSize="sm" lineHeight="1.7" color="app.muted">
+        {description}
+      </Text>
+    </Box>
   );
 }
 
 export function StatusPill({ label, tone }: { label: string; tone: "slate" | "cyan" | "emerald" | "amber" | "rose" }) {
-  const toneClasses: Record<StatusTone, string> = {
-    slate: "border-slate-200 bg-slate-50 text-slate-700",
-    cyan: "border-cyan-100 bg-cyan-50 text-cyan-700",
-    emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
-    amber: "border-amber-100 bg-amber-50 text-amber-700",
-    rose: "border-rose-100 bg-rose-50 text-rose-700",
-  };
-
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold", toneClasses[tone])}>
+    <Box
+      as="span"
+      display="inline-flex"
+      alignItems="center"
+      rounded="app.pill"
+      borderWidth="1px"
+      px={3}
+      py={1}
+      fontSize="xs"
+      fontWeight="semibold"
+      color={`${tone}.700`}
+      borderColor={`${tone}.100`}
+      bg={`${tone}.50`}
+    >
       {label}
-    </span>
+    </Box>
   );
 }

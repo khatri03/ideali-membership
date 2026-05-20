@@ -66,16 +66,16 @@ function CustomFormFieldCard({
 
   return (
     <div
-      className={`group relative space-y-3 rounded-2xl p-4 sm:p-5 ${controlBorderClass} ${spanClass}`.trim()}
+      className={`group relative space-y-3 ${spanClass}`.trim()}
       style={{
         borderColor: theme.cardBorder,
-        background: theme.tileBackground,
+        background: "transparent",
       }}
       title={tooltipText || undefined}
     >
       <div className="space-y-1">
         <div className="flex items-start gap-2">
-          <p className="text-sm font-semibold" style={{ color: theme.tileValueColor }}>
+          <p className="text-sm font-semibold tracking-tight" style={{ color: theme.titleColor }}>
             {field.controlLabel}
             {field.isMandatory ? <span className="ml-1 text-rose-600">*</span> : null}
           </p>
@@ -193,7 +193,7 @@ function CustomFormFieldCard({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className={`flex w-full items-center gap-4 rounded-3xl px-4 py-4 text-left transition hover:shadow-sm sm:px-5 ${dashedBorderClass}`.trim()}
+            className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition hover:shadow-sm sm:px-5 ${dashedBorderClass}`.trim()}
             style={{
               borderColor: isDragging ? theme.level1 : theme.cardBorder,
               background: isDragging ? theme.level3 : theme.cardBackground,

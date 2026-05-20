@@ -90,45 +90,45 @@ export function SideNav({ onNavigate }: SideNavProps) {
       w={{ base: "18rem", lg: "20rem" }}
       maxH={{ base: "100vh", lg: "calc(100vh - 88px)" }}
       overflowY="auto"
-      rounded="3xl"
+      rounded="app.panel"
       borderWidth="1px"
-      borderColor="slate.200"
-      bg="whiteAlpha.950"
+      borderColor="app.border"
+      bg="app.surface"
       p={6}
-      shadow={{ base: "2xl", lg: "sm" }}
+      shadow="app.panel"
       backdropFilter="blur(18px)"
     >
       <HStack justify="space-between" display={{ base: "flex", lg: "none" }}>
-        <Text fontSize="sm" fontWeight="semibold" letterSpacing="0.18em" color="cyan.800" textTransform="uppercase">
+        <Text fontSize="sm" fontWeight="semibold" letterSpacing="0.18em" color="brand.800" textTransform="uppercase">
           Navigation
         </Text>
-        <Button size="sm" variant="outline" rounded="full" borderColor="slate.200" color="slate.600" onClick={onNavigate}>
+        <Button size="sm" variant="outline" rounded="full" borderColor="app.border" color="app.text" onClick={onNavigate}>
           Close
         </Button>
       </HStack>
 
       <Stack gap={3} mt={{ base: 6, lg: 0 }}>
-        <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="slate.50" p={2}>
-              <Button
-                type="button"
-                onClick={() => setIsMembershipExpanded((current) => !current)}
-                w="full"
-                justifyContent="space-between"
-                rounded="2xl"
+        <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" p={2}>
+          <Button
+            type="button"
+            onClick={() => setIsMembershipExpanded((current) => !current)}
+            w="full"
+            justifyContent="space-between"
+            rounded="xl"
             variant="ghost"
             px={3}
             py={3}
             fontSize="sm"
             fontWeight="semibold"
-            color="slate.900"
+            color="app.text"
             aria-expanded={isMembershipExpanded}
             aria-controls="membership-nav-group"
-            _hover={{ bg: "white" }}
+            _hover={{ bg: "app.surface" }}
           >
             <span>Membership</span>
             <Text
               as="span"
-              color="slate.500"
+              color="app.subtle"
               transform={isMembershipExpanded ? "rotate(180deg)" : "rotate(0deg)"}
               transition="transform 0.2s ease"
             >
@@ -147,15 +147,15 @@ export function SideNav({ onNavigate }: SideNavProps) {
                     return (
                       <HStack
                         justify="space-between"
-                        rounded="2xl"
+                        rounded="xl"
                         px={4}
                         py={3}
                         fontSize="sm"
                         fontWeight="medium"
                         transition="all 0.2s ease"
-                        bg={isActive ? "cyan.50" : "transparent"}
-                        color={isActive ? "cyan.800" : "slate.700"}
-                        _hover={{ bg: isActive ? "cyan.50" : "slate.100" }}
+                        bg={isActive ? "brand.50" : "transparent"}
+                        color={isActive ? "brand.800" : "app.text"}
+                        _hover={{ bg: isActive ? "brand.50" : "app.surface" }}
                       >
                         <Text>{item.label}</Text>
                         <HStack gap={2}>
@@ -170,7 +170,7 @@ export function SideNav({ onNavigate }: SideNavProps) {
                             </Badge>
                           ) : null}
                           {isActive ? (
-                            <Badge rounded="full" px={2} py={0.5} bg="cyan.500" color="white" fontSize="10px">
+                            <Badge rounded="full" px={2} py={0.5} bg="brand.500" color="white" fontSize="10px">
                               Active
                             </Badge>
                           ) : null}
@@ -184,24 +184,24 @@ export function SideNav({ onNavigate }: SideNavProps) {
           ) : null}
         </Box>
 
-        <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="white" p={2} shadow="sm">
+        <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={2} shadow="sm">
           <NavLink to={APP_ROUTES.customForms} onClick={onNavigate}>
             {({ isActive }) => (
               <HStack
                 justify="space-between"
-                rounded="2xl"
+                rounded="xl"
                 px={4}
                 py={3}
                 fontSize="sm"
                 fontWeight="medium"
                 transition="all 0.2s ease"
-                bg={isActive ? "cyan.50" : "transparent"}
-                color={isActive ? "cyan.800" : "slate.700"}
-                _hover={{ bg: isActive ? "cyan.50" : "slate.100" }}
+                bg={isActive ? "brand.50" : "transparent"}
+                color={isActive ? "brand.800" : "app.text"}
+                _hover={{ bg: isActive ? "brand.50" : "app.surfaceAlt" }}
               >
                 <Text>Custom Forms</Text>
                 {isActive ? (
-                  <Badge rounded="full" px={2} py={0.5} bg="cyan.500" color="white" fontSize="10px">
+                  <Badge rounded="full" px={2} py={0.5} bg="brand.500" color="white" fontSize="10px">
                     Active
                   </Badge>
                 ) : null}
@@ -210,24 +210,24 @@ export function SideNav({ onNavigate }: SideNavProps) {
           </NavLink>
         </Box>
 
-        <Box rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="white" p={2} shadow="sm">
+        <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={2} shadow="sm">
           <NavLink to={APP_ROUTES.dndPlayground} onClick={onNavigate}>
             {({ isActive }) => (
               <HStack
                 justify="space-between"
-                rounded="2xl"
+                rounded="xl"
                 px={4}
                 py={3}
                 fontSize="sm"
                 fontWeight="medium"
                 transition="all 0.2s ease"
-                bg={isActive ? "cyan.50" : "transparent"}
-                color={isActive ? "cyan.800" : "slate.700"}
-                _hover={{ bg: isActive ? "cyan.50" : "slate.100" }}
+                bg={isActive ? "brand.50" : "transparent"}
+                color={isActive ? "brand.800" : "app.text"}
+                _hover={{ bg: isActive ? "brand.50" : "app.surfaceAlt" }}
               >
                 <Text>Dnd Playground</Text>
                 {isActive ? (
-                  <Badge rounded="full" px={2} py={0.5} bg="cyan.500" color="white" fontSize="10px">
+                  <Badge rounded="full" px={2} py={0.5} bg="brand.500" color="white" fontSize="10px">
                     Active
                   </Badge>
                 ) : null}
@@ -237,12 +237,12 @@ export function SideNav({ onNavigate }: SideNavProps) {
         </Box>
       </Stack>
 
-      <Box mt={8} rounded="3xl" borderWidth="1px" borderColor="cyan.100" bg="cyan.50" p={5}>
-        <Text fontSize="sm" fontWeight="semibold" color="slate.900">
+      <Box mt={8} rounded="app.panel" borderWidth="1px" borderColor="brand.100" bg="brand.50" p={5}>
+        <Text fontSize="sm" fontWeight="semibold" color="app.text">
           Quick note
         </Text>
-        <Box my={3} h="1px" bg="cyan.100" />
-        <Text fontSize="sm" lineHeight="1.7" color="slate.600">
+        <Box my={3} h="1px" bg="brand.100" />
+        <Text fontSize="sm" lineHeight="1.7" color="app.muted">
           Keep membership actions grouped together so the structure stays easy to scan.
         </Text>
       </Box>

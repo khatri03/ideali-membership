@@ -1,3 +1,4 @@
+import { Box, Button, Input, Stack, Text } from "@chakra-ui/react";
 import { MultiSelectInput } from "../../../components/inputs/MultiSelectInput/MultiSelectInput";
 
 export type MembersFilterOption = {
@@ -49,10 +50,11 @@ export function MembersFilters({
   onDraftSearchTermChange,
 }: MembersFiltersProps) {
   return (
-    <div className="mb-6 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-      <form
+    <Box mb={6} rounded="3xl" borderWidth="1px" borderColor="slate.200" bg="slate.50" p={5} shadow="sm">
+      <Stack
+        as="form"
         aria-label="Filters"
-        className="flex flex-col gap-4"
+        gap={4}
         onSubmit={(event) => {
           event.preventDefault();
           if (isMembersFetching || !hasPendingFilterChanges) {
@@ -61,114 +63,115 @@ export function MembersFilters({
           onApplyFilters();
         }}
       >
-        <span aria-hidden="true" className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="slate.500">
           Filters
-        </span>
-        <div className="grid gap-4 lg:grid-cols-3 lg:items-end">
-          <div className="space-y-2">
-            <label
-              htmlFor="member-search"
-              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500"
-            >
+        </Text>
+
+        <Box display="grid" gap={4} gridTemplateColumns={{ base: "1fr", lg: "repeat(3, minmax(0, 1fr))" }} alignItems={{ lg: "end" }}>
+          <Stack gap={2}>
+            <label htmlFor="member-search" style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--chakra-colors-slate-500)" }}>
               Search
             </label>
-            <input
+            <Input
               id="member-search"
               value={draftSearchTerm}
               onChange={(event) => onDraftSearchTermChange(event.target.value)}
               placeholder="Name, email, or phone"
               type="search"
               disabled={isMembersFetching}
-              className="h-13 w-full rounded-[1rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              h="13"
+              rounded="xl"
+              borderColor="slate.200"
+              bg="white"
+              px={4}
+              py={3}
+              fontSize="sm"
+              color="slate.900"
+              _placeholder={{ color: "slate.400" }}
+              _focusVisible={{ borderColor: "cyan.400", boxShadow: "0 0 0 4px rgba(34, 211, 238, 0.12)" }}
+              _disabled={{ cursor: "not-allowed", bg: "slate.100", color: "slate.500" }}
             />
-          </div>
-          <div className="space-y-2">
-            <label
-              htmlFor="membership-type-filter"
-              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500"
-            >
+          </Stack>
+
+          <Stack gap={2}>
+            <label htmlFor="membership-type-filter" style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--chakra-colors-slate-500)" }}>
               Membership Types
             </label>
-            <MultiSelectInput
-              value={
-                hasPendingFilterChanges
-                  ? normalizeUniqueIds(draftMembershipTypeUniqueIds)
-                  : normalizeUniqueIds(selectedMembershipTypeUniqueIds)
-              }
-              onChange={onDraftMembershipTypeUniqueIdsChange}
-              options={membershipTypeOptions}
-              placeholder="All membership types"
-              isDisabled={isMembershipTypesLoading || isMembersFetching}
-              className="w-full"
-              inputId="membership-type-filter"
-            />
-          </div>
-          <div className="space-y-2">
-            <label
-              htmlFor="membership-status-filter"
-              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500"
-            >
+            <Box w="full">
+              <MultiSelectInput
+                value={
+                  hasPendingFilterChanges
+                    ? normalizeUniqueIds(draftMembershipTypeUniqueIds)
+                    : normalizeUniqueIds(selectedMembershipTypeUniqueIds)
+                }
+                onChange={onDraftMembershipTypeUniqueIdsChange}
+                options={membershipTypeOptions}
+                placeholder="All membership types"
+                isDisabled={isMembershipTypesLoading || isMembersFetching}
+                inputId="membership-type-filter"
+              />
+            </Box>
+          </Stack>
+
+          <Stack gap={2}>
+            <label htmlFor="membership-status-filter" style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--chakra-colors-slate-500)" }}>
               Membership Status
             </label>
-            <MultiSelectInput
-              value={draftMembershipStatuses}
-              onChange={onDraftMembershipStatusesChange}
-              options={membershipStatusOptions}
-              placeholder="All membership statuses"
-              isDisabled={isMembershipStatusesLoading || isMembersFetching}
-              className="w-full"
-              inputId="membership-status-filter"
-            />
-          </div>
-        </div>
-        <div className="flex flex-wrap justify-end gap-3">
-          <button
+            <Box w="full">
+              <MultiSelectInput
+                value={draftMembershipStatuses}
+                onChange={onDraftMembershipStatusesChange}
+                options={membershipStatusOptions}
+                placeholder="All membership statuses"
+                isDisabled={isMembershipStatusesLoading || isMembersFetching}
+                inputId="membership-status-filter"
+              />
+            </Box>
+          </Stack>
+        </Box>
+
+        <Box display="flex" flexWrap="wrap" justifyContent="end" gap={3}>
+          <Button
             type="submit"
+            rounded="full"
+            bg="slate.950"
+            px={4}
+            py={2}
+            fontSize="sm"
+            fontWeight="semibold"
+            color="white"
+            shadow="sm"
+            _hover={{ bg: "slate.800" }}
+            _disabled={{ cursor: "not-allowed", bg: "slate.200", color: "slate.500" }}
             disabled={!hasPendingFilterChanges || isMembersFetching}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
-            {isMembersFetching ? (
-              <>
-                <svg
-                  aria-hidden="true"
-                  className="h-4 w-4 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                Applying…
-              </>
-            ) : (
-              "Apply filter"
-            )}
-          </button>
+            {isMembersFetching ? "Applying..." : "Apply filter"}
+          </Button>
+
           {selectedMembershipStatuses.length > 0 ||
           selectedMembershipTypeUniqueIds.length > 0 ||
           selectedSearchTerm.length > 0 ? (
-            <button
+            <Button
               type="button"
               onClick={onClearFilters}
+              rounded="full"
+              borderWidth="1px"
+              borderColor="cyan.200"
+              bg="cyan.50"
+              px={4}
+              py={2}
+              fontSize="sm"
+              fontWeight="semibold"
+              color="cyan.800"
+              _hover={{ borderColor: "cyan.300", bg: "cyan.100" }}
+              _disabled={{ cursor: "not-allowed", opacity: 0.5 }}
               disabled={isMembersFetching}
-              className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Clear filters
-            </button>
+            </Button>
           ) : null}
-        </div>
-      </form>
-    </div>
+        </Box>
+      </Stack>
+    </Box>
   );
 }

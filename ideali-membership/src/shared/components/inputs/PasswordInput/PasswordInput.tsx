@@ -16,15 +16,15 @@ export function PasswordInput({ id, ...props }: PasswordInputProps) {
         {...props}
         type={isVisible ? "text" : "password"}
         pe="3rem"
-        bg="white"
-        borderColor="slate.200"
+        bg="app.surface"
+        borderColor="app.border"
         borderRadius="xl"
         boxShadow="sm"
-        color="slate.900"
-        _placeholder={{ color: "slate.400" }}
+        color="app.text"
+        _placeholder={{ color: "app.subtle" }}
         _focusVisible={{
-          borderColor: "cyan.500",
-          boxShadow: "0 0 0 4px rgba(34, 211, 238, 0.18)",
+          borderColor: "brand.500",
+          boxShadow: "0 0 0 4px rgba(34, 211, 238, 0.16)",
         }}
       />
       <Button
@@ -41,8 +41,8 @@ export function PasswordInput({ id, ...props }: PasswordInputProps) {
         transform="translateY(-50%)"
         minW="2.5rem"
         px="0"
-        color="slate.500"
-        _hover={{ color: "slate.800", bg: "slate.100" }}
+        color="app.muted"
+        _hover={{ color: "app.text", bg: "app.surfaceAlt" }}
       >
         {isVisible ? <EyeOff size={18} /> : <Eye size={18} />}
       </Button>

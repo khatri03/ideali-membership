@@ -30,7 +30,7 @@ export function ProfilePhotoField({
     startOffsetY: number;
   } | null>(null);
   const dropCounterRef = useRef(0);
-  const cropViewportRef = useRef<HTMLDivElement | null>(null);
+  const cropViewportRef = useRef<HTMLDivElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewDimensions, setPreviewDimensions] = useState<{ width: number; height: number } | null>(null);
   const [editorSource, setEditorSource] = useState<File | null>(null);

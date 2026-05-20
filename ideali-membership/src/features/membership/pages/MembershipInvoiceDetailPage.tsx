@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
+import { Box, Button, Grid, Heading, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { APP_ROUTES, buildMembershipMemberDetailPath } from "../../../routes";
 import { cn } from "../../../lib/utils";
 import { showToast } from "../../../shared/components/toast/Toast";
@@ -270,12 +271,12 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
 
   if (!invoiceUniqueId) {
     return (
-      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
         <EmptyStatePanel
           title="Invoice ID missing"
           description="Open an invoice from the list to view the full billing record."
         />
-      </section>
+      </Box>
     );
   }
 
@@ -286,75 +287,100 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
 
   if (detailQuery.isLoading) {
     return (
-      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-8 text-sm text-slate-500">
+      <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
+        <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" p={8} fontSize="sm" color="app.muted">
           Loading invoice detail from the backend...
-        </div>
-      </section>
+        </Box>
+      </Box>
     );
   }
 
   if (detailQuery.error) {
     return (
-      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
         <EmptyStatePanel
           title="Invoice not available"
           description={detailQuery.error instanceof Error ? detailQuery.error.message : "Unable to load invoice detail."}
         />
-      </section>
+      </Box>
     );
   }
 
   if (!summary) {
     return (
-      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <Box rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
         <EmptyStatePanel
           title="Invoice not found"
           description="The invoice you requested is no longer available in the current dataset."
         />
-      </section>
+      </Box>
     );
   }
 
   return (
-    <section className="space-y-6">
-      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-cyan-50 via-white to-transparent lg:block" />
-        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-4 xl:max-w-4xl">
+    <Stack gap={6}>
+      <Box position="relative" overflow="hidden" rounded="app.panel" borderWidth="1px" borderColor="app.border" bg="app.surface" p={6} shadow="app.panel">
+        <Box position="absolute" insetY={0} right={0} display={{ base: "none", lg: "block" }} w="1/3" bgGradient="linear(to-l, brand.50, app.surface)" />
+        <Stack position="relative" gap={6} direction={{ base: "column", xl: "row" }} align={{ base: "stretch", xl: "start" }} justify="space-between">
+          <Stack gap={4} maxW="4xl">
             {isPublicView ? null : (
               <Link
                 to={APP_ROUTES.membershipInvoices}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  borderRadius: "9999px",
+                  border: "1px solid var(--chakra-colors-app-border)",
+                  background: "var(--chakra-colors-app-surface)",
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "var(--chakra-colors-app-text)",
+                  transition: "all 0.15s ease",
+                  textDecoration: "none",
+                }}
               >
                 <ArrowLeft size={16} />
                 Back to invoices
               </Link>
             )}
 
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
+            <Stack gap={3}>
+              <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.24em" textTransform="uppercase" color="brand.700">
                 Invoice summary
-              </p>
-              <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+              </Text>
+              <Heading as="h1" size={{ base: "2xl", sm: "3xl", lg: "4xl" }} letterSpacing="-0.04em" color="app.text">
                 {summary.invoiceNo}
-              </h1>
-              <p className="max-w-2xl text-sm leading-6 text-slate-600">
+              </Heading>
+              <Text maxW="2xl" fontSize="sm" lineHeight="1.8" color="app.muted">
                 {isPublicView
                   ? "Public invoice view with the full invoice record rendered without the app shell."
                   : "Summary, member detail, line items, and notes are loaded separately for a lighter detail view."}
-              </p>
-            </div>
-          </div>
+              </Text>
+            </Stack>
+          </Stack>
 
-          <div className="flex flex-col items-end gap-3 xl:min-w-[28rem]">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+          <Stack gap={3} align={{ base: "stretch", xl: "end" }} minW={{ xl: "28rem" }}>
+            <HStack flexWrap="wrap" justify={{ base: "start", xl: "end" }} gap={2}>
               <button
                 type="button"
                 onClick={copyInvoiceNumber}
                 title="Copy number"
                 aria-label="Copy invoice number"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  border: "1px solid var(--chakra-colors-app-border)",
+                  background: "var(--chakra-colors-app-surface)",
+                  color: "var(--chakra-colors-app-text)",
+                  boxShadow: "var(--chakra-shadows-sm)",
+                  transition: "all 0.15s ease",
+                }}
               >
                 <Copy size={18} />
               </button>
@@ -363,7 +389,19 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                 onClick={printInvoice}
                 title="Print invoice"
                 aria-label="Print invoice"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  border: "1px solid var(--chakra-colors-app-border)",
+                  background: "var(--chakra-colors-app-surface)",
+                  color: "var(--chakra-colors-app-text)",
+                  boxShadow: "var(--chakra-shadows-sm)",
+                  transition: "all 0.15s ease",
+                }}
               >
                 <Printer size={18} />
               </button>
@@ -374,14 +412,25 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                   rel="noreferrer noopener"
                   title="Open member profile"
                   aria-label="Open member profile"
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-sm transition hover:bg-cyan-700"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 44,
+                    height: 44,
+                    borderRadius: 16,
+                    background: "var(--chakra-colors-brand-600)",
+                    color: "white",
+                    boxShadow: "var(--chakra-shadows-sm)",
+                    transition: "background 0.15s ease",
+                  }}
                 >
                   <UserRound size={18} />
                 </a>
               ) : null}
-            </div>
+            </HStack>
 
-            <div className="grid w-full gap-3 sm:grid-cols-2">
+            <Grid w="full" gap={3} templateColumns={{ base: "1fr", sm: "repeat(2, minmax(0, 1fr))" }}>
               <StatCard
                 label="Invoice amount"
                 value={formatMembershipInvoiceAmount(summary.invoiceAmount, currencySymbol)}
@@ -392,9 +441,9 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                 value={latestPaymentMethodLabel}
                 tone="emerald"
               />
-            </div>
+            </Grid>
 
-            <div className="grid w-full gap-3 sm:grid-cols-2">
+            <Grid w="full" gap={3} templateColumns={{ base: "1fr", sm: "repeat(2, minmax(0, 1fr))" }}>
               <StatCard
                 label="Membership name"
                 value={summary.membershipName}
@@ -405,28 +454,28 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                 value={formatMembershipInvoiceDateLabel(summary.invoiceDate)}
                 tone="amber"
               />
-            </div>
-          </div>
-        </div>
-      </div>
+            </Grid>
+          </Stack>
+        </Stack>
+      </Box>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,0.9fr)]">
-        <div className="space-y-6">
+      <Grid gap={6} templateColumns={{ base: "1fr", xl: "minmax(0,1.55fr)_minmax(22rem,0.9fr)" }}>
+        <Stack gap={6}>
           <DetailPanel
             title="Member detail"
           >
             {isMemberLoading ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <Grid gap={4} templateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }}>
                 {[...Array(4)].map((_, index) => (
-                  <div key={index} className="animate-pulse rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="h-3 w-24 rounded-full bg-slate-200" />
-                    <div className="mt-3 h-5 w-full rounded-full bg-slate-200" />
-                    <div className="mt-2 h-4 w-4/5 rounded-full bg-slate-200" />
-                  </div>
+                  <Box key={index} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" p={4}>
+                    <Box h="3" w="24" rounded="full" bg="slate.200" />
+                    <Box mt={3} h="5" w="full" rounded="full" bg="slate.200" />
+                    <Box mt={2} h="4" w="4/5" rounded="full" bg="slate.200" />
+                  </Box>
                 ))}
-              </div>
+              </Grid>
             ) : memberContact ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <Grid gap={4} templateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }}>
                 <DetailBlock
                   icon={<UserRound size={16} />}
                   label="Member name"
@@ -449,7 +498,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                 <DetailBlock icon={<Mail size={16} />} label="Email" value={formatMemberEmail(memberContact)} />
                 <DetailBlock icon={<Phone size={16} />} label="Phone" value={formatMemberPhone(memberContact)} />
                 <AddressDetailBlock icon={<MapPin size={16} />} label="Address" address={memberAddress} />
-              </div>
+              </Grid>
             ) : (
               <EmptyStatePanel
                 title="Member not available"
@@ -577,58 +626,85 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
               />
             )}
           </DetailPanel>
-        </div>
-
-        <aside className="space-y-6">
+        </Stack>
+      <aside className="space-y-6">
           <DetailPanel
             title="Notes"
             action={
               isPublicView ? null : (
-                <button
+                <Button
                   type="button"
                   onClick={openAddNoteModal}
-                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
+                  variant="outline"
+                  rounded="full"
+                  borderColor="brand.100"
+                  bg="brand.50"
+                  color="brand.800"
+                  px={4}
+                  py={2}
+                  fontSize="sm"
+                  fontWeight="semibold"
+                  gap={2}
+                  _hover={{ borderColor: "brand.200", bg: "brand.100" }}
                 >
                   <MessageSquarePlus size={14} />
                   Add Note
-                </button>
+                </Button>
               )
             }
           >
-            <div className="space-y-3">
+            <Stack gap={3}>
               {isNotesLoading ? (
-                <div className="space-y-3">
+                <Stack gap={3}>
                   {[...Array(3)].map((_, index) => (
-                    <div
+                    <Box
                       key={index}
-                      className="animate-pulse rounded-3xl border border-slate-200 bg-slate-50 p-4"
+                      rounded="app.card"
+                      borderWidth="1px"
+                      borderColor="app.border"
+                      bg="app.surfaceAlt"
+                      p={4}
                     >
-                      <div className="h-3 w-24 rounded-full bg-slate-200" />
-                      <div className="mt-3 h-4 w-full rounded-full bg-slate-200" />
-                      <div className="mt-2 h-4 w-4/5 rounded-full bg-slate-200" />
-                      <div className="mt-4 h-3 w-32 rounded-full bg-slate-200" />
-                    </div>
+                      <Box h="3" w="24" rounded="full" bg="slate.200" />
+                      <Box mt={3} h="4" w="full" rounded="full" bg="slate.200" />
+                      <Box mt={2} h="4" w="4/5" rounded="full" bg="slate.200" />
+                      <Box mt={4} h="3" w="32" rounded="full" bg="slate.200" />
+                    </Box>
                   ))}
-                </div>
+                </Stack>
               ) : notes.length > 0 ? (
                 notes.map((note) => (
-                  <article
+                  <Box
+                    as="article"
                     key={`${note.createdBy}-${note.createdOnUtc}`}
-                    className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
+                    rounded="app.card"
+                    borderWidth="1px"
+                    borderColor="app.border"
+                    bg="app.surface"
+                    p={4}
+                    shadow="sm"
+                    transition="all 0.15s ease"
+                    _hover={{ borderColor: "brand.200", shadow: "md" }}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                    <Box display="flex" alignItems="start" justifyContent="space-between" gap={4}>
+                      <HStack gap={3} align="start">
+                        <Box display="inline-flex" h="10" w="10" alignItems="center" justifyContent="center" rounded="xl" bg="brand.50" color="brand.700">
                           <UserRound size={18} />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
-                          <p className="text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
-                  </article>
+                        </Box>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="semibold" color="app.text">
+                            {note.createdBy}
+                          </Text>
+                          <Text fontSize="xs" color="app.muted">
+                            {formatMembershipInvoiceDateLabel(note.createdOnUtc)}
+                          </Text>
+                        </Box>
+                      </HStack>
+                    </Box>
+                    <Text mt={4} whiteSpace="pre-wrap" fontSize="sm" lineHeight="1.75" color="app.text">
+                      {note.note}
+                    </Text>
+                  </Box>
                 ))
               ) : (
                 <EmptyStatePanel
@@ -636,10 +712,10 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                   description="Captured invoice notes will appear here when they are added."
                 />
               )}
-            </div>
+            </Stack>
           </DetailPanel>
         </aside>
-      </div>
+      </Grid>
 
       <InvoiceNoteModal
         isOpen={isAddNoteModalOpen}
@@ -649,7 +725,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
         onCancel={closeAddNoteModal}
         onSave={handleSaveNote}
       />
-    </section>
+    </Stack>
   );
 }
 
@@ -710,15 +786,17 @@ function DetailBlock({
   value: ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+    <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" p={4} shadow="sm">
+      <HStack gap={2} fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.muted">
+        <Box display="inline-flex" h="7" w="7" alignItems="center" justifyContent="center" rounded="full" bg="app.surfaceAlt" color="app.muted">
           {icon}
-        </span>
+        </Box>
         {label}
-      </div>
-      <div className="mt-3 text-sm font-medium leading-6 text-slate-700">{value}</div>
-    </div>
+      </HStack>
+      <Box mt={3} fontSize="sm" fontWeight="medium" lineHeight="1.75" color="app.text">
+        {value}
+      </Box>
+    </Box>
   );
 }
 
@@ -741,27 +819,33 @@ function AddressDetailBlock({
   ].filter((row) => Boolean(row.value && row.value.trim().length > 0));
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:col-span-2">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+    <Box rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surface" p={4} shadow="sm" gridColumn={{ md: "span 2" }}>
+      <HStack gap={2} fontSize="xs" fontWeight="semibold" letterSpacing="0.18em" textTransform="uppercase" color="app.muted">
+        <Box display="inline-flex" h="7" w="7" alignItems="center" justifyContent="center" rounded="full" bg="app.surfaceAlt" color="app.muted">
           {icon}
-        </span>
+        </Box>
         {label}
-      </div>
+      </HStack>
 
       {rows.length > 0 ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Grid mt={4} gap={3} templateColumns={{ base: "1fr", sm: "repeat(2, minmax(0, 1fr))" }}>
           {rows.map((row) => (
-            <div key={row.label} className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{row.label}</div>
-              <div className="mt-1 text-sm font-medium leading-6 text-slate-700">{row.value}</div>
-            </div>
+            <Box key={row.label} rounded="app.card" borderWidth="1px" borderColor="app.border" bg="app.surfaceAlt" px={4} py={3}>
+              <Text fontSize="11px" fontWeight="semibold" letterSpacing="0.14em" textTransform="uppercase" color="app.muted">
+                {row.label}
+              </Text>
+              <Text mt={1} fontSize="sm" fontWeight="medium" lineHeight="1.75" color="app.text">
+                {row.value}
+              </Text>
+            </Box>
           ))}
-        </div>
+        </Grid>
       ) : (
-        <p className="mt-3 text-sm font-medium leading-6 text-slate-700">Not available</p>
+        <Text mt={3} fontSize="sm" fontWeight="medium" lineHeight="1.75" color="app.text">
+          Not available
+        </Text>
       )}
-    </div>
+    </Box>
   );
 }
 
@@ -785,73 +869,132 @@ function InvoiceNoteModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm"
+    <Box
+      position="fixed"
+      inset={0}
+      zIndex={50}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bg="rgba(15, 23, 42, 0.4)"
+      px={4}
+      py={8}
+      backdropFilter="blur(6px)"
       onClick={onCancel}
       role="presentation"
     >
       <form
-        className="w-full max-w-2xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
         onSubmit={onSave}
         onClick={(event) => event.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: "42rem",
+          borderRadius: "2rem",
+          border: "1px solid var(--chakra-colors-app-border)",
+          background: "var(--chakra-colors-app-surface)",
+          padding: "1.5rem",
+          boxShadow: "var(--chakra-shadows-2xl)",
+        }}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Add note</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Record a billing note</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+        <Box display="flex" alignItems="start" justifyContent="space-between" gap={4}>
+          <Box>
+            <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.24em" textTransform="uppercase" color="brand.700">
+              Add note
+            </Text>
+            <Heading as="h3" mt={2} size="lg" letterSpacing="-0.03em" color="app.text">
+              Record a billing note
+            </Heading>
+            <Text mt={2} fontSize="sm" lineHeight="1.75" color="app.muted">
               Keep an internal note on this invoice. The latest note will surface at the top immediately after saving.
-            </p>
-          </div>
-          <button
+            </Text>
+          </Box>
+          <Button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            variant="ghost"
+            rounded="full"
+            h="10"
+            w="10"
+            minW="10"
+            p="0"
+            borderWidth="1px"
+            borderColor="app.border"
+            bg="app.surface"
+            color="app.muted"
+            _hover={{ borderColor: "app.borderStrong", color: "app.text" }}
             aria-label="Close modal"
             title="Close"
           >
             <X size={18} />
-          </button>
-        </div>
+          </Button>
+        </Box>
 
-        <div className="mt-6">
-          <label className="mb-2 block text-sm font-semibold text-slate-900" htmlFor="invoice-note">
+        <Box mt={6}>
+          <label htmlFor="invoice-note" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: 600, color: "var(--chakra-colors-app-text)" }}>
             Note
           </label>
-          <textarea
+          <Textarea
             id="invoice-note"
             value={noteDraft}
             onChange={(event) => onNoteDraftChange(event.target.value)}
             placeholder="Write a clear internal note about this invoice..."
             maxLength={400}
             rows={7}
-            className="min-h-[10rem] w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+            minH="10rem"
+            rounded="app.card"
+            borderColor="app.border"
+            bg="app.surfaceAlt"
+            px={4}
+            py={3}
+            fontSize="sm"
+            lineHeight="1.75"
+            color="app.text"
+            _placeholder={{ color: "app.muted" }}
+            _focusVisible={{ borderColor: "brand.200", bg: "app.surface", boxShadow: "0 0 0 4px var(--chakra-colors-brand-100)" }}
           />
-          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-            <span>Maximum 400 characters</span>
-            <span>{noteDraft.length}/400</span>
-          </div>
-        </div>
+          <HStack mt={2} justify="space-between" fontSize="xs" color="app.muted">
+            <Text>Maximum 400 characters</Text>
+            <Text>{noteDraft.length}/400</Text>
+          </HStack>
+        </Box>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button
+        <HStack mt={6} flexDirection={{ base: "column-reverse", sm: "row" }} justify="end" gap={3}>
+          <Button
             type="button"
             onClick={onCancel}
             disabled={isSaving}
-            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            variant="outline"
+            rounded="full"
+            borderColor="app.border"
+            bg="app.surface"
+            color="app.text"
+            px={5}
+            py={2.5}
+            fontSize="sm"
+            fontWeight="semibold"
+            _hover={{ borderColor: "app.borderStrong", bg: "app.surfaceAlt" }}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isSaving || noteDraft.trim().length === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
+            rounded="full"
+            bg="brand.600"
+            color="white"
+            px={5}
+            py={2.5}
+            fontSize="sm"
+            fontWeight="semibold"
+            gap={2}
+            shadow="sm"
+            _hover={{ bg: "brand.700" }}
           >
-            {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+            {isSaving ? <Loader2 size={16} /> : null}
             Save
-          </button>
-        </div>
+          </Button>
+        </HStack>
       </form>
-    </div>
+    </Box>
   );
 }

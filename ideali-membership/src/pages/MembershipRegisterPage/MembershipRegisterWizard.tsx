@@ -33,6 +33,7 @@ import type {
   StripeCardPaymentMethodCreator,
 } from "./MembershipRegisterWizard.types";
 import {
+  buildCurrencyPrefix,
   formatFileSize,
   formatStepNumber,
   formatTenureWithExpiryLabel,
@@ -276,42 +277,55 @@ function QuestionnaireStep({
 
   return (
     <>
-      {hasCustomForms ? (
-        <div className="space-y-5">
-          {customForms.map((form) => (
-            <ExtractedCustomFormSection
-              key={form.uniqueId}
-              form={form}
-              values={values}
-              errors={errors}
-              onFieldChange={onFieldChange}
-              theme={theme}
-              showBorders={showBorders}
-            />
-          ))}
-        </div>
-      ) : null}
+      <div
+        className="space-y-6 rounded-3xl border p-4 sm:p-5"
+        style={{
+          borderColor: theme.cardBorder,
+          background: theme.cardBackground,
+          boxShadow: `0 18px 42px -30px ${theme.cardShadow}`,
+        }}
+      >
+        {hasCustomForms ? (
+          <div className="space-y-6">
+            {customForms.map((form) => (
+              <ExtractedCustomFormSection
+                key={form.uniqueId}
+                form={form}
+                values={values}
+                errors={errors}
+                onFieldChange={onFieldChange}
+                theme={theme}
+                showBorders={showBorders}
+              />
+            ))}
+          </div>
+        ) : null}
 
-      {hasCustomQuestions ? (
-        <ExtractedCustomQuestionsSection
-          questions={customQuestions}
-          values={customQuestionValues}
-          errors={customQuestionErrors}
-          onFieldChange={onCustomQuestionFieldChange}
-          onFieldBlur={onCustomQuestionFieldBlur}
-          theme={theme}
-          showBorders={showBorders}
-        />
-      ) : null}
+        {hasCustomQuestions ? (
+          <ExtractedCustomQuestionsSection
+            questions={customQuestions}
+            values={customQuestionValues}
+            errors={customQuestionErrors}
+            onFieldChange={onCustomQuestionFieldChange}
+            onFieldBlur={onCustomQuestionFieldBlur}
+            theme={theme}
+            showBorders={showBorders}
+          />
+        ) : null}
 
-      {!hasCustomForms && !hasCustomQuestions ? (
-        <div
-          className="rounded-3xl border border-dashed px-4 py-5 text-sm"
-          style={{ borderColor: theme.cardBorder, color: theme.bodyColor }}
-        >
-          No questionnaire content mapped to this membership type.
-        </div>
-      ) : null}
+        {!hasCustomForms && !hasCustomQuestions ? (
+          <div
+            className="rounded-2xl border border-dashed px-5 py-6 text-sm leading-6"
+            style={{
+              borderColor: theme.cardBorder,
+              background: theme.cardBackground,
+              color: theme.bodyColor,
+            }}
+          >
+            No questionnaire content mapped to this membership type.
+          </div>
+        ) : null}
+      </div>
     </>
   );
 }
@@ -341,7 +355,7 @@ export function MembershipRegisterWizard({
   const allowSubmitRef = useRef(false);
   const stripeCardPaymentMethodCreatorRef =
     useRef<StripeCardPaymentMethodCreator | null>(null);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [isFillingDummyData, setIsFillingDummyData] = useState(false);
   const [paymentStepError, setPaymentStepError] = useState("");
   const [isCreditCardFieldsComplete, setIsCreditCardFieldsComplete] =
@@ -606,7 +620,7 @@ export function MembershipRegisterWizard({
   return (
     <form
       ref={formRef}
-      className="w-full max-w-400 space-y-6"
+      className="w-full max-w-7xl space-y-6"
       onSubmit={async (event) => {
         if (!allowSubmitRef.current) {
           event.preventDefault();
@@ -725,8 +739,15 @@ export function MembershipRegisterWizard({
         </div>
       ) : null}
 
-      <div className="relative -mx-4 overflow-x-auto pb-2 px-4 sm:mx-0 sm:px-0">
-        <div className="relative z-10 flex min-w-full flex-nowrap gap-3 sm:min-w-max sm:gap-4">
+      <div className="mx-auto w-full max-w-6xl overflow-x-auto pb-2">
+        <div
+          className="relative z-10 flex min-w-full flex-nowrap gap-3 rounded-[1.75rem] border p-2.5 shadow-sm sm:min-w-max sm:gap-4 sm:p-3"
+          style={{
+            borderColor: theme.cardBorder,
+            background: theme.cardBackground,
+            boxShadow: `0 18px 42px -34px ${theme.cardShadow}`,
+          }}
+        >
           {stepTitles.map((step, index) => (
             <StepBadge
               key={step.title}
@@ -746,9 +767,11 @@ export function MembershipRegisterWizard({
         </div>
       </div>
       <section
-        className="rounded-4xl p-4 sm:p-5 lg:p-6"
+        className="mx-auto w-full max-w-6xl rounded-[2rem] border p-4 shadow-sm sm:p-5 lg:p-7"
         style={{
+          borderColor: theme.cardBorder,
           background: theme.cardBackground,
+          boxShadow: `0 24px 60px -42px ${theme.cardShadow}`,
         }}
       >
         {currentStep === 0 ? (

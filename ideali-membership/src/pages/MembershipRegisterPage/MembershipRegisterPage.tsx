@@ -149,22 +149,22 @@ function buildMembershipTheme(color: string | null | undefined): MembershipTheme
     level1,
     level2,
     level3,
-    pageBackground: blendWithWhite(accentRgb, 0.1),
-    cardBackground: "transparent",
-    cardBorder: rgba(accentRgb, 0.58),
-    cardShadow: rgba(accentRgb, 0.18),
-    iconBackground: rgba(accentRgb, 0.18),
-    iconBorder: rgba(accentRgb, 0.46),
+    pageBackground: `linear-gradient(180deg, ${blendWithWhite(accentRgb, 0.14)} 0%, #f8fafc 38%, ${rgba(accentRgb, 0.08)} 100%)`,
+    cardBackground: "rgba(255, 255, 255, 0.9)",
+    cardBorder: "rgba(148, 163, 184, 0.26)",
+    cardShadow: "rgba(15, 23, 42, 0.12)",
+    iconBackground: rgba(accentRgb, 0.12),
+    iconBorder: rgba(accentRgb, 0.24),
     iconColor: level1,
     titleColor: "#020617",
     bodyColor: "#334155",
-    labelColor: level1,
-    mutedLabelColor: level2,
-    tileBorder: rgba(accentRgb, 0.5),
-    tileBackground: "transparent",
-    tileLabelColor: level2,
+    labelColor: "#0f172a",
+    mutedLabelColor: "#475569",
+    tileBorder: "rgba(148, 163, 184, 0.18)",
+    tileBackground: "rgba(248, 250, 252, 0.92)",
+    tileLabelColor: "#475569",
     tileValueColor: "#020617",
-    barBackground: rgba(accentRgb, 0.18),
+    barBackground: rgba(accentRgb, 0.12),
   };
 }
 
@@ -323,7 +323,7 @@ export function MembershipRegisterPage() {
 
   return (
     <main
-      className="relative flex min-h-screen items-start justify-center overflow-hidden px-4 py-6 text-slate-900"
+      className="relative flex min-h-screen items-start justify-center overflow-hidden px-4 py-6 text-slate-900 sm:px-6 lg:px-8 lg:py-10"
       style={{ background: theme.pageBackground }}
     >
       {showBackgroundIcons ? (
@@ -350,7 +350,7 @@ export function MembershipRegisterPage() {
         </div>
       ) : null}
 
-      <div className="relative z-10 flex w-full justify-center">
+      <div className="relative z-10 flex w-full max-w-7xl justify-center">
         {isLoading ? (
           <section
             role="status"

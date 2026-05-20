@@ -330,9 +330,9 @@ describe("fetchMembershipMemberDetail", () => {
     const result = await fetchMembershipMemberDetail("uid-100");
 
     expect(result.uniqueId).toBe("uid-100");
-    expect(result.membershipTypeUniqueId).toBe("membership-type-1");
-    expect(result.memberFullName).toBe("Amina Khan");
-    expect(result.activeMembershipName).toBe("Platinum");
+    expect(result.membership.membershipTypeUniqueId).toBe("membership-type-1");
+    expect([result.contact.firstName, result.contact.lastName].filter(Boolean).join(" ")).toBe("Amina Khan");
+    expect(result.membership.activeMembershipName).toBe("Platinum");
     expect(result.customFormResponses).toHaveLength(1);
     expect(result.customFormResponses[0]).toMatchObject({
       formName: "Organization details",
