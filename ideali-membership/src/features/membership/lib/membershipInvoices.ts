@@ -628,6 +628,19 @@ export async function addMembershipInvoiceNote(invoiceUniqueId: string, note: st
   await postJson<unknown>(`/api/invoice/${invoiceUniqueId}/add-note`, { note });
 }
 
+export interface MembershipInvoiceEmailRequest {
+  toEmail: string;
+  notifyOrganizer: boolean;
+  otherNotificationEmails: string[];
+}
+
+export async function sendMembershipInvoiceEmail(
+  invoiceUniqueId: string,
+  request: MembershipInvoiceEmailRequest,
+) {
+  await postJson<unknown>(`/api/invoice/membership/${invoiceUniqueId}/send-email`, request);
+}
+
 export async function downloadMembershipInvoicePdf(invoiceUniqueId: string, invoiceNo?: string | null) {
   const viewUrl = new URL(`${buildPublicMembershipInvoiceViewPath(invoiceUniqueId)}?pdf=true`, window.location.origin).toString();
   const url = `/api/pdf/public/from-url?url=${encodeURIComponent(viewUrl)}`;

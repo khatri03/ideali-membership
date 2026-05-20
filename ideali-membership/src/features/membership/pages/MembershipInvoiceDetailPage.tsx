@@ -29,7 +29,9 @@ import {
   formatMembershipInvoiceAmount,
   formatMembershipInvoiceDateLabel,
   getMembershipInvoicePaymentMethodLabel,
+  sendMembershipInvoiceEmail,
 } from "../lib/membershipInvoices";
+import { getMembershipDescriptionInfo } from "../../../lib/membershipWizard";
 
 const STALE_TIME_5_MIN_MS = 5 * 60 * 1000;
 
@@ -61,6 +63,11 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
   const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
+  const [sendEmailRecipient, setSendEmailRecipient] = useState("");
+  const [sendEmailNotifyOrganizer, setSendEmailNotifyOrganizer] = useState(false);
+  const [sendEmailOtherNotificationEmails, setSendEmailOtherNotificationEmails] = useState<string[]>([]);
 
   const publicDetailQuery = useQuery({
     queryKey: ["membership-invoice-view", invoiceUniqueId ?? ""],
@@ -83,6 +90,15 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
     queryKey: ["membership-invoice-member-detail", summary?.memberUniqueId ?? ""],
     queryFn: () => fetchMembershipMemberDetail(summary?.memberUniqueId ?? ""),
     enabled: !isPublicView && Boolean(summary?.memberUniqueId),
+    staleTime: STALE_TIME_5_MIN_MS,
+  });
+
+  const member = memberQuery.data ?? null;
+
+  const membershipTypeNotificationQuery = useQuery({
+    queryKey: ["membership-type-notification-settings", member?.membership?.membershipTypeUniqueId ?? ""],
+    queryFn: () => getMembershipDescriptionInfo(member?.membership?.membershipTypeUniqueId ?? ""),
+    enabled: !isPublicView && Boolean(member?.membership?.membershipTypeUniqueId),
     staleTime: STALE_TIME_5_MIN_MS,
   });
 
@@ -141,7 +157,44 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
     }
   }
 
-  const member = memberQuery.data ?? null;
+  function openSendEmailDialog() {
+    setSendEmailRecipient(formatMemberEmail(memberContact));
+    setSendEmailNotifyOrganizer(membershipTypeNotificationQuery.data?.notifyOrganizer ?? false);
+    setSendEmailOtherNotificationEmails(
+      splitNotificationEmails(membershipTypeNotificationQuery.data?.otherNotificationEmails ?? ""),
+    );
+    setIsSendEmailModalOpen(true);
+  }
+
+  async function submitSendEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!invoiceUniqueId || !summary) {
+      return;
+    }
+
+    const recipientEmail = sendEmailRecipient.trim();
+    if (!recipientEmail) {
+      showToast("Member email is required.", "error");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      await sendMembershipInvoiceEmail(invoiceUniqueId, {
+        toEmail: recipientEmail,
+        notifyOrganizer: sendEmailNotifyOrganizer,
+        otherNotificationEmails: sendEmailOtherNotificationEmails,
+      });
+      setIsSendEmailModalOpen(false);
+      showToast("Invoice email sent.", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Unable to send the invoice email.", "error");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }
+
   const memberContact: ContactLike | null = isPublicView ? publicDetail?.contact ?? null : member?.contact ?? null;
   const memberAddress = isPublicView ? publicDetail?.contact?.address ?? null : member?.address ?? null;
   const memberStatus = isPublicView ? null : member?.membership?.membershipStatus ?? null;
@@ -402,6 +455,16 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={openSendEmailDialog}
+                  title="Send email"
+                  aria-label="Send invoice email"
+                  disabled={isSendingEmail}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Mail size={16} />
+                </button>
                 <button
                   type="button"
                   onClick={() => void downloadPdf()}
@@ -686,6 +749,18 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
         onCancel={closeAddNoteModal}
         onSave={handleSaveNote}
       />
+
+      <SendInvoiceEmailModal
+        isOpen={isSendEmailModalOpen}
+        recipientEmail={sendEmailRecipient}
+        notifyOrganizer={sendEmailNotifyOrganizer}
+        otherNotificationEmails={sendEmailOtherNotificationEmails}
+        isSending={isSendingEmail}
+        onCancel={() => setIsSendEmailModalOpen(false)}
+        onSend={submitSendEmail}
+        onNotifyOrganizerChange={setSendEmailNotifyOrganizer}
+        onOtherNotificationEmailsChange={setSendEmailOtherNotificationEmails}
+      />
     </section>
   );
 }
@@ -727,6 +802,23 @@ function formatMemberEmail(contact: ContactLike | null | undefined) {
   }
 
   return contact.email || contact.primaryEmail || contact.secondaryEmail || contact.workEmail || "Not available";
+}
+
+function splitNotificationEmails(value: string) {
+  return value
+    .split(/[;,\n]/g)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function normalizeNotificationEmails(values: string[]) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    ),
+  );
 }
 
 function formatMemberPhone(contact: ContactLike | null | undefined) {
@@ -857,6 +949,223 @@ function AddressDetailBlock({
       ) : (
         <p className="mt-3 text-sm font-medium leading-6 text-slate-700">Not available</p>
       )}
+    </div>
+  );
+}
+
+function NotificationEmailTagsField({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (nextValue: string[]) => void;
+}) {
+  const [draftValue, setDraftValue] = useState("");
+
+  function commitTags(nextTags: string[]) {
+    onChange(normalizeNotificationEmails(nextTags));
+  }
+
+  function addDraftValue(rawValue: string) {
+    const nextItems = splitNotificationEmails(rawValue);
+    if (nextItems.length === 0) {
+      return;
+    }
+
+    commitTags([...value, ...nextItems]);
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-cyan-400 focus-within:ring-4 focus-within:ring-cyan-100">
+      <div className="flex flex-wrap items-center gap-2">
+        {value.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800"
+          >
+            <span className="max-w-[16rem] truncate">{tag}</span>
+            <button
+              type="button"
+              onClick={() => commitTags(value.filter((item) => item !== tag))}
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-cyan-700 transition hover:bg-cyan-100"
+              aria-label={`Remove ${tag}`}
+              title={`Remove ${tag}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+
+        <input
+          type="text"
+          value={draftValue}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+
+            if (nextValue.includes(",") || nextValue.includes("\n")) {
+              addDraftValue(nextValue);
+              setDraftValue("");
+              return;
+            }
+
+            setDraftValue(nextValue);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              addDraftValue(draftValue);
+              setDraftValue("");
+              return;
+            }
+
+            if (event.key === "Backspace" && draftValue.length === 0 && value.length > 0) {
+              event.preventDefault();
+              commitTags(value.slice(0, -1));
+            }
+          }}
+          onBlur={() => {
+            addDraftValue(draftValue);
+            setDraftValue("");
+          }}
+          className="min-w-[14rem] flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+          placeholder={value.length > 0 ? "Add another email" : "email1@example.com"}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SendInvoiceEmailModal({
+  isOpen,
+  recipientEmail,
+  notifyOrganizer,
+  otherNotificationEmails,
+  isSending,
+  onCancel,
+  onSend,
+  onNotifyOrganizerChange,
+  onOtherNotificationEmailsChange,
+}: {
+  isOpen: boolean;
+  recipientEmail: string;
+  notifyOrganizer: boolean;
+  otherNotificationEmails: string[];
+  isSending: boolean;
+  onCancel: () => void;
+  onSend: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onNotifyOrganizerChange: (value: boolean) => void;
+  onOtherNotificationEmailsChange: (nextValue: string[]) => void;
+}) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm"
+      onClick={onCancel}
+      role="presentation"
+    >
+      <form
+        className="w-full max-w-2xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
+        onSubmit={onSend}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Send invoice email</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Review recipients</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Confirm who should receive the invoice email and whether the organizer should be copied.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            aria-label="Close modal"
+            title="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-5">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-900" htmlFor="invoice-recipient-email">
+              Recipient email
+            </label>
+            <input
+              id="invoice-recipient-email"
+              readOnly
+              value={recipientEmail}
+              className="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none"
+            />
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              This invoice will be sent to the member email shown above.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Notify organizer</p>
+              <p className="text-xs text-slate-500">Send a copy to the organizer.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={notifyOrganizer}
+              aria-label="Toggle notify organizer"
+              onClick={() => onNotifyOrganizerChange(!notifyOrganizer)}
+              className={[
+                "relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition",
+                notifyOrganizer
+                  ? "border-cyan-500 bg-cyan-500"
+                  : "border-slate-300 bg-slate-200 hover:bg-slate-300",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition",
+                  notifyOrganizer ? "translate-x-7" : "translate-x-1",
+                ].join(" ")}
+              />
+            </button>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-900">
+              Other notification emails
+            </label>
+            <NotificationEmailTagsField
+              value={otherNotificationEmails}
+              onChange={onOtherNotificationEmailsChange}
+            />
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Add any additional recipients as pills. Press Enter or paste a comma-separated list.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSending}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSending || recipientEmail.trim().length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
+          >
+            {isSending ? <Loader2 size={16} className="animate-spin" /> : null}
+            Send email
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
