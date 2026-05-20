@@ -144,6 +144,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
   const member = memberQuery.data ?? null;
   const memberContact: ContactLike | null = isPublicView ? publicDetail?.contact ?? null : member?.contact ?? null;
   const memberAddress = isPublicView ? publicDetail?.contact?.address ?? null : member?.address ?? null;
+  const memberStatus = isPublicView ? null : member?.membership?.membershipStatus ?? null;
   const notes = isPublicView ? publicDetail?.notes ?? [] : notesQuery.data ?? [];
   const rawLineItems = isPublicView ? publicDetail?.invoiceItems ?? [] : lineItemsQuery.data ?? [];
   const isPdfMode = typeof window !== "undefined" && window.location.search.includes("pdf=true");
@@ -366,10 +367,21 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                   </button>
                 ) : null}
               </div>
+              {!isPublicView && memberStatus ? (
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition",
+                    getMemberDetailStatusPillClasses(memberStatus),
+                  )}
+                >
+                  <span>Membership Status:</span>
+                  <strong>{formatMembershipStatusLabel(memberStatus) ?? "Unknown"}</strong>
+                </div>
+              ) : null}
               <p className="max-w-2xl text-sm leading-6 text-slate-600">
                 {isPublicView
                   ? "Public invoice view with the full invoice record rendered without the app shell."
-                  : "Summary, member detail, line items, and notes are loaded separately for a lighter detail view."}
+                  : ""}
               </p>
             </div>
           </div>
@@ -458,8 +470,12 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                         href={buildMembershipMemberDetailPath(memberUniqueId)}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="ml-2 inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800"
-                        title="View member detail"
+                        className={cn(
+                          "ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition",
+                          getMemberDetailStatusPillClasses(memberStatus),
+                        )}
+                        title={getMemberDetailStatusTooltip(memberStatus)}
+                        aria-label={getMemberDetailStatusTooltip(memberStatus)}
                       >
                         View Detail
                       </a>
@@ -719,6 +735,60 @@ function formatMemberPhone(contact: ContactLike | null | undefined) {
   }
 
   return contact.cellPhone || contact.workPhone || contact.homePhone || "Not available";
+}
+
+function normalizeMembershipStatus(status: string | null | undefined) {
+  return (status ?? "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+}
+
+function getMemberDetailStatusPillClasses(status: string | null | undefined) {
+  switch (normalizeMembershipStatus(status)) {
+    case "active":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800";
+    case "pendingapproval":
+      return "border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300 hover:bg-amber-100 hover:text-amber-900";
+    case "rejected":
+      return "border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-800";
+    case "expired":
+      return "border-red-300 bg-red-950/95 text-red-50 hover:border-red-400 hover:bg-red-900 hover:text-white";
+    default:
+      return "border-cyan-200 bg-cyan-50 text-cyan-700 hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800";
+  }
+}
+
+function getMemberDetailStatusTooltip(status: string | null | undefined) {
+  const normalizedStatus = formatMembershipStatusLabel(status);
+  return normalizedStatus ? `Membership status: ${normalizedStatus}. Open member detail.` : "Open member detail.";
+}
+
+function formatMembershipStatusLabel(status: string | null | undefined) {
+  const normalized = normalizeMembershipStatus(status);
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized === "pendingapproval") {
+    return "Pending Approval";
+  }
+
+  if (normalized === "active") {
+    return "Active";
+  }
+
+  if (normalized === "rejected") {
+    return "Rejected";
+  }
+
+  if (normalized === "expired") {
+    return "Expired";
+  }
+
+  return (status ?? "").trim() || null;
 }
 
 function DetailBlock({
