@@ -21,6 +21,7 @@ type InvoicesTableProps = {
   sortOrder?: "asc" | "desc" | null;
   onSort: (sortBy: MembershipInvoiceSortBy) => void;
   onClearSort: () => void;
+  onSendViaEmail: (invoice: MembershipInvoiceListItem) => void;
 };
 
 type InvoiceTableColumn = {
@@ -58,7 +59,13 @@ function SortIcon({
   );
 }
 
-function InvoiceDetailMenu({ invoice }: { invoice: MembershipInvoiceListItem }) {
+function InvoiceDetailMenu({
+  invoice,
+  onSendViaEmail,
+}: {
+  invoice: MembershipInvoiceListItem;
+  onSendViaEmail: (invoice: MembershipInvoiceListItem) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -98,7 +105,7 @@ function InvoiceDetailMenu({ invoice }: { invoice: MembershipInvoiceListItem }) 
 
     const gap = 8;
     const menuWidth = 192;
-    const menuHeight = invoice.memberUniqueId ? 96 : 48;
+    const menuHeight = invoice.memberUniqueId ? 144 : 96;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
     const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
@@ -139,6 +146,16 @@ function InvoiceDetailMenu({ invoice }: { invoice: MembershipInvoiceListItem }) 
               >
                 Detail
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  onSendViaEmail(invoice);
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+              >
+                Send via Email
+              </button>
               {invoice.memberUniqueId ? (
                 <a
                   href={buildMembershipMemberDetailPath(invoice.memberUniqueId)}
@@ -190,7 +207,15 @@ function SkeletonRow() {
   );
 }
 
-export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, onSort, onClearSort }: InvoicesTableProps) {
+export function InvoicesTable({
+  invoices,
+  isLoading = false,
+  sortBy,
+  sortOrder,
+  onSort,
+  onClearSort,
+  onSendViaEmail,
+}: InvoicesTableProps) {
   const columns: InvoiceTableColumn[] = useMemo(
     () => [
       { label: "Invoice", key: "invoiceNumber" as const },
@@ -296,7 +321,7 @@ export function InvoicesTable({ invoices, isLoading = false, sortBy, sortOrder, 
                   )}
                 >
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-                    <InvoiceDetailMenu invoice={invoice} />
+                    <InvoiceDetailMenu invoice={invoice} onSendViaEmail={onSendViaEmail} />
                   </td>
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
                     <div className="space-y-2">
