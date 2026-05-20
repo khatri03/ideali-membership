@@ -2,13 +2,12 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
   Copy,
-  FileText,
   Loader2,
   Mail,
   MessageSquarePlus,
   MapPin,
   Phone,
-  Printer,
+  Download,
   UserRound,
   X,
 } from "lucide-react";
@@ -125,10 +124,6 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
     } catch {
       showToast("Unable to copy the invoice number from this browser context.", "error");
     }
-  }
-
-  function printInvoice() {
-    window.print();
   }
 
   async function downloadPdf() {
@@ -355,9 +350,22 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
                 Invoice summary
               </p>
-              <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-                {summary.invoiceNo}
-              </h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+                  {summary.invoiceNo}
+                </h1>
+                {!isPublicView ? (
+                  <button
+                    type="button"
+                    onClick={copyInvoiceNumber}
+                    title="Copy number"
+                    aria-label="Copy invoice number"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                  >
+                    <Copy size={18} />
+                  </button>
+                ) : null}
+              </div>
               <p className="max-w-2xl text-sm leading-6 text-slate-600">
                 {isPublicView
                   ? "Public invoice view with the full invoice record rendered without the app shell."
@@ -375,44 +383,23 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                   title="Download PDF"
                   aria-label="Download PDF"
                   disabled={isDownloadingPdf}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <FileText size={16} />
-                  {isDownloadingPdf ? "Preparing PDF..." : "PDF"}
+                  <Download size={16} />
                 </button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={copyInvoiceNumber}
-                  title="Copy number"
-                  aria-label="Copy invoice number"
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                  onClick={() => void downloadPdf()}
+                  title="Download PDF"
+                  aria-label="Download PDF"
+                  disabled={isDownloadingPdf}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Copy size={18} />
+                  <Download size={16} />
                 </button>
-                <button
-                  type="button"
-                  onClick={printInvoice}
-                  title="Print invoice"
-                  aria-label="Print invoice"
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-                >
-                  <Printer size={18} />
-                </button>
-                {memberUniqueId ? (
-                  <a
-                    href={buildMembershipMemberDetailPath(memberUniqueId)}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    title="Open member profile"
-                    aria-label="Open member profile"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-sm transition hover:bg-cyan-700"
-                  >
-                    <UserRound size={18} />
-                  </a>
-                ) : null}
               </div>
             )}
 
@@ -465,21 +452,20 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                 <DetailBlock
                   icon={<UserRound size={16} />}
                   label="Member name"
-                  value={
+                  labelAction={
                     !isPublicView && memberUniqueId ? (
                       <a
                         href={buildMembershipMemberDetailPath(memberUniqueId)}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="font-semibold text-cyan-700 transition hover:text-cyan-800 hover:underline"
-                        title="Open member profile"
+                        className="ml-2 inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 hover:text-cyan-800"
+                        title="View member detail"
                       >
-                        {formatMemberName(memberContact)}
+                        View Detail
                       </a>
-                    ) : (
-                      formatMemberName(memberContact)
-                    )
+                    ) : null
                   }
+                  value={formatMemberName(memberContact)}
                 />
                 <DetailBlock icon={<Mail size={16} />} label="Email" value={formatMemberEmail(memberContact)} />
                 <DetailBlock icon={<Phone size={16} />} label="Phone" value={formatMemberPhone(memberContact)} />
@@ -738,19 +724,24 @@ function formatMemberPhone(contact: ContactLike | null | undefined) {
 function DetailBlock({
   icon,
   label,
+  labelAction,
   value,
 }: {
   icon: ReactNode;
   label: string;
+  labelAction?: ReactNode;
   value: ReactNode;
 }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-          {icon}
-        </span>
-        {label}
+      <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+            {icon}
+          </span>
+          <span className="truncate">{label}</span>
+        </div>
+        {labelAction ? <span className="flex shrink-0 items-center normal-case tracking-normal">{labelAction}</span> : null}
       </div>
       <div className="mt-3 text-sm font-medium leading-6 text-slate-700">{value}</div>
     </div>
