@@ -47,6 +47,10 @@ function getStatusTone(status: string): MemberTone {
   }
 }
 
+function normalizeControlType(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
 function getAddressFieldIcon(fieldLabel: string) {
   switch (fieldLabel) {
     case "Type":
@@ -110,8 +114,11 @@ export function MemberDetailPage() {
     isLoading,
     error,
     refetch,
-  } =
-    useMemberDetailPage();
+    activeCustomFormSection,
+    isActiveCustomFormSectionLoading,
+    activeCustomFormSectionError,
+    refetchActiveCustomFormSection,
+  } = useMemberDetailPage(activeDetailTabId);
 
   useEffect(() => {
     const availableTabIds = [MEMBER_DETAIL_TAB_ID, ...customFormSections.map((section) => section.id)];
@@ -122,11 +129,6 @@ export function MemberDetailPage() {
       setActiveDetailTabId(nextActiveTabId);
     }
   }, [activeDetailTabId, customFormSections]);
-
-  const activeCustomFormSection = useMemo(
-    () => customFormSections.find((section) => section.id === activeDetailTabId) ?? null,
-    [activeDetailTabId, customFormSections],
-  );
 
   const isMemberDetailTabActive = activeDetailTabId === MEMBER_DETAIL_TAB_ID;
   const moderationModalAction = pendingModerationAction;
@@ -267,7 +269,7 @@ export function MemberDetailPage() {
             </button>
 
             {customFormSections.map((section) => {
-              const isActive = section.id === activeCustomFormSection?.id;
+              const isActive = section.id === activeDetailTabId;
 
               return (
                 <button
@@ -371,6 +373,25 @@ export function MemberDetailPage() {
                   ) : null}
 
                 </div>
+                ) : activeCustomFormSectionError ? (
+                  <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-sm font-medium text-rose-700">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>{activeCustomFormSectionError}</div>
+                      <button
+                        type="button"
+                        onClick={() => void refetchActiveCustomFormSection()}
+                        className="inline-flex items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                ) : isActiveCustomFormSectionLoading ? (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="h-28 animate-pulse rounded-3xl bg-slate-100" />
+                    <div className="h-28 animate-pulse rounded-3xl bg-slate-100" />
+                    <div className="h-28 animate-pulse rounded-3xl bg-slate-100" />
+                  </div>
                 ) : activeCustomFormSection ? (
                   <div key={activeCustomFormSection.id} className="space-y-4">
                     <div className={getCustomFormGridClass()}>
@@ -630,8 +651,11 @@ function ReadOnlyMultiSelectValue({
   if (options.length === 0) {
     return selectedValues.length > 0 ? (
       <span className="inline-flex flex-wrap gap-2">
-        {selectedValues.map((item) => (
-          <span key={item} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+        {selectedValues.map((item, index) => (
+          <span
+            key={`multi-value-${index}-${item || "empty"}`}
+            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+          >
             {item}
           </span>
         ))}
@@ -697,8 +721,8 @@ function ReadOnlyCountryValue({ value }: { value: string }) {
       className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none"
     >
       <option value="">{resolvedOptions.length > 0 ? "Select country" : value || "No value provided"}</option>
-      {resolvedOptions.map((option) => (
-        <option key={option.value} value={option.value}>
+      {resolvedOptions.map((option, index) => (
+        <option key={`country-option-${index}-${option.value || "empty"}`} value={option.value}>
           {option.label}
         </option>
       ))}
@@ -759,8 +783,8 @@ function ReadOnlyStateValue({
             : value || "No value provided"
           : value || "Select a country first"}
       </option>
-      {resolvedOptions.map((option) => (
-        <option key={option.value} value={option.value}>
+      {resolvedOptions.map((option, index) => (
+        <option key={`state-option-${index}-${option.value || "empty"}`} value={option.value}>
           {option.label}
         </option>
       ))}

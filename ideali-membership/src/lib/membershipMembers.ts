@@ -1,6 +1,8 @@
 import { getJson, postJson } from "./api";
 import type {
   MembershipMemberCustomFormAnswer,
+  MembershipMemberCustomFormSection,
+  MembershipMemberCustomFormSummary,
   MembershipMemberCustomQuestionAnswer,
   MembershipMemberDetailItem,
   MembershipMemberListItem,
@@ -25,6 +27,10 @@ function readRecord(value: unknown) {
 
 function readNumber(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function readArray(value: unknown) {
+  return Array.isArray(value) ? value : [];
 }
 
 function readCustomFormAnswers(value: unknown) {
@@ -63,6 +69,50 @@ function readCustomFormAnswers(value: unknown) {
       };
     })
     .filter((item): item is MembershipMemberCustomFormAnswer => Boolean(item?.fieldLabel || item?.value));
+}
+
+function readCustomFormSummaries(value: unknown) {
+  return readArray(value)
+    .map((item): MembershipMemberCustomFormSummary | null => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      return {
+        uniqueId: readText(record.UniqueId ?? record.uniqueId ?? record.FormUniqueId ?? record.formUniqueId),
+        name: readText(record.Name ?? record.name ?? record.FormName ?? record.formName),
+        headerText: readNullableText(record.HeaderText ?? record.headerText ?? record.FormHeaderText ?? record.formHeaderText),
+        description: readNullableText(record.Description ?? record.description ?? record.FormDescription ?? record.formDescription),
+        layoutColumn: readNullableNumber(record.LayoutColumn ?? record.layoutColumn ?? record.FormLayoutColumn ?? record.formLayoutColumn),
+        displayOrder: readNumber(record.DisplayOrder ?? record.displayOrder ?? record.Order ?? record.order, 0),
+        answerCount: readNumber(record.AnswerCount ?? record.answerCount ?? record.TotalAnswers ?? record.totalAnswers, 0),
+      };
+    })
+    .filter((item): item is MembershipMemberCustomFormSummary => Boolean(item?.uniqueId || item?.name));
+}
+
+function readCustomFormSection(value: unknown): MembershipMemberCustomFormSection | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const fields = readCustomFormAnswers(
+    record.Fields ?? record.fields ?? record.CustomFormResponses ?? record.customFormResponses ?? [],
+  );
+
+  return {
+    memberUniqueId: readText(record.MemberUniqueId ?? record.memberUniqueId),
+    membershipTypeUniqueId: readNullableText(record.MembershipTypeUniqueId ?? record.membershipTypeUniqueId),
+    formUniqueId: readText(record.FormUniqueId ?? record.formUniqueId),
+    formName: readText(record.FormName ?? record.formName),
+    formHeaderText: readNullableText(record.FormHeaderText ?? record.formHeaderText),
+    formDescription: readNullableText(record.FormDescription ?? record.formDescription),
+    formLayoutColumn: readNullableNumber(record.FormLayoutColumn ?? record.formLayoutColumn),
+    displayOrder: readNumber(record.DisplayOrder ?? record.displayOrder, 0),
+    fields,
+  };
 }
 
 function readCustomQuestionAnswers(value: unknown) {
@@ -342,6 +392,28 @@ export async function fetchMembershipMemberDetail(memberUniqueId: string) {
     customFormResponses,
     customQuestionResponses,
   } satisfies MembershipMemberDetailItem;
+}
+
+export async function fetchMembershipMemberCustomFormSummaries(memberUniqueId: string) {
+  const payload = await getJson<unknown>(`/api/organizer/membership/type/members/${memberUniqueId}/custom-forms`);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  const items = readArray(responseData?.PageData ?? responseData?.pageData ?? responseData?.Data ?? responseData?.data ?? responseData);
+  return readCustomFormSummaries(items);
+}
+
+export async function fetchMembershipMemberCustomForm(memberUniqueId: string, customFormUniqueId: string) {
+  const payload = await getJson<unknown>(
+    `/api/organizer/membership/type/members/${memberUniqueId}/custom-forms/${customFormUniqueId}`,
+  );
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  const detailRecord = pickMemberDetailRecord(responseData);
+  const section = readCustomFormSection(detailRecord ?? responseData);
+
+  if (!section) {
+    throw new Error("Unable to load member custom form.");
+  }
+
+  return section;
 }
 
 export async function fetchMembershipStatusOptions() {

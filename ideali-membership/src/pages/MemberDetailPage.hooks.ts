@@ -5,6 +5,8 @@ import { formatUtcToLocalDateTime } from "../lib/dateTime";
 import {
   approveMembershipMember,
   MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY,
+  fetchMembershipMemberCustomForm,
+  fetchMembershipMemberCustomFormSummaries,
   fetchMembershipMemberDetail,
   fetchMembershipStatusOptions,
   rejectMembershipMember,
@@ -12,6 +14,8 @@ import {
 import { getMembershipRegistrationInfo } from "../lib/membershipRegistration";
 import { showToast } from "../shared/components/toast/Toast";
 import type {
+  MembershipMemberCustomFormSection,
+  MembershipMemberCustomFormSummary,
   MembershipMemberCustomFormAnswer,
   MembershipMemberCustomQuestionAnswer,
 } from "../types/membership";
@@ -47,6 +51,15 @@ type CustomFormSectionView = {
   layoutColumn: number;
   items: CustomFormItemView[];
   order: number;
+};
+
+type CustomFormTabView = {
+  id: string;
+  title: string;
+  description: string;
+  layoutColumn: number;
+  order: number;
+  answerCount: number;
 };
 
 function normalizeStatusValue(value: string) {
@@ -109,75 +122,6 @@ function parseSelectedValues(value: string | null | undefined) {
     .filter(Boolean);
 }
 
-function groupCustomFormResponses(
-  responses: MembershipMemberCustomFormAnswer[],
-  formDefinitions: MembershipRegistrationCustomFormSummary[],
-): CustomFormSectionView[] {
-  const formLookup = new Map(formDefinitions.map((form) => [form.uniqueId, form]));
-  const fieldLookup = new Map(
-    formDefinitions.flatMap((form) => form.fields.map((field) => [field.uniqueId, { form, field }] as const)),
-  );
-
-  const sections = new Map<string, CustomFormSectionView>();
-
-  formDefinitions.forEach((form, index) => {
-    sections.set(form.uniqueId, {
-      id: form.uniqueId,
-      title: form.headerText || form.name || "Custom form responses",
-      description: form.description || "",
-      layoutColumn: Math.max(1, Math.min(4, form.layoutColumn ?? 2)),
-      items: [],
-      order: index,
-    });
-  });
-
-  responses.forEach((response, index) => {
-    const fieldDefinition = response.formUniqueId ? fieldLookup.get(response.fieldUniqueId ?? "")?.field ?? null : null;
-    const formDefinition = response.formUniqueId ? formLookup.get(response.formUniqueId) ?? null : null;
-    const key = formDefinition?.uniqueId || response.formUniqueId || response.formName || `form-${index}`;
-    const current = sections.get(key);
-
-    if (current) {
-      current.items.push({
-        ...response,
-        fieldDefinition,
-      });
-      return;
-    }
-
-    sections.set(key, {
-      id: key,
-      title: response.formHeaderText || response.formName || "Custom form responses",
-      description: response.formDescription || "",
-      layoutColumn: Math.max(1, Math.min(4, response.formLayoutColumn ?? 2)),
-      items: [
-        {
-          ...response,
-          fieldDefinition,
-        },
-      ],
-      order: formDefinitions.length + index,
-    });
-  });
-
-  return Array.from(sections.values())
-    .filter((section) => section.items.length > 0)
-    .map((section) => ({
-      ...section,
-      items: [...section.items].sort((left, right) => {
-        const leftOrder = left.fieldDisplayOrder ?? Number.MAX_SAFE_INTEGER;
-        const rightOrder = right.fieldDisplayOrder ?? Number.MAX_SAFE_INTEGER;
-
-        if (leftOrder !== rightOrder) {
-          return leftOrder - rightOrder;
-        }
-
-        return (left.fieldLabel || left.fieldUniqueId || "").localeCompare(right.fieldLabel || right.fieldUniqueId || "");
-      }),
-    }))
-    .sort((left, right) => left.order - right.order);
-}
-
 function mapCustomQuestionResponses(
   responses: MembershipMemberCustomQuestionAnswer[],
   questionDefinitions: MembershipRegistrationCustomQuestion[],
@@ -190,7 +134,44 @@ function mapCustomQuestionResponses(
   }));
 }
 
-export function useMemberDetailPage() {
+function mapCustomFormSection(
+  response: MembershipMemberCustomFormSection | null,
+  formDefinitions: MembershipRegistrationCustomFormSummary[],
+): CustomFormSectionView | null {
+  if (!response) {
+    return null;
+  }
+
+  const formDefinition = formDefinitions.find((form) => form.uniqueId === response.formUniqueId) ?? null;
+  const fieldLookup = new Map(formDefinition?.fields.map((field) => [field.uniqueId, field] as const) ?? []);
+
+  const items = [...response.fields]
+    .map((item): CustomFormItemView => ({
+      ...item,
+      fieldDefinition: item.fieldUniqueId ? fieldLookup.get(item.fieldUniqueId) ?? null : null,
+    }))
+    .sort((left, right) => {
+      const leftOrder = left.fieldDisplayOrder ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = right.fieldDisplayOrder ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return (left.fieldLabel || left.fieldUniqueId || "").localeCompare(right.fieldLabel || right.fieldUniqueId || "");
+    });
+
+  return {
+    id: response.formUniqueId,
+    title: response.formHeaderText || response.formName || "Custom form responses",
+    description: response.formDescription || "",
+    layoutColumn: Math.max(1, Math.min(4, response.formLayoutColumn ?? formDefinition?.layoutColumn ?? 2)),
+    items,
+    order: response.displayOrder,
+  };
+}
+
+export function useMemberDetailPage(activeDetailTabId: string) {
   const { memberUniqueId } = useParams<{ memberUniqueId?: string }>();
   const [isUpdatingMembershipStatus, setIsUpdatingMembershipStatus] = useState(false);
   const queryClient = useQueryClient();
@@ -218,8 +199,16 @@ export function useMemberDetailPage() {
     staleTime: STALE_TIME_5_MIN_MS,
   });
 
+  const customFormSummariesQuery = useQuery({
+    queryKey: ["membership-member-custom-form-summaries", memberUniqueId ?? ""],
+    queryFn: () => fetchMembershipMemberCustomFormSummaries(memberUniqueId ?? ""),
+    enabled: Boolean(memberUniqueId),
+    staleTime: STALE_TIME_5_MIN_MS,
+  });
+
   const registrationInfo = registrationInfoQuery.data ?? null;
   const membershipStatusOptions = membershipStatusOptionsQuery.data ?? [];
+  const customFormSummaries = customFormSummariesQuery.data ?? [];
   const membershipStatusLabelMap = useMemo(
     () => new Map(membershipStatusOptions.map((option) => [option.value, option.label] as const)),
     [membershipStatusOptions],
@@ -233,16 +222,35 @@ export function useMemberDetailPage() {
   }, [member, membershipStatusLabelMap]);
   const isPendingApproval = normalizeStatusValue(member?.membership.membershipStatus ?? "") === "pendingapproval";
 
-  const customFormSections = useMemo(() => {
-    if (!member) {
-      return [];
-    }
+  const customFormTabs = useMemo<CustomFormTabView[]>(() => {
+    return [...customFormSummaries]
+      .map((item) => ({
+        id: item.uniqueId,
+        title: item.headerText || item.name || "Custom form responses",
+        description: item.description || "",
+        layoutColumn: Math.max(1, Math.min(4, item.layoutColumn ?? 2)),
+        order: item.displayOrder,
+        answerCount: item.answerCount,
+      }))
+      .sort((left, right) => left.order - right.order);
+  }, [customFormSummaries]);
 
-    return groupCustomFormResponses(
-      member.customFormResponses,
-      registrationInfo?.membershipDetail.customForms ?? [],
-    );
-  }, [member, registrationInfo]);
+  const isMemberDetailTabActive = activeDetailTabId === "member-detail";
+  const activeCustomFormTab = useMemo(
+    () => customFormTabs.find((section) => section.id === activeDetailTabId) ?? null,
+    [activeDetailTabId, customFormTabs],
+  );
+
+  const activeCustomFormSectionQuery = useQuery({
+    queryKey: ["membership-member-custom-form", memberUniqueId ?? "", activeCustomFormTab?.id ?? ""],
+    queryFn: () => fetchMembershipMemberCustomForm(memberUniqueId ?? "", activeCustomFormTab?.id ?? ""),
+    enabled: Boolean(memberUniqueId && activeCustomFormTab?.id && !isMemberDetailTabActive),
+    staleTime: STALE_TIME_5_MIN_MS,
+  });
+
+  const activeCustomFormSection = useMemo(() => {
+    return mapCustomFormSection(activeCustomFormSectionQuery.data ?? null, registrationInfo?.membershipDetail.customForms ?? []);
+  }, [activeCustomFormSectionQuery.data, registrationInfo]);
 
   const customQuestionResponses = useMemo(() => {
     if (!member) {
@@ -364,7 +372,14 @@ export function useMemberDetailPage() {
     membershipStatusLabel,
     fullName,
     statCards,
-    customFormSections,
+    customFormSections: customFormTabs,
+    activeCustomFormSection,
+    isActiveCustomFormSectionLoading: activeCustomFormSectionQuery.isPending || activeCustomFormSectionQuery.isFetching,
+    activeCustomFormSectionError:
+      activeCustomFormSectionQuery.error instanceof Error ? activeCustomFormSectionQuery.error.message : null,
+    refetchActiveCustomFormSection: async () => {
+      await activeCustomFormSectionQuery.refetch();
+    },
     customQuestionResponses,
     addressFields,
     membershipExpiryLabel,
@@ -372,11 +387,18 @@ export function useMemberDetailPage() {
     isPendingApproval,
     isUpdatingMembershipStatus,
     updateMembershipStatus,
-    isLoading: memberQuery.isPending || memberQuery.isFetching || registrationInfoQuery.isPending || registrationInfoQuery.isFetching,
+    isLoading:
+      memberQuery.isPending ||
+      memberQuery.isFetching ||
+      registrationInfoQuery.isPending ||
+      registrationInfoQuery.isFetching ||
+      customFormSummariesQuery.isPending ||
+      customFormSummariesQuery.isFetching,
     error,
     refetch: async () => {
       await memberQuery.refetch();
       await registrationInfoQuery.refetch();
+      await customFormSummariesQuery.refetch();
     },
   };
 }

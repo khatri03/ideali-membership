@@ -217,6 +217,28 @@ export interface MembershipMemberCustomFormAnswer extends MembershipMemberFileAt
   value: string;
 }
 
+export interface MembershipMemberCustomFormSummary {
+  uniqueId: string;
+  name: string;
+  headerText: string | null;
+  description: string | null;
+  layoutColumn: number | null;
+  displayOrder: number;
+  answerCount: number;
+}
+
+export interface MembershipMemberCustomFormSection {
+  memberUniqueId: string;
+  membershipTypeUniqueId: string | null;
+  formUniqueId: string;
+  formName: string;
+  formHeaderText: string | null;
+  formDescription: string | null;
+  formLayoutColumn: number | null;
+  displayOrder: number;
+  fields: MembershipMemberCustomFormAnswer[];
+}
+
 export interface MembershipMemberCustomQuestionAnswer extends MembershipMemberFileAttachment {
   questionUniqueId: string;
   questionLabel: string;
