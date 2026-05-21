@@ -448,96 +448,70 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
         )}
       </div>
 
-      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-cyan-50 via-white to-transparent lg:block" />
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-4 xl:max-w-4xl">
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-                Invoice summary
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-                  {summary.invoiceNo}
-                </h1>
-                {!isPublicView ? (
-                  <button
-                    type="button"
-                    onClick={copyInvoiceNumber}
-                    title="Copy number"
-                    aria-label="Copy invoice number"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-                  >
-                    <Copy size={18} />
-                  </button>
-                ) : null}
-              </div>
-              {!isPublicView && memberStatus ? (
-                <div
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition",
-                    getMemberDetailStatusPillClasses(memberStatus),
-                  )}
-                >
-                  <span>Membership Status:</span>
-                  <strong>{formatMembershipStatusLabel(memberStatus) ?? "Unknown"}</strong>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-end gap-3 xl:min-w-[28rem]">
-            <div className="grid w-full gap-2 sm:grid-cols-2">
-              <StatCard
-                label="Invoice amount"
-                value={formatMembershipInvoiceAmount(summary.invoiceAmount, currencySymbol)}
-                tone="cyan"
-                compact
-              />
-              <StatCard
-                label="Payment method"
-                value={latestPaymentMethodLabel}
-                tone="emerald"
-                compact
-              />
-            </div>
-
-            <div className="grid w-full gap-2 sm:grid-cols-2">
-              <StatCard
-                label="Membership name"
-                value={summary.membershipName}
-                tone="slate"
-                compact
-              />
-              <StatCard
-                label="Invoice Date"
-                value={formatMembershipInvoiceDateLabel(summary.invoiceDate)}
-                tone="amber"
-                compact
-              />
-            </div>
-
-            <div className="grid w-full gap-2 sm:grid-cols-2">
-              <StatCard
-                label="Payment source"
-                value={latestPaymentSourceLabel}
-                tone="slate"
-                compact
-              />
-              <StatCard
-                label="Invoice payment status"
-                value={
-                  <StatusPill
-                    label={latestPaymentStatusLabel}
-                    tone={latestPaymentStatusTone}
-                  />
-                }
-                tone={latestPaymentStatusTone}
-                compact
-              />
-            </div>
-          </div>
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
+          Invoice number
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+            {summary.invoiceNo}
+          </h1>
+          {!isPublicView ? (
+            <button
+              type="button"
+              onClick={copyInvoiceNumber}
+              title="Copy number"
+              aria-label="Copy invoice number"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+            >
+              <Copy size={18} />
+            </button>
+          ) : null}
         </div>
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="Invoice amount"
+          value={formatMembershipInvoiceAmount(summary.invoiceAmount, currencySymbol)}
+          tone="cyan"
+          compact
+        />
+        <StatCard
+          label="Payment method"
+          value={latestPaymentMethodLabel}
+          tone="emerald"
+          compact
+        />
+        <StatCard
+          label="Membership name"
+          value={summary.membershipName}
+          tone="slate"
+          compact
+        />
+        <StatCard
+          label="Invoice Date"
+          value={formatMembershipInvoiceDateLabel(summary.invoiceDate)}
+          tone="amber"
+          compact
+        />
+        <StatCard
+          label="Payment source"
+          value={latestPaymentSourceLabel}
+          tone="slate"
+          compact
+        />
+        <StatCard
+          label="Invoice payment status"
+          value={
+            <StatusPill
+              label={latestPaymentStatusLabel}
+              tone={latestPaymentStatusTone}
+            />
+          }
+          tone={latestPaymentStatusTone}
+          compact
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,0.9fr)]">
