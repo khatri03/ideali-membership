@@ -431,11 +431,6 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                   <strong>{formatMembershipStatusLabel(memberStatus) ?? "Unknown"}</strong>
                 </div>
               ) : null}
-              <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                {isPublicView
-                  ? "Public invoice view with the full invoice record rendered without the app shell."
-                  : ""}
-              </p>
             </div>
           </div>
 
