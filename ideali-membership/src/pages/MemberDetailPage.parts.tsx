@@ -14,6 +14,7 @@ type StatCardProps = {
   value: ReactNode;
   detail?: string;
   tone?: "slate" | "cyan" | "emerald" | "amber" | "rose";
+  compact?: boolean;
 };
 
 type EmptyStatePanelProps = {
@@ -47,12 +48,16 @@ export function DetailPanel({ title, description, children, action, className }:
   );
 }
 
-export function StatCard({ label, value, detail, tone = "slate" }: StatCardProps) {
+export function StatCard({ label, value, detail, tone = "slate", compact = false }: StatCardProps) {
   return (
-    <article className={cn("rounded-3xl border p-5 shadow-sm", STAT_TONE_CLASSES[tone])}>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
-      {detail ? <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p> : null}
+    <article className={cn("rounded-3xl border shadow-sm", compact ? "p-3.5" : "p-5", STAT_TONE_CLASSES[tone])}>
+      <p className={cn("font-semibold uppercase tracking-[0.18em] text-slate-500", compact ? "text-[10px]" : "text-xs")}>
+        {label}
+      </p>
+      <div className={cn("font-semibold tracking-tight text-slate-900", compact ? "mt-2 text-lg" : "mt-3 text-2xl")}>
+        {value}
+      </div>
+      {detail ? <p className={cn("leading-6 text-slate-600", compact ? "mt-1.5 text-xs" : "mt-2 text-sm")}>{detail}</p> : null}
     </article>
   );
 }

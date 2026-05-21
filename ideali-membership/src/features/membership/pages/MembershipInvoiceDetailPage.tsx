@@ -396,20 +396,62 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
 
   return (
     <section className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {!isPublicView ? (
+          <Link
+            to={APP_ROUTES.membershipInvoices}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+          >
+            <ArrowLeft size={16} />
+            Back to invoices
+          </Link>
+        ) : (
+          <span />
+        )}
+
+        {isPdfMode ? null : isPublicView ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => void downloadPdf()}
+              title="Download PDF"
+              aria-label="Download PDF"
+              disabled={isDownloadingPdf}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={openSendEmailDialog}
+              title="Send email"
+              aria-label="Send invoice email"
+              disabled={isSendingEmail}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Mail size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => void downloadPdf()}
+              title="Download PDF"
+              aria-label="Download PDF"
+              disabled={isDownloadingPdf}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-gradient-to-l from-cyan-50 via-white to-transparent lg:block" />
           <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-4 xl:max-w-4xl">
-              {isPublicView ? null : (
-              <Link
-                to={APP_ROUTES.membershipInvoices}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-              >
-                <ArrowLeft size={16} />
-                Back to invoices
-                </Link>
-              )}
-
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
                 Invoice summary
@@ -445,75 +487,42 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
           </div>
 
           <div className="flex flex-col items-end gap-3 xl:min-w-[28rem]">
-            {isPdfMode ? null : isPublicView ? (
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => void downloadPdf()}
-                  title="Download PDF"
-                  aria-label="Download PDF"
-                  disabled={isDownloadingPdf}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Download size={16} />
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={openSendEmailDialog}
-                  title="Send email"
-                  aria-label="Send invoice email"
-                  disabled={isSendingEmail}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Mail size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void downloadPdf()}
-                  title="Download PDF"
-                  aria-label="Download PDF"
-                  disabled={isDownloadingPdf}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Download size={16} />
-                </button>
-              </div>
-            )}
-
-            <div className="grid w-full gap-3 sm:grid-cols-2">
+            <div className="grid w-full gap-2 sm:grid-cols-2">
               <StatCard
                 label="Invoice amount"
                 value={formatMembershipInvoiceAmount(summary.invoiceAmount, currencySymbol)}
                 tone="cyan"
+                compact
               />
               <StatCard
                 label="Payment method"
                 value={latestPaymentMethodLabel}
                 tone="emerald"
+                compact
               />
             </div>
 
-            <div className="grid w-full gap-3 sm:grid-cols-2">
+            <div className="grid w-full gap-2 sm:grid-cols-2">
               <StatCard
                 label="Membership name"
                 value={summary.membershipName}
                 tone="slate"
+                compact
               />
               <StatCard
                 label="Invoice Date"
                 value={formatMembershipInvoiceDateLabel(summary.invoiceDate)}
                 tone="amber"
+                compact
               />
             </div>
 
-            <div className="grid w-full gap-3 sm:grid-cols-2">
+            <div className="grid w-full gap-2 sm:grid-cols-2">
               <StatCard
                 label="Payment source"
                 value={latestPaymentSourceLabel}
                 tone="slate"
+                compact
               />
               <StatCard
                 label="Invoice payment status"
@@ -524,6 +533,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                   />
                 }
                 tone={latestPaymentStatusTone}
+                compact
               />
             </div>
           </div>
