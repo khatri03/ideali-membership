@@ -8,6 +8,7 @@ import {
   MapPin,
   Phone,
   Download,
+  ChevronDown,
   UserRound,
   X,
 } from "lucide-react";
@@ -16,7 +17,7 @@ import { Link, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipMemberDetailPath } from "../../../routes";
 import { cn } from "../../../lib/utils";
 import { showToast } from "../../../shared/components/toast/Toast";
-import { DetailPanel, EmptyStatePanel, StatCard, StatusPill } from "../../../pages/MemberDetailPage.parts";
+import { DetailPanel, EmptyStatePanel, StatCard } from "../../../pages/MemberDetailPage.parts";
 import { fetchMembershipMemberDetail } from "../../../lib/membershipMembers";
 import type { MembershipInvoiceDetailItem, MembershipInvoiceDetailLineItem, MembershipInvoiceSummaryItem } from "../types/invoice";
 import {
@@ -65,6 +66,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [sendEmailRecipient, setSendEmailRecipient] = useState("");
   const [sendEmailNotifyOrganizer, setSendEmailNotifyOrganizer] = useState(false);
   const [sendEmailOtherNotificationEmails, setSendEmailOtherNotificationEmails] = useState<string[]>([]);
@@ -484,7 +486,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
           compact
         />
         <StatCard
-          label="Membership name"
+          label="Membership"
           value={summary.membershipName}
           tone="slate"
           compact
@@ -502,13 +504,8 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
           compact
         />
         <StatCard
-          label="Invoice payment status"
-          value={
-            <StatusPill
-              label={latestPaymentStatusLabel}
-              tone={latestPaymentStatusTone}
-            />
-          }
+          label="Payment Status"
+          value={latestPaymentStatusLabel}
           tone={latestPaymentStatusTone}
           compact
         />
@@ -533,7 +530,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailBlock
                   icon={<UserRound size={16} />}
-                  label="Member name"
+                  label="Name"
                   labelAction={
                     !isPublicView && memberUniqueId ? (
                       <a
@@ -690,16 +687,28 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
           <DetailPanel
             title="Notes"
             action={
-              isPublicView ? null : (
-                <button
-                  type="button"
-                  onClick={openAddNoteModal}
-                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
-                >
-                  <MessageSquarePlus size={14} />
-                  Add Note
-                </button>
-              )
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {notes.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsNotesExpanded((current) => !current)}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                  >
+                    <ChevronDown size={14} className={cn("transition", isNotesExpanded ? "rotate-180" : "rotate-0")} />
+                    {isNotesExpanded ? "Hide notes" : `Show notes (${notes.length})`}
+                  </button>
+                ) : null}
+                {isPublicView ? null : (
+                  <button
+                    type="button"
+                    onClick={openAddNoteModal}
+                    className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
+                  >
+                    <MessageSquarePlus size={14} />
+                    Add Note
+                  </button>
+                )}
+              </div>
             }
           >
             <div className="space-y-3">
@@ -718,25 +727,69 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                   ))}
                 </div>
               ) : notes.length > 0 ? (
-                notes.map((note) => (
-                  <article
-                    key={`${note.createdBy}-${note.createdOnUtc}`}
-                    className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-                          <UserRound size={18} />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
-                          <p className="text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
+                <>
+                  {notes.slice(0, 1).map((note) => (
+                    <article
+                      key={`${note.createdBy}-${note.createdOnUtc}`}
+                      className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                            <UserRound size={18} />
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
+                            <p className="text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
-                  </article>
-                ))
+                      <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
+                    </article>
+                  ))}
+                  {notes.length > 1 ? (
+                    <>
+                      <div
+                        className={cn(
+                          "grid transition-[grid-template-rows,opacity,transform] duration-300 ease-out",
+                          isNotesExpanded ? "grid-rows-[1fr] opacity-100 translate-y-0 mt-3" : "grid-rows-[0fr] opacity-0 -translate-y-2 mt-0",
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="space-y-3 pt-1">
+                            {notes.slice(1).map((note) => (
+                              <article
+                                key={`${note.createdBy}-${note.createdOnUtc}`}
+                                className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                                      <UserRound size={18} />
+                                    </span>
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
+                                      <p className="text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsNotesExpanded((current) => !current)}
+                        className="inline-flex items-center gap-2 rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+                      >
+                        <ChevronDown size={14} className={cn("transition", isNotesExpanded ? "rotate-180" : "rotate-0")} />
+                        {isNotesExpanded ? "Hide notes" : `Show all ${notes.length} notes`}
+                      </button>
+                    </>
+                  ) : null}
+                </>
               ) : (
                 <EmptyStatePanel
                   title="No notes captured"
