@@ -595,7 +595,7 @@ function ReadOnlyRadioValue({
 
   return (
     <div className="space-y-2">
-      {options.map((option) => {
+      {options.map((option, index) => {
         const isSelected =
           selectedValues.includes(option.value) ||
           selectedValues.includes(option.uniqueId) ||
@@ -605,7 +605,10 @@ function ReadOnlyRadioValue({
           fallbackValue === option.displayText;
 
         return (
-          <label key={option.uniqueId} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+          <label
+            key={`radio-option-${index}-${option.uniqueId || option.value || option.displayText || "value"}`}
+            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+          >
             <input type="radio" checked={isSelected} readOnly disabled className="h-4 w-4 accent-cyan-600" />
             <span>{option.displayText}</span>
           </label>
@@ -640,14 +643,17 @@ function ReadOnlyMultiSelectValue({
 
   return (
     <div className="space-y-2">
-      {options.map((option) => {
+      {options.map((option, index) => {
         const isSelected =
           selectedValues.includes(option.value) ||
           selectedValues.includes(option.uniqueId) ||
           selectedValues.includes(option.displayText);
 
         return (
-          <label key={option.uniqueId} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+          <label
+            key={`multi-option-${index}-${option.uniqueId || option.value || option.displayText || "value"}`}
+            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+          >
             <input type="checkbox" checked={isSelected} readOnly disabled className="h-4 w-4 accent-cyan-600" />
             <span>{option.displayText}</span>
           </label>
