@@ -324,16 +324,26 @@ export function InvoicesTable({
                     <InvoiceDetailMenu invoice={invoice} onSendViaEmail={onSendViaEmail} />
                   </td>
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <Link
                         to={buildMembershipInvoiceDetailPath(invoice.invoiceId)}
                         className="block text-sm font-semibold text-cyan-700 underline decoration-cyan-200 underline-offset-4 transition hover:text-cyan-800 hover:decoration-cyan-400"
                       >
                         {invoice.invoiceNo}
                       </Link>
-                      <span className="inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
-                        {formatMembershipInvoicePaymentMethodLabel(invoice.paymentMethod)}
-                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
+                          {formatMembershipInvoicePaymentMethodLabel(invoice.paymentMethod)}
+                        </span>
+                        {invoice.paymentSource ? (
+                          <span
+                            className="inline-flex max-w-full w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                            title={invoice.paymentSource}
+                          >
+                            <span className="truncate">{invoice.paymentSource}</span>
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </td>
                   <td className="border-r border-slate-200/70 px-3 py-4 sm:px-4">

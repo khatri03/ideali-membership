@@ -40,6 +40,7 @@ export interface MembershipInvoiceListItem {
   totalAmount: number;
   balanceAmount: number | null;
   paymentMethod: string | null;
+  paymentSource: string | null;
   currencySymbol: string;
   lastActivityUtc: string | null;
   quickBooksInvoiceId: string | null;
@@ -109,6 +110,7 @@ export interface MembershipInvoiceDetailPayment {
   amount: number;
   paymentMethod: string;
   paymentStatus: string;
+  paymentSource: string | null;
   referenceNo: string | null;
   note: string | null;
   paymentDateUtc: string;
@@ -125,6 +127,8 @@ export interface MembershipInvoiceSummaryItem {
   discountCouponCode: string | null;
   balanceAmount: number | null;
   paymentMethod: string | null;
+  paymentSource: string | null;
+  paymentStatus: string | null;
   membershipName: string;
   memberUniqueId: string | null;
   currencySymbol: string | null;

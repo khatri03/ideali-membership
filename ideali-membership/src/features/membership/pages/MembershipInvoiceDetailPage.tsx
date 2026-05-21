@@ -16,7 +16,7 @@ import { Link, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipMemberDetailPath } from "../../../routes";
 import { cn } from "../../../lib/utils";
 import { showToast } from "../../../shared/components/toast/Toast";
-import { DetailPanel, EmptyStatePanel, StatCard } from "../../../pages/MemberDetailPage.parts";
+import { DetailPanel, EmptyStatePanel, StatCard, StatusPill } from "../../../pages/MemberDetailPage.parts";
 import { fetchMembershipMemberDetail } from "../../../lib/membershipMembers";
 import type { MembershipInvoiceDetailItem, MembershipInvoiceDetailLineItem, MembershipInvoiceSummaryItem } from "../types/invoice";
 import {
@@ -206,6 +206,9 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
   const currencySymbol = summary?.currencySymbol ?? "$";
   const memberUniqueId = summary?.memberUniqueId ?? null;
   const latestPaymentMethodLabel = summary?.paymentMethod ?? "Not available";
+  const latestPaymentSourceLabel = summary?.paymentSource ?? "Not available";
+  const latestPaymentStatusLabel = summary?.paymentStatus ?? "Not available";
+  const latestPaymentStatusTone = getInvoicePaymentStatusTone(latestPaymentStatusLabel);
 
   const getLineItemAmount = (item: MembershipInvoiceDetailLineItem) => {
     if (item.description.startsWith("Discount coupon:")) {
@@ -228,31 +231,6 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
       return [];
     }
 
-    if (!discountCouponCode || discountLineItemAmount <= 0) {
-      return rawLineItems;
-    }
-
-    const discountLineItem: MembershipInvoiceDetailLineItem = {
-      description: `Discount coupon: ${discountCouponCode}`,
-      unitPrice: 0,
-      quantity: 1,
-      total: -discountLineItemAmount,
-      invoiceItemStatus: "Applied",
-      discountAmount: null,
-      discountRate: null,
-      taxCharges: {
-        rate: 0,
-        description: "Discount",
-        amount: 0,
-      },
-      serviceCharges: {
-        rate: 0,
-        description: "Discount",
-        amount: 0,
-      },
-      itemType: 0,
-    };
-
     const isTipLineItem = (item: MembershipInvoiceDetailLineItem) =>
       item.itemType === 1 || item.description.trim().toLowerCase() === "tip";
 
@@ -260,33 +238,36 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
     const tipItems = rawLineItems.filter((item) => isTipLineItem(item));
     const purchasedSubtotal = purchasedItems.reduce((sum, item) => sum + getLineItemAmount(item), 0);
     const tipTotal = tipItems.reduce((sum, item) => sum + getLineItemAmount(item), 0);
+    const hasDiscountCoupon = Boolean(discountCouponCode) && discountLineItemAmount > 0;
 
-    const subtotalLineItem: MembershipInvoiceDetailLineItem = {
-      description: "Sub total",
-      unitPrice: 0,
-      quantity: 1,
-      total: Math.max(purchasedSubtotal - discountLineItemAmount, 0),
-      invoiceItemStatus: "Applied",
-      discountAmount: null,
-      discountRate: null,
-      taxCharges: {
-        rate: 0,
-        description: "Subtotal",
-        amount: 0,
-      },
-      serviceCharges: {
-        rate: 0,
-        description: "Subtotal",
-        amount: 0,
-      },
-      itemType: 0,
-    };
+    const discountLineItem: MembershipInvoiceDetailLineItem | null = hasDiscountCoupon
+      ? {
+          description: `Discount coupon: ${discountCouponCode}`,
+          unitPrice: 0,
+          quantity: 1,
+          total: -discountLineItemAmount,
+          invoiceItemStatus: "Applied",
+          discountAmount: null,
+          discountRate: null,
+          taxCharges: {
+            rate: 0,
+            description: "Discount",
+            amount: 0,
+          },
+          serviceCharges: {
+            rate: 0,
+            description: "Discount",
+            amount: 0,
+          },
+          itemType: 0,
+        }
+      : null;
 
     const netTotalLineItem: MembershipInvoiceDetailLineItem = {
       description: "Net Total",
       unitPrice: 0,
       quantity: 1,
-      total: Math.max(subtotalLineItem.total + tipTotal, 0),
+      total: Math.max((hasDiscountCoupon ? purchasedSubtotal - discountLineItemAmount : purchasedSubtotal) + tipTotal, 0),
       invoiceItemStatus: "Applied",
       discountAmount: null,
       discountRate: null,
@@ -303,7 +284,36 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
       itemType: 0,
     };
 
-    return [...purchasedItems, discountLineItem, subtotalLineItem, ...tipItems, netTotalLineItem];
+    return [
+      ...purchasedItems,
+      ...(discountLineItem ? [discountLineItem] : []),
+      ...(hasDiscountCoupon
+        ? [
+            {
+              description: "Sub total",
+              unitPrice: 0,
+              quantity: 1,
+              total: Math.max(purchasedSubtotal - discountLineItemAmount, 0),
+              invoiceItemStatus: "Applied",
+              discountAmount: null,
+              discountRate: null,
+              taxCharges: {
+                rate: 0,
+                description: "Subtotal",
+                amount: 0,
+              },
+              serviceCharges: {
+                rate: 0,
+                description: "Subtotal",
+                amount: 0,
+              },
+              itemType: 0,
+            } satisfies MembershipInvoiceDetailLineItem,
+          ]
+        : []),
+      ...tipItems,
+      netTotalLineItem,
+    ];
   }, [discountCouponCode, discountLineItemAmount, rawLineItems]);
 
   function openAddNoteModal() {
@@ -496,6 +506,24 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                 label="Invoice Date"
                 value={formatMembershipInvoiceDateLabel(summary.invoiceDate)}
                 tone="amber"
+              />
+            </div>
+
+            <div className="grid w-full gap-3 sm:grid-cols-2">
+              <StatCard
+                label="Payment source"
+                value={latestPaymentSourceLabel}
+                tone="slate"
+              />
+              <StatCard
+                label="Invoice payment status"
+                value={
+                  <StatusPill
+                    label={latestPaymentStatusLabel}
+                    tone={latestPaymentStatusTone}
+                  />
+                }
+                tone={latestPaymentStatusTone}
               />
             </div>
           </div>
@@ -765,6 +793,8 @@ function buildInvoiceSummaryFromDetail(detail: MembershipInvoiceDetailItem | nul
     return null;
   }
 
+  const latestPayment = getLatestInvoicePayment(detail);
+
   return {
     uniqueId: detail.uniqueId,
     invoiceNo: detail.invoiceNo,
@@ -774,10 +804,20 @@ function buildInvoiceSummaryFromDetail(detail: MembershipInvoiceDetailItem | nul
     discountCouponCode: detail.discountCouponCode,
     balanceAmount: detail.balanceAmount,
     paymentMethod: getMembershipInvoicePaymentMethodLabel(detail),
+    paymentSource: latestPayment?.paymentSource ?? null,
+    paymentStatus: latestPayment?.paymentStatus ?? null,
     membershipName: detail.invoiceContext?.name ?? "Not available",
     memberUniqueId: detail.invoiceContext?.memberUniqueId ?? null,
     currencySymbol: detail.currencySymbol ?? "$",
   };
+}
+
+function getLatestInvoicePayment(detail: MembershipInvoiceDetailItem | null): MembershipInvoiceDetailPayment | null {
+  if (!detail || detail.payments.length === 0) {
+    return null;
+  }
+
+  return [...detail.payments].sort((left, right) => right.paymentDateUtc.localeCompare(left.paymentDateUtc))[0] ?? null;
 }
 
 function formatMemberName(contact: ContactLike | null | undefined) {
@@ -876,6 +916,19 @@ function formatMembershipStatusLabel(status: string | null | undefined) {
   }
 
   return (status ?? "").trim() || null;
+}
+
+function getInvoicePaymentStatusTone(status: string | null | undefined): "slate" | "cyan" | "emerald" | "amber" | "rose" {
+  switch ((status ?? "").trim().toLowerCase()) {
+    case "success":
+      return "emerald";
+    case "pending":
+      return "amber";
+    case "failed":
+      return "rose";
+    default:
+      return "slate";
+  }
 }
 
 function DetailBlock({

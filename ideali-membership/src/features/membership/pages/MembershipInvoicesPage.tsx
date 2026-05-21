@@ -232,8 +232,18 @@ export function MembershipInvoicesPage() {
                             >
                               {invoice.invoiceNo}
                             </a>
-                            <div className="mt-2 inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
-                              {invoice.paymentMethod ?? "Not available"}
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
+                                {invoice.paymentMethod ?? "Not available"}
+                              </span>
+                              {invoice.paymentSource ? (
+                                <span
+                                  className="inline-flex max-w-full w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                                  title={invoice.paymentSource}
+                                >
+                                  <span className="truncate">{invoice.paymentSource}</span>
+                                </span>
+                              ) : null}
                             </div>
                             <div className="mt-2 flex flex-wrap gap-2">
                               <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800">
