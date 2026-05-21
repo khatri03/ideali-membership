@@ -511,13 +511,131 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,0.9fr)]">
-        <div className="space-y-6">
+      <div className="space-y-6">
+          <DetailPanel
+            title="Notes"
+            action={
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {notes.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsNotesExpanded((current) => !current)}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+                  >
+                    <ChevronDown size={14} className={cn("transition", isNotesExpanded ? "rotate-180" : "rotate-0")} />
+                    {isNotesExpanded ? "Hide notes" : `Show notes (${notes.length})`}
+                  </button>
+                ) : null}
+                {isPublicView ? null : (
+                  <button
+                    type="button"
+                    onClick={openAddNoteModal}
+                    className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
+                  >
+                    <MessageSquarePlus size={14} />
+                    Add Note
+                  </button>
+                )}
+              </div>
+            }
+          >
+            <div className="space-y-3">
+              {isNotesLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, index) => (
+                    <div
+                      key={index}
+                      className="animate-pulse rounded-3xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="h-3 w-24 rounded-full bg-slate-200" />
+                      <div className="mt-3 h-4 w-full rounded-full bg-slate-200" />
+                      <div className="mt-2 h-4 w-4/5 rounded-full bg-slate-200" />
+                      <div className="mt-4 h-3 w-32 rounded-full bg-slate-200" />
+                    </div>
+                  ))}
+                </div>
+              ) : notes.length > 0 ? (
+                <>
+                  {notes.slice(0, 1).map((note) => (
+                    <article
+                      key={`${note.createdBy}-${note.createdOnUtc}`}
+                      className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                            <UserRound size={18} />
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
+                          </div>
+                        </div>
+                        <p className="shrink-0 pt-0.5 text-right text-xs text-slate-500">
+                          {formatMembershipInvoiceDateLabel(note.createdOnUtc)}
+                        </p>
+                      </div>
+                      <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
+                    </article>
+                  ))}
+                  {notes.length > 1 ? (
+                    <>
+                      <div
+                        className={cn(
+                          "grid transition-[grid-template-rows,opacity,transform] duration-300 ease-out",
+                          isNotesExpanded ? "grid-rows-[1fr] opacity-100 translate-y-0 mt-3" : "grid-rows-[0fr] opacity-0 -translate-y-2 mt-0",
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="space-y-3 pt-1">
+                            {notes.slice(1).map((note) => (
+                              <article
+                                key={`${note.createdBy}-${note.createdOnUtc}`}
+                                className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                                      <UserRound size={18} />
+                                    </span>
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
+                                    </div>
+                                  </div>
+                                  <p className="shrink-0 pt-0.5 text-right text-xs text-slate-500">
+                                    {formatMembershipInvoiceDateLabel(note.createdOnUtc)}
+                                  </p>
+                                </div>
+                                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsNotesExpanded((current) => !current)}
+                        className="inline-flex items-center gap-2 rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+                      >
+                        <ChevronDown size={14} className={cn("transition", isNotesExpanded ? "rotate-180" : "rotate-0")} />
+                        {isNotesExpanded ? "Hide notes" : `Show all ${notes.length} notes`}
+                      </button>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <EmptyStatePanel
+                  title="No notes captured"
+                  description="Captured invoice notes will appear here when they are added."
+                />
+              )}
+            </div>
+          </DetailPanel>
+
           <DetailPanel
             title="Member detail"
           >
             {isMemberLoading ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 {[...Array(4)].map((_, index) => (
                   <div key={index} className="animate-pulse rounded-3xl border border-slate-200 bg-slate-50 p-4">
                     <div className="h-3 w-24 rounded-full bg-slate-200" />
@@ -527,7 +645,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
                 ))}
               </div>
             ) : memberContact ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 <DetailBlock
                   icon={<UserRound size={16} />}
                   label="Name"
@@ -681,124 +799,6 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
               />
             )}
           </DetailPanel>
-        </div>
-
-        <aside className="space-y-6">
-          <DetailPanel
-            title="Notes"
-            action={
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {notes.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsNotesExpanded((current) => !current)}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-                  >
-                    <ChevronDown size={14} className={cn("transition", isNotesExpanded ? "rotate-180" : "rotate-0")} />
-                    {isNotesExpanded ? "Hide notes" : `Show notes (${notes.length})`}
-                  </button>
-                ) : null}
-                {isPublicView ? null : (
-                  <button
-                    type="button"
-                    onClick={openAddNoteModal}
-                    className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100"
-                  >
-                    <MessageSquarePlus size={14} />
-                    Add Note
-                  </button>
-                )}
-              </div>
-            }
-          >
-            <div className="space-y-3">
-              {isNotesLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, index) => (
-                    <div
-                      key={index}
-                      className="animate-pulse rounded-3xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="h-3 w-24 rounded-full bg-slate-200" />
-                      <div className="mt-3 h-4 w-full rounded-full bg-slate-200" />
-                      <div className="mt-2 h-4 w-4/5 rounded-full bg-slate-200" />
-                      <div className="mt-4 h-3 w-32 rounded-full bg-slate-200" />
-                    </div>
-                  ))}
-                </div>
-              ) : notes.length > 0 ? (
-                <>
-                  {notes.slice(0, 1).map((note) => (
-                    <article
-                      key={`${note.createdBy}-${note.createdOnUtc}`}
-                      className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-                            <UserRound size={18} />
-                          </span>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
-                            <p className="text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
-                    </article>
-                  ))}
-                  {notes.length > 1 ? (
-                    <>
-                      <div
-                        className={cn(
-                          "grid transition-[grid-template-rows,opacity,transform] duration-300 ease-out",
-                          isNotesExpanded ? "grid-rows-[1fr] opacity-100 translate-y-0 mt-3" : "grid-rows-[0fr] opacity-0 -translate-y-2 mt-0",
-                        )}
-                      >
-                        <div className="overflow-hidden">
-                          <div className="space-y-3 pt-1">
-                            {notes.slice(1).map((note) => (
-                              <article
-                                key={`${note.createdBy}-${note.createdOnUtc}`}
-                                className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex items-center gap-3">
-                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-                                      <UserRound size={18} />
-                                    </span>
-                                    <div>
-                                      <p className="text-sm font-semibold text-slate-900">{note.createdBy}</p>
-                                      <p className="text-xs text-slate-500">{formatMembershipInvoiceDateLabel(note.createdOnUtc)}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{note.note}</p>
-                              </article>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsNotesExpanded((current) => !current)}
-                        className="inline-flex items-center gap-2 rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-                      >
-                        <ChevronDown size={14} className={cn("transition", isNotesExpanded ? "rotate-180" : "rotate-0")} />
-                        {isNotesExpanded ? "Hide notes" : `Show all ${notes.length} notes`}
-                      </button>
-                    </>
-                  ) : null}
-                </>
-              ) : (
-                <EmptyStatePanel
-                  title="No notes captured"
-                  description="Captured invoice notes will appear here when they are added."
-                />
-              )}
-            </div>
-          </DetailPanel>
-        </aside>
       </div>
 
       <InvoiceNoteModal
@@ -1014,7 +1014,7 @@ function AddressDetailBlock({
   ].filter((row) => Boolean(row.value && row.value.trim().length > 0));
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:col-span-2">
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:col-span-3">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500">
           {icon}
