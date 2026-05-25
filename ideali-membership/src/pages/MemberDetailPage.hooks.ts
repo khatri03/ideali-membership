@@ -99,6 +99,15 @@ function normalizeControlType(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase();
 }
 
+function parseSortableDate(value: string | null | undefined) {
+  if (!value) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : Number.NEGATIVE_INFINITY;
+}
+
 function parseSelectedValues(value: string | null | undefined) {
   const trimmed = value?.trim() ?? "";
   if (!trimmed) {
@@ -262,6 +271,29 @@ export function useMemberDetailPage(activeDetailTabId: string) {
       registrationInfo?.membershipDetail.customQuestions ?? [],
     );
   }, [member, registrationInfo]);
+  const membershipHistory = useMemo(() => {
+    if (!member) {
+      return [];
+    }
+
+    return [...member.membershipHistory].sort((left, right) => {
+      const leftTime = parseSortableDate(left.statusDateUtc);
+      const rightTime = parseSortableDate(right.statusDateUtc);
+
+      if (leftTime !== rightTime) {
+        return rightTime - leftTime;
+      }
+
+      const leftExpiry = parseSortableDate(left.membershipExpiryUtc);
+      const rightExpiry = parseSortableDate(right.membershipExpiryUtc);
+
+      if (leftExpiry !== rightExpiry) {
+        return rightExpiry - leftExpiry;
+      }
+
+      return (right.uniqueId || "").localeCompare(left.uniqueId || "");
+    });
+  }, [member]);
 
   const membershipStartLabel = member?.membership.membershipStartUtc
     ? formatUtcToLocalDateTime(member.membership.membershipStartUtc)
@@ -384,6 +416,7 @@ export function useMemberDetailPage(activeDetailTabId: string) {
     addressFields,
     membershipExpiryLabel,
     membershipStartLabel,
+    membershipHistory,
     isPendingApproval,
     isUpdatingMembershipStatus,
     updateMembershipStatus,

@@ -2,8 +2,9 @@ import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, Building2, CheckCircle2, CircleX, Download, ExternalLink, FileText, Globe2, Hash, Home, Image, Landmark, Mail, MapPinned, Phone, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
-import { APP_ROUTES } from "../routes";
+import { APP_ROUTES, buildMembershipInvoiceDetailPath } from "../routes";
 import { downloadBinaryFile, openBinaryFile } from "../lib/api";
+import { formatUtcToLocalDateTime } from "../lib/dateTime";
 import { cn } from "../lib/utils";
 import { fetchCountryOptions, fetchStateOptions } from "../lib/customForms";
 import { EmptyStatePanel, DetailPanel, StatCard, StatusPill } from "./MemberDetailPage.parts";
@@ -110,8 +111,7 @@ export function MemberDetailPage() {
     customFormSections,
     customQuestionResponses,
     addressFields,
-    membershipExpiryLabel,
-    membershipStartLabel,
+    membershipHistory,
     isPendingApproval,
     isUpdatingMembershipStatus,
     updateMembershipStatus,
@@ -329,25 +329,64 @@ export function MemberDetailPage() {
 
                     <DetailPanel
                       className="h-full"
-                      title="Membership snapshot"
-                      description="A concise view of the member's current standing and the most important lifecycle dates."
+                      title="Membership history"
+                      description="Most recent membership records are shown first."
                     >
-                      <div className="space-y-4">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Current plan</p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">{member.membership.activeMembershipName || "Not assigned"}</p>
+                      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-200">
+                            <thead className="bg-slate-50">
+                              <tr>
+                                <th scope="col" className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  Membership Name
+                                </th>
+                                <th scope="col" className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  Expiry
+                                </th>
+                                <th scope="col" className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  Invoice Number
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 bg-white">
+                              {membershipHistory.length > 0 ? (
+                                membershipHistory.map((history) => (
+                                  <tr key={history.uniqueId} className="transition-colors hover:bg-slate-50/80">
+                                    <td className="px-5 py-4">
+                                      <div className="text-sm font-semibold text-slate-900">
+                                        {history.membershipName || "Not assigned"}
+                                      </div>
+                                    </td>
+                                    <td className="px-5 py-4 text-sm text-slate-700">
+                                      {history.membershipExpiryUtc ? formatUtcToLocalDateTime(history.membershipExpiryUtc) : "No expiry"}
+                                    </td>
+                                    <td className="px-5 py-4 text-sm font-medium text-cyan-700">
+                                      {history.invoiceUniqueId ? (
+                                        <a
+                                          href={buildMembershipInvoiceDetailPath(history.invoiceUniqueId)}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center gap-2 transition hover:text-cyan-800 hover:underline"
+                                        >
+                                          <span>{history.invoiceNo || "Open invoice"}</span>
+                                          <ExternalLink size={14} />
+                                        </a>
+                                      ) : (
+                                        <span className="text-slate-500">{history.invoiceNo || "No invoice"}</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={3} className="px-5 py-10 text-center text-sm text-slate-500">
+                                    No membership history records were found for this member.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </div>
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Expiry</p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">{membershipExpiryLabel}</p>
-                        </div>
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Record notes</p>
-                          <p className={cn("mt-2 text-sm leading-6", member.membership.notes ? "text-slate-700" : "text-slate-500")}>
-                            {member.membership.notes || "No notes provided with this member record."}
-                          </p>
-                        </div>
-
                       </div>
                     </DetailPanel>
                   </div>

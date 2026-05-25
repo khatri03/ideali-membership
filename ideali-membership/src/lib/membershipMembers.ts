@@ -3,6 +3,7 @@ import type {
   MembershipMemberCustomFormAnswer,
   MembershipMemberCustomFormSection,
   MembershipMemberCustomFormSummary,
+  MembershipMemberHistoryItem,
   MembershipMemberCustomQuestionAnswer,
   MembershipMemberDetailItem,
   MembershipMemberListItem,
@@ -141,6 +142,56 @@ function readCustomQuestionAnswers(value: unknown) {
       };
     })
     .filter((item): item is MembershipMemberCustomQuestionAnswer => Boolean(item?.questionUniqueId || item?.questionLabel || item?.value));
+}
+
+function readMembershipHistory(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item): MembershipMemberHistoryItem | null => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const invoiceRecord = readRecord(record.Invoice ?? record.invoice);
+
+      return {
+        uniqueId: readText(record.UniqueId ?? record.uniqueId ?? record.MembershipHistoryUniqueId ?? record.membershipHistoryUniqueId),
+        membershipName: readText(
+          record.MembershipName ??
+            record.membershipName ??
+            record.ActiveMembershipName ??
+            record.activeMembershipName ??
+            record.MembershipTypeName ??
+            record.membershipTypeName,
+        ),
+        membershipStatus: readText(record.MembershipStatus ?? record.membershipStatus),
+        membershipExpiryUtc: readNullableText(
+          record.MembershipExpiryUtc ?? record.membershipExpiryUtc ?? record.ExpiresOnUtc ?? record.expiresOnUtc,
+        ),
+        invoiceUniqueId: readNullableText(
+          invoiceRecord?.UniqueId ??
+            invoiceRecord?.uniqueId ??
+            record.InvoiceUniqueId ??
+            record.invoiceUniqueId ??
+            record.InvoiceId ??
+            record.invoiceId,
+        ),
+        invoiceNo: readText(
+          invoiceRecord?.InvoiceNo ??
+            invoiceRecord?.invoiceNo ??
+            record.InvoiceNo ??
+            record.invoiceNo ??
+            record.InvoiceNumber ??
+            record.invoiceNumber,
+        ),
+        statusDateUtc: readNullableText(record.StatusDateUtc ?? record.statusDateUtc ?? record.StatusDate ?? record.statusDate),
+      };
+    })
+    .filter((item): item is MembershipMemberHistoryItem => Boolean(item?.uniqueId || item?.membershipName || item?.invoiceNo));
 }
 
 function pickMemberDetailRecord(responseData: Record<string, unknown> | null) {
@@ -300,6 +351,12 @@ export async function fetchMembershipMemberDetail(memberUniqueId: string) {
       detailRecord.CustomQuestionsResponses ??
       detailRecord.customQuestionsResponses,
   );
+  const membershipHistory = readMembershipHistory(
+    responseData?.MembershipHistory ??
+      responseData?.membershipHistory ??
+      detailRecord.MembershipHistory ??
+      detailRecord.membershipHistory,
+  );
 
   const profileRecord = readMemberSection(detailRecord, "Profile", ["profile"]);
   const contactRecord = readMemberSection(detailRecord, "Contact", ["contact"]);
@@ -389,6 +446,7 @@ export async function fetchMembershipMemberDetail(memberUniqueId: string) {
       ),
       notes: readNullableText(membershipRecord?.Notes ?? membershipRecord?.notes ?? detailRecord.Notes ?? detailRecord.notes),
     },
+    membershipHistory,
     customFormResponses,
     customQuestionResponses,
   } satisfies MembershipMemberDetailItem;

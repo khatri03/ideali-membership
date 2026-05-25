@@ -200,6 +200,16 @@ export interface MembershipMemberMembership {
   notes: string | null;
 }
 
+export interface MembershipMemberHistoryItem {
+  uniqueId: string;
+  membershipName: string;
+  membershipStatus: string;
+  membershipExpiryUtc: string | null;
+  invoiceUniqueId: string | null;
+  invoiceNo: string;
+  statusDateUtc: string | null;
+}
+
 export interface MembershipMemberFileAttachment {
   fileStorageId: number | null;
   fileStorageUniqueId: string | null;
@@ -258,6 +268,7 @@ export interface MembershipMemberDetailItem {
   contact: MembershipMemberContact;
   address: MembershipMemberAddress;
   membership: MembershipMemberMembership;
+  membershipHistory: MembershipMemberHistoryItem[];
   customFormResponses: MembershipMemberCustomFormAnswer[];
   customQuestionResponses: MembershipMemberCustomQuestionAnswer[];
 }
