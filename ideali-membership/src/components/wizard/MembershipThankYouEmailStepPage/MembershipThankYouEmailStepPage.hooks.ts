@@ -9,10 +9,10 @@ import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
 import {
-  getMembershipDescriptionInfo,
+  getMembershipThankYouEmailInfo,
   getMembershipTypePlaceholders,
-  invalidateMembershipWizardDescriptionCache,
-  saveMembershipDescriptionStep,
+  invalidateMembershipWizardThankYouEmailCache,
+  saveMembershipThankYouEmailStep,
 } from "../../../lib/membershipWizard";
 import { useWizardFooterActions } from "../WizardFooterActionsContext/WizardFooterActionsContext";
 import {
@@ -28,7 +28,6 @@ import {
 import type { MembershipThankYouEmailStepState } from "./MembershipThankYouEmailStepPage.types";
 
 async function persistThankYouEmailStepWithFeedback({
-  description,
   emailSubject,
   emailTemplate,
   notifyOrganizer,
@@ -40,7 +39,6 @@ async function persistThankYouEmailStepWithFeedback({
   setIsSaving,
   onSuccess,
 }: {
-  description: string | null;
   emailSubject: string | null;
   emailTemplate: string | null;
   notifyOrganizer: boolean;
@@ -57,9 +55,8 @@ async function persistThankYouEmailStepWithFeedback({
   setIsSaving(true);
 
   try {
-    const result = await saveMembershipDescriptionStep(
+    const result = await saveMembershipThankYouEmailStep(
       {
-        description,
         emailSubject,
         emailTemplate,
         notifyOrganizer,
@@ -227,7 +224,6 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
   const [notifyOrganizer, setNotifyOrganizer] = useState(false);
   const [otherNotificationEmails, setOtherNotificationEmails] = useState("");
   const [placeholders, setPlaceholders] = useState<MembershipThankYouEmailStepState["placeholders"]>([]);
-  const descriptionRef = useRef("<p></p>");
   const emailSubjectRef = useRef("<p></p>");
   const emailTemplateRef = useRef("<p></p>");
 
@@ -318,14 +314,13 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
 
       try {
         const [info, placeholderItems] = await Promise.all([
-          getMembershipDescriptionInfo(currentMembershipTypeUniqueId),
+          getMembershipThankYouEmailInfo(currentMembershipTypeUniqueId),
           getMembershipTypePlaceholders(),
         ]);
         if (!isMounted) {
           return;
         }
 
-        descriptionRef.current = info.description || "<p></p>";
         emailSubjectRef.current = normalizeSubjectTemplateText(info.emailSubject || "<p></p>", placeholderItems);
         setEmailSubjectHtml(buildSubjectEditorHtml(info.emailSubject || "<p></p>", placeholderItems));
         emailTemplateRef.current = info.emailTemplate || "<p></p>";
@@ -382,7 +377,6 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
       const currentEmailTemplate = editor?.getHTML() ?? emailTemplateRef.current;
 
       void persistThankYouEmailStepWithFeedback({
-        description: descriptionRef.current,
         emailSubject: currentEmailSubject,
         emailTemplate: currentEmailTemplate,
         notifyOrganizer,
@@ -416,7 +410,6 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
         ),
       onSkip: () =>
         void persistThankYouEmailStepWithFeedback({
-          description: descriptionRef.current,
           emailSubject: null,
           emailTemplate: null,
           notifyOrganizer,
@@ -478,7 +471,7 @@ export function useMembershipThankYouEmailStep(): MembershipThankYouEmailStepSta
     subjectEditor,
     reload: () => {
       if (currentMembershipTypeUniqueId) {
-        invalidateMembershipWizardDescriptionCache(currentMembershipTypeUniqueId);
+        invalidateMembershipWizardThankYouEmailCache(currentMembershipTypeUniqueId);
       }
       setReloadTick((current) => current + 1);
     },

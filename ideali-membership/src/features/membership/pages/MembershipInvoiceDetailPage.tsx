@@ -20,6 +20,7 @@ import { showToast } from "../../../shared/components/toast/Toast";
 import { DetailPanel, EmptyStatePanel, StatCard } from "../../../pages/MemberDetailPage.parts";
 import { fetchMembershipMemberDetail } from "../../../lib/membershipMembers";
 import type { MembershipInvoiceDetailItem, MembershipInvoiceDetailLineItem, MembershipInvoiceSummaryItem } from "../types/invoice";
+import type { MembershipInvoiceDetailPayment } from "../types/invoice";
 import {
   addMembershipInvoiceNote,
   downloadMembershipInvoicePdf,
@@ -32,7 +33,7 @@ import {
   getMembershipInvoicePaymentMethodLabel,
   sendMembershipInvoiceEmail,
 } from "../lib/membershipInvoices";
-import { getMembershipDescriptionInfo } from "../../../lib/membershipWizard";
+import { getMembershipThankYouEmailInfo } from "../../../lib/membershipWizard";
 
 const STALE_TIME_5_MIN_MS = 5 * 60 * 1000;
 
@@ -99,7 +100,7 @@ export function MembershipInvoiceDetailPage({ isPublicView = false }: { isPublic
 
   const membershipTypeNotificationQuery = useQuery({
     queryKey: ["membership-type-notification-settings", member?.membership?.membershipTypeUniqueId ?? ""],
-    queryFn: () => getMembershipDescriptionInfo(member?.membership?.membershipTypeUniqueId ?? ""),
+    queryFn: () => getMembershipThankYouEmailInfo(member?.membership?.membershipTypeUniqueId ?? ""),
     enabled: !isPublicView && Boolean(member?.membership?.membershipTypeUniqueId),
     staleTime: STALE_TIME_5_MIN_MS,
   });

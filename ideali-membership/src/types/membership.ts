@@ -73,6 +73,11 @@ export interface MembershipDiscountCouponsInfo {
 export interface MembershipDescriptionInfo {
   uniqueId: string;
   description: string;
+  stepNo: number;
+}
+
+export interface MembershipThankYouEmailInfo {
+  uniqueId: string;
   emailSubject: string;
   emailTemplate: string;
   notifyOrganizer: boolean;

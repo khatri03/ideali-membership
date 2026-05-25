@@ -10,7 +10,7 @@ import {
   formatMembershipInvoiceAmount,
   formatMembershipInvoiceDateLabel,
 } from "../lib/membershipInvoices";
-import { getMembershipDescriptionInfo } from "../../../lib/membershipWizard";
+import { getMembershipThankYouEmailInfo } from "../../../lib/membershipWizard";
 import { InvoicesFilters, InvoicesPagination, InvoicesTable } from "../components";
 import { useMembershipInvoicesPage } from "./MembershipInvoicesPage.hooks";
 import type { MembershipInvoiceListItem } from "../types/invoice";
@@ -78,7 +78,7 @@ export function MembershipInvoicesPage() {
 
   const sendEmailSettingsQuery = useQuery({
     queryKey: ["membership-invoice-email-settings", sendEmailMember?.membership?.membershipTypeUniqueId ?? ""],
-    queryFn: () => getMembershipDescriptionInfo(sendEmailMember?.membership?.membershipTypeUniqueId ?? ""),
+    queryFn: () => getMembershipThankYouEmailInfo(sendEmailMember?.membership?.membershipTypeUniqueId ?? ""),
     enabled: isSendEmailModalOpen && Boolean(sendEmailMember?.membership?.membershipTypeUniqueId),
     staleTime: 5 * 60 * 1000,
   });

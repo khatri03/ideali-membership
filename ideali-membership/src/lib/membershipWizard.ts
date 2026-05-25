@@ -7,6 +7,7 @@ import type {
   MembershipCustomQuestionDraft,
   MembershipCustomQuestionOptionDraft,
   MembershipDescriptionInfo,
+  MembershipThankYouEmailInfo,
   MembershipQuestionsInfo,
   MembershipDiscountCouponsInfo,
   MembershipAdvanceSettingsInfo,
@@ -135,6 +136,10 @@ export function invalidateMembershipWizardTitleCache(membershipTypeUniqueId: str
 
 export function invalidateMembershipWizardDescriptionCache(membershipTypeUniqueId: string) {
   invalidateWizardCache(`wizard:description:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardThankYouEmailCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:thank-you-email:${membershipTypeUniqueId}`);
 }
 
 export function invalidateMembershipWizardPricingCache(membershipTypeUniqueId: string) {
@@ -610,15 +615,9 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
     const payload = await getJson<unknown>(`/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/description`);
     const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-      const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
-      const description = readText(responseData?.Description ?? responseData?.description);
-      const emailSubject = readText(responseData?.EmailSubject ?? responseData?.emailSubject);
-      const emailTemplate = readText(responseData?.EmailTemplate ?? responseData?.emailTemplate);
-      const notifyOrganizer = readBoolean(responseData?.NotifyOrganizer ?? responseData?.notifyOrganizer) ?? false;
-      const otherNotificationEmails = readText(
-        responseData?.OtherNotificationEmails ?? responseData?.otherNotificationEmails,
-      );
-      const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const description = readText(responseData?.Description ?? responseData?.description);
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
 
     if (!uniqueId) {
       throw new Error("Unexpected membership description response.");
@@ -626,13 +625,40 @@ export async function getMembershipDescriptionInfo(membershipTypeUniqueId: strin
 
     return {
       uniqueId,
-        description,
-        emailSubject,
-        emailTemplate,
-        notifyOrganizer,
-        otherNotificationEmails,
-        stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
-      } satisfies MembershipDescriptionInfo;
+      description,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 2,
+    } satisfies MembershipDescriptionInfo;
+  });
+}
+
+export async function getMembershipThankYouEmailInfo(membershipTypeUniqueId: string) {
+  return getCachedWizardResponse(`wizard:thank-you-email:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(
+      `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/thank-you-email`,
+    );
+    const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+    const uniqueId = readText(responseData?.UniqueId ?? responseData?.uniqueId);
+    const emailSubject = readText(responseData?.EmailSubject ?? responseData?.emailSubject);
+    const emailTemplate = readText(responseData?.EmailTemplate ?? responseData?.emailTemplate);
+    const notifyOrganizer = readBoolean(responseData?.NotifyOrganizer ?? responseData?.notifyOrganizer) ?? false;
+    const otherNotificationEmails = readText(
+      responseData?.OtherNotificationEmails ?? responseData?.otherNotificationEmails,
+    );
+    const stepNo = Number(responseData?.StepNo ?? responseData?.stepNo ?? 0);
+
+    if (!uniqueId) {
+      throw new Error("Unexpected membership thank you email response.");
+    }
+
+    return {
+      uniqueId,
+      emailSubject,
+      emailTemplate,
+      notifyOrganizer,
+      otherNotificationEmails,
+      stepNo: Number.isFinite(stepNo) && stepNo > 0 ? stepNo : 9,
+    } satisfies MembershipThankYouEmailInfo;
   });
 }
 
@@ -785,10 +811,6 @@ export async function saveMembershipPricingStep(
 export async function saveMembershipDescriptionStep(
   request: {
     description: string | null;
-    emailSubject: string | null;
-    emailTemplate: string | null;
-    notifyOrganizer: boolean;
-    otherNotificationEmails: string | null;
   },
   stepNumber: number,
   membershipTypeUniqueId?: string,
@@ -819,6 +841,51 @@ export async function saveMembershipDescriptionStep(
   }
 
   invalidateMembershipWizardDescriptionCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
+  invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
+
+  return {
+    membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
+}
+
+export async function saveMembershipThankYouEmailStep(
+  request: {
+    emailSubject: string | null;
+    emailTemplate: string | null;
+    notifyOrganizer: boolean;
+    otherNotificationEmails: string | null;
+  },
+  stepNumber: number,
+  membershipTypeUniqueId?: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for thank you email saving.");
+  }
+
+  const payload = await postJson<unknown>(
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/thank-you-email?stepNumber=${stepNumber}`,
+    request,
+  );
+
+  const responseData = readResponseData(payload);
+  const savedMembershipTypeUniqueId =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).UniqueId ??
+            (responseData as Record<string, unknown>).uniqueId ??
+            (responseData as Record<string, unknown>).MembershipTypeUniqueId ??
+            (responseData as Record<string, unknown>).membershipTypeUniqueId
+        : "",
+    );
+
+  if (!savedMembershipTypeUniqueId) {
+    throw new Error("Unexpected membership thank you email response.");
+  }
+
+  invalidateMembershipWizardThankYouEmailCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardReviewCache(savedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(savedMembershipTypeUniqueId);
 
