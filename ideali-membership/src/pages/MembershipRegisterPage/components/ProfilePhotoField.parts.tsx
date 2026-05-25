@@ -89,11 +89,11 @@ export function AvatarEditorModal({
         <div className="flex flex-col items-center gap-4 px-6 py-6">
           <div className="flex w-full items-center justify-center">
             <div className="rounded-4xl border border-blue-50 bg-blue-50/50 p-5">
-              <div
-                ref={cropViewportRef}
-                className={`relative h-60 w-60 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-inner ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
-                onPointerDown={onCropPointerDown}
-              >
+          <div
+            ref={cropViewportRef as RefObject<HTMLDivElement>}
+            className={`relative h-60 w-60 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-inner ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+            onPointerDown={onCropPointerDown}
+          >
                 <img
                   src={editorUrl}
                   alt="Avatar editor preview"

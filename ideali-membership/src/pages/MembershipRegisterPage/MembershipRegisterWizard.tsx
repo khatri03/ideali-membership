@@ -34,6 +34,7 @@ import type {
 } from "./MembershipRegisterWizard.types";
 import {
   formatFileSize,
+  buildCurrencyPrefix,
   formatStepNumber,
   formatTenureWithExpiryLabel,
   getFieldBorderClass,

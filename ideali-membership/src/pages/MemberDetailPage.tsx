@@ -10,7 +10,11 @@ import { EmptyStatePanel, DetailPanel, StatCard, StatusPill } from "./MemberDeta
 import { useMemberDetailPage } from "./MemberDetailPage.hooks";
 import { getCustomFormFieldSpanClass, getCustomFormGridClass, getCustomFormControlType, getCustomQuestionControlType } from "./MembershipRegisterPage/MembershipRegisterWizard.logic";
 import type { MembershipMemberCustomFormAnswer, MembershipMemberCustomQuestionAnswer } from "../types/membership";
-import type { MembershipRegistrationCustomQuestionOption } from "../types/membershipRegistration";
+import type {
+  MembershipRegistrationCustomFormField,
+  MembershipRegistrationCustomQuestion,
+  MembershipRegistrationCustomQuestionOption,
+} from "../types/membershipRegistration";
 
 type MemberTone = "slate" | "cyan" | "emerald" | "amber" | "rose";
 type ModerationAction = "approve" | "reject";
@@ -243,7 +247,7 @@ export function MemberDetailPage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {statCards.map((card) => (
-              <StatCard key={card.label} label={card.label} value={card.value} detail={card.detail} tone={card.tone} />
+              <StatCard key={card.label} label={card.label} value={card.value} tone={card.tone} />
             ))}
           </div>
 
