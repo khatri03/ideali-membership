@@ -18,6 +18,8 @@ import type {
   MembershipTypeOrderListItem,
   MembershipTitleInfo,
   MembershipTypeListItem,
+  MembershipTypeUpgradePathListItem,
+  MembershipTypeUpgradePathRequest,
   OrganizerPaymentAccountSelectionItem,
 } from "../types/membership";
 
@@ -164,6 +166,10 @@ export function invalidateMembershipWizardQuestionsCache(membershipTypeUniqueId:
 
 export function invalidateMembershipWizardAdvanceSettingsCache(membershipTypeUniqueId: string) {
   invalidateWizardCache(`wizard:advance-settings:${membershipTypeUniqueId}`);
+}
+
+export function invalidateMembershipWizardUpgradePathsCache(membershipTypeUniqueId: string) {
+  invalidateWizardCache(`wizard:upgrade-paths:${membershipTypeUniqueId}`);
 }
 
 export function invalidateMembershipWizardReviewCache(membershipTypeUniqueId: string) {
@@ -546,6 +552,65 @@ export async function saveMembershipAdvanceSettingsStep(
     membershipTypeUniqueId: resolvedMembershipTypeUniqueId,
     responseData,
   };
+}
+
+export async function getMembershipTypeUpgradePaths(membershipTypeUniqueId: string) {
+  return getCachedWizardResponse(`wizard:upgrade-paths:${membershipTypeUniqueId}`, async () => {
+    const payload = await getJson<unknown>(
+      `/api/organizer/membership/type/${membershipTypeUniqueId}/upgrade-paths`,
+    );
+    const responseData = readResponseData(payload) as
+      | Array<Record<string, unknown>>
+      | { PageData?: unknown; Data?: unknown }
+      | null;
+
+    const items = Array.isArray(responseData)
+      ? responseData
+      : Array.isArray(responseData?.PageData)
+        ? (responseData.PageData as Array<Record<string, unknown>>)
+        : Array.isArray(responseData?.Data)
+          ? (responseData.Data as Array<Record<string, unknown>>)
+          : [];
+
+    return items
+      .map((item): MembershipTypeUpgradePathListItem => ({
+        uniqueId: readText(item.UniqueId ?? item.uniqueId),
+        fromMembershipTypeUniqueId: readText(
+          item.FromMembershipTypeUniqueId ?? item.fromMembershipTypeUniqueId,
+        ),
+        fromMembershipTypeName: readText(item.FromMembershipTypeName ?? item.fromMembershipTypeName),
+        toMembershipTypeUniqueId: readText(item.ToMembershipTypeUniqueId ?? item.toMembershipTypeUniqueId),
+        toMembershipTypeName: readText(item.ToMembershipTypeName ?? item.toMembershipTypeName),
+        chargeRule: readText(item.ChargeRule ?? item.chargeRule) as MembershipTypeUpgradePathListItem["chargeRule"],
+        fixedUpgradeAmount: readNumber(item.FixedUpgradeAmount ?? item.fixedUpgradeAmount) ?? null,
+        requiresApproval: readBoolean(item.RequiresApproval ?? item.requiresApproval) ?? false,
+        isActive: readBoolean(item.IsActive ?? item.isActive) ?? true,
+        createdAtUtc: readText(item.CreatedAtUtc ?? item.createdAtUtc),
+        updatedAtUtc: readText(item.UpdatedAtUtc ?? item.updatedAtUtc) || null,
+      }))
+      .filter(
+        (item) =>
+          item.uniqueId &&
+          item.fromMembershipTypeUniqueId &&
+          item.fromMembershipTypeName &&
+          item.toMembershipTypeUniqueId &&
+          item.toMembershipTypeName,
+      );
+  });
+}
+
+export async function saveMembershipTypeUpgradePath(
+  membershipTypeUniqueId: string,
+  request: MembershipTypeUpgradePathRequest,
+) {
+  const payload = await postJson<unknown>(
+    `/api/organizer/membership/type/${membershipTypeUniqueId}/upgrade-paths`,
+    request,
+  );
+
+  invalidateMembershipWizardUpgradePathsCache(membershipTypeUniqueId);
+
+  return payload;
 }
 
 export async function saveMembershipReviewStep(

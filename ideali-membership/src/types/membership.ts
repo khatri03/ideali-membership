@@ -93,6 +93,46 @@ export interface MembershipAdvanceSettingsInfo {
   stepNo: number;
 }
 
+export type MembershipUpgradeChargeRule =
+  | "FullPrice"
+  | "PriceDifference"
+  | "FixedAmount"
+  | "Free"
+  | "ManualReview";
+
+export interface MembershipTypeUpgradePathListItem {
+  uniqueId: string;
+  fromMembershipTypeUniqueId: string;
+  fromMembershipTypeName: string;
+  toMembershipTypeUniqueId: string;
+  toMembershipTypeName: string;
+  chargeRule: MembershipUpgradeChargeRule;
+  fixedUpgradeAmount: number | null;
+  requiresApproval: boolean;
+  isActive: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string | null;
+}
+
+export interface MembershipTypeUpgradePathDraft {
+  id: string;
+  uniqueId: string | null;
+  toMembershipTypeUniqueId: string;
+  toMembershipTypeName: string;
+  chargeRule: MembershipUpgradeChargeRule;
+  fixedUpgradeAmount: string;
+  requiresApproval: boolean;
+  isActive: boolean;
+}
+
+export interface MembershipTypeUpgradePathRequest {
+  toMembershipTypeUniqueId: string;
+  chargeRule: MembershipUpgradeChargeRule;
+  fixedUpgradeAmount: number | null;
+  requiresApproval: boolean;
+  isActive: boolean;
+}
+
 export interface MembershipReviewPaymentAccountInfo {
   name: string;
   merchant: string;
