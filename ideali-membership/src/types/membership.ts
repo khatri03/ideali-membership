@@ -93,6 +93,21 @@ export interface MembershipAdvanceSettingsInfo {
   stepNo: number;
 }
 
+export interface MembershipAdvanceSettingsUpgradePathRequest {
+  toMembershipTypeUniqueId: string;
+  chargeRule: MembershipUpgradeChargeRule;
+  fixedUpgradeAmount: number | null;
+  requiresApproval: boolean;
+  isActive: boolean;
+}
+
+export interface MembershipAdvanceSettingsSaveRequest {
+  registrationStartDateUtc: string | null;
+  registrationEndDateUtc: string | null;
+  requiresApproval: boolean;
+  upgradePaths: MembershipAdvanceSettingsUpgradePathRequest[];
+}
+
 export type MembershipUpgradeChargeRule =
   | "FullPrice"
   | "PriceDifference"

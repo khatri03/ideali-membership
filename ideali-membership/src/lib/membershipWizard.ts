@@ -11,6 +11,7 @@ import type {
   MembershipQuestionsInfo,
   MembershipDiscountCouponsInfo,
   MembershipAdvanceSettingsInfo,
+  MembershipAdvanceSettingsSaveRequest,
   MembershipReviewInfo,
   MembershipReviewPaymentAccountInfo,
   MembershipTypePlaceholderGroup,
@@ -19,7 +20,6 @@ import type {
   MembershipTitleInfo,
   MembershipTypeListItem,
   MembershipTypeUpgradePathListItem,
-  MembershipTypeUpgradePathRequest,
   OrganizerPaymentAccountSelectionItem,
 } from "../types/membership";
 
@@ -509,11 +509,7 @@ export async function saveMembershipDiscountCoupons(
 }
 
 export async function saveMembershipAdvanceSettingsStep(
-  request: {
-    registrationStartDateUtc: string | null;
-    registrationEndDateUtc: string | null;
-    requiresApproval: boolean;
-  },
+  request: MembershipAdvanceSettingsSaveRequest,
   stepNumber: number,
   membershipTypeUniqueId?: string,
 ) {
@@ -545,6 +541,7 @@ export async function saveMembershipAdvanceSettingsStep(
   const resolvedMembershipTypeUniqueId = savedMembershipTypeUniqueId || membershipTypeUniqueId;
 
   invalidateMembershipWizardAdvanceSettingsCache(resolvedMembershipTypeUniqueId);
+  invalidateMembershipWizardUpgradePathsCache(resolvedMembershipTypeUniqueId);
   invalidateMembershipWizardReviewCache(resolvedMembershipTypeUniqueId);
   invalidateMembershipWizardProgressCache(resolvedMembershipTypeUniqueId);
 
@@ -597,20 +594,6 @@ export async function getMembershipTypeUpgradePaths(membershipTypeUniqueId: stri
           item.toMembershipTypeName,
       );
   });
-}
-
-export async function saveMembershipTypeUpgradePath(
-  membershipTypeUniqueId: string,
-  request: MembershipTypeUpgradePathRequest,
-) {
-  const payload = await postJson<unknown>(
-    `/api/organizer/membership/type/${membershipTypeUniqueId}/upgrade-paths`,
-    request,
-  );
-
-  invalidateMembershipWizardUpgradePathsCache(membershipTypeUniqueId);
-
-  return payload;
 }
 
 export async function saveMembershipReviewStep(

@@ -7,10 +7,10 @@ import {
   getMembershipTypes,
   invalidateMembershipWizardAdvanceSettingsCache,
   invalidateMembershipWizardUpgradePathsCache,
-  saveMembershipTypeUpgradePath,
   saveMembershipAdvanceSettingsStep,
 } from "../../../lib/membershipWizard";
 import type {
+  MembershipAdvanceSettingsUpgradePathRequest,
   MembershipTypeListItem,
   MembershipTypeUpgradePathDraft,
   MembershipTypeUpgradePathListItem,
@@ -32,23 +32,23 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
   registrationStartDateUtc,
   registrationEndDateUtc,
   requiresApproval,
+  upgradePaths,
   stepNumber,
   membershipTypeUniqueId,
   setError,
   setValidationError,
   setIsSaving,
-  onPostSave,
   onSuccess,
 }: {
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
   requiresApproval: boolean;
+  upgradePaths: MembershipAdvanceSettingsUpgradePathRequest[];
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
   setValidationError: (value: string) => void;
   setIsSaving: (value: boolean) => void;
-  onPostSave?: () => Promise<void> | void;
   onSuccess: (membershipTypeUniqueId: string) => void | Promise<void>;
 }) {
   const nextValidationError = getMembershipAdvanceSettingsValidationError(
@@ -70,11 +70,11 @@ async function persistMembershipAdvanceSettingsStepWithFeedback({
         registrationStartDateUtc: formatUtcDate(registrationStartDateUtc),
         registrationEndDateUtc: formatUtcDate(registrationEndDateUtc),
         requiresApproval,
+        upgradePaths,
       },
       stepNumber,
       membershipTypeUniqueId,
     );
-    await onPostSave?.();
     await onSuccess(result.membershipTypeUniqueId);
   } catch (saveError) {
     setError(saveError instanceof Error ? saveError.message : "Unable to save advance settings.");
@@ -87,23 +87,23 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
   registrationStartDateUtc,
   registrationEndDateUtc,
   requiresApproval,
+  upgradePaths,
   stepNumber,
   membershipTypeUniqueId,
   setError,
   setValidationError,
   setIsSaving,
-  onPostSave,
   onSuccess,
 }: {
   registrationStartDateUtc: Date | null;
   registrationEndDateUtc: Date | null;
   requiresApproval: boolean;
+  upgradePaths: MembershipAdvanceSettingsUpgradePathRequest[];
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
   setValidationError: (value: string) => void;
   setIsSaving: (value: boolean) => void;
-  onPostSave?: () => Promise<void> | void;
   onSuccess: (membershipTypeUniqueId: string) => void | Promise<void>;
 }) {
   setError("");
@@ -115,11 +115,11 @@ async function persistMembershipAdvanceSettingsStepWithoutValidation({
         registrationStartDateUtc: formatUtcDate(registrationStartDateUtc),
         registrationEndDateUtc: formatUtcDate(registrationEndDateUtc),
         requiresApproval,
+        upgradePaths,
       },
       stepNumber,
       membershipTypeUniqueId,
     );
-    await onPostSave?.();
     await onSuccess(result.membershipTypeUniqueId);
   } catch (saveError) {
     setError(saveError instanceof Error ? saveError.message : "Unable to save advance settings.");
@@ -192,6 +192,19 @@ function toUpgradePathDraft(path: MembershipTypeUpgradePathListItem): Membership
   };
 }
 
+function toUpgradePathRequest(path: MembershipTypeUpgradePathDraft): MembershipAdvanceSettingsUpgradePathRequest {
+  return {
+    toMembershipTypeUniqueId: path.toMembershipTypeUniqueId,
+    chargeRule: path.chargeRule,
+    fixedUpgradeAmount:
+      path.chargeRule === "FixedAmount" && path.fixedUpgradeAmount.trim()
+        ? Number(path.fixedUpgradeAmount)
+        : null,
+    requiresApproval: path.requiresApproval,
+    isActive: path.isActive,
+  };
+}
+
 function normalizeMembershipTypeOptions(items: MembershipTypeListItem[], currentMembershipTypeUniqueId: string) {
   return items.filter((item) => item.value && item.value !== currentMembershipTypeUniqueId);
 }
@@ -221,7 +234,6 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
   const [pendingUpgradePathRemoval, setPendingUpgradePathRemoval] = useState<{ id: string; label: string } | null>(
     null,
   );
-  const [removedUpgradePaths, setRemovedUpgradePaths] = useState<MembershipTypeUpgradePathDraft[]>([]);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -412,7 +424,6 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
       return [...current, resolvedDraft];
     });
 
-    setRemovedUpgradePaths((current) => current.filter((path) => path.id !== resolvedDraft.id));
     setUpgradePathValidationError("");
 
     if (keepModalOpen) {
@@ -443,12 +454,6 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
 
     setUpgradePaths((current) => current.filter((path) => path.id !== pendingUpgradePathRemoval.id));
 
-    if (targetPath?.uniqueId) {
-      setRemovedUpgradePaths((current) =>
-        current.some((path) => path.id === targetPath.id) ? current : [...current, targetPath],
-      );
-    }
-
     if (editingUpgradePathId === pendingUpgradePathRemoval.id) {
       closeUpgradePathModal();
     }
@@ -458,39 +463,6 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
 
   function cancelUpgradePathRemoval() {
     setPendingUpgradePathRemoval(null);
-  }
-
-  async function persistUpgradePathsToBackend() {
-    if (!currentMembershipTypeUniqueId) {
-      throw new Error("Membership type unique id is missing.");
-    }
-
-    const savedUpgradePaths = upgradePaths;
-
-    for (const path of savedUpgradePaths) {
-      await saveMembershipTypeUpgradePath(currentMembershipTypeUniqueId, {
-        toMembershipTypeUniqueId: path.toMembershipTypeUniqueId,
-        chargeRule: path.chargeRule,
-        fixedUpgradeAmount: path.chargeRule === "FixedAmount" ? Number(path.fixedUpgradeAmount || 0) : null,
-        requiresApproval: path.requiresApproval,
-        isActive: path.isActive,
-      });
-    }
-
-    for (const path of removedUpgradePaths) {
-      await saveMembershipTypeUpgradePath(currentMembershipTypeUniqueId, {
-        toMembershipTypeUniqueId: path.toMembershipTypeUniqueId,
-        chargeRule: path.chargeRule,
-        fixedUpgradeAmount: path.chargeRule === "FixedAmount" ? Number(path.fixedUpgradeAmount || 0) : null,
-        requiresApproval: path.requiresApproval,
-        isActive: false,
-      });
-    }
-
-    invalidateMembershipWizardUpgradePathsCache(currentMembershipTypeUniqueId);
-    const refreshed = await getMembershipTypeUpgradePaths(currentMembershipTypeUniqueId);
-    setUpgradePaths(refreshed.map(toUpgradePathDraft));
-    setRemovedUpgradePaths([]);
   }
 
   useEffect(() => {
@@ -517,12 +489,12 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          upgradePaths: upgradePaths.map(toUpgradePathRequest),
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setValidationError,
           setIsSaving,
-          onPostSave: persistUpgradePathsToBackend,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
@@ -539,12 +511,12 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          upgradePaths: upgradePaths.map(toUpgradePathRequest),
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setValidationError,
           setIsSaving,
-          onPostSave: persistUpgradePathsToBackend,
           onSuccess: async (savedMembershipTypeUniqueId) => {
             navigate(
               buildMembershipWizardStepPath(
@@ -561,12 +533,12 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
           registrationStartDateUtc: registrationWindowEnabled ? registrationStartDateUtc : null,
           registrationEndDateUtc: registrationWindowEnabled ? registrationEndDateUtc : null,
           requiresApproval,
+          upgradePaths: upgradePaths.map(toUpgradePathRequest),
           stepNumber: MEMBERSHIP_ADVANCE_SETTINGS_STEP_NUMBER,
           membershipTypeUniqueId: currentMembershipTypeUniqueId,
           setError,
           setValidationError,
           setIsSaving,
-          onPostSave: persistUpgradePathsToBackend,
           onSuccess: async () => {
             navigate(APP_ROUTES.membershipTypes, { replace: true });
           },
@@ -580,7 +552,6 @@ export function useMembershipAdvanceSettingsStep(): MembershipAdvanceSettingsSte
     registrationEndDateUtc,
     registrationStartDateUtc,
     requiresApproval,
-    removedUpgradePaths,
     upgradePaths,
     setFooterActions,
   ]);
