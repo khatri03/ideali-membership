@@ -12,10 +12,25 @@ import {
   MEMBERSHIP_BANNER_STEP_NUMBER,
 } from "./MembershipBannerStepPage.fields";
 import { normalizeMembershipBannerUrl } from "./MembershipBannerStepPage.schema";
-import type { MembershipBannerStepState, UnsplashPhoto } from "./MembershipBannerStepPage.types";
+import type {
+  BannerSourceMode,
+  MembershipBannerStepState,
+  UnsplashPhoto,
+} from "./MembershipBannerStepPage.types";
 import { searchUnsplashPhotos, type UnsplashOrientation } from "../../../lib/unsplash";
+import { uploadMembershipBannerImage } from "../../../lib/membershipWizard";
 
 const UNSPLASH_SEARCH_DEBOUNCE_MS = 1000;
+
+function inferBannerSourceFromUrl(bannerUrl: string): BannerSourceMode {
+  const normalizedBannerUrl = bannerUrl.toLowerCase();
+
+  if (normalizedBannerUrl.includes("unsplash.com") || normalizedBannerUrl.includes("images.unsplash.com")) {
+    return "unsplash";
+  }
+
+  return "upload";
+}
 
 async function persistMembershipBannerStepWithFeedback({
   bannerUrl,
@@ -55,9 +70,11 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
   const [bannerUrl, setBannerUrl] = useState("");
+  const [bannerSource, setBannerSourceState] = useState<BannerSourceMode>("upload");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const [unsplashQuery, setUnsplashQuery] = useState("");
   const [unsplashOrientation, setUnsplashOrientation] = useState<UnsplashOrientation>("landscape");
@@ -67,6 +84,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const [isSearchingUnsplash, setIsSearchingUnsplash] = useState(false);
   const [isLoadingMoreUnsplash, setIsLoadingMoreUnsplash] = useState(false);
   const [unsplashSearchError, setUnsplashSearchError] = useState("");
+  const [bannerUploadError, setBannerUploadError] = useState("");
   const [selectedUnsplashPhoto, setSelectedUnsplashPhoto] = useState<UnsplashPhoto | null>(null);
   const unsplashSearchAbortControllerRef = useRef<AbortController | null>(null);
   const unsplashSearchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,6 +110,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
         }
 
         setBannerUrl(info.bannerUrl);
+        setBannerSourceState(info.bannerUrl ? inferBannerSourceFromUrl(info.bannerUrl) : "upload");
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -141,6 +160,15 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     }
 
     return merged;
+  }, []);
+
+  const setBannerSource = useCallback((value: BannerSourceMode) => {
+    setBannerSourceState(value);
+    setBannerUploadError("");
+    if (value === "upload") {
+      setUnsplashSearchError("");
+      setSelectedUnsplashPhoto(null);
+    }
   }, []);
 
   const executeUnsplashSearch = useCallback(async ({
@@ -246,6 +274,28 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     await executeUnsplashSearch({ query, page: 1, append: false, orientation });
   }, [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashOrientation, unsplashQuery]);
 
+  const uploadBannerImage = useCallback(async (file: File) => {
+    if (!file) {
+      return;
+    }
+
+    setBannerSource("upload");
+    setError("");
+    setIsUploadingBanner(true);
+    setSelectedUnsplashPhoto(null);
+
+    try {
+      const response = await uploadMembershipBannerImage(file, currentMembershipTypeUniqueId);
+      setBannerUrl(response.bannerUrl);
+    } catch (uploadError) {
+      setBannerUploadError(
+        uploadError instanceof Error ? uploadError.message : "Unable to upload membership banner.",
+      );
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  }, [currentMembershipTypeUniqueId]);
+
   const loadMoreUnsplash = useCallback(async () => {
     const query = unsplashQuery.trim();
     if (!query || isSearchingUnsplash || isLoadingMoreUnsplash) {
@@ -267,6 +317,8 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const selectUnsplashPhoto = useCallback((photo: UnsplashPhoto) => {
     setSelectedUnsplashPhoto(photo);
     setBannerUrl(photo.imageUrl);
+    setBannerSourceState("unsplash");
+    setBannerUploadError("");
     setError("");
   }, []);
 
@@ -335,6 +387,8 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     error,
     isLoading,
     isSaving,
+    bannerSource,
+    isUploadingBanner,
     reload: () => {
       if (currentMembershipTypeUniqueId) {
         invalidateMembershipWizardBannerCache(currentMembershipTypeUniqueId);
@@ -348,11 +402,14 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     isLoadingMoreUnsplash,
     hasMoreUnsplashResults: unsplashTotalResults > 0 && unsplashResults.length < unsplashTotalResults,
     unsplashSearchError,
+    bannerUploadError,
     selectedUnsplashPhoto,
     unsplashOrientation,
+    setBannerSource,
     setUnsplashQuery,
     setUnsplashOrientation,
     searchUnsplash,
+    uploadBannerImage,
     loadMoreUnsplash,
     selectUnsplashPhoto,
   };

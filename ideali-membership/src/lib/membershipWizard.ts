@@ -1,4 +1,4 @@
-import { getJson, postJson } from "./api";
+import { getJson, postFormData, postJson } from "./api";
 import { readResponseData, readText, readNumber, readBoolean } from "./parseUtils";
 import type {
   DiscountCouponListItem,
@@ -1281,6 +1281,44 @@ export async function saveMembershipBannerStep(
 
   return {
     membershipTypeUniqueId: savedMembershipTypeUniqueId,
+    responseData,
+  };
+}
+
+export async function uploadMembershipBannerImage(
+  file: File,
+  membershipTypeUniqueId: string,
+) {
+  if (!membershipTypeUniqueId) {
+    throw new Error("membershipTypeUniqueId is required for membership banner uploading.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const payload = await postFormData<unknown>(
+    `/api/organizer/membership/type/wizard/${membershipTypeUniqueId}/banner/upload`,
+    formData,
+  );
+
+  const responseData = readResponseData(payload);
+  const bannerUrl =
+    readText(responseData) ||
+    readText(
+      responseData && typeof responseData === "object"
+        ? (responseData as Record<string, unknown>).bannerUrl ??
+            (responseData as Record<string, unknown>).BannerUrl ??
+            (responseData as Record<string, unknown>).url ??
+            (responseData as Record<string, unknown>).Url
+        : "",
+    );
+
+  if (!bannerUrl) {
+    throw new Error("Unexpected membership banner upload response.");
+  }
+
+  return {
+    bannerUrl,
     responseData,
   };
 }

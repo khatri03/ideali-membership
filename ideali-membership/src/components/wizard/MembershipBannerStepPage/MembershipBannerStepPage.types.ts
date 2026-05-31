@@ -1,6 +1,8 @@
 import type { UnsplashOrientation } from "../../../lib/unsplash";
 export type { UnsplashOrientation };
 
+export type BannerSourceMode = "upload" | "unsplash";
+
 export interface UnsplashPhoto {
   id: string;
   description: string;
@@ -18,6 +20,8 @@ export interface MembershipBannerStepState {
   error: string;
   isLoading: boolean;
   isSaving: boolean;
+  bannerSource: BannerSourceMode;
+  isUploadingBanner: boolean;
   reload: () => void;
   unsplashQuery: string;
   unsplashResults: UnsplashPhoto[];
@@ -26,8 +30,10 @@ export interface MembershipBannerStepState {
   isLoadingMoreUnsplash: boolean;
   hasMoreUnsplashResults: boolean;
   unsplashSearchError: string;
+  bannerUploadError: string;
   selectedUnsplashPhoto: UnsplashPhoto | null;
   unsplashOrientation: UnsplashOrientation;
+  setBannerSource: (value: BannerSourceMode) => void;
   setUnsplashQuery: (value: string) => void;
   setUnsplashOrientation: (value: UnsplashOrientation) => void;
   searchUnsplash: (
@@ -37,6 +43,7 @@ export interface MembershipBannerStepState {
       suppressNextDebounce?: boolean;
     },
   ) => Promise<void>;
+  uploadBannerImage: (file: File) => Promise<void>;
   loadMoreUnsplash: () => void;
   selectUnsplashPhoto: (photo: UnsplashPhoto) => void;
 }

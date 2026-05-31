@@ -42,6 +42,8 @@ export interface UnsplashSearchResult {
   results: UnsplashPhoto[];
 }
 
+export type UnsplashOrientation = "landscape" | "portrait" | "squarish" | "any";
+
 function toPhoto(photo: UnsplashSearchApiPhotoDto): UnsplashPhoto {
   return {
     id: photo.id,
@@ -61,6 +63,7 @@ export async function searchUnsplashPhotos(
   options?: {
     page?: number;
     perPage?: number;
+    orientation?: UnsplashOrientation;
     signal?: AbortSignal;
   },
 ): Promise<UnsplashSearchResult> {
@@ -75,8 +78,11 @@ export async function searchUnsplashPhotos(
 
   const page = Math.max(options?.page ?? 1, 1);
   const perPage = Math.min(Math.max(options?.perPage ?? 12, 1), 30);
+  const orientation = options?.orientation ?? "landscape";
+  const orientationQuery =
+    orientation === "any" ? "" : `&orientation=${encodeURIComponent(orientation)}`;
   const payload = await getJson<UnsplashServiceResponse<UnsplashSearchApiResponseDto>>(
-    `/api/unsplash/search?query=${encodeURIComponent(normalizedQuery)}&page=${page}&perPage=${perPage}`,
+    `/api/unsplash/search?query=${encodeURIComponent(normalizedQuery)}&page=${page}&perPage=${perPage}${orientationQuery}`,
     { signal: options?.signal },
   );
 
