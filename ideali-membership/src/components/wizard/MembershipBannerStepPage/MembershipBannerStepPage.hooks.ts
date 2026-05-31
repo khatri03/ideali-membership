@@ -85,6 +85,8 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const [isLoadingMoreUnsplash, setIsLoadingMoreUnsplash] = useState(false);
   const [unsplashSearchError, setUnsplashSearchError] = useState("");
   const [bannerUploadError, setBannerUploadError] = useState("");
+  const [bannerEditError, setBannerEditError] = useState("");
+  const [isEditingBanner, setIsEditingBanner] = useState(false);
   const [selectedUnsplashPhoto, setSelectedUnsplashPhoto] = useState<UnsplashPhoto | null>(null);
   const unsplashSearchAbortControllerRef = useRef<AbortController | null>(null);
   const unsplashSearchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,6 +171,28 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
       setUnsplashSearchError("");
       setSelectedUnsplashPhoto(null);
     }
+  }, []);
+
+  const clearBannerSelection = useCallback(() => {
+    setBannerUrl("");
+    setSelectedUnsplashPhoto(null);
+    setBannerUploadError("");
+    setBannerEditError("");
+    setError("");
+  }, []);
+
+  const openBannerEditor = useCallback(() => {
+    if (!bannerUrl) {
+      return;
+    }
+
+    setBannerEditError("");
+    setBannerUploadError("");
+    setIsEditingBanner(true);
+  }, [bannerUrl]);
+
+  const closeBannerEditor = useCallback(() => {
+    setIsEditingBanner(false);
   }, []);
 
   const executeUnsplashSearch = useCallback(async ({
@@ -281,6 +305,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
 
     setBannerSource("upload");
     setError("");
+    setBannerEditError("");
     setIsUploadingBanner(true);
     setSelectedUnsplashPhoto(null);
 
@@ -319,8 +344,52 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     setBannerUrl(photo.imageUrl);
     setBannerSourceState("unsplash");
     setBannerUploadError("");
+    setBannerEditError("");
     setError("");
   }, []);
+
+  const completeBannerEdit = useCallback(async ({
+    canvas,
+    imageMime,
+    imageName,
+  }: {
+    canvas: HTMLCanvasElement;
+    imageMime: string;
+    imageName: string;
+  }) => {
+    setBannerEditError("");
+    try {
+      const sourceBeforeEdit = bannerSource;
+      const selectedPhotoBeforeEdit = selectedUnsplashPhoto;
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((value) => {
+          if (!value) {
+            reject(new Error("Unable to export the edited banner image."));
+            return;
+          }
+
+          resolve(value);
+        }, imageMime || "image/png");
+      });
+
+      const sanitizedName = imageName?.trim() || "membership-banner.png";
+      const file = new File([blob], sanitizedName, {
+        type: imageMime || blob.type || "image/png",
+      });
+
+      await uploadBannerImage(file);
+
+      if (sourceBeforeEdit === "unsplash" && selectedPhotoBeforeEdit) {
+        setBannerSourceState("unsplash");
+        setSelectedUnsplashPhoto(selectedPhotoBeforeEdit);
+      }
+    } catch (editError) {
+      setBannerEditError(
+        editError instanceof Error ? editError.message : "Unable to save the edited banner.",
+      );
+    }
+  }, [bannerSource, selectedUnsplashPhoto, uploadBannerImage]);
 
   useEffect(() => {
     setFooterActions({
@@ -403,12 +472,18 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     hasMoreUnsplashResults: unsplashTotalResults > 0 && unsplashResults.length < unsplashTotalResults,
     unsplashSearchError,
     bannerUploadError,
+    isEditingBanner,
+    bannerEditError,
     selectedUnsplashPhoto,
     unsplashOrientation,
     setBannerSource,
+    clearBannerSelection,
     setUnsplashQuery,
     setUnsplashOrientation,
+    openBannerEditor,
+    closeBannerEditor,
     searchUnsplash,
+    completeBannerEdit,
     uploadBannerImage,
     loadMoreUnsplash,
     selectUnsplashPhoto,

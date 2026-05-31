@@ -31,11 +31,16 @@ export interface MembershipBannerStepState {
   hasMoreUnsplashResults: boolean;
   unsplashSearchError: string;
   bannerUploadError: string;
+  isEditingBanner: boolean;
+  bannerEditError: string;
   selectedUnsplashPhoto: UnsplashPhoto | null;
   unsplashOrientation: UnsplashOrientation;
   setBannerSource: (value: BannerSourceMode) => void;
+  clearBannerSelection: () => void;
   setUnsplashQuery: (value: string) => void;
   setUnsplashOrientation: (value: UnsplashOrientation) => void;
+  openBannerEditor: () => void;
+  closeBannerEditor: () => void;
   searchUnsplash: (
     queryOverride?: string,
     orientationOverride?: UnsplashOrientation,
@@ -43,6 +48,11 @@ export interface MembershipBannerStepState {
       suppressNextDebounce?: boolean;
     },
   ) => Promise<void>;
+  completeBannerEdit: (payload: {
+    canvas: HTMLCanvasElement;
+    imageMime: string;
+    imageName: string;
+  }) => Promise<void>;
   uploadBannerImage: (file: File) => Promise<void>;
   loadMoreUnsplash: () => void;
   selectUnsplashPhoto: (photo: UnsplashPhoto) => void;

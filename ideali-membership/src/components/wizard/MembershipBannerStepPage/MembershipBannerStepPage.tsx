@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+import FilerobotImageEditor from "filerobot-image-editor";
 import { MEMBERSHIP_BANNER_CONTENT } from "./MembershipBannerStepPage.fields";
 import { useMembershipBannerStep } from "./MembershipBannerStepPage.hooks";
 import type {
@@ -125,8 +127,11 @@ export function MembershipBannerStepPage() {
     bannerUrl,
     bannerSource,
     bannerUploadError,
+    bannerEditError,
+    clearBannerSelection,
     error,
     isLoading,
+    isEditingBanner,
     isUploadingBanner,
     reload,
     unsplashQuery,
@@ -141,11 +146,87 @@ export function MembershipBannerStepPage() {
     setBannerSource,
     setUnsplashQuery,
     setUnsplashOrientation,
+    openBannerEditor,
+    closeBannerEditor,
     searchUnsplash,
+    completeBannerEdit,
     loadMoreUnsplash,
     selectUnsplashPhoto,
     uploadBannerImage,
   } = useMembershipBannerStep();
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const unsplashQueryInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadSectionRef = useRef<HTMLElement | null>(null);
+  const uploadDragDepthRef = useRef(0);
+  const [isUploadDragActive, setIsUploadDragActive] = useState(false);
+  const [isUnsplashModalOpen, setIsUnsplashModalOpen] = useState(false);
+
+  const handleReplaceBanner = () => {
+    if (bannerSource === "upload") {
+      uploadInputRef.current?.click();
+      return;
+    }
+
+    setIsUnsplashModalOpen(true);
+  };
+
+  const handleEditBanner = () => {
+    if (!bannerUrl) {
+      return;
+    }
+
+    openBannerEditor();
+  };
+
+  const handleOpenUnsplashModal = () => {
+    setBannerSource("unsplash");
+    setIsUnsplashModalOpen(true);
+  };
+
+  const handleCloseUnsplashModal = () => {
+    setIsUnsplashModalOpen(false);
+  };
+
+  const handleSelectUnsplashPhoto = (photo: UnsplashPhoto) => {
+    selectUnsplashPhoto(photo);
+    setIsUnsplashModalOpen(false);
+  };
+
+  const handleUploadFiles = (files: FileList | null | undefined) => {
+    const file = files?.[0];
+    if (!file) {
+      return;
+    }
+
+    void uploadBannerImage(file);
+  };
+
+  useEffect(() => {
+    if (!isUnsplashModalOpen) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsUnsplashModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    const timer = window.setTimeout(() => {
+      unsplashQueryInputRef.current?.focus();
+    }, 0);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.clearTimeout(timer);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isUnsplashModalOpen]);
 
   if (error) {
     return (
@@ -201,7 +282,7 @@ export function MembershipBannerStepPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setBannerSource("unsplash")}
+                onClick={handleOpenUnsplashModal}
                 className={[
                   "rounded-[1.5rem] border p-5 text-left transition",
                   bannerSource === "unsplash"
@@ -232,16 +313,29 @@ export function MembershipBannerStepPage() {
                       {getBannerPreviewLabel(bannerSource, unsplashOrientation)}
                     </p>
                   </div>
-                  {bannerSource === "unsplash" && selectedUnsplashPhoto ? (
-                    <a
-                      href={selectedUnsplashPhoto.photoPageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex rounded-full border border-cyan-200 bg-white px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleReplaceBanner}
+                      className="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
                     >
-                      View on Unsplash
-                    </a>
-                  ) : null}
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleEditBanner}
+                      className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearBannerSelection}
+                      className="inline-flex rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
                 <div
                   className={`mt-4 overflow-hidden rounded-[1.25rem] border border-cyan-100 bg-slate-100 p-2 ${getBannerPreviewAspectClass(bannerSource, unsplashOrientation)}`}
@@ -256,19 +350,22 @@ export function MembershipBannerStepPage() {
                 </div>
                 <div className="mt-4 flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                   <p className="break-all">{bannerUrl}</p>
-                  {bannerSource === "unsplash" && selectedUnsplashPhoto ? (
-                    <p className="text-xs leading-5 text-slate-500">
-                      Selected from Unsplash by {selectedUnsplashPhoto.photographerName}
-                    </p>
-                  ) : bannerSource === "upload" ? (
-                    <p className="text-xs leading-5 text-slate-500">Uploaded from your device</p>
-                  ) : null}
+                  <p className="text-xs leading-5 text-slate-500">
+                    {bannerSource === "unsplash" && selectedUnsplashPhoto
+                      ? `Selected from Unsplash by ${selectedUnsplashPhoto.photographerName}`
+                      : "Uploaded from your device"}
+                  </p>
                 </div>
+                {bannerEditError ? (
+                  <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {bannerEditError}
+                  </div>
+                ) : null}
               </section>
             ) : null}
 
             {bannerSource === "upload" ? (
-              <section className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 sm:p-6">
+              <section ref={uploadSectionRef} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 sm:p-6">
                 <div className="space-y-2">
                   <p className="text-sm font-semibold tracking-[0.15em] text-cyan-700 uppercase">
                     Upload your own
@@ -281,26 +378,58 @@ export function MembershipBannerStepPage() {
 
                 <label
                   htmlFor="membership-banner-upload"
-                  className="mt-4 block rounded-[1.5rem] border-2 border-dashed border-slate-200 bg-white p-5 transition hover:border-cyan-200"
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    uploadDragDepthRef.current += 1;
+                    setIsUploadDragActive(true);
+                  }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    if (!isUploadingBanner) {
+                      setIsUploadDragActive(true);
+                    }
+                  }}
+                  onDragLeave={(event) => {
+                    event.preventDefault();
+                    uploadDragDepthRef.current = Math.max(0, uploadDragDepthRef.current - 1);
+                    if (uploadDragDepthRef.current === 0) {
+                      setIsUploadDragActive(false);
+                    }
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    uploadDragDepthRef.current = 0;
+                    setIsUploadDragActive(false);
+                    handleUploadFiles(event.dataTransfer.files);
+                  }}
+                  className={[
+                    "mt-4 block rounded-[1.5rem] border-2 border-dashed bg-white p-5 transition",
+                    isUploadDragActive
+                      ? "border-cyan-400 bg-cyan-50/70"
+                      : "border-slate-200 hover:border-cyan-200",
+                    isUploadingBanner ? "opacity-80" : "",
+                  ].join(" ")}
                 >
                   <span className="block text-sm font-semibold text-slate-900">
-                    {isUploadingBanner ? "Uploading banner..." : "Choose an image file"}
+                    {isUploadingBanner
+                      ? "Uploading banner..."
+                      : isUploadDragActive
+                        ? "Drop image to upload"
+                        : "Choose an image file"}
                   </span>
                   <span className="mt-1 block text-sm leading-6 text-slate-500">
-                    Uploading automatically updates the preview once the file is stored.
+                    {isUploadDragActive
+                      ? "Release the image to upload it now."
+                      : "Drag and drop an image here, or choose a file from your device. Uploading automatically updates the preview once the file is stored."}
                   </span>
                   <input
+                    ref={uploadInputRef}
                     id="membership-banner-upload"
                     type="file"
                     accept="image/*"
                     disabled={isUploadingBanner}
                     onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) {
-                        return;
-                      }
-
-                      void uploadBannerImage(file);
+                      handleUploadFiles(event.target.files);
                       event.currentTarget.value = "";
                     }}
                     className="mt-4 block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-700 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-cyan-600"
@@ -321,125 +450,229 @@ export function MembershipBannerStepPage() {
 
             {bannerSource === "unsplash" ? (
               <section className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 sm:p-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-2">
                     <p className="text-sm font-semibold tracking-[0.15em] text-cyan-700 uppercase">
                       Unsplash library
                     </p>
-                    <h2 className="text-2xl font-bold tracking-tight text-slate-900">Browse banner ideas</h2>
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-900">Browse in a larger view</h2>
                     <p className="max-w-3xl text-sm leading-6 text-slate-600">
-                      Search Unsplash, preview a photo, and use it as the banner image for this membership type.
-                    </p>
-                    <p className="text-xs leading-5 text-slate-500">
-                      Results update about 1 second after you stop typing, or instantly when you click Search or press Enter.
+                      Open Unsplash in a modal so you can search and compare images without stretching the page.
                     </p>
                   </div>
-                  <div className="flex gap-3 md:min-w-[28rem]">
-                    <label className="sr-only" htmlFor="unsplash-query">
-                      Search Unsplash
-                    </label>
-                    <input
-                      id="unsplash-query"
-                      value={unsplashQuery}
-                      onChange={(event) => setUnsplashQuery(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          void searchUnsplash();
-                        }
-                      }}
-                      placeholder="Search Unsplash photos"
-                      className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void searchUnsplash()}
-                      disabled={isSearchingUnsplash}
-                      className="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-cyan-300"
-                    >
-                      {isSearchingUnsplash ? "Searching..." : "Search"}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenUnsplashModal}
+                    className="inline-flex rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-600"
+                  >
+                    Open Unsplash library
+                  </button>
                 </div>
-
-                <fieldset className="mt-4">
-                  <legend className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                    Orientation
-                  </legend>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {UNSPLASH_ORIENTATION_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className={[
-                          "inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition",
-                          unsplashOrientation === option.value
-                            ? "border-cyan-300 bg-cyan-50 text-cyan-800"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:text-cyan-700",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="radio"
-                          name="unsplash-orientation"
-                          value={option.value}
-                          checked={unsplashOrientation === option.value}
-                          onChange={() => {
-                            setUnsplashOrientation(option.value);
-                            void searchUnsplash(undefined, option.value, { suppressNextDebounce: true });
-                          }}
-                          className="sr-only"
-                        />
-                        {option.label}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-
-                {unsplashSearchError ? (
-                  <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {unsplashSearchError}
-                  </div>
-                ) : null}
-
-                {unsplashResults.length > 0 ? (
-                  <div className="mt-5 max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-                    <p className="text-sm text-slate-500">
-                      Showing {unsplashResults.length}
-                      {unsplashTotalResults > 0 ? ` of ${unsplashTotalResults}` : ""}
-                      {" "}Unsplash results for {" "}
-                      <span className="font-semibold text-slate-700">{unsplashQuery.trim()}</span>
-                    </p>
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {unsplashResults.map((photo) => (
-                        <UnsplashPhotoCard key={photo.id} photo={photo} onUse={selectUnsplashPhoto} />
-                      ))}
-                    </div>
-                    {hasMoreUnsplashResults ? (
-                      <div className="flex items-center justify-center">
-                        <button
-                          type="button"
-                          onClick={() => void loadMoreUnsplash()}
-                          disabled={isSearchingUnsplash || isLoadingMoreUnsplash}
-                          className="rounded-2xl border border-cyan-200 bg-white px-5 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                        >
-                          {isLoadingMoreUnsplash ? "Loading more..." : "Load more"}
-                        </button>
-                      </div>
-                    ) : (
-                      <p className="text-center text-sm text-slate-500">
-                        You’ve reached the end of the Unsplash results for this search.
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-5 rounded-[1.5rem] border border-dashed border-slate-200 bg-white px-5 py-8 text-sm leading-6 text-slate-500">
-                    Search for a photo to see curated Unsplash results here.
-                  </div>
-                )}
               </section>
             ) : null}
           </>
         )}
       </div>
+
+      {isUnsplashModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={handleCloseUnsplashModal}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="unsplash-modal-title"
+            className="flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-cyan-700">
+                  Unsplash library
+                </p>
+                <h3 id="unsplash-modal-title" className="text-2xl font-bold tracking-tight text-slate-900">
+                  Browse and choose a banner image
+                </h3>
+                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                  Search, filter, and select an image without expanding the main wizard page.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseUnsplashModal}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                aria-label="Close Unsplash library"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col px-5 py-5 sm:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold tracking-[0.15em] text-cyan-700 uppercase">
+                    Search
+                  </p>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Results update about 1 second after you stop typing, or instantly when you click Search or press Enter.
+                  </p>
+                </div>
+                <div className="flex gap-3 lg:min-w-[28rem]">
+                  <label className="sr-only" htmlFor="unsplash-query">
+                    Search Unsplash
+                  </label>
+                  <input
+                    ref={unsplashQueryInputRef}
+                    id="unsplash-query"
+                    value={unsplashQuery}
+                    onChange={(event) => setUnsplashQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void searchUnsplash();
+                      }
+                    }}
+                    placeholder="Search Unsplash photos"
+                    className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void searchUnsplash()}
+                    disabled={isSearchingUnsplash}
+                    className="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-cyan-300"
+                  >
+                    {isSearchingUnsplash ? "Searching..." : "Search"}
+                  </button>
+                </div>
+              </div>
+
+              <fieldset className="mt-4">
+                <legend className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+                  Orientation
+                </legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {UNSPLASH_ORIENTATION_OPTIONS.map((option) => (
+                    <label
+                      key={option.value}
+                      className={[
+                        "inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition",
+                        unsplashOrientation === option.value
+                          ? "border-cyan-300 bg-cyan-50 text-cyan-800"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:text-cyan-700",
+                      ].join(" ")}
+                    >
+                      <input
+                        type="radio"
+                        name="unsplash-orientation"
+                        value={option.value}
+                        checked={unsplashOrientation === option.value}
+                        onChange={() => {
+                          setUnsplashOrientation(option.value);
+                          void searchUnsplash(undefined, option.value, { suppressNextDebounce: true });
+                        }}
+                        className="sr-only"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {unsplashSearchError ? (
+                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {unsplashSearchError}
+                </div>
+              ) : null}
+
+              <div className="mt-5 min-h-0 flex-1">
+                {unsplashResults.length > 0 ? (
+                  <div className="flex h-full min-h-0 flex-col">
+                    <p className="mb-4 text-sm text-slate-500">
+                      Showing {unsplashResults.length}
+                      {unsplashTotalResults > 0 ? ` of ${unsplashTotalResults}` : ""}
+                      {" "}Unsplash results for {" "}
+                      <span className="font-semibold text-slate-700">{unsplashQuery.trim()}</span>
+                    </p>
+                    <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {unsplashResults.map((photo) => (
+                          <UnsplashPhotoCard
+                            key={photo.id}
+                            photo={photo}
+                            onUse={handleSelectUnsplashPhoto}
+                          />
+                        ))}
+                      </div>
+                      <div className="mt-4 flex items-center justify-center">
+                        {hasMoreUnsplashResults ? (
+                          <button
+                            type="button"
+                            onClick={() => void loadMoreUnsplash()}
+                            disabled={isSearchingUnsplash || isLoadingMoreUnsplash}
+                            className="rounded-2xl border border-cyan-200 bg-white px-5 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                          >
+                            {isLoadingMoreUnsplash ? "Loading more..." : "Load more"}
+                          </button>
+                        ) : (
+                          <p className="text-center text-sm text-slate-500">
+                            You’ve reached the end of the Unsplash results for this search.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center rounded-[1.5rem] border border-dashed border-slate-200 bg-white px-5 py-10 text-sm leading-6 text-slate-500">
+                    Search for a photo to see curated Unsplash results here.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {bannerUrl && isEditingBanner ? (
+        <FilerobotImageEditor
+          show={isEditingBanner}
+          src={bannerUrl}
+          onClose={() => closeBannerEditor()}
+          onBeforeComplete={() => false}
+          onComplete={(result: {
+            canvas?: HTMLCanvasElement;
+            imageMime?: string;
+            imageName?: string;
+          }) => {
+            if (!result.canvas || !result.imageMime || !result.imageName) {
+              return;
+            }
+
+            void completeBannerEdit({
+              canvas: result.canvas,
+              imageMime: result.imageMime,
+              imageName: result.imageName,
+            });
+          }}
+          config={{
+            finishButtonLabel: "Apply changes",
+            showGoBackBtn: true,
+            tools: [
+              "crop",
+              "resize",
+              "rotate",
+              "adjust",
+              "filters",
+              "effects",
+              "text",
+              "shapes",
+              "watermark",
+              "image",
+            ],
+          }}
+        />
+      ) : null}
     </section>
   );
 }
