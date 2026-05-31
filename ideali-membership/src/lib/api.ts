@@ -106,8 +106,17 @@ export async function putJson<T>(path: string, body: unknown) {
   return readJsonResponse<T>(response);
 }
 
-export async function getJson<T>(path: string) {
+export async function getJson<T>(path: string, init?: RequestInit) {
   const requestKey = createApiUrl(path);
+
+  if (init?.signal) {
+    return fetch(requestKey, {
+      method: "GET",
+      headers: buildHeaders(init.headers),
+      ...init,
+    }).then((response) => readJsonResponse<T>(response));
+  }
+
   const existingRequest = inFlightGetRequests.get(requestKey);
 
   if (existingRequest) {
@@ -116,7 +125,8 @@ export async function getJson<T>(path: string) {
 
   const request = fetch(requestKey, {
     method: "GET",
-    headers: buildHeaders(),
+    headers: buildHeaders(init?.headers),
+    ...init,
   })
     .then((response) => readJsonResponse<T>(response))
     .finally(() => {

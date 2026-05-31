@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipWizardStepPath } from "../../../routes";
 import {
@@ -12,7 +12,10 @@ import {
   MEMBERSHIP_BANNER_STEP_NUMBER,
 } from "./MembershipBannerStepPage.fields";
 import { normalizeMembershipBannerUrl } from "./MembershipBannerStepPage.schema";
-import type { MembershipBannerStepState } from "./MembershipBannerStepPage.types";
+import type { MembershipBannerStepState, UnsplashPhoto } from "./MembershipBannerStepPage.types";
+import { searchUnsplashPhotos } from "../../../lib/unsplash";
+
+const UNSPLASH_SEARCH_DEBOUNCE_MS = 1000;
 
 async function persistMembershipBannerStepWithFeedback({
   bannerUrl,
@@ -56,6 +59,17 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [unsplashQuery, setUnsplashQuery] = useState("");
+  const [unsplashResults, setUnsplashResults] = useState<UnsplashPhoto[]>([]);
+  const [unsplashPage, setUnsplashPage] = useState(1);
+  const [unsplashTotalResults, setUnsplashTotalResults] = useState(0);
+  const [isSearchingUnsplash, setIsSearchingUnsplash] = useState(false);
+  const [isLoadingMoreUnsplash, setIsLoadingMoreUnsplash] = useState(false);
+  const [unsplashSearchError, setUnsplashSearchError] = useState("");
+  const [selectedUnsplashPhoto, setSelectedUnsplashPhoto] = useState<UnsplashPhoto | null>(null);
+  const unsplashSearchAbortControllerRef = useRef<AbortController | null>(null);
+  const unsplashSearchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressNextUnsplashDebounceRef = useRef(false);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -97,6 +111,154 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
       isMounted = false;
     };
   }, [currentMembershipTypeUniqueId, reloadTick]);
+
+  useEffect(() => {
+    return () => {
+      unsplashSearchAbortControllerRef.current?.abort();
+      if (unsplashSearchDebounceTimerRef.current !== null) {
+        clearTimeout(unsplashSearchDebounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const clearUnsplashSearchDebounce = useCallback(() => {
+    if (unsplashSearchDebounceTimerRef.current !== null) {
+      clearTimeout(unsplashSearchDebounceTimerRef.current);
+      unsplashSearchDebounceTimerRef.current = null;
+    }
+  }, []);
+
+  const mergeUnsplashResults = useCallback((existing: UnsplashPhoto[], incoming: UnsplashPhoto[]) => {
+    const seen = new Set(existing.map((photo) => photo.id));
+    const merged = [...existing];
+
+    for (const photo of incoming) {
+      if (!seen.has(photo.id)) {
+        seen.add(photo.id);
+        merged.push(photo);
+      }
+    }
+
+    return merged;
+  }, []);
+
+  const executeUnsplashSearch = useCallback(async ({
+    query,
+    page,
+    append,
+  }: {
+    query: string;
+    page: number;
+    append: boolean;
+  }) => {
+    const normalizedQuery = query.trim();
+
+    if (!normalizedQuery) {
+      setUnsplashSearchError("Enter a search term to browse Unsplash images.");
+      setUnsplashResults([]);
+      setUnsplashPage(1);
+      setUnsplashTotalResults(0);
+      setSelectedUnsplashPhoto(null);
+      return;
+    }
+
+    unsplashSearchAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    unsplashSearchAbortControllerRef.current = abortController;
+
+    setUnsplashSearchError("");
+    if (append) {
+      setIsLoadingMoreUnsplash(true);
+    } else {
+      setIsSearchingUnsplash(true);
+      setUnsplashPage(1);
+      setUnsplashTotalResults(0);
+      setUnsplashResults([]);
+      setSelectedUnsplashPhoto(null);
+    }
+
+    try {
+      const response = await searchUnsplashPhotos(normalizedQuery, {
+        page,
+        perPage: 12,
+        signal: abortController.signal,
+      });
+      setUnsplashTotalResults(response.totalResults);
+      setUnsplashPage(page);
+      setUnsplashResults((current) => (append ? mergeUnsplashResults(current, response.results) : response.results));
+    } catch (searchError) {
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      if (!append) {
+        setUnsplashResults([]);
+        setUnsplashTotalResults(0);
+      }
+      setUnsplashSearchError(
+        searchError instanceof Error ? searchError.message : "Unable to search Unsplash.",
+      );
+    } finally {
+      if (!abortController.signal.aborted) {
+        setIsSearchingUnsplash(false);
+        setIsLoadingMoreUnsplash(false);
+      }
+    }
+  }, [mergeUnsplashResults]);
+
+  useEffect(() => {
+    clearUnsplashSearchDebounce();
+
+    if (suppressNextUnsplashDebounceRef.current) {
+      suppressNextUnsplashDebounceRef.current = false;
+      return;
+    }
+
+    const normalizedQuery = unsplashQuery.trim();
+    if (!normalizedQuery) {
+      setUnsplashSearchError("");
+      setUnsplashResults([]);
+      setUnsplashPage(1);
+      setUnsplashTotalResults(0);
+      setSelectedUnsplashPhoto(null);
+      return;
+    }
+
+    unsplashSearchDebounceTimerRef.current = setTimeout(() => {
+      void executeUnsplashSearch({ query: normalizedQuery, page: 1, append: false });
+    }, UNSPLASH_SEARCH_DEBOUNCE_MS);
+  }, [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashQuery]);
+
+  const searchUnsplash = useCallback(async (queryOverride?: string, options?: { suppressNextDebounce?: boolean }) => {
+    clearUnsplashSearchDebounce();
+    suppressNextUnsplashDebounceRef.current = options?.suppressNextDebounce ?? false;
+
+    const query = (queryOverride ?? unsplashQuery).trim();
+    await executeUnsplashSearch({ query, page: 1, append: false });
+  }, [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashQuery]);
+
+  const loadMoreUnsplash = useCallback(async () => {
+    const query = unsplashQuery.trim();
+    if (!query || isSearchingUnsplash || isLoadingMoreUnsplash) {
+      return;
+    }
+
+    if (unsplashResults.length >= unsplashTotalResults && unsplashTotalResults > 0) {
+      return;
+    }
+
+    await executeUnsplashSearch({
+      query,
+      page: unsplashPage + 1,
+      append: true,
+    });
+  }, [executeUnsplashSearch, isLoadingMoreUnsplash, isSearchingUnsplash, unsplashPage, unsplashQuery, unsplashResults.length, unsplashTotalResults]);
+
+  const selectUnsplashPhoto = useCallback((photo: UnsplashPhoto) => {
+    setSelectedUnsplashPhoto(photo);
+    setBannerUrl(photo.imageUrl);
+    setError("");
+  }, []);
 
   useEffect(() => {
     setFooterActions({
@@ -169,6 +331,18 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
       }
       setReloadTick((current) => current + 1);
     },
+    unsplashQuery,
+    unsplashResults,
+    unsplashTotalResults,
+    isSearchingUnsplash,
+    isLoadingMoreUnsplash,
+    hasMoreUnsplashResults: unsplashTotalResults > 0 && unsplashResults.length < unsplashTotalResults,
+    unsplashSearchError,
+    selectedUnsplashPhoto,
+    setUnsplashQuery,
+    searchUnsplash,
+    loadMoreUnsplash,
+    selectUnsplashPhoto,
   };
 }
 
