@@ -13,7 +13,7 @@ import {
 } from "./MembershipBannerStepPage.fields";
 import { normalizeMembershipBannerUrl } from "./MembershipBannerStepPage.schema";
 import type { MembershipBannerStepState, UnsplashPhoto } from "./MembershipBannerStepPage.types";
-import { searchUnsplashPhotos } from "../../../lib/unsplash";
+import { searchUnsplashPhotos, type UnsplashOrientation } from "../../../lib/unsplash";
 
 const UNSPLASH_SEARCH_DEBOUNCE_MS = 1000;
 
@@ -60,6 +60,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const [isSaving, setIsSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const [unsplashQuery, setUnsplashQuery] = useState("");
+  const [unsplashOrientation, setUnsplashOrientation] = useState<UnsplashOrientation>("landscape");
   const [unsplashResults, setUnsplashResults] = useState<UnsplashPhoto[]>([]);
   const [unsplashPage, setUnsplashPage] = useState(1);
   const [unsplashTotalResults, setUnsplashTotalResults] = useState(0);
@@ -146,10 +147,12 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     query,
     page,
     append,
+    orientation,
   }: {
     query: string;
     page: number;
     append: boolean;
+    orientation: UnsplashOrientation;
   }) => {
     const normalizedQuery = query.trim();
 
@@ -181,6 +184,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
       const response = await searchUnsplashPhotos(normalizedQuery, {
         page,
         perPage: 12,
+        orientation,
         signal: abortController.signal,
       });
       setUnsplashTotalResults(response.totalResults);
@@ -225,17 +229,22 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     }
 
     unsplashSearchDebounceTimerRef.current = setTimeout(() => {
-      void executeUnsplashSearch({ query: normalizedQuery, page: 1, append: false });
+      void executeUnsplashSearch({ query: normalizedQuery, page: 1, append: false, orientation: unsplashOrientation });
     }, UNSPLASH_SEARCH_DEBOUNCE_MS);
-  }, [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashQuery]);
+  }, [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashOrientation, unsplashQuery]);
 
-  const searchUnsplash = useCallback(async (queryOverride?: string, options?: { suppressNextDebounce?: boolean }) => {
+  const searchUnsplash = useCallback(async (
+    queryOverride?: string,
+    orientationOverride?: UnsplashOrientation,
+    options?: { suppressNextDebounce?: boolean },
+  ) => {
     clearUnsplashSearchDebounce();
     suppressNextUnsplashDebounceRef.current = options?.suppressNextDebounce ?? false;
 
     const query = (queryOverride ?? unsplashQuery).trim();
-    await executeUnsplashSearch({ query, page: 1, append: false });
-  }, [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashQuery]);
+    const orientation = orientationOverride ?? unsplashOrientation;
+    await executeUnsplashSearch({ query, page: 1, append: false, orientation });
+  }, [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashOrientation, unsplashQuery]);
 
   const loadMoreUnsplash = useCallback(async () => {
     const query = unsplashQuery.trim();
@@ -251,8 +260,9 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
       query,
       page: unsplashPage + 1,
       append: true,
+      orientation: unsplashOrientation,
     });
-  }, [executeUnsplashSearch, isLoadingMoreUnsplash, isSearchingUnsplash, unsplashPage, unsplashQuery, unsplashResults.length, unsplashTotalResults]);
+  }, [executeUnsplashSearch, isLoadingMoreUnsplash, isSearchingUnsplash, unsplashOrientation, unsplashPage, unsplashQuery, unsplashResults.length, unsplashTotalResults]);
 
   const selectUnsplashPhoto = useCallback((photo: UnsplashPhoto) => {
     setSelectedUnsplashPhoto(photo);
@@ -339,7 +349,9 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     hasMoreUnsplashResults: unsplashTotalResults > 0 && unsplashResults.length < unsplashTotalResults,
     unsplashSearchError,
     selectedUnsplashPhoto,
+    unsplashOrientation,
     setUnsplashQuery,
+    setUnsplashOrientation,
     searchUnsplash,
     loadMoreUnsplash,
     selectUnsplashPhoto,

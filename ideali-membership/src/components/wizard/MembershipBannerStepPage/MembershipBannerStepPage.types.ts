@@ -1,3 +1,6 @@
+import type { UnsplashOrientation } from "../../../lib/unsplash";
+export type { UnsplashOrientation };
+
 export interface UnsplashPhoto {
   id: string;
   description: string;
@@ -24,9 +27,12 @@ export interface MembershipBannerStepState {
   hasMoreUnsplashResults: boolean;
   unsplashSearchError: string;
   selectedUnsplashPhoto: UnsplashPhoto | null;
+  unsplashOrientation: UnsplashOrientation;
   setUnsplashQuery: (value: string) => void;
+  setUnsplashOrientation: (value: UnsplashOrientation) => void;
   searchUnsplash: (
     queryOverride?: string,
+    orientationOverride?: UnsplashOrientation,
     options?: {
       suppressNextDebounce?: boolean;
     },
