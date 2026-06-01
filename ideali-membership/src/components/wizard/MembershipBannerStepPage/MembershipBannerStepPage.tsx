@@ -99,13 +99,20 @@ function MembershipBannerError({ message, onRetry }: { message: string; onRetry:
 function UnsplashPhotoCard({
   photo,
   onUse,
+  disabled,
 }: {
   photo: UnsplashPhoto;
-  onUse: (photo: UnsplashPhoto) => void;
+  onUse: (photo: UnsplashPhoto) => void | Promise<boolean>;
+  disabled?: boolean;
 }) {
   return (
     <article className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <button type="button" className="block w-full text-left" onClick={() => onUse(photo)}>
+      <button
+        type="button"
+        className="block w-full text-left disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={() => void onUse(photo)}
+        disabled={disabled}
+      >
         <img
           src={photo.imageUrl}
           alt={photo.altDescription}
@@ -188,8 +195,13 @@ export function MembershipBannerStepPage() {
   };
 
   const handleSelectUnsplashPhoto = (photo: UnsplashPhoto) => {
-    selectUnsplashPhoto(photo);
-    setIsUnsplashModalOpen(false);
+    return selectUnsplashPhoto(photo).then((success) => {
+      if (success) {
+        setIsUnsplashModalOpen(false);
+      }
+
+      return success;
+    });
   };
 
   const handleUploadFiles = (files: FileList | null | undefined) => {
@@ -277,7 +289,7 @@ export function MembershipBannerStepPage() {
                 <p className="text-sm font-semibold tracking-[0.15em] text-cyan-700 uppercase">Upload your own</p>
                 <h2 className="mt-2 text-xl font-bold text-slate-900">Use a local image</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Upload a banner file from your device and we’ll save it as the membership banner.
+                  Upload a banner file from your device and we’ll keep it ready for saving.
                 </p>
               </button>
               <button
@@ -353,7 +365,7 @@ export function MembershipBannerStepPage() {
                   <p className="text-xs leading-5 text-slate-500">
                     {bannerSource === "unsplash" && selectedUnsplashPhoto
                       ? `Selected from Unsplash by ${selectedUnsplashPhoto.photographerName}`
-                      : "Uploaded from your device"}
+                      : "Stored banner image"}
                   </p>
                 </div>
                 {bannerEditError ? (
@@ -412,15 +424,15 @@ export function MembershipBannerStepPage() {
                 >
                   <span className="block text-sm font-semibold text-slate-900">
                     {isUploadingBanner
-                      ? "Uploading banner..."
+                      ? "Preparing banner..."
                       : isUploadDragActive
                         ? "Drop image to upload"
                         : "Choose an image file"}
                   </span>
                   <span className="mt-1 block text-sm leading-6 text-slate-500">
                     {isUploadDragActive
-                      ? "Release the image to upload it now."
-                      : "Drag and drop an image here, or choose a file from your device. Uploading automatically updates the preview once the file is stored."}
+                      ? "Release the image to stage it for saving."
+                      : "Drag and drop an image here, or choose a file from your device. The preview updates immediately, and the file is saved when you continue."}
                   </span>
                   <input
                     ref={uploadInputRef}
@@ -443,7 +455,7 @@ export function MembershipBannerStepPage() {
                 ) : null}
 
                 {isUploadingBanner ? (
-                  <p className="mt-4 text-sm text-slate-500">We’re uploading the selected file now.</p>
+                  <p className="mt-4 text-sm text-slate-500">We’re preparing the selected file now.</p>
                 ) : null}
               </section>
             ) : null}
@@ -585,6 +597,11 @@ export function MembershipBannerStepPage() {
                   {unsplashSearchError}
                 </div>
               ) : null}
+              {bannerUploadError ? (
+                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {bannerUploadError}
+                </div>
+              ) : null}
 
               <div className="mt-5 min-h-0 flex-1">
                 {unsplashResults.length > 0 ? (
@@ -602,6 +619,7 @@ export function MembershipBannerStepPage() {
                             key={photo.id}
                             photo={photo}
                             onUse={handleSelectUnsplashPhoto}
+                            disabled={isUploadingBanner}
                           />
                         ))}
                       </div>

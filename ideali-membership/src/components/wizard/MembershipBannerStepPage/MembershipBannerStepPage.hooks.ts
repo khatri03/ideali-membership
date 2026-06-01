@@ -11,36 +11,24 @@ import {
   MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
   MEMBERSHIP_BANNER_STEP_NUMBER,
 } from "./MembershipBannerStepPage.fields";
-import { normalizeMembershipBannerUrl } from "./MembershipBannerStepPage.schema";
 import type {
   BannerSourceMode,
   MembershipBannerStepState,
   UnsplashPhoto,
 } from "./MembershipBannerStepPage.types";
 import { searchUnsplashPhotos, type UnsplashOrientation } from "../../../lib/unsplash";
-import { uploadMembershipBannerImage } from "../../../lib/membershipWizard";
 
 const UNSPLASH_SEARCH_DEBOUNCE_MS = 1000;
 
-function inferBannerSourceFromUrl(bannerUrl: string): BannerSourceMode {
-  const normalizedBannerUrl = bannerUrl.toLowerCase();
-
-  if (normalizedBannerUrl.includes("unsplash.com") || normalizedBannerUrl.includes("images.unsplash.com")) {
-    return "unsplash";
-  }
-
-  return "upload";
-}
-
 async function persistMembershipBannerStepWithFeedback({
-  bannerUrl,
+  bannerFile,
   stepNumber,
   membershipTypeUniqueId,
   setError,
   setIsSaving,
   onSuccess,
 }: {
-  bannerUrl: string | null;
+  bannerFile: File | null;
   stepNumber: number;
   membershipTypeUniqueId?: string;
   setError: (value: string) => void;
@@ -51,11 +39,7 @@ async function persistMembershipBannerStepWithFeedback({
   setIsSaving(true);
 
   try {
-    const result = await saveMembershipBannerStep(
-      normalizeMembershipBannerUrl(bannerUrl),
-      stepNumber,
-      membershipTypeUniqueId,
-    );
+    const result = await saveMembershipBannerStep(bannerFile, stepNumber, membershipTypeUniqueId);
     await onSuccess(result.membershipTypeUniqueId);
   } catch (saveError) {
     setError(saveError instanceof Error ? saveError.message : "Unable to save membership banner.");
@@ -70,6 +54,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const currentMembershipTypeUniqueId = membershipTypeUniqueId ?? "";
   const { setFooterActions } = useWizardFooterActions();
   const [bannerUrl, setBannerUrl] = useState("");
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerSource, setBannerSourceState] = useState<BannerSourceMode>("upload");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -91,6 +76,14 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   const unsplashSearchAbortControllerRef = useRef<AbortController | null>(null);
   const unsplashSearchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressNextUnsplashDebounceRef = useRef(false);
+  const bannerPreviewObjectUrlRef = useRef<string | null>(null);
+
+  const revokeBannerPreviewObjectUrl = useCallback(() => {
+    if (bannerPreviewObjectUrlRef.current) {
+      URL.revokeObjectURL(bannerPreviewObjectUrlRef.current);
+      bannerPreviewObjectUrlRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!currentMembershipTypeUniqueId) {
@@ -104,6 +97,8 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     async function loadMembershipBanner() {
       setIsLoading(true);
       setError("");
+      setBannerUploadError("");
+      setBannerEditError("");
 
       try {
         const info = await getMembershipBannerInfo(currentMembershipTypeUniqueId);
@@ -111,14 +106,20 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
           return;
         }
 
+        revokeBannerPreviewObjectUrl();
+        setBannerFile(null);
         setBannerUrl(info.bannerUrl);
-        setBannerSourceState(info.bannerUrl ? inferBannerSourceFromUrl(info.bannerUrl) : "upload");
+        setBannerSourceState("upload");
+        setSelectedUnsplashPhoto(null);
       } catch (loadError) {
         if (!isMounted) {
           return;
         }
 
+        revokeBannerPreviewObjectUrl();
+        setBannerFile(null);
         setBannerUrl("");
+        setSelectedUnsplashPhoto(null);
         setError(loadError instanceof Error ? loadError.message : "Unable to load membership banner.");
       } finally {
         if (isMounted) {
@@ -132,7 +133,7 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     return () => {
       isMounted = false;
     };
-  }, [currentMembershipTypeUniqueId, reloadTick]);
+  }, [currentMembershipTypeUniqueId, reloadTick, revokeBannerPreviewObjectUrl]);
 
   useEffect(() => {
     return () => {
@@ -140,8 +141,78 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
       if (unsplashSearchDebounceTimerRef.current !== null) {
         clearTimeout(unsplashSearchDebounceTimerRef.current);
       }
+      if (bannerPreviewObjectUrlRef.current) {
+        URL.revokeObjectURL(bannerPreviewObjectUrlRef.current);
+        bannerPreviewObjectUrlRef.current = null;
+      }
     };
   }, []);
+
+  const setBannerFileAndPreview = useCallback((file: File) => {
+    revokeBannerPreviewObjectUrl();
+    const previewUrl = URL.createObjectURL(file);
+    bannerPreviewObjectUrlRef.current = previewUrl;
+    setBannerFile(file);
+    setBannerUrl(previewUrl);
+  }, [revokeBannerPreviewObjectUrl]);
+
+  const mimeTypeToExtension = useCallback((mimeType: string | null | undefined, fallbackUrl?: string) => {
+    const normalizedMimeType = mimeType?.split(";")[0]?.trim().toLowerCase();
+
+    switch (normalizedMimeType) {
+      case "image/jpeg":
+      case "image/jpg":
+        return ".jpg";
+      case "image/png":
+        return ".png";
+      case "image/webp":
+        return ".webp";
+      case "image/gif":
+        return ".gif";
+      default: {
+        if (fallbackUrl) {
+          try {
+            const fallbackPath = new URL(fallbackUrl).pathname;
+            const match = fallbackPath.match(/\.[a-z0-9]+$/i);
+            if (match?.[0]) {
+              return match[0].toLowerCase();
+            }
+          } catch {
+            return ".png";
+          }
+        }
+
+        return ".png";
+      }
+    }
+  }, []);
+
+  const buildImageFileFromUrl = useCallback(async (imageUrl: string, fallbackName: string) => {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error("Unable to read the selected image.");
+    }
+
+    const blob = await response.blob();
+    const mimeTypeHeader = response.headers.get("content-type") || blob.type || "image/png";
+    const mimeType = (mimeTypeHeader.split(";")[0] || "image/png").trim();
+    const extension = mimeTypeToExtension(mimeType, imageUrl);
+    return new File([blob], `${fallbackName}${extension}`, { type: mimeType });
+  }, [mimeTypeToExtension]);
+
+  const resolveBannerFileForSave = useCallback(async () => {
+    if (bannerFile) {
+      return bannerFile;
+    }
+
+    if (!bannerUrl) {
+      return null;
+    }
+
+    const file = await buildImageFileFromUrl(bannerUrl, "membership-banner");
+    setBannerFile(file);
+    return file;
+  }, [bannerFile, bannerUrl, buildImageFileFromUrl]);
 
   const clearUnsplashSearchDebounce = useCallback(() => {
     if (unsplashSearchDebounceTimerRef.current !== null) {
@@ -174,12 +245,14 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
   }, []);
 
   const clearBannerSelection = useCallback(() => {
+    revokeBannerPreviewObjectUrl();
     setBannerUrl("");
+    setBannerFile(null);
     setSelectedUnsplashPhoto(null);
     setBannerUploadError("");
     setBannerEditError("");
     setError("");
-  }, []);
+  }, [revokeBannerPreviewObjectUrl]);
 
   const openBannerEditor = useCallback(() => {
     if (!bannerUrl) {
@@ -310,16 +383,15 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     setSelectedUnsplashPhoto(null);
 
     try {
-      const response = await uploadMembershipBannerImage(file, currentMembershipTypeUniqueId);
-      setBannerUrl(response.bannerUrl);
+      setBannerFileAndPreview(file);
     } catch (uploadError) {
       setBannerUploadError(
-        uploadError instanceof Error ? uploadError.message : "Unable to upload membership banner.",
+        uploadError instanceof Error ? uploadError.message : "Unable to prepare membership banner.",
       );
     } finally {
       setIsUploadingBanner(false);
     }
-  }, [currentMembershipTypeUniqueId]);
+  }, [setBannerFileAndPreview, setBannerSource]);
 
   const loadMoreUnsplash = useCallback(async () => {
     const query = unsplashQuery.trim();
@@ -339,14 +411,28 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
     });
   }, [executeUnsplashSearch, isLoadingMoreUnsplash, isSearchingUnsplash, unsplashOrientation, unsplashPage, unsplashQuery, unsplashResults.length, unsplashTotalResults]);
 
-  const selectUnsplashPhoto = useCallback((photo: UnsplashPhoto) => {
-    setSelectedUnsplashPhoto(photo);
-    setBannerUrl(photo.imageUrl);
-    setBannerSourceState("unsplash");
+  const selectUnsplashPhoto = useCallback(async (photo: UnsplashPhoto) => {
+    setBannerSource("unsplash");
     setBannerUploadError("");
     setBannerEditError("");
     setError("");
-  }, []);
+    setIsUploadingBanner(true);
+
+    try {
+      const file = await buildImageFileFromUrl(photo.imageUrl, `unsplash-${photo.id}`);
+      setSelectedUnsplashPhoto(photo);
+      setBannerFileAndPreview(file);
+      return true;
+    } catch (importError) {
+      setSelectedUnsplashPhoto(null);
+      setBannerUploadError(
+        importError instanceof Error ? importError.message : "Unable to prepare the selected Unsplash image.",
+      );
+      return false;
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  }, [buildImageFileFromUrl, setBannerFileAndPreview, setBannerSource]);
 
   const completeBannerEdit = useCallback(async ({
     canvas,
@@ -378,10 +464,10 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
         type: imageMime || blob.type || "image/png",
       });
 
-      await uploadBannerImage(file);
+      setBannerFileAndPreview(file);
 
       if (sourceBeforeEdit === "unsplash" && selectedPhotoBeforeEdit) {
-        setBannerSourceState("unsplash");
+        setBannerSource("unsplash");
         setSelectedUnsplashPhoto(selectedPhotoBeforeEdit);
       }
     } catch (editError) {
@@ -389,7 +475,24 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
         editError instanceof Error ? editError.message : "Unable to save the edited banner.",
       );
     }
-  }, [bannerSource, selectedUnsplashPhoto, uploadBannerImage]);
+  }, [bannerSource, selectedUnsplashPhoto, setBannerFileAndPreview, setBannerSource]);
+
+  const persistBannerStep = useCallback(async ({
+    bannerFileToSave,
+    onSuccess,
+  }: {
+    bannerFileToSave: File | null;
+    onSuccess: (savedMembershipTypeUniqueId: string) => void | Promise<void>;
+  }) => {
+    await persistMembershipBannerStepWithFeedback({
+      bannerFile: bannerFileToSave,
+      stepNumber: MEMBERSHIP_BANNER_STEP_NUMBER,
+      membershipTypeUniqueId: currentMembershipTypeUniqueId,
+      setError,
+      setIsSaving,
+      onSuccess,
+    });
+  }, [currentMembershipTypeUniqueId, setError, setIsSaving]);
 
   useEffect(() => {
     setFooterActions({
@@ -402,54 +505,63 @@ export function useMembershipBannerStep(): MembershipBannerStepState {
       saveExitLabel: "Save & Exit",
       isSaving,
       onSkip: () =>
-        void persistMembershipBannerStepWithFeedback({
-          bannerUrl: null,
-          stepNumber: MEMBERSHIP_BANNER_STEP_NUMBER,
-          membershipTypeUniqueId: currentMembershipTypeUniqueId,
-          setError,
-          setIsSaving,
-          onSuccess: async (savedMembershipTypeUniqueId) => {
-            navigate(
-              buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardPaymentAccount,
-                savedMembershipTypeUniqueId,
-                MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
-              ),
-              { replace: true },
-            );
-          },
-        }),
+        void (async () => {
+          try {
+            const fileToSave = await resolveBannerFileForSave();
+            await persistBannerStep({
+              bannerFileToSave: fileToSave,
+              onSuccess: async (savedMembershipTypeUniqueId) => {
+                navigate(
+                  buildMembershipWizardStepPath(
+                    APP_ROUTES.membershipWizardPaymentAccount,
+                    savedMembershipTypeUniqueId,
+                    MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
+                  ),
+                  { replace: true },
+                );
+              },
+            });
+          } catch (saveError) {
+            setError(saveError instanceof Error ? saveError.message : "Unable to save membership banner.");
+          }
+        })(),
       onSaveNext: () =>
-        void persistMembershipBannerStepWithFeedback({
-          bannerUrl,
-          stepNumber: MEMBERSHIP_BANNER_STEP_NUMBER,
-          membershipTypeUniqueId: currentMembershipTypeUniqueId,
-          setError,
-          setIsSaving,
-          onSuccess: async (savedMembershipTypeUniqueId) => {
-            navigate(
-              buildMembershipWizardStepPath(
-                APP_ROUTES.membershipWizardPaymentAccount,
-                savedMembershipTypeUniqueId,
-                MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
-              ),
-              { replace: true },
-            );
-          },
-        }),
+        void (async () => {
+          try {
+            const fileToSave = await resolveBannerFileForSave();
+            await persistBannerStep({
+              bannerFileToSave: fileToSave,
+              onSuccess: async (savedMembershipTypeUniqueId) => {
+                navigate(
+                  buildMembershipWizardStepPath(
+                    APP_ROUTES.membershipWizardPaymentAccount,
+                    savedMembershipTypeUniqueId,
+                    MEMBERSHIP_BANNER_NEXT_STEP_NUMBER,
+                  ),
+                  { replace: true },
+                );
+              },
+            });
+          } catch (saveError) {
+            setError(saveError instanceof Error ? saveError.message : "Unable to save membership banner.");
+          }
+        })(),
       onSaveExit: () =>
-        void persistMembershipBannerStepWithFeedback({
-          bannerUrl,
-          stepNumber: MEMBERSHIP_BANNER_STEP_NUMBER,
-          membershipTypeUniqueId: currentMembershipTypeUniqueId,
-          setError,
-          setIsSaving,
-          onSuccess: async () => {
-            navigate(APP_ROUTES.membershipTypes, { replace: true });
-          },
-        }),
+        void (async () => {
+          try {
+            const fileToSave = await resolveBannerFileForSave();
+            await persistBannerStep({
+              bannerFileToSave: fileToSave,
+              onSuccess: async () => {
+                navigate(APP_ROUTES.membershipTypes, { replace: true });
+              },
+            });
+          } catch (saveError) {
+            setError(saveError instanceof Error ? saveError.message : "Unable to save membership banner.");
+          }
+        })(),
     });
-  }, [bannerUrl, currentMembershipTypeUniqueId, navigate, isSaving, setFooterActions]);
+  }, [currentMembershipTypeUniqueId, navigate, persistBannerStep, resolveBannerFileForSave, isSaving, setFooterActions]);
 
   return {
     bannerUrl,

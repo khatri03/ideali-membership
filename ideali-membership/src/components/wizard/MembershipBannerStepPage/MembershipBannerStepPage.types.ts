@@ -55,5 +55,5 @@ export interface MembershipBannerStepState {
   }) => Promise<void>;
   uploadBannerImage: (file: File) => Promise<void>;
   loadMoreUnsplash: () => void;
-  selectUnsplashPhoto: (photo: UnsplashPhoto) => void;
+  selectUnsplashPhoto: (photo: UnsplashPhoto) => Promise<boolean>;
 }
