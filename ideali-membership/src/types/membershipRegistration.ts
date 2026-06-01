@@ -77,6 +77,7 @@ export interface MembershipRegistrationDetail {
   allowPartialPayment: boolean;
   discountsEnabled: boolean;
   color: string | null;
+  bannerUrl: string | null;
   customForms: MembershipRegistrationCustomFormSummary[];
   customQuestions: MembershipRegistrationCustomQuestion[];
 }

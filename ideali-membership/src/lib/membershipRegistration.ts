@@ -660,6 +660,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
     membershipDetailRecord?.AllowPartialPayment ?? membershipDetailRecord?.allowPartialPayment,
   );
   const color = readText(membershipDetailRecord?.Color ?? membershipDetailRecord?.color);
+  const bannerUrl = readText(membershipDetailRecord?.BannerUrl ?? membershipDetailRecord?.bannerUrl);
   const customForms = readCustomForms(membershipDetailRecord?.CustomForms ?? membershipDetailRecord?.customForms);
   const customQuestions = readCustomQuestions(
     membershipDetailRecord?.CustomQuestions ?? membershipDetailRecord?.customQuestions,
@@ -713,6 +714,7 @@ export async function getMembershipRegistrationInfo(membershipTypeUniqueId: stri
       allowPartialPayment,
       discountsEnabled,
       color: color || null,
+      bannerUrl: bannerUrl || null,
       customForms,
       customQuestions,
     },

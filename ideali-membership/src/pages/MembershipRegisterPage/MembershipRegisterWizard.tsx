@@ -410,6 +410,7 @@ export function MembershipRegisterWizard({
         ),
       ).length === 0
     : true;
+  const bannerUrl = info.membershipDetail.bannerUrl?.trim() || "";
 
   useEffect(() => {
     if (!info) {
@@ -746,6 +747,40 @@ export function MembershipRegisterWizard({
           ))}
         </div>
       </div>
+      {bannerUrl ? (
+        <section
+          className="overflow-hidden rounded-4xl border shadow-2xl"
+          style={{
+            borderColor: theme.cardBorder,
+            background: theme.cardBackground,
+            boxShadow: `0 26px 70px -36px ${theme.cardShadow}`,
+          }}
+        >
+          <div className="relative">
+            <img
+              src={bannerUrl}
+              alt={`${info.membershipDetail.name} banner`}
+              className="h-44 w-full object-cover sm:h-56 lg:h-64"
+              loading="eager"
+            />
+            <div
+              className="absolute inset-x-0 bottom-0 h-20"
+              style={{
+                background: "linear-gradient(to top, rgba(2, 6, 23, 0.78), rgba(2, 6, 23, 0))",
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/75">
+                Membership banner
+              </p>
+              <h2 className="mt-1 text-lg font-bold tracking-tight text-white sm:text-xl">
+                {info.membershipDetail.name}
+              </h2>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section
         className="rounded-4xl p-4 sm:p-5 lg:p-6"
         style={{
