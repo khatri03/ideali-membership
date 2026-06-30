@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router-dom";
-import { APP_ROUTES, buildMembershipMembersPath } from "../../../../routes";
+import { APP_ROUTES, buildMembershipMembersPath, buildMembershipPollsPath } from "../../../../routes";
 import {
   MEMBERSHIP_PENDING_APPROVAL_COUNT_QUERY_KEY,
   fetchPendingApprovalCount,
@@ -48,6 +48,10 @@ function isMembershipNavItemActive(item: MembershipNavItem, locationPathname: st
     return locationPathname.startsWith(APP_ROUTES.membershipInvoices);
   }
 
+  if (item.label === "Polls") {
+    return locationPathname.startsWith(buildMembershipPollsPath());
+  }
+
   return locationPathname === itemPath;
 }
 
@@ -60,6 +64,7 @@ const membershipItems: MembershipNavItem[] = [
     to: buildMembershipMembersPath({ membershipStatuses: ["PendingApproval"] }),
   },
   { label: "Invoices", to: APP_ROUTES.membershipInvoices },
+  { label: "Polls", to: buildMembershipPollsPath() },
 ];
 
 export function SideNav({ onNavigate }: SideNavProps) {

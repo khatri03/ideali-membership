@@ -21,6 +21,9 @@ export const MembershipInvoicesPage = React.lazy(() =>
 export const MembershipInvoiceDetailPage = React.lazy(() =>
   import("../../features/membership/pages/MembershipInvoiceDetailPage").then((m) => ({ default: m.MembershipInvoiceDetailPage })),
 );
+export const PollsPage = React.lazy(() =>
+  import("../../features/polls/pages").then((m) => ({ default: m.PollsPage })),
+);
 export const CustomFormsPage = React.lazy(() =>
   import("../../pages/CustomFormsPage").then((m) => ({ default: m.CustomFormsPage })),
 );

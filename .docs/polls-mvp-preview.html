@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poll System MVP Preview</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f5f2ea;
+        --surface: #fffaf2;
+        --surface-strong: #ffffff;
+        --text: #171412;
+        --muted: #70685d;
+        --border: #e8ddd0;
+        --accent: #0f766e;
+        --accent-soft: #d9f2ef;
+        --shadow: 0 16px 40px rgba(23, 20, 18, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 30%),
+          radial-gradient(circle at top right, rgba(180, 83, 9, 0.08), transparent 24%),
+          linear-gradient(180deg, #fbf8f2 0%, #f5f2ea 100%);
+        color: var(--text);
+      }
+
+      .hero {
+        padding: 4rem 0 2.5rem;
+      }
+
+      .hero-panel {
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(232, 221, 208, 0.8);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        padding: 2rem;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .hero h1 {
+        font-size: clamp(2.2rem, 4vw, 4rem);
+        font-weight: 800;
+        line-height: 1.02;
+        letter-spacing: -0.05em;
+        margin: 1rem 0 1rem;
+      }
+
+      .hero p {
+        color: var(--muted);
+        font-size: 1.02rem;
+        max-width: 62ch;
+        margin-bottom: 0;
+      }
+
+      .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.8);
+        color: #4b443c;
+        font-size: 0.84rem;
+        font-weight: 600;
+      }
+
+      .section-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+        letter-spacing: -0.03em;
+      }
+
+      .section-copy {
+        color: var(--muted);
+        margin-bottom: 0;
+      }
+
+      .poll-card {
+        background: var(--surface-strong);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+        padding: 1.3rem;
+        height: 100%;
+      }
+
+      .poll-header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.9rem;
+      }
+
+      .poll-type {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.32rem 0.65rem;
+        border-radius: 999px;
+        background: #f2f7ff;
+        color: #1d4ed8;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .poll-count {
+        color: var(--muted);
+        font-size: 0.84rem;
+        font-weight: 600;
+      }
+
+      .poll-card h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.35;
+        margin-bottom: 0.3rem;
+      }
+
+      .poll-subtitle {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+      }
+
+      .option-list {
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .option-btn,
+      .rank-item,
+      .yesno-btn,
+      .star-btn,
+      .nps-cell,
+      .time-chip {
+        transition:
+          transform 0.15s ease,
+          border-color 0.15s ease,
+          background-color 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+
+      .option-btn {
+        width: 100%;
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 14px;
+        padding: 0.85rem 0.95rem;
+        text-align: left;
+        font-weight: 600;
+        color: #29231d;
+      }
+
+      .option-btn:hover,
+      .rank-item:hover,
+      .yesno-btn:hover,
+      .star-btn:hover,
+      .nps-cell:hover,
+      .time-chip:hover {
+        transform: translateY(-1px);
+        border-color: rgba(15, 118, 110, 0.45);
+        box-shadow: 0 10px 20px rgba(23, 20, 18, 0.06);
+      }
+
+      .option-btn.selected {
+        border-color: var(--accent);
+        background: linear-gradient(180deg, #effdfb, #e7faf7);
+        color: #0f4f49;
+      }
+
+      .option-note {
+        display: block;
+        font-size: 0.78rem;
+        color: var(--muted);
+        font-weight: 500;
+        margin-top: 0.15rem;
+      }
+
+      .selection-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #cfc5b6;
+        border-radius: 999px;
+        flex: 0 0 auto;
+      }
+
+      .option-btn.selected .selection-box {
+        border-color: var(--accent);
+        background: var(--accent);
+      }
+
+      .option-btn.multi-selected .selection-box {
+        border-radius: 5px;
+        border-color: #15803d;
+        background: #15803d;
+      }
+
+      .selected-check {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      .btn-compact {
+        border-radius: 14px;
+        font-weight: 700;
+        padding: 0.8rem 1rem;
+      }
+
+      .poll-footer {
+        margin-top: 0.9rem;
+        color: var(--muted);
+        font-size: 0.84rem;
+        min-height: 1.2rem;
+      }
+
+      .star-row {
+        display: flex;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+      }
+
+      .star-btn {
+        border: 1px solid var(--border);
+        background: #fff;
+        color: #d97706;
+        border-radius: 12px;
+        min-width: 48px;
+        height: 48px;
+        font-size: 1.15rem;
+        font-weight: 800;
+      }
+
+      .star-btn.selected {
+        background: #fff7ed;
+        border-color: #f59e0b;
+        box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.2);
+      }
+
+      .rating-label {
+        margin-top: 0.8rem;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+
+      .nps-grid {
+        display: grid;
+        grid-template-columns: repeat(11, minmax(0, 1fr));
+        gap: 0.35rem;
+      }
+
+      .nps-cell {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 12px;
+        height: 44px;
+        font-weight: 700;
+        color: #403830;
+      }
+
+      .nps-cell.selected {
+        border-color: #be123c;
+        background: #fff1f2;
+        color: #9f1239;
+      }
+
+      .rank-list {
+        display: grid;
+        gap: 0.55rem;
+      }
+
+      .rank-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 14px;
+        padding: 0.8rem 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 800;
+        flex: 0 0 auto;
+      }
+
+      .grid-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.55rem;
+      }
+
+      .grid-table th,
+      .grid-table td {
+        text-align: center;
+        padding: 0.45rem 0.35rem;
+        white-space: nowrap;
+      }
+
+      .grid-row-label {
+        text-align: left !important;
+        font-weight: 600;
+        color: #3b342d;
+      }
+
+      .grid-cell {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        border: 1px solid #d8cec1;
+        background: #fff;
+        cursor: pointer;
+      }
+
+      .grid-cell.selected {
+        background: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+      }
+
+      .yesno-wrap {
+        display: grid;
+        gap: 0.7rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .yesno-btn {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 16px;
+        padding: 1rem;
+        text-align: center;
+        font-weight: 800;
+      }
+
+      .yesno-btn.yes {
+        color: #166534;
+      }
+
+      .yesno-btn.no {
+        color: #9f1239;
+      }
+
+      .open-textarea {
+        width: 100%;
+        min-height: 140px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 0.95rem 1rem;
+        resize: vertical;
+        font-family: inherit;
+        font-size: 0.96rem;
+        outline: none;
+      }
+
+      .open-textarea:focus {
+        border-color: rgba(15, 118, 110, 0.65);
+        box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+      }
+
+      .time-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+      }
+
+      .time-chip {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 999px;
+        padding: 0.55rem 0.85rem;
+        font-weight: 600;
+        font-size: 0.92rem;
+      }
+
+      .time-chip.selected {
+        background: #ecfdf5;
+        border-color: #22c55e;
+        color: #166534;
+      }
+
+      .footer-note {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 768px) {
+        .hero {
+          padding-top: 2rem;
+        }
+
+        .hero-panel {
+          padding: 1.35rem;
+          border-radius: 22px;
+        }
+
+        .nps-grid {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container py-4 py-md-5">
+      <section class="hero">
+        <div class="hero-panel">
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <span class="eyebrow">Poll System MVP</span>
+            <span class="meta-pill">Bootstrap + jQuery</span>
+            <span class="meta-pill">Responsive preview</span>
+          </div>
+          <h1>Sample polls we are implementing first.</h1>
+          <p>
+            This page previews the core poll types we should ship first. The
+            goal is to keep the product simple now while leaving room for the
+            more specialized types later.
+          </p>
+        </div>
+      </section>
+
+      <section class="mb-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+          <div>
+            <div class="section-title">Core poll types</div>
+            <p class="section-copy">The first wave of poll formats we should support.</p>
+          </div>
+          <span class="meta-pill">7 poll types</span>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6 col-xl-4">
+            <article class="poll-card" data-poll="single">
+              <div class="poll-header">
+                <span class="poll-type">Single choice</span>
+                <span class="poll-count">Best for one answer</span>
+              </div>
+              <h3>What is your preferred meeting format?</h3>
+              <p class="poll-subtitle">Choose one option only.</p>
+              <div class="option-list">
+                <button class="option-btn" data-option="In-person"><span class="selection-box"><span class="selected-check d-none"></span></span> In-person</button>
+                <button class="option-btn" data-option="Virtual"><span class="selection-box"><span class="selected-check d-none"></span></span> Virtual</button>
+                <button class="option-btn" data-option="Hybrid"><span class="selection-box"><span class="selected-check d-none"></span></span> Hybrid</button>
+              </div>
+              <div class="poll-footer" id="single-status">No selection yet.</div>
+            </article>
+          </div>
+
+          <div class="col-md-6 col-xl-4">
+            <article class="poll-card" data-poll="multi">
+              <div class="poll-header">
+                <span class="poll-type">Multiple choice</span>
+                <span class="poll-count">Select all that apply</span>
+              </div>
+              <h3>Which product updates matter most?</h3>
+              <p class="poll-subtitle">Pick every item you care about.</p>
+              <div class="option-list">
+                <button class="option-btn" data-option="Notifications"><span class="selection-box"></span> Notifications</button>
+                <button class="option-btn" data-option="Billing"><span class="selection-box"></span> Billing</button>
+                <button class="option-btn" data-option="Member roles"><span class="selection-box"></span> Member roles</button>
+                <button class="option-btn" data-option="Reports"><span class="selection-box"></span> Reports</button>
+              </div>
+              <div class="poll-footer" id="multi-status">No selections yet.</div>
+            </article>
+          </div>
+
+          <div class="col-md-6 col-xl-4">
+            <article class="poll-card" data-poll="yesno">
+              <div class="poll-header">
+                <span class="poll-type">Yes / No</span>
+                <span class="poll-count">Fast binary vote</span>
+              </div>
+              <h3>Should this feature be enabled by default?</h3>
+              <p class="poll-subtitle">Keep it simple: yes or no.</p>
+              <div class="yesno-wrap">
+                <button class="yesno-btn yes" data-option="Yes">Yes</button>
+                <button class="yesno-btn no" data-option="No">No</button>
+              </div>
+              <div class="poll-footer" id="yesno-status">No vote yet.</div>
+            </article>
+          </div>
+
+          <div class="col-md-6 col-xl-4">
+            <article class="poll-card" data-poll="open">
+              <div class="poll-header">
+                <span class="poll-type">Open-ended</span>
+                <span class="poll-count">Free text</span>
+              </div>
+              <h3>What is one improvement you want next?</h3>
+              <p class="poll-subtitle">Short answers are enough.</p>
+              <textarea class="open-textarea" id="open-answer" maxlength="280" placeholder="Type your answer here..."></textarea>
+              <div class="d-flex justify-content-between mt-2">
+                <small class="footer-note" id="open-count">0 / 280</small>
+                <small class="footer-note">Maximum 280 characters</small>
+              </div>
+              <div class="poll-footer" id="open-status">Waiting for an answer.</div>
+            </article>
+          </div>
+
+          <div class="col-md-6 col-xl-4">
+            <article class="poll-card" data-poll="rating">
+              <div class="poll-header">
+                <span class="poll-type">Star rating</span>
+                <span class="poll-count">1 to 5 stars</span>
+              </div>
+              <h3>How would you rate the experience?</h3>
+              <p class="poll-subtitle">Tap a star to rate.</p>
+              <div class="star-row">
+                <button class="star-btn" data-value="1">★</button>
+                <button class="star-btn" data-value="2">★</button>
+                <button class="star-btn" data-value="3">★</button>
+                <button class="star-btn" data-value="4">★</button>
+                <button class="star-btn" data-value="5">★</button>
+              </div>
+              <div class="rating-label" id="rating-label">No rating selected.</div>
+            </article>
+          </div>
+
+          <div class="col-md-6 col-xl-4">
+            <article class="poll-card" data-poll="nps">
+              <div class="poll-header">
+                <span class="poll-type">NPS scale</span>
+                <span class="poll-count">0 to 10 scale</span>
+              </div>
+              <h3>How likely are you to recommend us?</h3>
+              <p class="poll-subtitle">Net Promoter Score style question.</p>
+              <div class="nps-grid">
+                <button class="nps-cell" data-value="0">0</button>
+                <button class="nps-cell" data-value="1">1</button>
+                <button class="nps-cell" data-value="2">2</button>
+                <button class="nps-cell" data-value="3">3</button>
+                <button class="nps-cell" data-value="4">4</button>
+                <button class="nps-cell" data-value="5">5</button>
+                <button class="nps-cell" data-value="6">6</button>
+                <button class="nps-cell" data-value="7">7</button>
+                <button class="nps-cell" data-value="8">8</button>
+                <button class="nps-cell" data-value="9">9</button>
+                <button class="nps-cell" data-value="10">10</button>
+              </div>
+              <div class="poll-footer" id="nps-status">No score selected.</div>
+            </article>
+          </div>
+
+          <div class="col-xl-4">
+            <article class="poll-card" data-poll="ranked">
+              <div class="poll-header">
+                <span class="poll-type">Ranked choice</span>
+                <span class="poll-count">Priority ordering</span>
+              </div>
+              <h3>Rank the benefits from most to least important.</h3>
+              <p class="poll-subtitle">Drag and drop can be added in the real app.</p>
+              <div class="rank-list">
+                <div class="rank-item" data-rank="Flexible hours"><span class="rank-badge">1</span> Flexible hours</div>
+                <div class="rank-item" data-rank="Remote work"><span class="rank-badge">2</span> Remote work</div>
+                <div class="rank-item" data-rank="Paid learning"><span class="rank-badge">3</span> Paid learning</div>
+                <div class="rank-item" data-rank="Health cover"><span class="rank-badge">4</span> Health cover</div>
+              </div>
+              <div class="poll-footer" id="rank-status">Default order shown.</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+          <div>
+            <div class="section-title">Later types</div>
+            <p class="section-copy">Useful, but better deferred until the core flow is solid.</p>
+          </div>
+          <span class="meta-pill">Deferred for now</span>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <article class="poll-card">
+              <div class="poll-header">
+                <span class="poll-type">Matrix / Grid</span>
+                <span class="poll-count">Deferred</span>
+              </div>
+              <h3>Rate multiple criteria in one survey table.</h3>
+              <p class="poll-subtitle">
+                Powerful, but heavier to build and harder to use on mobile.
+              </p>
+              <table class="grid-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Poor</th>
+                    <th>Fair</th>
+                    <th>Good</th>
+                    <th>Very Good</th>
+                    <th>Excellent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="grid-row-label">Check-in</td>
+                    <td><span class="grid-cell"></span></td>
+                    <td><span class="grid-cell"></span></td>
+                    <td><span class="grid-cell selected"></span></td>
+                    <td><span class="grid-cell"></span></td>
+                    <td><span class="grid-cell"></span></td>
+                  </tr>
+                  <tr>
+                    <td class="grid-row-label">Boarding</td>
+                    <td><span class="grid-cell"></span></td>
+                    <td><span class="grid-cell"></span></td>
+                    <td><span class="grid-cell"></span></td>
+                    <td><span class="grid-cell selected"></span></td>
+                    <td><span class="grid-cell"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </article>
+          </div>
+
+          <div class="col-lg-4">
+            <article class="poll-card">
+              <div class="poll-header">
+                <span class="poll-type">Date / Time</span>
+                <span class="poll-count">Deferred</span>
+              </div>
+              <h3>Pick availability slots for a meeting.</h3>
+              <p class="poll-subtitle">
+                More of a scheduling tool than a core poll type.
+              </p>
+              <div class="time-grid">
+                <button class="time-chip">Mon 9:00</button>
+                <button class="time-chip selected">Mon 1:00</button>
+                <button class="time-chip">Tue 10:30</button>
+                <button class="time-chip">Wed 4:00</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <div class="text-center py-3">
+        <p class="footer-note mb-0">
+          MVP focus: the first 6 core poll types plus ranked choice. Everything else can
+          follow once the system model is stable.
+        </p>
+      </div>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+      $(function () {
+        let selectedSingle = null;
+        const selectedMulti = new Set();
+        let selectedRating = 0;
+        let selectedNps = null;
+
+        $(".option-btn[data-option]").on("click", function () {
+          const $card = $(this).closest(".poll-card");
+          const poll = $card.data("poll");
+          const option = $(this).data("option");
+
+          if (poll === "single") {
+            selectedSingle = option;
+            $card.find(".option-btn").removeClass("selected");
+            $card.find(".selected-check").addClass("d-none");
+            $(this).addClass("selected");
+            $(this).find(".selected-check").removeClass("d-none");
+            $("#single-status").text("Selected: " + selectedSingle + ".");
+            return;
+          }
+
+          if (poll === "multi") {
+            if (selectedMulti.has(option)) {
+              selectedMulti.delete(option);
+              $(this).removeClass("multi-selected");
+            } else {
+              selectedMulti.add(option);
+              $(this).addClass("multi-selected");
+            }
+
+            const values = Array.from(selectedMulti);
+            $("#multi-status").text(
+              values.length ? "Selected: " + values.join(", ") + "." : "No selections yet."
+            );
+          }
+        });
+
+        $(".yesno-btn").on("click", function () {
+          const choice = $(this).data("option");
+          $(".yesno-btn").removeClass("selected");
+          $(this).addClass("selected");
+          $("#yesno-status").text("Vote recorded: " + choice + ".");
+        });
+
+        $("#open-answer").on("input", function () {
+          const length = $(this).val().length;
+          $("#open-count").text(length + " / 280");
+          $("#open-status").text(
+            length > 0 ? "Draft ready to submit." : "Waiting for an answer."
+          );
+        });
+
+        $(".star-btn").on("click", function () {
+          selectedRating = Number($(this).data("value"));
+          $(".star-btn").removeClass("selected");
+          $(".star-btn").each(function () {
+            const starValue = Number($(this).data("value"));
+            if (starValue <= selectedRating) {
+              $(this).addClass("selected");
+            }
+          });
+          $("#rating-label").text("Selected " + selectedRating + " star" + (selectedRating === 1 ? "" : "s") + ".");
+        });
+
+        $(".nps-cell").on("click", function () {
+          selectedNps = Number($(this).data("value"));
+          $(".nps-cell").removeClass("selected");
+          $(this).addClass("selected");
+          $("#nps-status").text("NPS score selected: " + selectedNps + ".");
+        });
+
+        $(".rank-item").on("click", function () {
+          const item = $(this).data("rank");
+          $("#rank-status").text("Current top priority: " + item + ".");
+        });
+
+        $(".time-chip").on("click", function () {
+          $(this).toggleClass("selected");
+        });
+      });
+    </script>
+  </body>
+</html>

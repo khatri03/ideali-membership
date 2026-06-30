@@ -1,0 +1,2162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online Polls</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f5f5f0;
+        color: #1a1a18;
+      }
+
+      .hero {
+        background: #1a1a18;
+        color: #f5f5f0;
+        padding: 3.5rem 0 3rem;
+      }
+      .hero h1 {
+        font-size: 2.4rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+      .hero p {
+        color: #a0a09a;
+        font-size: 1rem;
+        margin-bottom: 0;
+      }
+
+      .poll-card {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e4e4de;
+        padding: 1.6rem;
+        height: 100%;
+        transition: box-shadow 0.15s;
+      }
+      .poll-card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+      }
+
+      .poll-type-badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 3px 10px;
+        border-radius: 20px;
+        margin-bottom: 0.9rem;
+      }
+      .badge-single {
+        background: #e8f0fe;
+        color: #1a56db;
+      }
+      .badge-multi {
+        background: #e3f5ec;
+        color: #1a7a44;
+      }
+      .badge-rating {
+        background: #fef3e2;
+        color: #a05c00;
+      }
+      .badge-ranked {
+        background: #f4ecfd;
+        color: #6e32bb;
+      }
+      .badge-slider {
+        background: #fce4ec;
+        color: #b91c4a;
+      }
+      .badge-image {
+        background: #e0f4f9;
+        color: #0c6e8e;
+      }
+
+      .poll-card h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        line-height: 1.4;
+      }
+      .poll-card .question-meta {
+        font-size: 12.5px;
+        color: #888880;
+        margin-bottom: 1.1rem;
+      }
+
+      /* Single / Multi choice */
+      .choice-option {
+        position: relative;
+        border: 1px solid #e4e4de;
+        border-radius: 9px;
+        padding: 0.55rem 0.9rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition:
+          border-color 0.12s,
+          background 0.12s;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        user-select: none;
+      }
+      .choice-option:hover {
+        border-color: #b0b0a8;
+        background: #f9f9f6;
+      }
+      .choice-option.selected {
+        border-color: #1a56db;
+        background: #f0f4ff;
+        color: #1a3a8c;
+      }
+      .choice-option.selected .choice-dot {
+        background: #1a56db;
+      }
+      .choice-dot {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid #c8c8c2;
+        flex-shrink: 0;
+        transition:
+          background 0.12s,
+          border-color 0.12s;
+      }
+      .choice-option.selected .choice-dot {
+        border-color: #1a56db;
+      }
+
+      .choice-option.multi-selected {
+        border-color: #1a7a44;
+        background: #f0faf4;
+        color: #15533b;
+      }
+      .choice-option.multi-selected .choice-dot {
+        background: #1a7a44;
+        border-color: #1a7a44;
+        border-radius: 3px;
+      }
+
+      /* Progress result bar */
+      .result-bar-wrap {
+        margin-top: 0.85rem;
+      }
+      .result-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.45rem;
+        font-size: 13px;
+      }
+      .result-label {
+        min-width: 80px;
+        color: #555550;
+      }
+      .result-bar-bg {
+        flex: 1;
+        height: 8px;
+        background: #ededea;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .result-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+      }
+      .fill-blue {
+        background: #1a56db;
+      }
+      .fill-green {
+        background: #1a7a44;
+      }
+      .fill-orange {
+        background: #d97706;
+      }
+      .result-pct {
+        font-weight: 600;
+        min-width: 32px;
+        text-align: right;
+        color: #333330;
+        font-size: 12.5px;
+      }
+
+      /* Rating Stars */
+      .star-group {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 0.8rem;
+      }
+      .star {
+        font-size: 1.8rem;
+        cursor: pointer;
+        color: #d8d8d2;
+        transition:
+          color 0.1s,
+          transform 0.1s;
+        line-height: 1;
+      }
+      .star:hover,
+      .star.lit {
+        color: #f59e0b;
+        transform: scale(1.15);
+      }
+      .rating-label {
+        font-size: 13px;
+        color: #888880;
+        margin-top: 0.2rem;
+      }
+
+      /* NPS / Numeric scale */
+      .nps-grid {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+      .nps-cell {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #e4e4de;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.12s;
+      }
+      .nps-cell:hover {
+        background: #f4f4ef;
+        border-color: #aaa;
+      }
+      .nps-cell.nps-selected {
+        background: #1a1a18;
+        color: #fff;
+        border-color: #1a1a18;
+      }
+
+      /* Slider */
+      .custom-slider {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(
+          to right,
+          #1a56db var(--val, 50%),
+          #e4e4de var(--val, 50%)
+        );
+        border-radius: 3px;
+        outline: none;
+        cursor: pointer;
+      }
+      .custom-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #1a56db;
+        border: 3px solid #fff;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        cursor: grab;
+      }
+      .slider-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #888880;
+        margin-top: 4px;
+      }
+      .slider-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a56db;
+        text-align: center;
+        margin: 0.5rem 0 0.2rem;
+      }
+
+      /* Ranked choice */
+      .rank-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: #f9f9f6;
+        border: 1px solid #e4e4de;
+        border-radius: 9px;
+        padding: 0.5rem 0.8rem;
+        margin-bottom: 0.4rem;
+        cursor: grab;
+        font-size: 14px;
+        font-weight: 500;
+        transition: box-shadow 0.12s;
+      }
+      .rank-item:active {
+        cursor: grabbing;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .rank-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #1a1a18;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      /* Image poll */
+      .img-option {
+        border: 2px solid #e4e4de;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: border-color 0.12s;
+        position: relative;
+      }
+      .img-option:hover {
+        border-color: #aaa;
+      }
+      .img-option.img-selected {
+        border-color: #1a56db;
+      }
+      .img-option img {
+        width: 100%;
+        height: 110px;
+        object-fit: cover;
+        display: block;
+      }
+      .img-option .img-label {
+        padding: 0.4rem 0.6rem;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: center;
+        background: #fff;
+      }
+      .img-check {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        background: #1a56db;
+        color: #fff;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .img-option.img-selected .img-check {
+        display: flex;
+      }
+
+      /* Vote button */
+      .vote-btn {
+        background: #1a1a18;
+        color: #f5f5f0;
+        border: none;
+        border-radius: 9px;
+        padding: 0.5rem 1.2rem;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+        margin-top: 0.9rem;
+      }
+      .vote-btn:hover {
+        background: #333330;
+      }
+      .vote-btn:active {
+        transform: scale(0.98);
+      }
+
+      .voters-count {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 0.5rem;
+      }
+
+      .section-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+        color: #aaa;
+        margin-bottom: 1.2rem;
+      }
+
+      /* Yes / No */
+      .yesno-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        border: 2px solid #e4e4de;
+        border-radius: 12px;
+        padding: 0.7rem 0.5rem;
+        background: #fff;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: inherit;
+      }
+      .yesno-btn:hover {
+        border-color: #aaa;
+        background: #f9f9f6;
+      }
+      .yesno-icon {
+        font-size: 1.6rem;
+      }
+      .yesno-label {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .yes-btn:hover,
+      .yes-btn.active {
+        border-color: #16a34a;
+        background: #f0fdf4;
+        color: #166534;
+      }
+      .no-btn:hover,
+      .no-btn.active {
+        border-color: #dc2626;
+        background: #fef2f2;
+        color: #991b1b;
+      }
+      .yesno-bar-wrap {
+        display: flex;
+        border-radius: 8px;
+        overflow: hidden;
+        height: 38px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .yesno-seg {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        transition: width 0.5s ease;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .yesno-yes {
+        background: #16a34a;
+      }
+      .yesno-no {
+        background: #dc2626;
+      }
+
+      /* Open-ended */
+      .open-response-card {
+        background: #f9f9f6;
+        border: 1px solid #e4e4de;
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        font-size: 13px;
+        color: #444;
+        margin-bottom: 0.4rem;
+        font-style: italic;
+      }
+
+      /* Matrix table */
+      .matrix-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .matrix-table th {
+        text-align: center;
+        font-weight: 600;
+        color: #888;
+        font-size: 12px;
+        padding: 0.4rem 0.3rem;
+        border-bottom: 2px solid #e4e4de;
+      }
+      .matrix-table th:first-child {
+        text-align: left;
+      }
+      .matrix-table tr:nth-child(even) {
+        background: #fafaf8;
+      }
+      .matrix-row-label {
+        padding: 0.55rem 0.5rem 0.55rem 0;
+        font-weight: 500;
+        color: #333;
+        white-space: nowrap;
+      }
+      .matrix-table td {
+        text-align: center;
+        padding: 0.4rem 0.2rem;
+      }
+      .matrix-cell {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid #d4d4ce;
+        margin: 0 auto;
+        cursor: pointer;
+        transition: all 0.12s;
+        position: relative;
+      }
+      .matrix-cell:hover {
+        border-color: #c2410c;
+        background: #fff7ed;
+      }
+      .matrix-cell.matrix-selected {
+        background: #c2410c;
+        border-color: #c2410c;
+      }
+      .matrix-cell.matrix-selected::after {
+        content: "\2713";
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      /* Date / Time slots */
+      .date-day-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #065f46;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .time-slot {
+        padding: 0.35rem 0.75rem;
+        border: 1.5px solid #d1d5db;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.12s;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .time-slot:hover {
+        border-color: #065f46;
+        background: #f0fdf4;
+      }
+      .time-slot.slot-selected {
+        border-color: #065f46;
+        background: #065f46;
+        color: #fff;
+      }
+      .time-slot.slot-popular {
+        border-color: #d97706;
+        background: #fffbeb;
+      }
+      .time-slot.slot-popular.slot-selected {
+        background: #065f46;
+        border-color: #065f46;
+        color: #fff;
+      }
+      .slot-pip {
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <div class="container">
+        <p class="section-label mb-2">Interactive demo</p>
+        <h1>Online poll types</h1>
+        <p>
+          Six common poll formats — each fully interactive. Click, rate, rank,
+          and slide.
+        </p>
+      </div>
+    </div>
+
+    <div class="container py-5">
+      <div class="row g-4">
+        <!-- 1. Single Choice -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span class="poll-type-badge badge-single">Single choice</span>
+            <h5>What's your go-to morning drink?</h5>
+            <p class="question-meta">Pick one · 2,841 votes</p>
+
+            <div id="single-options">
+              <div
+                class="choice-option"
+                data-group="single"
+                data-val="Coffee"
+                onclick="pickSingle(this)"
+              >
+                <div class="choice-dot"></div>
+                Coffee
+              </div>
+              <div
+                class="choice-option"
+                data-group="single"
+                data-val="Tea"
+                onclick="pickSingle(this)"
+              >
+                <div class="choice-dot"></div>
+                Tea
+              </div>
+              <div
+                class="choice-option"
+                data-group="single"
+                data-val="Juice"
+                onclick="pickSingle(this)"
+              >
+                <div class="choice-dot"></div>
+                Juice
+              </div>
+              <div
+                class="choice-option"
+                data-group="single"
+                data-val="Water"
+                onclick="pickSingle(this)"
+              >
+                <div class="choice-dot"></div>
+                Water
+              </div>
+            </div>
+
+            <div
+              id="single-results"
+              class="result-bar-wrap"
+              style="display: none"
+            >
+              <div class="result-row">
+                <span class="result-label">Coffee</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill fill-blue"
+                    style="width: 58%"
+                  ></div>
+                </div>
+                <span class="result-pct">58%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Tea</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill fill-blue"
+                    style="width: 24%"
+                  ></div>
+                </div>
+                <span class="result-pct">24%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Juice</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill fill-blue"
+                    style="width: 11%"
+                  ></div>
+                </div>
+                <span class="result-pct">11%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Water</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill fill-blue"
+                    style="width: 7%"
+                  ></div>
+                </div>
+                <span class="result-pct">7%</span>
+              </div>
+            </div>
+            <p class="voters-count" id="single-status"></p>
+          </div>
+        </div>
+
+        <!-- 2. Multiple Choice -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span class="poll-type-badge badge-multi">Multiple choice</span>
+            <h5>Which features matter most to you?</h5>
+            <p class="question-meta">Select all that apply · 1,190 votes</p>
+
+            <div>
+              <div class="choice-option" onclick="toggleMulti(this)">
+                <div class="choice-dot" style="border-radius: 3px"></div>
+                Fast performance
+              </div>
+              <div class="choice-option" onclick="toggleMulti(this)">
+                <div class="choice-dot" style="border-radius: 3px"></div>
+                Clean design
+              </div>
+              <div class="choice-option" onclick="toggleMulti(this)">
+                <div class="choice-dot" style="border-radius: 3px"></div>
+                Offline support
+              </div>
+              <div class="choice-option" onclick="toggleMulti(this)">
+                <div class="choice-dot" style="border-radius: 3px"></div>
+                Dark mode
+              </div>
+              <div class="choice-option" onclick="toggleMulti(this)">
+                <div class="choice-dot" style="border-radius: 3px"></div>
+                Privacy controls
+              </div>
+            </div>
+            <button class="vote-btn" onclick="submitMulti()">
+              Submit vote
+            </button>
+            <p class="voters-count" id="multi-status"></p>
+          </div>
+        </div>
+
+        <!-- 3. Star Rating -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span class="poll-type-badge badge-rating">Star rating</span>
+            <h5>How would you rate your last delivery experience?</h5>
+            <p class="question-meta">1–5 stars · 4,022 ratings</p>
+
+            <div class="star-group" id="stars">
+              <span
+                class="star"
+                data-val="1"
+                onclick="rateStar(1)"
+                onmouseover="hoverStar(1)"
+                onmouseout="resetStarHover()"
+                >★</span
+              >
+              <span
+                class="star"
+                data-val="2"
+                onclick="rateStar(2)"
+                onmouseover="hoverStar(2)"
+                onmouseout="resetStarHover()"
+                >★</span
+              >
+              <span
+                class="star"
+                data-val="3"
+                onclick="rateStar(3)"
+                onmouseover="hoverStar(3)"
+                onmouseout="resetStarHover()"
+                >★</span
+              >
+              <span
+                class="star"
+                data-val="4"
+                onclick="rateStar(4)"
+                onmouseover="hoverStar(4)"
+                onmouseout="resetStarHover()"
+                >★</span
+              >
+              <span
+                class="star"
+                data-val="5"
+                onclick="rateStar(5)"
+                onmouseover="hoverStar(5)"
+                onmouseout="resetStarHover()"
+                >★</span
+              >
+            </div>
+            <p class="rating-label" id="rating-label">Tap a star to rate</p>
+
+            <div class="result-bar-wrap mt-3">
+              <div class="result-row">
+                <span class="result-label">5 ★★★★★</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 44%; background: #f59e0b"
+                  ></div>
+                </div>
+                <span class="result-pct">44%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">4 ★★★★</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 31%; background: #f59e0b"
+                  ></div>
+                </div>
+                <span class="result-pct">31%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">3 ★★★</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 14%; background: #f59e0b"
+                  ></div>
+                </div>
+                <span class="result-pct">14%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">2 ★★</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 7%; background: #f59e0b"
+                  ></div>
+                </div>
+                <span class="result-pct">7%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">1 ★</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 4%; background: #f59e0b"
+                  ></div>
+                </div>
+                <span class="result-pct">4%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. NPS / Numeric Scale -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span
+              class="poll-type-badge badge-rated"
+              style="background: #fce4ec; color: #b91c4a"
+              >NPS scale</span
+            >
+            <h5>How likely are you to recommend us to a friend?</h5>
+            <p class="question-meta">
+              0 = not at all, 10 = extremely likely · 3,650 responses
+            </p>
+
+            <div class="nps-grid mb-2" id="nps-grid">
+              <div class="nps-cell" onclick="pickNPS(this, 0)">0</div>
+              <div class="nps-cell" onclick="pickNPS(this, 1)">1</div>
+              <div class="nps-cell" onclick="pickNPS(this, 2)">2</div>
+              <div class="nps-cell" onclick="pickNPS(this, 3)">3</div>
+              <div class="nps-cell" onclick="pickNPS(this, 4)">4</div>
+              <div class="nps-cell" onclick="pickNPS(this, 5)">5</div>
+              <div class="nps-cell" onclick="pickNPS(this, 6)">6</div>
+              <div class="nps-cell" onclick="pickNPS(this, 7)">7</div>
+              <div class="nps-cell" onclick="pickNPS(this, 8)">8</div>
+              <div class="nps-cell" onclick="pickNPS(this, 9)">9</div>
+              <div class="nps-cell" onclick="pickNPS(this, 10)">10</div>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 11.5px;
+                color: #aaa;
+                margin-bottom: 0.8rem;
+              "
+            >
+              <span>Not likely</span><span>Very likely</span>
+            </div>
+            <button class="vote-btn" onclick="submitNPS()">Submit</button>
+            <p class="voters-count" id="nps-status"></p>
+          </div>
+        </div>
+
+        <!-- 5. Slider -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span class="poll-type-badge badge-slider">Slider poll</span>
+            <h5>How many hours per week do you spend on social media?</h5>
+            <p class="question-meta">Drag to your estimate · 987 responses</p>
+
+            <div class="slider-value" id="slider-val">10</div>
+            <div
+              style="
+                font-size: 12px;
+                text-align: center;
+                color: #888880;
+                margin-bottom: 0.8rem;
+              "
+            >
+              hours / week
+            </div>
+            <input
+              type="range"
+              class="custom-slider"
+              id="hour-slider"
+              min="0"
+              max="40"
+              value="10"
+              step="1"
+              oninput="updateSlider(this.value)"
+              style="--val: 25%"
+            />
+            <div class="slider-labels">
+              <span>0 h</span><span>10 h</span><span>20 h</span><span>30 h</span
+              ><span>40 h</span>
+            </div>
+
+            <div class="result-bar-wrap mt-3">
+              <div class="result-row">
+                <span class="result-label">0–5 h</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 28%; background: #b91c4a"
+                  ></div>
+                </div>
+                <span class="result-pct">28%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">6–15 h</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 41%; background: #b91c4a"
+                  ></div>
+                </div>
+                <span class="result-pct">41%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">16–30 h</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 22%; background: #b91c4a"
+                  ></div>
+                </div>
+                <span class="result-pct">22%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">31+ h</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 9%; background: #b91c4a"
+                  ></div>
+                </div>
+                <span class="result-pct">9%</span>
+              </div>
+            </div>
+
+            <button class="vote-btn" onclick="submitSlider()">Submit</button>
+            <p class="voters-count" id="slider-status"></p>
+          </div>
+        </div>
+
+        <!-- 6. Image Poll -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span class="poll-type-badge badge-image">Image poll</span>
+            <h5>Which destination is on your 2025 bucket list?</h5>
+            <p class="question-meta">Pick one · 5,310 votes</p>
+
+            <div class="row g-2 mb-1">
+              <div class="col-6">
+                <div
+                  class="img-option"
+                  onclick="pickImage(this, 'Kyoto')"
+                  id="img-kyoto"
+                >
+                  <!-- Kyoto: pagoda silhouette against pink sky -->
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 200 110"
+                    width="100%"
+                    height="110"
+                    display="block"
+                  >
+                    <defs>
+                      <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#ffb7c5" />
+                        <stop offset="100%" stop-color="#fde8c8" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="200" height="110" fill="url(#sky1)" />
+                    <!-- mountains -->
+                    <polygon
+                      points="0,90 40,50 80,90"
+                      fill="#d4869a"
+                      opacity=".5"
+                    />
+                    <polygon
+                      points="60,90 110,40 160,90"
+                      fill="#c0607a"
+                      opacity=".45"
+                    />
+                    <polygon
+                      points="130,90 175,55 200,90"
+                      fill="#d4869a"
+                      opacity=".5"
+                    />
+                    <!-- ground -->
+                    <rect y="90" width="200" height="20" fill="#8b3a52" />
+                    <!-- pagoda base -->
+                    <rect x="85" y="70" width="30" height="22" fill="#5c2236" />
+                    <!-- tier 3 -->
+                    <polygon
+                      points="82,70 118,70 112,62 88,62"
+                      fill="#7a2d45"
+                    />
+                    <rect x="90" y="55" width="20" height="9" fill="#5c2236" />
+                    <!-- tier 2 -->
+                    <polygon
+                      points="87,55 113,55 109,48 91,48"
+                      fill="#7a2d45"
+                    />
+                    <rect x="93" y="42" width="14" height="8" fill="#5c2236" />
+                    <!-- tier 1 -->
+                    <polygon
+                      points="90,42 110,42 107,36 93,36"
+                      fill="#7a2d45"
+                    />
+                    <rect x="97" y="28" width="6" height="10" fill="#5c2236" />
+                    <!-- spire -->
+                    <line
+                      x1="100"
+                      y1="14"
+                      x2="100"
+                      y2="28"
+                      stroke="#5c2236"
+                      stroke-width="2"
+                    />
+                    <polygon points="97,20 103,20 100,14" fill="#5c2236" />
+                    <!-- cherry blossom dots -->
+                    <circle
+                      cx="30"
+                      cy="62"
+                      r="12"
+                      fill="#ffaabb"
+                      opacity=".7"
+                    />
+                    <circle cx="22" cy="55" r="8" fill="#ff8fa3" opacity=".6" />
+                    <circle
+                      cx="170"
+                      cy="58"
+                      r="11"
+                      fill="#ffaabb"
+                      opacity=".7"
+                    />
+                    <circle
+                      cx="178"
+                      cy="50"
+                      r="7"
+                      fill="#ff8fa3"
+                      opacity=".6"
+                    />
+                    <!-- sun -->
+                    <circle
+                      cx="160"
+                      cy="22"
+                      r="10"
+                      fill="#ffcc00"
+                      opacity=".8"
+                    />
+                  </svg>
+                  <div class="img-check">✓</div>
+                  <div class="img-label">Kyoto, Japan</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div
+                  class="img-option"
+                  onclick="pickImage(this, 'Santorini')"
+                  id="img-santorini"
+                >
+                  <!-- Santorini: white domes, blue sea, sunset -->
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 200 110"
+                    width="100%"
+                    height="110"
+                    display="block"
+                  >
+                    <defs>
+                      <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#f97316" />
+                        <stop offset="60%" stop-color="#fb923c" />
+                        <stop offset="100%" stop-color="#fcd34d" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="200" height="110" fill="url(#sky2)" />
+                    <!-- sea -->
+                    <rect y="72" width="200" height="38" fill="#0369a1" />
+                    <rect
+                      y="72"
+                      width="200"
+                      height="6"
+                      fill="#0ea5e9"
+                      opacity=".5"
+                    />
+                    <!-- cliff -->
+                    <polygon
+                      points="0,110 0,60 60,45 120,50 200,40 200,110"
+                      fill="#e2c9a0"
+                    />
+                    <!-- buildings -->
+                    <rect
+                      x="30"
+                      y="48"
+                      width="28"
+                      height="22"
+                      fill="#fff"
+                      rx="2"
+                    />
+                    <rect
+                      x="25"
+                      y="45"
+                      width="38"
+                      height="6"
+                      fill="#f0ede8"
+                      rx="1"
+                    />
+                    <!-- dome 1 -->
+                    <ellipse cx="44" cy="45" rx="12" ry="7" fill="#1d4ed8" />
+                    <rect x="32" y="45" width="24" height="4" fill="#1d4ed8" />
+                    <!-- building 2 -->
+                    <rect
+                      x="70"
+                      y="52"
+                      width="22"
+                      height="18"
+                      fill="#fff"
+                      rx="2"
+                    />
+                    <ellipse cx="81" cy="52" rx="9" ry="5" fill="#1d4ed8" />
+                    <rect x="72" y="52" width="18" height="3" fill="#1d4ed8" />
+                    <!-- building 3 -->
+                    <rect
+                      x="105"
+                      y="44"
+                      width="26"
+                      height="20"
+                      fill="#f9f5f0"
+                      rx="2"
+                    />
+                    <ellipse cx="118" cy="44" rx="10" ry="6" fill="#2563eb" />
+                    <rect x="108" y="44" width="20" height="3" fill="#2563eb" />
+                    <!-- bell tower -->
+                    <rect
+                      x="145"
+                      y="38"
+                      width="14"
+                      height="24"
+                      fill="#fff"
+                      rx="2"
+                    />
+                    <ellipse cx="152" cy="38" rx="7" ry="5" fill="#1d4ed8" />
+                    <rect x="150" y="55" width="4" height="8" fill="#cbd5e1" />
+                    <!-- sun reflection -->
+                    <ellipse
+                      cx="100"
+                      cy="74"
+                      rx="30"
+                      ry="4"
+                      fill="#fcd34d"
+                      opacity=".35"
+                    />
+                    <!-- sun -->
+                    <circle
+                      cx="155"
+                      cy="20"
+                      r="13"
+                      fill="#fde047"
+                      opacity=".9"
+                    />
+                  </svg>
+                  <div class="img-check">✓</div>
+                  <div class="img-label">Santorini, Greece</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div
+                  class="img-option"
+                  onclick="pickImage(this, 'Patagonia')"
+                  id="img-patagonia"
+                >
+                  <!-- Patagonia: dramatic peaks, lake, glacier -->
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 200 110"
+                    width="100%"
+                    height="110"
+                    display="block"
+                  >
+                    <defs>
+                      <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#bfdbfe" />
+                        <stop offset="100%" stop-color="#e0f2fe" />
+                      </linearGradient>
+                      <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#7dd3fc" />
+                        <stop offset="100%" stop-color="#38bdf8" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="200" height="110" fill="url(#sky3)" />
+                    <!-- back mountains -->
+                    <polygon
+                      points="0,80 30,30 60,75 90,20 130,65 160,25 200,60 200,80"
+                      fill="#94a3b8"
+                    />
+                    <!-- snow caps -->
+                    <polygon
+                      points="88,22 90,20 92,22 91,28 89,28"
+                      fill="#fff"
+                    />
+                    <polygon
+                      points="158,27 160,25 162,27 161,33 159,33"
+                      fill="#fff"
+                    />
+                    <polygon
+                      points="28,32 30,30 32,32 31,37 29,37"
+                      fill="#fff"
+                    />
+                    <!-- front mountains -->
+                    <polygon
+                      points="0,90 50,45 100,85 150,40 200,75 200,90"
+                      fill="#475569"
+                    />
+                    <!-- glacier on front peak -->
+                    <polygon
+                      points="148,42 150,40 152,42 151,50 149,50"
+                      fill="#e0f2fe"
+                    />
+                    <polygon
+                      points="48,47 50,45 52,47 51,54 49,54"
+                      fill="#e0f2fe"
+                    />
+                    <!-- lake -->
+                    <ellipse
+                      cx="100"
+                      cy="95"
+                      rx="65"
+                      ry="12"
+                      fill="url(#lake)"
+                      opacity=".85"
+                    />
+                    <!-- ground / meadow -->
+                    <rect
+                      y="88"
+                      width="200"
+                      height="22"
+                      fill="#4ade80"
+                      opacity=".55"
+                    />
+                    <rect
+                      y="93"
+                      width="200"
+                      height="17"
+                      fill="#16a34a"
+                      opacity=".4"
+                    />
+                    <!-- clouds -->
+                    <ellipse
+                      cx="40"
+                      cy="14"
+                      rx="22"
+                      ry="7"
+                      fill="#fff"
+                      opacity=".8"
+                    />
+                    <ellipse
+                      cx="55"
+                      cy="12"
+                      rx="16"
+                      ry="6"
+                      fill="#fff"
+                      opacity=".7"
+                    />
+                    <ellipse
+                      cx="150"
+                      cy="10"
+                      rx="20"
+                      ry="6"
+                      fill="#fff"
+                      opacity=".75"
+                    />
+                  </svg>
+                  <div class="img-check">✓</div>
+                  <div class="img-label">Patagonia</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div
+                  class="img-option"
+                  onclick="pickImage(this, 'Marrakech')"
+                  id="img-marrakech"
+                >
+                  <!-- Marrakech: minaret, arches, warm desert tones -->
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 200 110"
+                    width="100%"
+                    height="110"
+                    display="block"
+                  >
+                    <defs>
+                      <linearGradient id="sky4" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#f97316" />
+                        <stop offset="100%" stop-color="#fbbf24" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="200" height="110" fill="url(#sky4)" />
+                    <!-- ground -->
+                    <rect y="80" width="200" height="30" fill="#b45309" />
+                    <!-- medina walls -->
+                    <rect x="0" y="55" width="200" height="30" fill="#d97706" />
+                    <!-- battlements -->
+                    <rect
+                      x="5"
+                      y="50"
+                      width="10"
+                      height="8"
+                      fill="#d97706"
+                      rx="1"
+                    />
+                    <rect
+                      x="20"
+                      y="50"
+                      width="10"
+                      height="8"
+                      fill="#d97706"
+                      rx="1"
+                    />
+                    <rect
+                      x="35"
+                      y="50"
+                      width="10"
+                      height="8"
+                      fill="#d97706"
+                      rx="1"
+                    />
+                    <rect
+                      x="160"
+                      y="50"
+                      width="10"
+                      height="8"
+                      fill="#d97706"
+                      rx="1"
+                    />
+                    <rect
+                      x="175"
+                      y="50"
+                      width="10"
+                      height="8"
+                      fill="#d97706"
+                      rx="1"
+                    />
+                    <!-- main gate arch -->
+                    <rect x="80" y="55" width="40" height="30" fill="#92400e" />
+                    <path d="M80,72 Q100,55 120,72" fill="#78350f" />
+                    <!-- gate details -->
+                    <rect
+                      x="88"
+                      y="75"
+                      width="24"
+                      height="12"
+                      fill="#1c0a00"
+                      rx="1"
+                    />
+                    <!-- minaret tower -->
+                    <rect
+                      x="105"
+                      y="12"
+                      width="22"
+                      height="46"
+                      fill="#b45309"
+                    />
+                    <!-- minaret tiers -->
+                    <rect x="102" y="30" width="28" height="4" fill="#92400e" />
+                    <rect x="102" y="40" width="28" height="4" fill="#92400e" />
+                    <!-- minaret top -->
+                    <rect x="107" y="8" width="18" height="6" fill="#92400e" />
+                    <polygon points="116,2 122,8 110,8" fill="#78350f" />
+                    <!-- crescent -->
+                    <path
+                      d="M113,4 A4,4 0 1 1 119,4 A2.5,2.5 0 1 0 113,4"
+                      fill="#fbbf24"
+                    />
+                    <!-- windows on minaret -->
+                    <rect
+                      x="112"
+                      y="18"
+                      width="8"
+                      height="6"
+                      fill="#1c0a00"
+                      rx="1"
+                    />
+                    <path d="M112,21 Q116,17 120,21" fill="#1c0a00" />
+                    <!-- tile pattern on wall -->
+                    <rect
+                      x="20"
+                      y="60"
+                      width="55"
+                      height="18"
+                      fill="#b45309"
+                      rx="2"
+                    />
+                    <line
+                      x1="30"
+                      y1="60"
+                      x2="30"
+                      y2="78"
+                      stroke="#92400e"
+                      stroke-width="1"
+                    />
+                    <line
+                      x1="40"
+                      y1="60"
+                      x2="40"
+                      y2="78"
+                      stroke="#92400e"
+                      stroke-width="1"
+                    />
+                    <line
+                      x1="50"
+                      y1="60"
+                      x2="50"
+                      y2="78"
+                      stroke="#92400e"
+                      stroke-width="1"
+                    />
+                    <line
+                      x1="60"
+                      y1="60"
+                      x2="60"
+                      y2="78"
+                      stroke="#92400e"
+                      stroke-width="1"
+                    />
+                    <line
+                      x1="20"
+                      y1="69"
+                      x2="75"
+                      y2="69"
+                      stroke="#92400e"
+                      stroke-width="1"
+                    />
+                    <!-- palm tree -->
+                    <rect x="170" y="48" width="4" height="32" fill="#92400e" />
+                    <ellipse
+                      cx="172"
+                      cy="46"
+                      rx="14"
+                      ry="7"
+                      fill="#15803d"
+                      opacity=".85"
+                    />
+                    <ellipse
+                      cx="162"
+                      cy="50"
+                      rx="10"
+                      ry="5"
+                      fill="#16a34a"
+                      opacity=".75"
+                    />
+                    <ellipse
+                      cx="182"
+                      cy="50"
+                      rx="10"
+                      ry="5"
+                      fill="#16a34a"
+                      opacity=".75"
+                    />
+                  </svg>
+                  <div class="img-check">✓</div>
+                  <div class="img-label">Marrakech, Morocco</div>
+                </div>
+              </div>
+            </div>
+
+            <div id="img-results" class="result-bar-wrap" style="display: none">
+              <div class="result-row">
+                <span class="result-label">Kyoto</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 38%; background: #0c6e8e"
+                  ></div>
+                </div>
+                <span class="result-pct">38%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Santorini</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 29%; background: #0c6e8e"
+                  ></div>
+                </div>
+                <span class="result-pct">29%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Patagonia</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 21%; background: #0c6e8e"
+                  ></div>
+                </div>
+                <span class="result-pct">21%</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">Marrakech</span>
+                <div class="result-bar-bg">
+                  <div
+                    class="result-bar-fill"
+                    style="width: 12%; background: #0c6e8e"
+                  ></div>
+                </div>
+                <span class="result-pct">12%</span>
+              </div>
+            </div>
+            <p class="voters-count" id="img-status"></p>
+          </div>
+        </div>
+
+        <!-- 7. Yes / No Binary -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span
+              class="poll-type-badge"
+              style="background: #f0fdf4; color: #166534"
+              >Yes / No</span
+            >
+            <h5>Should remote work become the default for office jobs?</h5>
+            <p class="question-meta">Binary poll · 18,402 votes</p>
+            <div class="d-flex gap-3 my-3" id="yesno-btns">
+              <button class="yesno-btn yes-btn" onclick="pickYesNo('Yes', 61)">
+                <span class="yesno-icon">👍</span
+                ><span class="yesno-label">Yes</span>
+              </button>
+              <button class="yesno-btn no-btn" onclick="pickYesNo('No', 39)">
+                <span class="yesno-icon">👎</span
+                ><span class="yesno-label">No</span>
+              </button>
+            </div>
+            <div id="yesno-results" style="display: none">
+              <div class="yesno-bar-wrap">
+                <div class="yesno-seg yesno-yes" id="yn-yes" style="width: 61%">
+                  Yes · 61%
+                </div>
+                <div class="yesno-seg yesno-no" id="yn-no" style="width: 39%">
+                  No · 39%
+                </div>
+              </div>
+            </div>
+            <p class="voters-count" id="yesno-status"></p>
+          </div>
+        </div>
+
+        <!-- 8. Open-ended -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span
+              class="poll-type-badge"
+              style="background: #faf5ff; color: #6b21a8"
+              >Open-ended</span
+            >
+            <h5>What's one feature you wish every app had?</h5>
+            <p class="question-meta">Free text · 934 answers</p>
+            <textarea
+              id="open-textarea"
+              placeholder="Type your answer here…"
+              rows="4"
+              maxlength="280"
+              oninput="
+                document.getElementById('open-charcount').textContent =
+                  this.value.length + ' / 280'
+              "
+              style="
+                width: 100%;
+                border: 1px solid #e4e4de;
+                border-radius: 9px;
+                padding: 0.6rem 0.8rem;
+                font-size: 14px;
+                font-family: inherit;
+                resize: vertical;
+                outline: none;
+                transition: border-color 0.12s;
+              "
+              onfocus="this.style.borderColor = '#6b21a8'"
+              onblur="this.style.borderColor = '#e4e4de'"
+            ></textarea>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 0.4rem;
+              "
+            >
+              <span id="open-charcount" style="font-size: 12px; color: #aaa"
+                >0 / 280</span
+              >
+            </div>
+            <button
+              class="vote-btn"
+              style="background: #6b21a8"
+              onclick="submitOpen()"
+            >
+              Submit answer
+            </button>
+            <p class="voters-count" id="open-status"></p>
+            <div id="open-responses" style="display: none; margin-top: 0.9rem">
+              <div
+                style="
+                  font-size: 12px;
+                  font-weight: 600;
+                  color: #888;
+                  margin-bottom: 0.5rem;
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+              >
+                Recent answers
+              </div>
+              <div class="open-response-card">
+                "Undo button for everything."
+              </div>
+              <div class="open-response-card">
+                "Cross-device clipboard sync."
+              </div>
+              <div class="open-response-card">"A truly offline mode."</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 9. Ranked choice -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span class="poll-type-badge badge-ranked">Ranked choice</span>
+            <h5>Rank these work perks from most to least important.</h5>
+            <p class="question-meta">Drag to reorder · 2,105 votes</p>
+            <div id="rank-list">
+              <div
+                class="rank-item"
+                draggable="true"
+                ondragstart="dragStart(event)"
+                ondragover="dragOver(event)"
+                ondrop="dropRank(event)"
+                data-id="r1"
+              >
+                <div class="rank-badge rank-num">1</div>
+                Flexible hours
+              </div>
+              <div
+                class="rank-item"
+                draggable="true"
+                ondragstart="dragStart(event)"
+                ondragover="dragOver(event)"
+                ondrop="dropRank(event)"
+                data-id="r2"
+              >
+                <div class="rank-badge rank-num">2</div>
+                Remote work
+              </div>
+              <div
+                class="rank-item"
+                draggable="true"
+                ondragstart="dragStart(event)"
+                ondragover="dragOver(event)"
+                ondrop="dropRank(event)"
+                data-id="r3"
+              >
+                <div class="rank-badge rank-num">3</div>
+                Health insurance
+              </div>
+              <div
+                class="rank-item"
+                draggable="true"
+                ondragstart="dragStart(event)"
+                ondragover="dragOver(event)"
+                ondrop="dropRank(event)"
+                data-id="r4"
+              >
+                <div class="rank-badge rank-num">4</div>
+                Learning budget
+              </div>
+              <div
+                class="rank-item"
+                draggable="true"
+                ondragstart="dragStart(event)"
+                ondragover="dragOver(event)"
+                ondrop="dropRank(event)"
+                data-id="r5"
+              >
+                <div class="rank-badge rank-num">5</div>
+                Team retreats
+              </div>
+            </div>
+            <button
+              class="vote-btn"
+              style="background: #6e32bb"
+              onclick="submitRank()"
+            >
+              Submit ranking
+            </button>
+            <p class="voters-count" id="rank-status"></p>
+          </div>
+        </div>
+
+        <!-- 10. Matrix / Grid -->
+        <div class="col-md-12 col-lg-8">
+          <div class="poll-card">
+            <span
+              class="poll-type-badge"
+              style="background: #fff7ed; color: #c2410c"
+              >Matrix / Grid</span
+            >
+            <h5>Rate each aspect of your last flight experience.</h5>
+            <p class="question-meta">One selection per row · 6,780 responses</p>
+            <div style="overflow-x: auto">
+              <table class="matrix-table" id="matrix-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Poor</th>
+                    <th>Fair</th>
+                    <th>Good</th>
+                    <th>Very Good</th>
+                    <th>Excellent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr data-row="0">
+                    <td class="matrix-row-label">Check-in</td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 0, 0)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 0, 1)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 0, 2)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 0, 3)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 0, 4)"
+                      ></div>
+                    </td>
+                  </tr>
+                  <tr data-row="1">
+                    <td class="matrix-row-label">Boarding</td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 1, 0)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 1, 1)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 1, 2)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 1, 3)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 1, 4)"
+                      ></div>
+                    </td>
+                  </tr>
+                  <tr data-row="2">
+                    <td class="matrix-row-label">Seat comfort</td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 2, 0)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 2, 1)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 2, 2)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 2, 3)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 2, 4)"
+                      ></div>
+                    </td>
+                  </tr>
+                  <tr data-row="3">
+                    <td class="matrix-row-label">Meal quality</td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 3, 0)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 3, 1)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 3, 2)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 3, 3)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 3, 4)"
+                      ></div>
+                    </td>
+                  </tr>
+                  <tr data-row="4">
+                    <td class="matrix-row-label">Staff service</td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 4, 0)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 4, 1)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 4, 2)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 4, 3)"
+                      ></div>
+                    </td>
+                    <td>
+                      <div
+                        class="matrix-cell"
+                        onclick="pickMatrix(this, 4, 4)"
+                      ></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button
+              class="vote-btn"
+              style="background: #c2410c"
+              onclick="submitMatrix()"
+            >
+              Submit survey
+            </button>
+            <p class="voters-count" id="matrix-status"></p>
+          </div>
+        </div>
+
+        <!-- 11. Date / Time availability -->
+        <div class="col-md-6 col-lg-4">
+          <div class="poll-card">
+            <span
+              class="poll-type-badge"
+              style="background: #ecfdf5; color: #065f46"
+              >Date / Time poll</span
+            >
+            <h5>When can you join the team retrospective?</h5>
+            <p class="question-meta">
+              Select all slots that work · 12 responses
+            </p>
+            <div id="date-slots">
+              <div class="date-day-label">Monday, Jul 7</div>
+              <div class="d-flex gap-2 flex-wrap mb-2">
+                <div class="time-slot" onclick="toggleSlot(this)">9:00 AM</div>
+                <div class="time-slot" onclick="toggleSlot(this)">11:00 AM</div>
+                <div class="time-slot" onclick="toggleSlot(this)">2:00 PM</div>
+                <div class="time-slot" onclick="toggleSlot(this)">4:00 PM</div>
+              </div>
+              <div class="date-day-label">Tuesday, Jul 8</div>
+              <div class="d-flex gap-2 flex-wrap mb-2">
+                <div class="time-slot" onclick="toggleSlot(this)">10:00 AM</div>
+                <div class="time-slot" onclick="toggleSlot(this)">1:00 PM</div>
+                <div class="time-slot" onclick="toggleSlot(this)">3:00 PM</div>
+              </div>
+              <div class="date-day-label">Wednesday, Jul 9</div>
+              <div class="d-flex gap-2 flex-wrap mb-2">
+                <div class="time-slot slot-popular" onclick="toggleSlot(this)">
+                  9:00 AM <span class="slot-pip">🔥 7</span>
+                </div>
+                <div class="time-slot" onclick="toggleSlot(this)">11:00 AM</div>
+                <div class="time-slot" onclick="toggleSlot(this)">5:00 PM</div>
+              </div>
+            </div>
+            <button
+              class="vote-btn"
+              style="background: #065f46"
+              onclick="submitSlots()"
+            >
+              Confirm availability
+            </button>
+            <p class="voters-count" id="slot-status"></p>
+          </div>
+        </div>
+      </div>
+      <!-- /row -->
+    </div>
+    <!-- /container -->
+
+    <script>
+      // --- Single choice ---
+      function pickSingle(el) {
+        document
+          .querySelectorAll('[data-group="single"]')
+          .forEach((o) => o.classList.remove("selected"));
+        el.classList.add("selected");
+        document.getElementById("single-options").style.display = "none";
+        document.getElementById("single-results").style.display = "block";
+        document.getElementById("single-status").textContent =
+          "You voted: " + el.dataset.val + " · 2,842 votes total";
+      }
+
+      // --- Multi choice ---
+      function toggleMulti(el) {
+        el.classList.toggle("multi-selected");
+      }
+      function submitMulti() {
+        const sel = document.querySelectorAll(".multi-selected");
+        if (!sel.length) {
+          alert("Select at least one option.");
+          return;
+        }
+        const names = [...sel].map((e) => e.textContent.trim()).join(", ");
+        document.getElementById("multi-status").textContent =
+          "Voted for: " + names;
+        sel.forEach((e) => (e.style.opacity = "0.7"));
+      }
+
+      // --- Star rating ---
+      let currentRating = 0;
+      const labels = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
+      function hoverStar(n) {
+        document
+          .querySelectorAll(".star")
+          .forEach((s, i) => s.classList.toggle("lit", i < n));
+      }
+      function resetStarHover() {
+        document
+          .querySelectorAll(".star")
+          .forEach((s, i) => s.classList.toggle("lit", i < currentRating));
+      }
+      function rateStar(n) {
+        currentRating = n;
+        document.getElementById("rating-label").textContent =
+          labels[n] + " (" + n + "/5) — thanks for rating!";
+        resetStarHover();
+      }
+
+      // --- NPS ---
+      let npsVal = null;
+      function pickNPS(el, val) {
+        document
+          .querySelectorAll(".nps-cell")
+          .forEach((c) => c.classList.remove("nps-selected"));
+        el.classList.add("nps-selected");
+        npsVal = val;
+      }
+      function submitNPS() {
+        if (npsVal === null) {
+          alert("Pick a score first.");
+          return;
+        }
+        const type =
+          npsVal >= 9 ? "Promoter 🎉" : npsVal >= 7 ? "Passive" : "Detractor";
+        document.getElementById("nps-status").textContent =
+          "Score: " + npsVal + " — " + type + " · 3,651 total";
+      }
+
+      // --- Slider ---
+      function updateSlider(v) {
+        document.getElementById("slider-val").textContent = v;
+        const pct = (v / 40) * 100 + "%";
+        document.getElementById("hour-slider").style.setProperty("--val", pct);
+      }
+      function submitSlider() {
+        const v = document.getElementById("hour-slider").value;
+        document.getElementById("slider-status").textContent =
+          "You submitted: " + v + " h/week · 988 total";
+      }
+
+      // --- Image poll ---
+      let imgSelected = null;
+      function pickImage(el, name) {
+        document
+          .querySelectorAll(".img-option")
+          .forEach((o) => o.classList.remove("img-selected"));
+        el.classList.add("img-selected");
+        imgSelected = name;
+        document.getElementById("img-results").style.display = "block";
+        document.getElementById("img-status").textContent =
+          "You voted: " + name + " · 5,311 votes total";
+      }
+
+      // --- Yes / No ---
+      function pickYesNo(choice, yesPct) {
+        document
+          .querySelectorAll(".yesno-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document
+          .querySelector(choice === "Yes" ? ".yes-btn" : ".no-btn")
+          .classList.add("active");
+        document.getElementById("yesno-results").style.display = "block";
+        const noPct = 100 - yesPct;
+        document.getElementById("yn-yes").style.width = yesPct + "%";
+        document.getElementById("yn-yes").textContent = "Yes · " + yesPct + "%";
+        document.getElementById("yn-no").style.width = noPct + "%";
+        document.getElementById("yn-no").textContent = "No · " + noPct + "%";
+        document.getElementById("yesno-status").textContent =
+          "You voted: " + choice + " · 18,403 total";
+      }
+
+      // --- Open-ended ---
+      function submitOpen() {
+        const val = document.getElementById("open-textarea").value.trim();
+        if (!val) {
+          alert("Please write an answer first.");
+          return;
+        }
+        document.getElementById("open-status").textContent =
+          "Answer submitted! · 935 total";
+        document.getElementById("open-responses").style.display = "block";
+        document.getElementById("open-textarea").disabled = true;
+      }
+
+      // --- Ranked choice drag-and-drop ---
+      let dragSrc = null;
+      function dragStart(e) {
+        dragSrc = e.currentTarget;
+        e.dataTransfer.effectAllowed = "move";
+      }
+      function dragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      }
+      function dropRank(e) {
+        e.preventDefault();
+        const target = e.currentTarget;
+        if (!dragSrc || dragSrc === target) return;
+        const list = document.getElementById("rank-list");
+        const items = [...list.children];
+        const fromIdx = items.indexOf(dragSrc);
+        const toIdx = items.indexOf(target);
+        if (fromIdx < toIdx) list.insertBefore(dragSrc, target.nextSibling);
+        else list.insertBefore(dragSrc, target);
+        // renumber
+        [...list.children].forEach(
+          (el, i) => (el.querySelector(".rank-num").textContent = i + 1),
+        );
+      }
+      function submitRank() {
+        const order = [
+          ...document.querySelectorAll("#rank-list .rank-item"),
+        ].map((el) => el.textContent.trim().replace(/^\d+/, "").trim());
+        document.getElementById("rank-status").textContent =
+          "1st choice: " + order[0] + " · 2,106 total";
+      }
+
+      // --- Matrix ---
+      const matrixState = {};
+      function pickMatrix(el, row, col) {
+        const table = document.getElementById("matrix-table");
+        const cells = table.querySelectorAll(
+          'tr[data-row="' + row + '"] .matrix-cell',
+        );
+        cells.forEach((c) => c.classList.remove("matrix-selected"));
+        el.classList.add("matrix-selected");
+        matrixState[row] = col;
+      }
+      function submitMatrix() {
+        const rows = 5;
+        const answered = Object.keys(matrixState).length;
+        if (answered < rows) {
+          alert("Please rate all " + rows + " items before submitting.");
+          return;
+        }
+        document.getElementById("matrix-status").textContent =
+          "Survey submitted — thanks! · 6,781 total";
+      }
+
+      // --- Date / Time slots ---
+      function toggleSlot(el) {
+        el.classList.toggle("slot-selected");
+      }
+      function submitSlots() {
+        const selected = [...document.querySelectorAll(".slot-selected")].map(
+          (e) => e.textContent.trim(),
+        );
+        if (!selected.length) {
+          alert("Please select at least one slot.");
+          return;
+        }
+        document.getElementById("slot-status").textContent =
+          selected.length + " slot(s) confirmed · 13 responses";
+      }
+    </script>
+  </body>
+</html>
