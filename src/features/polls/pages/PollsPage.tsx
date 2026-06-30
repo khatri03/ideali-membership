@@ -11,7 +11,7 @@ import {
   Vote,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { APP_ROUTES } from "../../../app/router/routes";
+import { APP_ROUTES, buildMembershipPollCreatePath } from "../../../app/router/routes";
 import type { PollAudienceType, PollStatus } from "../../../types/polls";
 import { POLL_API_ROUTES } from "../../../types/pollsApi";
 import {
@@ -132,7 +132,7 @@ export function PollsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-800">
-                Phase 4/5
+                Phase 3/5
               </span>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
                 Best-practice hardening
@@ -144,6 +144,12 @@ export function PollsPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              to={buildMembershipPollCreatePath()}
+              className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+            >
+              Create poll
+            </Link>
             <Link
               to={APP_ROUTES.membershipDashboard}
               className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
@@ -312,8 +318,16 @@ export function PollsPage() {
               <p className="mt-2 text-sm text-slate-600">
                 {hasFilters
                   ? "Try clearing filters to see the full organizer list."
-                  : "Create the first poll in the backend to populate this list."}
+                  : "Create the first poll from the organizer create screen."}
               </p>
+              <div className="mt-5">
+                <Link
+                  to={buildMembershipPollCreatePath()}
+                  className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+                >
+                  Create poll
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -351,7 +365,9 @@ export function PollsPage() {
                           </p>
                           <div className="flex flex-wrap gap-2">
                             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                              {poll.requiredMembershipTypeUniqueId ? "Membership mapped" : "Public open"}
+                              {poll.requiredMembershipTypeUniqueIds.length > 0
+                                ? `${poll.requiredMembershipTypeUniqueIds.length} membership${poll.requiredMembershipTypeUniqueIds.length > 1 ? "s" : ""} mapped`
+                                : "Public open"}
                             </span>
                             <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-cyan-700">
                               {poll.startsAtUtc ? "Scheduled" : "No start window"}
@@ -365,7 +381,7 @@ export function PollsPage() {
                             {getPollAudienceCopy(poll.audienceType)}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
-                            {poll.requiredMembershipTypeUniqueId
+                            {poll.requiredMembershipTypeUniqueIds.length > 0
                               ? "Visible only to eligible members"
                               : "Visible to everyone"}
                           </p>

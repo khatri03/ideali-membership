@@ -9,9 +9,7 @@ export type PollQuestionType =
   | "OpenText"
   | "StarRating"
   | "Nps"
-  | "RankedChoice"
-  | "Matrix"
-  | "DateTimeAvailability";
+  | "RankedChoice";
 
 export type PollVoteIdentityType = "Authenticated" | "Anonymous";
 
@@ -22,7 +20,7 @@ export interface OrganizerPollSummary {
   description: string | null;
   audienceType: PollAudienceType;
   status: PollStatus;
-  requiredMembershipTypeUniqueId: string | null;
+  requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string | null;
   endsAtUtc: string | null;
   questionCount: number;
@@ -54,7 +52,7 @@ export interface OrganizerPollDetail {
   description: string | null;
   audienceType: PollAudienceType;
   status: PollStatus;
-  requiredMembershipTypeUniqueId: string | null;
+  requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string | null;
   endsAtUtc: string | null;
   questions: OrganizerPollQuestion[];
@@ -77,7 +75,7 @@ export interface OrganizerPollDraft {
   description: string | null;
   audienceType: PollAudienceType;
   status: PollStatus;
-  requiredMembershipTypeUniqueId: string | null;
+  requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string | null;
   endsAtUtc: string | null;
   questions: OrganizerPollQuestionDraft[];

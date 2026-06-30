@@ -6,9 +6,10 @@ Current phase: 3/5
 
 - Added an organizer-facing Polls page
 - Added a route at `/organizer/polls`
+- Added a poll draft create screen at `/organizer/polls/create`
 - Added a navigation entry under Membership
 - Wired the page to the live poll contract and organizer list endpoint
-- Added a visible frontend representation of the core poll types and access rules
+- Added a visible frontend representation of the supported poll types and access rules
 
 ## Why this shape
 
@@ -20,3 +21,4 @@ Current phase: 3/5
 
 - The page is API-aware and ready for live backend data.
 - The backend migration label remains `AddOrganizerPolls`.
+- The unsupported question types were trimmed from the contract and UI.

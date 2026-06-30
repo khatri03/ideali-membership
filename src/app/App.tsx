@@ -38,6 +38,7 @@ import {
   MembershipTitleStepPage,
   MembershipTypesPage,
   MembershipWizardResumePage,
+  PollCreatePage,
   PollsPage,
 } from "./router/lazyPages";
 
@@ -119,7 +120,10 @@ function RouterApp() {
                   element={<Navigate to={buildMembershipMembersPath({ membershipStatuses: ["PendingApproval"] })} replace />}
                 />
               </Route>
-              <Route path="organizer/polls" element={<PollsPage />} />
+              <Route path="organizer/polls">
+                <Route index element={<PollsPage />} />
+                <Route path="create" element={<PollCreatePage />} />
+              </Route>
               <Route path="organizer/membership/type/polls" element={<Navigate to={APP_ROUTES.membershipPolls} replace />} />
               <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />
               <Route path="organizer/custom-form">

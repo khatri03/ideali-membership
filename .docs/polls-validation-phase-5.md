@@ -8,6 +8,7 @@ Current phase: 5/5
 - Frontend builds cleanly after the API-backed poll page update.
 - Poll helper tests pass and cover the core display/query helpers.
 - Phase notes are aligned with the actual implementation state.
+- The polls controller contract test locks the supported question types.
 
 ## Final state
 
@@ -19,4 +20,5 @@ Current phase: 5/5
 ## Notes
 
 - The backend migration label remains `AddOrganizerPolls`.
+- Unsupported poll question types are removed from the live enum and UI mirror.
 - No further schema or route changes are required for the current MVP slice.

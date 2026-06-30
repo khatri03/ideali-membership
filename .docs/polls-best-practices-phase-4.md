@@ -11,6 +11,7 @@ Current phase: 4/5
 - Kept sample poll data in one place
 - Preserved the `Public` vs `Members only` rule with hidden-by-default access
 - Kept the frontend contract aligned with the schema and route design
+- Trimmed unsupported poll question types from the active contract
 
 ## Best-practice intent
 
@@ -21,6 +22,6 @@ Current phase: 4/5
 
 ## Notes
 
-- Backend migration still needs to be added in the .NET repo.
-- Migration label to use: `AddOrganizerPolls`
+- Backend migration is already applied in the .NET repo.
+- The current schema label is `AddOrganizerPolls`.
 - Final validation is captured in `polls-validation-phase-5.md`.

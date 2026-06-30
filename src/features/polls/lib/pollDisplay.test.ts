@@ -5,8 +5,16 @@ import { buildPollListQuery } from "./pollsApi";
 describe("poll display helpers", () => {
   it("keeps the supported question types categorized", () => {
     expect(POLL_TYPE_COPY.SingleChoice.status).toBe("Core");
-    expect(POLL_TYPE_COPY.Matrix.status).toBe("Deferred");
-    expect(POLL_TYPE_COPY.DateTimeAvailability.status).toBe("Deferred");
+    expect(POLL_TYPE_COPY.RankedChoice.status).toBe("Core");
+    expect(Object.keys(POLL_TYPE_COPY)).toEqual([
+      "SingleChoice",
+      "MultipleChoice",
+      "YesNo",
+      "OpenText",
+      "StarRating",
+      "Nps",
+      "RankedChoice",
+    ]);
   });
 
   it("returns the right audience copy", () => {
@@ -27,7 +35,7 @@ describe("poll display helpers", () => {
     expect(samplePolls).toHaveLength(2);
     expect(samplePolls[0]?.audienceType).toBe("Public");
     expect(samplePolls[1]?.audienceType).toBe("MembersOnly");
-    expect(samplePolls[1]?.requiredMembershipTypeUniqueId).toBe("membership-premium");
+    expect(samplePolls[1]?.requiredMembershipTypeUniqueIds).toEqual(["membership-premium"]);
   });
 });
 

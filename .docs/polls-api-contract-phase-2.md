@@ -74,3 +74,4 @@ Current phase: 2/6
 - Eligibility must be checked on both read and submit.
 - Anonymous public voting should still carry a stable anti-duplication identity.
 - Keep API shapes small and typed so the frontend can consume them without ad hoc mapping.
+- The organizer question-types endpoint is now locked to the supported enum set and covered by a controller contract test.

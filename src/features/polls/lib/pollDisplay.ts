@@ -1,6 +1,6 @@
-import type { OrganizerPollSummary, PollAudienceType, PollStatus, PollQuestionType } from "../../../types/polls";
+import type { OrganizerPollSummary, PollAudienceType, PollQuestionType, PollStatus } from "../../../types/polls";
 
-export const POLL_TYPE_COPY: Record<PollQuestionType, { label: string; description: string; status: "Core" | "Deferred" }> = {
+export const POLL_TYPE_COPY: Record<PollQuestionType, { label: string; description: string; status: "Core" }> = {
   SingleChoice: {
     label: "Single choice",
     description: "Best default when one answer is required.",
@@ -36,20 +36,10 @@ export const POLL_TYPE_COPY: Record<PollQuestionType, { label: string; descripti
     description: "Useful when prioritization matters.",
     status: "Core",
   },
-  Matrix: {
-    label: "Matrix / Grid",
-    description: "Deferred until the basic flow is stable.",
-    status: "Deferred",
-  },
-  DateTimeAvailability: {
-    label: "Date / Time availability",
-    description: "Deferred. This behaves more like scheduling.",
-    status: "Deferred",
-  },
 };
 
 export const POLL_PAGE_ROUTE_SUMMARY = {
-  organizerRouteCount: 5,
+  organizerRouteCount: 6,
   publicRouteCount: 3,
 } as const;
 
@@ -78,7 +68,7 @@ export function buildSamplePolls(): OrganizerPollSummary[] {
       description: "Public poll for attendees and members.",
       audienceType: "Public",
       status: "Published",
-      requiredMembershipTypeUniqueId: null,
+      requiredMembershipTypeUniqueIds: [],
       startsAtUtc: "2026-07-01T08:00:00Z",
       endsAtUtc: "2026-07-15T18:00:00Z",
       questionCount: 1,
@@ -93,7 +83,7 @@ export function buildSamplePolls(): OrganizerPollSummary[] {
       description: "Only active members of the mapped plan can see it.",
       audienceType: "MembersOnly",
       status: "Draft",
-      requiredMembershipTypeUniqueId: "membership-premium",
+      requiredMembershipTypeUniqueIds: ["membership-premium"],
       startsAtUtc: null,
       endsAtUtc: null,
       questionCount: 3,
