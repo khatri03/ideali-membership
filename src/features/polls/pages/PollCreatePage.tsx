@@ -286,6 +286,8 @@ export function PollCreatePage() {
   const [focusedMatrixColumnId, setFocusedMatrixColumnId] = useState<string | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
   const optionsListRef = useRef<HTMLDivElement | null>(null);
+  const matrixRowsListRef = useRef<HTMLDivElement | null>(null);
+  const matrixColumnsListRef = useRef<HTMLDivElement | null>(null);
   const questionInputRefs = useRef(new Map<string, HTMLButtonElement>());
   const optionInputRefs = useRef(new Map<string, HTMLInputElement>());
   const matrixRowInputRefs = useRef(new Map<string, HTMLInputElement>());
@@ -342,6 +344,50 @@ export function PollCreatePage() {
         }
 
         const bounds = optionsList.getBoundingClientRect();
+        const minX = bounds.left - draggingNodeRect.left;
+        const maxX = bounds.right - draggingNodeRect.right;
+        const minY = bounds.top - draggingNodeRect.top;
+        const maxY = bounds.bottom - draggingNodeRect.bottom;
+
+        return {
+          ...transform,
+          x: Math.min(Math.max(transform.x, minX), maxX),
+          y: Math.min(Math.max(transform.y, minY), maxY),
+        };
+      },
+    [],
+  );
+  const restrictMatrixRowDragToParent = useMemo<Modifier>(
+    () =>
+      ({ draggingNodeRect, transform }) => {
+        const rowsList = matrixRowsListRef.current;
+        if (!rowsList || !draggingNodeRect) {
+          return transform;
+        }
+
+        const bounds = rowsList.getBoundingClientRect();
+        const minX = bounds.left - draggingNodeRect.left;
+        const maxX = bounds.right - draggingNodeRect.right;
+        const minY = bounds.top - draggingNodeRect.top;
+        const maxY = bounds.bottom - draggingNodeRect.bottom;
+
+        return {
+          ...transform,
+          x: Math.min(Math.max(transform.x, minX), maxX),
+          y: Math.min(Math.max(transform.y, minY), maxY),
+        };
+      },
+    [],
+  );
+  const restrictMatrixColumnDragToParent = useMemo<Modifier>(
+    () =>
+      ({ draggingNodeRect, transform }) => {
+        const columnsList = matrixColumnsListRef.current;
+        if (!columnsList || !draggingNodeRect) {
+          return transform;
+        }
+
+        const bounds = columnsList.getBoundingClientRect();
         const minX = bounds.left - draggingNodeRect.left;
         const maxX = bounds.right - draggingNodeRect.right;
         const minY = bounds.top - draggingNodeRect.top;
@@ -611,6 +657,90 @@ export function PollCreatePage() {
   }
 
   function handleOptionDragCancel() {
+    setDraggedOptionId(null);
+    setDraggedOptionWidth(null);
+  }
+
+  function handleMatrixRowDragStart(event: DragStartEvent) {
+    setDraggedOptionId(String(event.active.id));
+    setDraggedOptionWidth(event.active.rect.current.initial?.width ?? null);
+  }
+
+  function handleMatrixRowDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    setDraggedOptionId(null);
+    setDraggedOptionWidth(null);
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    setDraft((current) => ({
+      ...current,
+      questions: current.questions.map((question) => {
+        if (question.id !== activeQuestionId) {
+          return question;
+        }
+
+        const fromIndex = question.matrixRows.findIndex((row) => row.id === String(active.id));
+        const toIndex = question.matrixRows.findIndex((row) => row.id === String(over.id));
+
+        if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+          return question;
+        }
+
+        return {
+          ...question,
+          matrixRows: arrayMove(question.matrixRows, fromIndex, toIndex),
+        };
+      }),
+    }));
+  }
+
+  function handleMatrixRowDragCancel() {
+    setDraggedOptionId(null);
+    setDraggedOptionWidth(null);
+  }
+
+  function handleMatrixColumnDragStart(event: DragStartEvent) {
+    setDraggedOptionId(String(event.active.id));
+    setDraggedOptionWidth(event.active.rect.current.initial?.width ?? null);
+  }
+
+  function handleMatrixColumnDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    setDraggedOptionId(null);
+    setDraggedOptionWidth(null);
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    setDraft((current) => ({
+      ...current,
+      questions: current.questions.map((question) => {
+        if (question.id !== activeQuestionId) {
+          return question;
+        }
+
+        const fromIndex = question.matrixColumns.findIndex((column) => column.id === String(active.id));
+        const toIndex = question.matrixColumns.findIndex((column) => column.id === String(over.id));
+
+        if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+          return question;
+        }
+
+        return {
+          ...question,
+          matrixColumns: arrayMove(question.matrixColumns, fromIndex, toIndex),
+        };
+      }),
+    }));
+  }
+
+  function handleMatrixColumnDragCancel() {
     setDraggedOptionId(null);
     setDraggedOptionWidth(null);
   }
@@ -1052,137 +1182,175 @@ export function PollCreatePage() {
                           </div>
 
                           <div className="grid gap-4 lg:grid-cols-2">
-                            <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white p-4">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-800">Rows</p>
-                                  <p className="text-xs text-slate-500">Add the statements voters will evaluate.</p>
-                                </div>
-                                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  {activeQuestion.matrixRows.length}
-                                </span>
-                              </div>
-
-                              <div className="space-y-2">
-                                {activeQuestion.matrixRows.map((row, rowIndex) => (
-                                  <div
-                                    key={row.id}
-                                    className="grid gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 p-2.5 md:grid-cols-[minmax(0,1fr)_auto]"
-                                  >
-                                    <input
-                                      value={row.label}
-                                      onChange={(event) =>
-                                        updateQuestion(activeQuestion.id, (current) => ({
-                                          ...current,
-                                          matrixRows: current.matrixRows.map((currentRow) =>
-                                            currentRow.id === row.id
-                                              ? {
-                                                  ...currentRow,
-                                                  label: event.target.value,
-                                                  value: createOptionValueFromLabel(event.target.value) || currentRow.value,
-                                                }
-                                              : currentRow,
-                                          ),
-                                        }))
-                                      }
-                                      ref={(input) => {
-                                        if (input) {
-                                          matrixRowInputRefs.current.set(row.id, input);
-                                        } else {
-                                          matrixRowInputRefs.current.delete(row.id);
-                                        }
-                                      }}
-                                      className="w-full rounded-[0.85rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                                      placeholder={`Row ${rowIndex + 1}`}
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => removeMatrixRow(activeQuestion.id, row.id)}
-                                      disabled={activeQuestion.matrixRows.length === 1}
-                                      className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                      aria-label="Remove row"
-                                    >
-                                      <span className="text-lg leading-none">×</span>
-                                    </button>
+                            <DndContext
+                              sensors={dragSensors}
+                              collisionDetection={closestCenter}
+                              modifiers={[restrictMatrixRowDragToParent]}
+                              onDragStart={handleMatrixRowDragStart}
+                              onDragEnd={handleMatrixRowDragEnd}
+                              onDragCancel={handleMatrixRowDragCancel}
+                            >
+                              <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800">Rows</p>
+                                    <p className="text-xs text-slate-500">Add the statements voters will evaluate.</p>
                                   </div>
-                                ))}
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => addMatrixRow(activeQuestion.id)}
-                                className="inline-flex w-full items-center justify-center rounded-[1rem] border border-dashed border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
-                              >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add row
-                              </button>
-                            </div>
-
-                            <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white p-4">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-800">Columns</p>
-                                  <p className="text-xs text-slate-500">Add the response options for each row.</p>
+                                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    {activeQuestion.matrixRows.length}
+                                  </span>
                                 </div>
-                                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  {activeQuestion.matrixColumns.length}
-                                </span>
-                              </div>
 
-                              <div className="space-y-2">
-                                {activeQuestion.matrixColumns.map((column, columnIndex) => (
-                                  <div
-                                    key={column.id}
-                                    className="grid gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 p-2.5 md:grid-cols-[minmax(0,1fr)_auto]"
-                                  >
-                                    <input
-                                      value={column.label}
-                                      onChange={(event) =>
-                                        updateQuestion(activeQuestion.id, (current) => ({
-                                          ...current,
-                                          matrixColumns: current.matrixColumns.map((currentColumn) =>
-                                            currentColumn.id === column.id
-                                              ? {
-                                                  ...currentColumn,
-                                                  label: event.target.value,
-                                                  value: createOptionValueFromLabel(event.target.value) || currentColumn.value,
-                                                }
-                                              : currentColumn,
-                                          ),
-                                        }))
-                                      }
-                                      ref={(input) => {
-                                        if (input) {
-                                          matrixColumnInputRefs.current.set(column.id, input);
-                                        } else {
-                                          matrixColumnInputRefs.current.delete(column.id);
+                                <SortableContext
+                                  items={activeQuestion.matrixRows.map((row) => row.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  <div ref={matrixRowsListRef} className="flex flex-col gap-3">
+                                    {activeQuestion.matrixRows.map((row, rowIndex) => (
+                                      <SortableQuestionOptionRow
+                                        key={row.id}
+                                        option={row}
+                                        optionIndex={rowIndex}
+                                        optionCount={activeQuestion.matrixRows.length}
+                                        placeholderPrefix="Row"
+                                        dragLabel="row"
+                                        removeLabel="Remove row"
+                                        onChange={(nextLabel) =>
+                                          updateQuestion(activeQuestion.id, (current) => ({
+                                            ...current,
+                                            matrixRows: current.matrixRows.map((currentRow) =>
+                                              currentRow.id === row.id
+                                                ? {
+                                                    ...currentRow,
+                                                    label: nextLabel,
+                                                    value: createOptionValueFromLabel(nextLabel) || currentRow.value,
+                                                  }
+                                                : currentRow,
+                                            ),
+                                          }))
                                         }
-                                      }}
-                                      className="w-full rounded-[0.85rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                                      placeholder={`Column ${columnIndex + 1}`}
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => removeMatrixColumn(activeQuestion.id, column.id)}
-                                      disabled={activeQuestion.matrixColumns.length === 1}
-                                      className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                      aria-label="Remove column"
-                                    >
-                                      <span className="text-lg leading-none">×</span>
-                                    </button>
+                                        onRemove={() => removeMatrixRow(activeQuestion.id, row.id)}
+                                        inputRef={(input) => {
+                                          if (input) {
+                                            matrixRowInputRefs.current.set(row.id, input);
+                                          } else {
+                                            matrixRowInputRefs.current.delete(row.id);
+                                          }
+                                        }}
+                                      />
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
+                                </SortableContext>
 
-                              <button
-                                type="button"
-                                onClick={() => addMatrixColumn(activeQuestion.id)}
-                                className="inline-flex w-full items-center justify-center rounded-[1rem] border border-dashed border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
-                              >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add column
-                              </button>
-                            </div>
+                                {typeof document !== "undefined"
+                                  ? createPortal(
+                                      <DragOverlay adjustScale={false} dropAnimation={null} modifiers={[restrictMatrixRowDragToParent]}>
+                                        {draggedOptionId ? (
+                                          <OptionDragPreview
+                                            option={activeQuestion.matrixRows.find((row) => row.id === draggedOptionId) ?? null}
+                                            width={draggedOptionWidth}
+                                          />
+                                        ) : null}
+                                      </DragOverlay>,
+                                      document.body,
+                                    )
+                                  : null}
+
+                                <button
+                                  type="button"
+                                  onClick={() => addMatrixRow(activeQuestion.id)}
+                                  className="inline-flex w-full items-center justify-center rounded-[1rem] border border-dashed border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add row
+                                </button>
+                              </div>
+                            </DndContext>
+
+                            <DndContext
+                              sensors={dragSensors}
+                              collisionDetection={closestCenter}
+                              modifiers={[restrictMatrixColumnDragToParent]}
+                              onDragStart={handleMatrixColumnDragStart}
+                              onDragEnd={handleMatrixColumnDragEnd}
+                              onDragCancel={handleMatrixColumnDragCancel}
+                            >
+                              <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800">Columns</p>
+                                    <p className="text-xs text-slate-500">Add the response options for each row.</p>
+                                  </div>
+                                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    {activeQuestion.matrixColumns.length}
+                                  </span>
+                                </div>
+
+                                <SortableContext
+                                  items={activeQuestion.matrixColumns.map((column) => column.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  <div ref={matrixColumnsListRef} className="flex flex-col gap-3">
+                                    {activeQuestion.matrixColumns.map((column, columnIndex) => (
+                                      <SortableQuestionOptionRow
+                                        key={column.id}
+                                        option={column}
+                                        optionIndex={columnIndex}
+                                        optionCount={activeQuestion.matrixColumns.length}
+                                        placeholderPrefix="Column"
+                                        dragLabel="column"
+                                        removeLabel="Remove column"
+                                        onChange={(nextLabel) =>
+                                          updateQuestion(activeQuestion.id, (current) => ({
+                                            ...current,
+                                            matrixColumns: current.matrixColumns.map((currentColumn) =>
+                                              currentColumn.id === column.id
+                                                ? {
+                                                    ...currentColumn,
+                                                    label: nextLabel,
+                                                    value: createOptionValueFromLabel(nextLabel) || currentColumn.value,
+                                                  }
+                                                : currentColumn,
+                                            ),
+                                          }))
+                                        }
+                                        onRemove={() => removeMatrixColumn(activeQuestion.id, column.id)}
+                                        inputRef={(input) => {
+                                          if (input) {
+                                            matrixColumnInputRefs.current.set(column.id, input);
+                                          } else {
+                                            matrixColumnInputRefs.current.delete(column.id);
+                                          }
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                </SortableContext>
+
+                                {typeof document !== "undefined"
+                                  ? createPortal(
+                                      <DragOverlay adjustScale={false} dropAnimation={null} modifiers={[restrictMatrixColumnDragToParent]}>
+                                        {draggedOptionId ? (
+                                          <OptionDragPreview
+                                            option={activeQuestion.matrixColumns.find((column) => column.id === draggedOptionId) ?? null}
+                                            width={draggedOptionWidth}
+                                          />
+                                        ) : null}
+                                      </DragOverlay>,
+                                      document.body,
+                                    )
+                                  : null}
+
+                                <button
+                                  type="button"
+                                  onClick={() => addMatrixColumn(activeQuestion.id)}
+                                  className="inline-flex w-full items-center justify-center rounded-[1rem] border border-dashed border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add column
+                                </button>
+                              </div>
+                            </DndContext>
                           </div>
                         </div>
                       ) : null}
@@ -1390,6 +1558,9 @@ function SortableQuestionOptionRow({
   onChange,
   onRemove,
   inputRef,
+  placeholderPrefix = "Option",
+  dragLabel = "option",
+  removeLabel = "Remove option",
 }: {
   option: PollQuestionOptionDraft;
   optionIndex: number;
@@ -1397,6 +1568,9 @@ function SortableQuestionOptionRow({
   onChange: (nextLabel: string) => void;
   onRemove: () => void;
   inputRef: (input: HTMLInputElement | null) => void;
+  placeholderPrefix?: string;
+  dragLabel?: string;
+  removeLabel?: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: option.id,
@@ -1418,7 +1592,7 @@ function SortableQuestionOptionRow({
       <button
         type="button"
         className="flex h-full cursor-grab items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white px-3 py-3 text-sm text-slate-400 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 active:cursor-grabbing"
-        aria-label="Drag option to reorder"
+        aria-label={`Drag ${dragLabel} to reorder`}
         {...attributes}
         {...listeners}
       >
@@ -1431,7 +1605,7 @@ function SortableQuestionOptionRow({
           onChange={(event) => onChange(event.target.value)}
           ref={inputRef}
           className="w-full rounded-[0.85rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-          placeholder={`Option ${optionIndex + 1}`}
+          placeholder={`${placeholderPrefix} ${optionIndex + 1}`}
         />
       </label>
 
@@ -1441,7 +1615,7 @@ function SortableQuestionOptionRow({
           onClick={onRemove}
           disabled={optionCount === 1}
           className="inline-flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Remove option"
+          aria-label={removeLabel}
         >
           <span className="text-lg leading-none">×</span>
         </button>
