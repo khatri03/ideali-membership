@@ -5,6 +5,7 @@ import {
   DragOverlay,
   PointerSensor,
   closestCenter,
+  type Modifier,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -273,6 +274,7 @@ export function PollCreatePage() {
   const [draggedOptionId, setDraggedOptionId] = useState<string | null>(null);
   const [draggedOptionWidth, setDraggedOptionWidth] = useState<number | null>(null);
   const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
+  const optionsListRef = useRef<HTMLDivElement | null>(null);
   const optionInputRefs = useRef(new Map<string, HTMLInputElement>());
   const [draft, setDraft] = useState<PollDraft>({
     title: "",
@@ -290,6 +292,28 @@ export function PollCreatePage() {
     staleTime: 5 * 60 * 1000,
   });
   const dragSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const restrictOptionDragToParent = useMemo<Modifier>(
+    () =>
+      ({ draggingNodeRect, transform }) => {
+        const optionsList = optionsListRef.current;
+        if (!optionsList || !draggingNodeRect) {
+          return transform;
+        }
+
+        const bounds = optionsList.getBoundingClientRect();
+        const minX = bounds.left - draggingNodeRect.left;
+        const maxX = bounds.right - draggingNodeRect.right;
+        const minY = bounds.top - draggingNodeRect.top;
+        const maxY = bounds.bottom - draggingNodeRect.bottom;
+
+        return {
+          ...transform,
+          x: Math.min(Math.max(transform.x, minX), maxX),
+          y: Math.min(Math.max(transform.y, minY), maxY),
+        };
+      },
+    [],
+  );
 
   const createPollMutation = useMutation({
     mutationFn: createOrganizerPoll,
@@ -789,6 +813,7 @@ export function PollCreatePage() {
                           <DndContext
                             sensors={dragSensors}
                             collisionDetection={closestCenter}
+                            modifiers={[restrictOptionDragToParent]}
                             onDragStart={handleOptionDragStart}
                             onDragEnd={handleOptionDragEnd}
                             onDragCancel={handleOptionDragCancel}
@@ -808,7 +833,7 @@ export function PollCreatePage() {
                               items={activeQuestion.options.map((option) => option.id)}
                               strategy={verticalListSortingStrategy}
                             >
-                              <div className="mt-4 flex flex-col gap-3">
+                              <div ref={optionsListRef} className="mt-4 flex flex-col gap-3">
                                 {activeQuestion.options.map((option, optionIndex) => (
                                   <SortableQuestionOptionRow
                                     key={option.id}
@@ -844,7 +869,11 @@ export function PollCreatePage() {
 
                             {typeof document !== "undefined"
                               ? createPortal(
-                                  <DragOverlay adjustScale={false} dropAnimation={null}>
+                                  <DragOverlay
+                                    adjustScale={false}
+                                    dropAnimation={null}
+                                    modifiers={[restrictOptionDragToParent]}
+                                  >
                                     {draggedOptionId ? (
                                       <OptionDragPreview
                                         option={
@@ -1231,12 +1260,7 @@ function QuestionTypeCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-3">
-          <span
-            className={[
-              "inline-flex h-10 w-10 items-center justify-center rounded-2xl ring-1 transition",
-              selected ? "bg-white text-cyan-700 ring-cyan-200" : "bg-slate-50 text-slate-500 ring-slate-200",
-            ].join(" ")}
-          >
+          <span className={selected ? "inline-flex text-cyan-700" : "inline-flex text-slate-500"}>
             <choice.icon className="h-5 w-5" />
           </span>
           <p className="text-sm font-semibold text-slate-900">{choice.label}</p>
