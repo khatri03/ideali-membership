@@ -71,7 +71,6 @@ type QuestionTypeChoice = {
   label: string;
   description: string;
   optionMode: "none" | "fixed" | "list";
-  badge: string;
   icon: ComponentType<{ className?: string }>;
 };
 
@@ -81,7 +80,6 @@ const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
     label: "Single choice",
     description: "The default poll format when one answer is allowed.",
     optionMode: "list",
-    badge: "Core",
     icon: CircleDot,
   },
   {
@@ -89,7 +87,6 @@ const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
     label: "Multiple choice",
     description: "Use when more than one answer can be selected.",
     optionMode: "list",
-    badge: "Core",
     icon: CheckSquare2,
   },
   {
@@ -97,7 +94,6 @@ const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
     label: "Yes / No",
     description: "Fast binary feedback with no extra setup.",
     optionMode: "fixed",
-    badge: "Built-in",
     icon: ToggleLeft,
   },
   {
@@ -105,7 +101,6 @@ const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
     label: "Open text",
     description: "Best for free-form feedback or comments.",
     optionMode: "none",
-    badge: "Simple",
     icon: MessageSquareText,
   },
 ];
@@ -253,18 +248,6 @@ function validatePollDraft(draft: PollDraft) {
   return null;
 }
 
-function buildQuestionTypeTone(optionMode: QuestionTypeChoice["optionMode"]) {
-  if (optionMode === "list") {
-    return "bg-cyan-50 text-cyan-700";
-  }
-
-  if (optionMode === "fixed") {
-    return "bg-emerald-50 text-emerald-700";
-  }
-
-  return "bg-slate-100 text-slate-600";
-}
-
 export function PollCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -329,11 +312,11 @@ export function PollCreatePage() {
 
   const validationError = useMemo(() => validatePollDraft(draft), [draft]);
   const membershipTypeOptions = membershipTypesQuery.data ?? [];
-  const questionTypeChoices = QUESTION_TYPE_METADATA;
   const activeQuestion = useMemo(
     () => draft.questions.find((question) => question.id === activeQuestionId) ?? draft.questions[0],
     [activeQuestionId, draft.questions],
   );
+  const questionTypeChoices = QUESTION_TYPE_METADATA;
   const activeQuestionIndex = draft.questions.findIndex((question) => question.id === activeQuestion?.id);
   const activeQuestionChoice = activeQuestion ? questionTypeChoices.find((choice) => choice.value === activeQuestion.questionType) ?? null : null;
   const questionCount = draft.questions.length;
@@ -644,28 +627,6 @@ export function PollCreatePage() {
               </button>
             </div>
 
-            <div className="mt-6 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Supported formats</p>
-                  <p className="text-sm leading-6 text-slate-500">The builder is intentionally narrow for MVP.</p>
-                </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  4 core types
-                </span>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {QUESTION_TYPE_METADATA.map((choice) => (
-                  <QuestionTypeCard
-                    key={choice.value}
-                    choice={choice}
-                    selected={activeQuestion?.questionType === choice.value}
-                    onSelect={() => activeQuestion && setQuestionType(activeQuestion.id, choice.value)}
-                  />
-                ))}
-              </div>
-            </div>
-
             <div className="mt-6 grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
               <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between gap-3">
@@ -700,14 +661,6 @@ export function PollCreatePage() {
                               {question.text || "Untitled question"}
                             </p>
                           </div>
-                          <span
-                            className={[
-                              "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ring-1",
-                              buildQuestionTypeTone(choice?.optionMode ?? "none"),
-                            ].join(" ")}
-                          >
-                            {choice?.badge ?? "Core"}
-                          </span>
                         </div>
                       </button>
                     );
@@ -1030,18 +983,6 @@ export function PollCreatePage() {
                           {activeQuestion?.text || "Write the question text here"}
                         </p>
                       </div>
-                      <span
-                        className={[
-                          "rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ring-1",
-                          activeQuestionChoice ? buildQuestionTypeTone(activeQuestionChoice.optionMode) : "bg-slate-100 text-slate-500 ring-slate-200",
-                        ].join(" ")}
-                      >
-                        {activeQuestionChoice?.optionMode === "fixed"
-                          ? "Built-in"
-                          : activeQuestionChoice?.optionMode === "none"
-                            ? "Simple"
-                            : "Core"}
-                      </span>
                     </div>
 
                     <div className="mt-4">
@@ -1259,21 +1200,15 @@ function QuestionTypeCard({
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-3">
-          <span className={selected ? "inline-flex text-cyan-700" : "inline-flex text-slate-500"}>
-            <choice.icon className="h-5 w-5" />
-          </span>
-          <p className="text-sm font-semibold text-slate-900">{choice.label}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-500">{choice.description}</p>
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className={selected ? "inline-flex text-cyan-700" : "inline-flex text-slate-500"}>
+              <choice.icon className="h-5 w-5" />
+            </span>
+            <p className="min-w-0 text-sm font-semibold text-slate-900">{choice.label}</p>
+          </div>
+          <p className="text-sm leading-6 text-slate-500">{choice.description}</p>
         </div>
-        <span
-          className={[
-            "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ring-1",
-            buildQuestionTypeTone(choice.optionMode),
-          ].join(" ")}
-        >
-          {choice.optionMode === "list" ? "Core" : choice.optionMode === "fixed" ? "Built-in" : "Simple"}
-        </span>
       </div>
     </button>
   );
