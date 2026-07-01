@@ -1,6 +1,6 @@
 import { getJson, postJson, putJson } from "../../../lib/api";
 import { readResponseData } from "../../../lib/parseUtils";
-import type { PollAudienceType, PollStatus } from "../../../types/polls";
+import type { PollAudienceType, PollListSortBy, PollStatus } from "../../../types/polls";
 import type { PollQuestionType } from "../../../types/polls";
 import { POLL_API_ROUTES } from "../../../types/pollsApi";
 import type {
@@ -17,6 +17,8 @@ export interface PollListFilters {
   searchText: string;
   audienceType: PollAudienceType | null;
   status: PollStatus | null;
+  sortBy?: PollListSortBy | null;
+  sortOrder?: "asc" | "desc" | null;
 }
 
 export interface PollQuestionTypeListItem {
@@ -87,6 +89,14 @@ export function buildPollListQuery(filters: PollListFilters) {
 
   if (filters.status) {
     searchParams.set("status", filters.status);
+  }
+
+  if (filters.sortBy) {
+    searchParams.set("sortBy", filters.sortBy);
+  }
+
+  if (filters.sortOrder) {
+    searchParams.set("sortOrder", filters.sortOrder);
   }
 
   return searchParams.toString();

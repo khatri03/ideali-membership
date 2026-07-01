@@ -1,0 +1,2573 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poll Builder — PollDesk</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f7f7f5;
+        --surface: #ffffff;
+        --border: #e2e2dc;
+        --border-focus: #2a5cff;
+        --ink: #111110;
+        --ink-2: #55554f;
+        --ink-3: #9b9b93;
+        --accent: #2a5cff;
+        --accent-light: #eef2ff;
+        --accent-dim: #c7d3ff;
+        --success: #18794e;
+        --success-bg: #edfaf3;
+        --warning: #8f5e1a;
+        --warning-bg: #fef6e4;
+        --danger: #c12b2b;
+        --danger-bg: #fef0f0;
+        --sidebar-w: 260px;
+        --topbar-h: 56px;
+        --radius: 8px;
+        --radius-lg: 12px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "DM Sans", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      /* ── TOP BAR ── */
+      .topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--topbar-h);
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        gap: 16px;
+        z-index: 100;
+        box-shadow: var(--shadow-sm);
+      }
+      .topbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--ink);
+        text-decoration: none;
+        flex-shrink: 0;
+      }
+      .topbar-brand .brand-dot {
+        width: 26px;
+        height: 26px;
+        background: var(--accent);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .topbar-divider {
+        width: 1px;
+        height: 24px;
+        background: var(--border);
+        margin: 0 4px;
+      }
+      .topbar-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .topbar-breadcrumb .crumb-active {
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .topbar-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* ── SIDEBAR ── */
+      .sidebar {
+        position: fixed;
+        top: var(--topbar-h);
+        left: 0;
+        bottom: 0;
+        width: var(--sidebar-w);
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        z-index: 90;
+      }
+      .sidebar-section {
+        padding: 16px 12px 4px;
+      }
+      .sidebar-section-label {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        padding: 0 8px;
+        margin-bottom: 4px;
+      }
+      .sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: var(--radius);
+        font-size: 13.5px;
+        color: var(--ink-2);
+        cursor: pointer;
+        transition:
+          background 0.12s,
+          color 0.12s;
+        text-decoration: none;
+        margin-bottom: 2px;
+      }
+      .sidebar-item:hover {
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .sidebar-item.active {
+        background: var(--accent-light);
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .sidebar-item .si-icon {
+        width: 18px;
+        text-align: center;
+        font-size: 15px;
+        flex-shrink: 0;
+      }
+      .sidebar-item .si-badge {
+        margin-left: auto;
+        background: var(--accent);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 10px;
+        padding: 1px 6px;
+      }
+      .sidebar-divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 8px 12px;
+      }
+
+      /* ── MAIN CONTENT ── */
+      .main-content {
+        margin-left: var(--sidebar-w);
+        padding-top: var(--topbar-h);
+        min-height: 100vh;
+      }
+
+      /* ── PAGE HEADER ── */
+      .page-header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 20px 32px;
+      }
+      .page-header h1 {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 0 2px;
+        color: var(--ink);
+      }
+      .page-header p {
+        font-size: 13.5px;
+        color: var(--ink-2);
+        margin: 0;
+      }
+
+      /* ── BUILDER LAYOUT ── */
+      .builder-wrap {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 24px;
+        padding: 24px 32px;
+        max-width: 1200px;
+      }
+
+      /* ── CARD ── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+      }
+      .card-header-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .card-header-bar h2 {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--ink);
+        margin: 0;
+      }
+      .card-body-pad {
+        padding: 20px;
+      }
+
+      /* ── STEP INDICATOR ── */
+      .steps-bar {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 0 20px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+      }
+      .step-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px 12px 0;
+        font-size: 13px;
+        color: var(--ink-3);
+        cursor: pointer;
+        position: relative;
+        transition: color 0.15s;
+      }
+      .step-item + .step-item::before {
+        content: "›";
+        color: var(--border);
+        margin-right: 16px;
+        font-size: 16px;
+      }
+      .step-item.active {
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .step-item.done {
+        color: var(--success);
+      }
+      .step-num {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1.5px solid currentColor;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .step-item.done .step-num {
+        background: var(--success);
+        border-color: var(--success);
+        color: #fff;
+      }
+      .step-item.done .step-num::after {
+        content: "✓";
+      }
+      .step-item.done .step-num span {
+        display: none;
+      }
+
+      /* ── POLL TYPE SELECTOR ── */
+      .poll-type-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .poll-type-card {
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px 14px 12px;
+        cursor: pointer;
+        transition:
+          border-color 0.12s,
+          background 0.12s,
+          box-shadow 0.12s;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .poll-type-card:hover {
+        border-color: var(--accent-dim);
+        background: var(--accent-light);
+      }
+      .poll-type-card.selected {
+        border-color: var(--accent);
+        background: var(--accent-light);
+        box-shadow: 0 0 0 3px rgba(42, 92, 255, 0.1);
+      }
+      .ptc-icon {
+        font-size: 20px;
+        line-height: 1;
+      }
+      .ptc-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .ptc-desc {
+        font-size: 12px;
+        color: var(--ink-3);
+        line-height: 1.4;
+      }
+      .ptc-check {
+        margin-left: auto;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1.5px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        flex-shrink: 0;
+        transition: all 0.12s;
+        align-self: flex-start;
+      }
+      .poll-type-card.selected .ptc-check {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      /* ── FORM CONTROLS ── */
+      .form-group {
+        margin-bottom: 18px;
+      }
+      .form-label {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--ink-2);
+        margin-bottom: 6px;
+      }
+      .form-label .required {
+        color: var(--danger);
+        margin-left: 2px;
+      }
+      .form-label .opt {
+        color: var(--ink-3);
+        font-weight: 400;
+        font-size: 11.5px;
+      }
+      .form-control,
+      .form-select {
+        width: 100%;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        padding: 8px 12px;
+        font-size: 13.5px;
+        font-family: inherit;
+        color: var(--ink);
+        background: var(--surface);
+        transition:
+          border-color 0.12s,
+          box-shadow 0.12s;
+        outline: none;
+      }
+      .form-control:focus,
+      .form-select:focus {
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 3px rgba(42, 92, 255, 0.1);
+      }
+      textarea.form-control {
+        resize: vertical;
+        min-height: 80px;
+      }
+      .form-hint {
+        font-size: 12px;
+        color: var(--ink-3);
+        margin-top: 5px;
+      }
+      .char-count {
+        font-family: "DM Mono", monospace;
+        font-size: 11.5px;
+        color: var(--ink-3);
+        float: right;
+      }
+
+      /* ── OPTION LIST ── */
+      .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .option-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg);
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        padding: 6px 10px;
+        transition: border-color 0.12s;
+      }
+      .option-row:focus-within {
+        border-color: var(--border-focus);
+        background: #fff;
+      }
+      .option-drag {
+        cursor: grab;
+        color: var(--ink-3);
+        font-size: 14px;
+        flex-shrink: 0;
+        padding: 2px;
+        user-select: none;
+      }
+      .option-drag:active {
+        cursor: grabbing;
+      }
+      .option-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 13.5px;
+        font-family: inherit;
+        color: var(--ink);
+      }
+      .option-input::placeholder {
+        color: var(--ink-3);
+      }
+      .option-remove {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        color: var(--ink-3);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition:
+          background 0.1s,
+          color 0.1s;
+        flex-shrink: 0;
+      }
+      .option-remove:hover {
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+      .add-option-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--accent);
+        font-weight: 500;
+        border: 1.5px dashed var(--accent-dim);
+        border-radius: var(--radius);
+        padding: 8px 14px;
+        cursor: pointer;
+        background: transparent;
+        transition:
+          background 0.12s,
+          border-color 0.12s;
+        width: 100%;
+        margin-top: 4px;
+      }
+      .add-option-btn:hover {
+        background: var(--accent-light);
+        border-color: var(--accent);
+      }
+
+      /* ── DYNAMIC SECTIONS ── */
+      .poll-section {
+        display: none;
+        animation: fadeIn 0.18s ease;
+      }
+      .poll-section.active {
+        display: block;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* ── SCALE BUILDER ── */
+      .scale-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .scale-input {
+        width: 70px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        padding: 7px 10px;
+        font-size: 13.5px;
+        font-family: inherit;
+        text-align: center;
+        outline: none;
+        transition: border-color 0.12s;
+      }
+      .scale-input:focus {
+        border-color: var(--border-focus);
+      }
+
+      /* ── MATRIX BUILDER ── */
+      .matrix-config {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .matrix-col-list,
+      .matrix-row-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      /* ── TOGGLE ── */
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--bg);
+      }
+      .toggle-row:last-child {
+        border-bottom: none;
+      }
+      .toggle-info .tl {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .toggle-info .td {
+        font-size: 12px;
+        color: var(--ink-3);
+        margin-top: 1px;
+      }
+      .form-switch .form-check-input {
+        width: 36px;
+        height: 20px;
+        cursor: pointer;
+      }
+      .form-switch .form-check-input:checked {
+        background-color: var(--accent);
+        border-color: var(--accent);
+      }
+      .form-switch .form-check-input:focus {
+        box-shadow: 0 0 0 3px rgba(42, 92, 255, 0.12);
+      }
+
+      /* ── BUTTONS ── */
+      .btn {
+        border-radius: var(--radius);
+        font-size: 13.5px;
+        font-weight: 500;
+        font-family: inherit;
+        transition: all 0.12s;
+      }
+      .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: #1e4de0;
+        border-color: #1e4de0;
+      }
+      .btn-outline-secondary {
+        border: 1.5px solid var(--border);
+        background: transparent;
+        color: var(--ink-2);
+      }
+      .btn-outline-secondary:hover {
+        background: var(--bg);
+        border-color: #ccc;
+        color: var(--ink);
+      }
+      .btn-ghost {
+        border: none;
+        background: transparent;
+        color: var(--ink-2);
+        padding: 6px 12px;
+        cursor: pointer;
+      }
+      .btn-ghost:hover {
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .btn-sm {
+        padding: 5px 12px;
+        font-size: 12.5px;
+      }
+      .btn-danger-outline {
+        border: 1.5px solid var(--danger);
+        color: var(--danger);
+        background: transparent;
+      }
+      .btn-danger-outline:hover {
+        background: var(--danger-bg);
+      }
+
+      /* ── PREVIEW PANEL ── */
+      .preview-panel {
+        position: sticky;
+        top: calc(var(--topbar-h) + 24px);
+      }
+      .preview-device {
+        background: #1a1a18;
+        border-radius: 20px;
+        padding: 3px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      }
+      .preview-screen {
+        background: #fff;
+        border-radius: 18px;
+        overflow: hidden;
+        min-height: 480px;
+      }
+      .preview-topbar {
+        background: var(--accent);
+        height: 44px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+        gap: 8px;
+      }
+      .preview-topbar .ptb-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+      }
+      .preview-body {
+        padding: 20px 16px;
+      }
+      .preview-poll-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 4px;
+        line-height: 1.4;
+      }
+      .preview-poll-desc {
+        font-size: 12px;
+        color: var(--ink-2);
+        margin-bottom: 18px;
+      }
+      .preview-option {
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-size: 13px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink);
+        cursor: pointer;
+        transition:
+          border-color 0.12s,
+          background 0.12s;
+      }
+      .preview-option:hover {
+        border-color: var(--accent);
+        background: var(--accent-light);
+      }
+      .preview-option .po-marker {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 1.5px solid var(--border);
+        flex-shrink: 0;
+      }
+      .preview-submit {
+        width: 100%;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 13.5px;
+        font-weight: 600;
+        margin-top: 12px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .preview-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 320px;
+        color: var(--ink-3);
+        text-align: center;
+        padding: 20px;
+      }
+      .preview-empty .pe-icon {
+        font-size: 36px;
+        margin-bottom: 10px;
+        opacity: 0.4;
+      }
+      .preview-empty p {
+        font-size: 13px;
+        margin: 0;
+      }
+
+      /* ── SETTINGS PANEL ── */
+      .settings-section {
+        margin-bottom: 0;
+      }
+      .settings-section + .settings-section {
+        border-top: 1px solid var(--border);
+        padding-top: 0;
+      }
+
+      /* ── TAGS ── */
+      .tag-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--accent-light);
+        border: 1px solid var(--accent-dim);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 12px;
+        color: var(--accent);
+        font-weight: 500;
+      }
+      .tag-remove {
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        color: var(--accent-dim);
+      }
+      .tag-remove:hover {
+        color: var(--danger);
+      }
+
+      /* ── STATUS BADGE ── */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .status-draft {
+        background: var(--warning-bg);
+        color: var(--warning);
+      }
+      .status-live {
+        background: var(--success-bg);
+        color: var(--success);
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      /* ── NOTIFICATION TOAST ── */
+      #toast-wrap {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      }
+      .toast-msg {
+        background: var(--ink);
+        color: #fff;
+        border-radius: var(--radius);
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        box-shadow: var(--shadow-md);
+        animation: slideUp 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        pointer-events: auto;
+      }
+      .toast-msg.success {
+        background: #18794e;
+      }
+      .toast-msg.error {
+        background: var(--danger);
+      }
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* ── DIVIDER TEXT ── */
+      .section-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        margin: 20px 0 14px;
+      }
+      .section-divider::before,
+      .section-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      /* ── COLLAPSIBLE ── */
+      .collapse-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        user-select: none;
+        padding: 14px 20px;
+      }
+      .collapse-trigger h2 {
+        margin: 0;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .collapse-trigger .ct-arrow {
+        transition: transform 0.2s;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      .collapse-trigger.collapsed .ct-arrow {
+        transform: rotate(-90deg);
+      }
+
+      /* ── STAR PREVIEW ── */
+      .star-preview {
+        display: flex;
+        gap: 6px;
+      }
+      .star-prev {
+        font-size: 24px;
+        color: #e5e5dc;
+        cursor: pointer;
+        transition: color 0.1s;
+      }
+      .star-prev.lit {
+        color: #f59e0b;
+      }
+
+      /* ── TIMELINE / SCHEDULE ── */
+      .date-time-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      /* ── SCROLLBAR ── */
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 99px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #ccc;
+      }
+
+      /* ── SORTABLE GHOST ── */
+      .sortable-ghost {
+        opacity: 0.35;
+      }
+
+      /* ── NAV TABS (inside card) ── */
+      .inner-tabs {
+        display: flex;
+        gap: 2px;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .inner-tab {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-2);
+        padding: 10px 14px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition:
+          color 0.12s,
+          border-color 0.12s;
+      }
+      .inner-tab:hover {
+        color: var(--ink);
+      }
+      .inner-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        font-weight: 600;
+      }
+
+      .tab-pane {
+        display: none;
+      }
+      .tab-pane.active {
+        display: block;
+      }
+
+      /* ── AUDIENCE CHIP ── */
+      .audience-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1.5px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12.5px;
+        color: var(--ink-2);
+        cursor: pointer;
+        transition: all 0.12s;
+      }
+      .audience-chip:hover,
+      .audience-chip.active {
+        border-color: var(--accent);
+        background: var(--accent-light);
+        color: var(--accent);
+      }
+
+      /* ── INFO CALLOUT ── */
+      .callout {
+        border-radius: var(--radius);
+        padding: 10px 14px;
+        font-size: 12.5px;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .callout-info {
+        background: var(--accent-light);
+        border: 1px solid var(--accent-dim);
+        color: #1a3a8c;
+      }
+      .callout-warn {
+        background: var(--warning-bg);
+        border: 1px solid #f0d090;
+        color: var(--warning);
+      }
+      .callout-icon {
+        flex-shrink: 0;
+        font-size: 14px;
+        margin-top: 1px;
+      }
+
+      /* ── FOOTER BAR ── */
+      .builder-footer {
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        padding: 12px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        bottom: 0;
+        z-index: 80;
+      }
+
+      @media (max-width: 1024px) {
+        .builder-wrap {
+          grid-template-columns: 1fr;
+        }
+        .preview-panel {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <a class="topbar-brand" href="#">
+        <div class="brand-dot">P</div>
+        PollDesk
+      </a>
+      <div class="topbar-divider"></div>
+      <div class="topbar-breadcrumb">
+        <span>Polls</span>
+        <span style="color: var(--ink-3)">›</span>
+        <span class="crumb-active">New poll</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="status-badge status-draft"
+          ><span class="status-dot"></span> Draft</span
+        >
+        <button class="btn btn-outline-secondary btn-sm" id="save-draft-btn">
+          Save draft
+        </button>
+        <button class="btn btn-primary btn-sm" id="publish-btn">
+          Publish poll
+        </button>
+        <div
+          style="
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            margin-left: 4px;
+            flex-shrink: 0;
+          "
+        >
+          S
+        </div>
+      </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Workspace</div>
+        <a class="sidebar-item" href="#"
+          ><span class="si-icon">🏠</span> Dashboard</a
+        >
+        <a class="sidebar-item active" href="#"
+          ><span class="si-icon">📊</span> Polls
+          <span class="si-badge">3</span></a
+        >
+        <a class="sidebar-item" href="#"
+          ><span class="si-icon">📋</span> Surveys</a
+        >
+        <a class="sidebar-item" href="#"
+          ><span class="si-icon">📈</span> Analytics</a
+        >
+      </div>
+      <hr class="sidebar-divider" />
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Manage</div>
+        <a class="sidebar-item" href="#"
+          ><span class="si-icon">👥</span> Audiences</a
+        >
+        <a class="sidebar-item" href="#"
+          ><span class="si-icon">🔗</span> Integrations</a
+        >
+        <a class="sidebar-item" href="#"
+          ><span class="si-icon">⚙️</span> Settings</a
+        >
+      </div>
+      <div style="margin-top: auto; padding: 16px 12px">
+        <div
+          style="
+            background: var(--accent-light);
+            border: 1px solid var(--accent-dim);
+            border-radius: var(--radius);
+            padding: 12px;
+          "
+        >
+          <div
+            style="
+              font-size: 12.5px;
+              font-weight: 600;
+              color: var(--accent);
+              margin-bottom: 4px;
+            "
+          >
+            Pro plan
+          </div>
+          <div style="font-size: 12px; color: var(--ink-2)">
+            3 of 10 polls used this month.
+          </div>
+          <div
+            style="
+              height: 4px;
+              background: #dde5ff;
+              border-radius: 2px;
+              margin-top: 8px;
+            "
+          >
+            <div
+              style="
+                width: 30%;
+                height: 100%;
+                background: var(--accent);
+                border-radius: 2px;
+              "
+            ></div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main-content">
+      <!-- Page header -->
+      <div class="page-header">
+        <h1>Create poll</h1>
+        <p>
+          Configure your poll below, then publish to share it with your
+          audience.
+        </p>
+      </div>
+
+      <!-- Steps -->
+      <div class="steps-bar">
+        <div class="step-item done" data-step="1">
+          <div class="step-num"><span>1</span></div>
+          Poll type
+        </div>
+        <div class="step-item active" data-step="2">
+          <div class="step-num"><span>2</span></div>
+          Content
+        </div>
+        <div class="step-item" data-step="3">
+          <div class="step-num"><span>3</span></div>
+          Settings
+        </div>
+        <div class="step-item" data-step="4">
+          <div class="step-num"><span>4</span></div>
+          Publish
+        </div>
+      </div>
+
+      <!-- Builder + Preview -->
+      <div class="builder-wrap">
+        <!-- LEFT COLUMN: Builder -->
+        <div class="builder-left">
+          <!-- CARD 1: Poll Type -->
+          <div class="card mb-4">
+            <div class="collapse-trigger" id="ct-type">
+              <h2>Poll type</h2>
+              <span class="ct-arrow">▼</span>
+            </div>
+            <div id="cc-type">
+              <div class="card-body-pad pt-0">
+                <div class="poll-type-grid" id="poll-type-grid">
+                  <div class="poll-type-card selected" data-type="single">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">🔘</div>
+                      <div class="ptc-check">✓</div>
+                    </div>
+                    <div class="ptc-name">Single choice</div>
+                    <div class="ptc-desc">
+                      Respondents pick exactly one option.
+                    </div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="multiple">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">☑️</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Multiple choice</div>
+                    <div class="ptc-desc">Select all options that apply.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="rating">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">⭐</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Star rating</div>
+                    <div class="ptc-desc">1–5 (or custom) star scale.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="nps">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">📊</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">NPS scale</div>
+                    <div class="ptc-desc">0–10 promoter score.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="yesno">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">👍</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Yes / No</div>
+                    <div class="ptc-desc">Simple binary question.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="slider">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">🎚️</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Slider</div>
+                    <div class="ptc-desc">Drag to a numeric value.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="ranked">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">🔢</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Ranked choice</div>
+                    <div class="ptc-desc">Drag to set preference order.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="open">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">✏️</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Open-ended</div>
+                    <div class="ptc-desc">Free-form text response.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="matrix">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">🗂️</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Matrix / Grid</div>
+                    <div class="ptc-desc">
+                      Rate multiple items on one scale.
+                    </div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="image">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">🖼️</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Image poll</div>
+                    <div class="ptc-desc">Vote on visual options.</div>
+                  </div>
+
+                  <div class="poll-type-card" data-type="datetime">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                      "
+                    >
+                      <div class="ptc-icon">📅</div>
+                      <div class="ptc-check"></div>
+                    </div>
+                    <div class="ptc-name">Date / Time</div>
+                    <div class="ptc-desc">Pick availability slots.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 2: Poll Content -->
+          <div class="card mb-4">
+            <div class="inner-tabs">
+              <div class="inner-tab active" data-tab="content">Content</div>
+              <div class="inner-tab" data-tab="logic">Logic</div>
+              <div class="inner-tab" data-tab="design">Design</div>
+            </div>
+
+            <!-- Content Tab -->
+            <div class="tab-pane active card-body-pad" id="tab-content">
+              <div class="form-group">
+                <label class="form-label"
+                  >Question <span class="required">*</span></label
+                >
+                <textarea
+                  class="form-control"
+                  id="question-input"
+                  placeholder="e.g. How satisfied are you with our product?"
+                  maxlength="500"
+                  rows="2"
+                ></textarea>
+                <div>
+                  <span class="form-hint">Be specific and direct.</span
+                  ><span class="char-count" id="q-count">0 / 500</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label"
+                  >Description <span class="opt">(optional)</span></label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="desc-input"
+                  placeholder="Add context or instructions for respondents"
+                  maxlength="200"
+                />
+              </div>
+
+              <!-- Dynamic sections per poll type -->
+              <!-- Single / Multiple / Ranked / Image -->
+              <div class="poll-section active" id="section-options">
+                <div class="section-divider">Answer options</div>
+                <div class="options-list" id="options-list">
+                  <div class="option-row">
+                    <span class="option-drag">⠿</span>
+                    <input
+                      type="text"
+                      class="option-input"
+                      placeholder="Option 1"
+                      value="Option A"
+                    />
+                    <button class="option-remove" onclick="removeOption(this)">
+                      ×
+                    </button>
+                  </div>
+                  <div class="option-row">
+                    <span class="option-drag">⠿</span>
+                    <input
+                      type="text"
+                      class="option-input"
+                      placeholder="Option 2"
+                      value="Option B"
+                    />
+                    <button class="option-remove" onclick="removeOption(this)">
+                      ×
+                    </button>
+                  </div>
+                  <div class="option-row">
+                    <span class="option-drag">⠿</span>
+                    <input
+                      type="text"
+                      class="option-input"
+                      placeholder="Option 3"
+                    />
+                    <button class="option-remove" onclick="removeOption(this)">
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <button class="add-option-btn" id="add-option-btn">
+                  <span style="font-size: 16px; line-height: 1">+</span> Add
+                  option
+                </button>
+                <div
+                  id="multi-limit-row"
+                  class="form-group mt-3"
+                  style="display: none"
+                >
+                  <label class="form-label">Max selections allowed</label>
+                  <div class="scale-row">
+                    <input
+                      type="number"
+                      class="scale-input"
+                      id="multi-max"
+                      value="3"
+                      min="2"
+                      max="20"
+                    />
+                    <span style="font-size: 13px; color: var(--ink-3)"
+                      >options maximum</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rating Stars -->
+              <div class="poll-section" id="section-rating">
+                <div class="section-divider">Scale configuration</div>
+                <div class="form-group">
+                  <label class="form-label">Number of stars</label>
+                  <div class="scale-row">
+                    <input
+                      type="number"
+                      class="scale-input"
+                      id="star-count"
+                      value="5"
+                      min="3"
+                      max="10"
+                    />
+                    <span style="font-size: 13px; color: var(--ink-3)"
+                      >stars</span
+                    >
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label"
+                    >Labels <span class="opt">(optional)</span></label
+                  >
+                  <div
+                    style="
+                      display: grid;
+                      grid-template-columns: 1fr 1fr;
+                      gap: 10px;
+                    "
+                  >
+                    <div>
+                      <input
+                        type="text"
+                        class="form-control"
+                        placeholder="1 star label"
+                        value="Poor"
+                      />
+                      <div class="form-hint">Lowest</div>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        class="form-control"
+                        placeholder="Top star label"
+                        value="Excellent"
+                      />
+                      <div class="form-hint">Highest</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- NPS -->
+              <div class="poll-section" id="section-nps">
+                <div class="section-divider">Scale configuration</div>
+                <div class="callout callout-info mb-3">
+                  <span class="callout-icon">ℹ️</span>
+                  <span
+                    >NPS scale is fixed 0–10. Scores 0–6 are Detractors, 7–8
+                    Passives, 9–10 Promoters.</span
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Low end label</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    value="Not at all likely"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">High end label</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    value="Extremely likely"
+                  />
+                </div>
+              </div>
+
+              <!-- Yes / No -->
+              <div class="poll-section" id="section-yesno">
+                <div class="section-divider">Button labels</div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                  "
+                >
+                  <div class="form-group">
+                    <label class="form-label">Positive option</label>
+                    <input type="text" class="form-control" value="Yes" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Negative option</label>
+                    <input type="text" class="form-control" value="No" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slider -->
+              <div class="poll-section" id="section-slider">
+                <div class="section-divider">Slider configuration</div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    gap: 10px;
+                  "
+                  class="mb-3"
+                >
+                  <div class="form-group mb-0">
+                    <label class="form-label">Min</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="slider-min"
+                      value="0"
+                    />
+                  </div>
+                  <div class="form-group mb-0">
+                    <label class="form-label">Max</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="slider-max"
+                      value="100"
+                    />
+                  </div>
+                  <div class="form-group mb-0">
+                    <label class="form-label">Step</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="slider-step"
+                      value="1"
+                    />
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                  "
+                >
+                  <div class="form-group">
+                    <label class="form-label">Low label</label>
+                    <input type="text" class="form-control" value="Low" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">High label</label>
+                    <input type="text" class="form-control" value="High" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label"
+                    >Unit suffix <span class="opt">(optional)</span></label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="e.g. hours, %, km"
+                  />
+                </div>
+              </div>
+
+              <!-- Open-ended -->
+              <div class="poll-section" id="section-open">
+                <div class="section-divider">Response configuration</div>
+                <div class="form-group">
+                  <label class="form-label">Placeholder text</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    value="Type your answer here…"
+                  />
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                  "
+                >
+                  <div class="form-group">
+                    <label class="form-label">Min characters</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      value="10"
+                      min="0"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Max characters</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      value="500"
+                      min="1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Matrix -->
+              <div class="poll-section" id="section-matrix">
+                <div class="section-divider">Rows & columns</div>
+                <div class="matrix-config">
+                  <div>
+                    <label class="form-label">Rows (items to rate)</label>
+                    <div class="matrix-row-list" id="matrix-rows">
+                      <div class="option-row">
+                        <input
+                          type="text"
+                          class="option-input"
+                          value="Check-in"
+                        />
+                        <button
+                          class="option-remove"
+                          onclick="removeOption(this)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div class="option-row">
+                        <input
+                          type="text"
+                          class="option-input"
+                          value="Boarding"
+                        />
+                        <button
+                          class="option-remove"
+                          onclick="removeOption(this)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div class="option-row">
+                        <input
+                          type="text"
+                          class="option-input"
+                          value="Seat comfort"
+                        />
+                        <button
+                          class="option-remove"
+                          onclick="removeOption(this)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      class="add-option-btn mt-2"
+                      onclick="addMatrixRow()"
+                    >
+                      + Add row
+                    </button>
+                  </div>
+                  <div>
+                    <label class="form-label">Columns (scale labels)</label>
+                    <div class="matrix-col-list" id="matrix-cols">
+                      <div class="option-row">
+                        <input type="text" class="option-input" value="Poor" />
+                        <button
+                          class="option-remove"
+                          onclick="removeOption(this)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div class="option-row">
+                        <input type="text" class="option-input" value="Fair" />
+                        <button
+                          class="option-remove"
+                          onclick="removeOption(this)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div class="option-row">
+                        <input type="text" class="option-input" value="Good" />
+                        <button
+                          class="option-remove"
+                          onclick="removeOption(this)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div class="option-row">
+                        <input
+                          type="text"
+                          class="option-input"
+                          value="Excellent"
+                        />
+                        <button
+                          class="option-remove"
+                          onclick="removeOption(this)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      class="add-option-btn mt-2"
+                      onclick="addMatrixCol()"
+                    >
+                      + Add column
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Date/Time -->
+              <div class="poll-section" id="section-datetime">
+                <div class="section-divider">Time slots</div>
+                <div id="slot-list">
+                  <div class="date-time-row mb-2">
+                    <input type="date" class="form-control" />
+                    <input type="time" class="form-control" />
+                  </div>
+                  <div class="date-time-row mb-2">
+                    <input type="date" class="form-control" />
+                    <input type="time" class="form-control" />
+                  </div>
+                </div>
+                <button class="add-option-btn mt-1" id="add-slot-btn">
+                  + Add time slot
+                </button>
+              </div>
+            </div>
+            <!-- /tab-content -->
+
+            <!-- Logic Tab -->
+            <div class="tab-pane card-body-pad" id="tab-logic">
+              <div class="callout callout-info mb-4">
+                <span class="callout-icon">ℹ️</span>
+                <span
+                  >Conditional logic is available for polls with 2+ options.
+                  Rules run top to bottom.</span
+                >
+              </div>
+              <div
+                style="text-align: center; padding: 30px 0; color: var(--ink-3)"
+              >
+                <div style="font-size: 32px; margin-bottom: 8px">⚡</div>
+                <div
+                  style="
+                    font-size: 13.5px;
+                    font-weight: 500;
+                    color: var(--ink-2);
+                    margin-bottom: 4px;
+                  "
+                >
+                  No logic rules yet
+                </div>
+                <div style="font-size: 13px">
+                  Add a poll type and options first, then create rules here.
+                </div>
+              </div>
+            </div>
+
+            <!-- Design Tab -->
+            <div class="tab-pane card-body-pad" id="tab-design">
+              <div class="form-group">
+                <label class="form-label">Accent color</label>
+                <div style="display: flex; gap: 8px; align-items: center">
+                  <input
+                    type="color"
+                    value="#2A5CFF"
+                    style="
+                      width: 40px;
+                      height: 36px;
+                      border: 1.5px solid var(--border);
+                      border-radius: var(--radius);
+                      cursor: pointer;
+                      padding: 2px;
+                    "
+                  />
+                  <input
+                    type="text"
+                    class="form-control"
+                    value="#2A5CFF"
+                    style="
+                      font-family: &quot;DM Mono&quot;, monospace;
+                      font-size: 13px;
+                    "
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Background</label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                  <div
+                    style="
+                      width: 32px;
+                      height: 32px;
+                      background: #fff;
+                      border: 2px solid var(--accent);
+                      border-radius: 6px;
+                      cursor: pointer;
+                    "
+                    title="White"
+                  ></div>
+                  <div
+                    style="
+                      width: 32px;
+                      height: 32px;
+                      background: #f7f7f5;
+                      border: 1.5px solid var(--border);
+                      border-radius: 6px;
+                      cursor: pointer;
+                    "
+                    title="Off-white"
+                  ></div>
+                  <div
+                    style="
+                      width: 32px;
+                      height: 32px;
+                      background: #eef2ff;
+                      border: 1.5px solid var(--border);
+                      border-radius: 6px;
+                      cursor: pointer;
+                    "
+                    title="Blue tint"
+                  ></div>
+                  <div
+                    style="
+                      width: 32px;
+                      height: 32px;
+                      background: #111110;
+                      border: 1.5px solid var(--border);
+                      border-radius: 6px;
+                      cursor: pointer;
+                    "
+                    title="Dark"
+                  ></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Button style</label>
+                <select class="form-select">
+                  <option>Filled</option>
+                  <option>Outlined</option>
+                  <option>Pill</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label"
+                  >Logo <span class="opt">(optional)</span></label
+                >
+                <div
+                  style="
+                    border: 1.5px dashed var(--border);
+                    border-radius: var(--radius);
+                    padding: 18px;
+                    text-align: center;
+                    cursor: pointer;
+                    color: var(--ink-3);
+                    font-size: 13px;
+                  "
+                >
+                  <div style="font-size: 22px; margin-bottom: 4px">📁</div>
+                  Click to upload PNG or SVG
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 3: Settings -->
+          <div class="card mb-4">
+            <div class="collapse-trigger" id="ct-settings">
+              <h2>Settings</h2>
+              <span class="ct-arrow">▼</span>
+            </div>
+            <div id="cc-settings">
+              <div class="card-body-pad">
+                <div class="form-group">
+                  <label class="form-label"
+                    >Poll title <span class="opt">(internal)</span></label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="poll-title-input"
+                    placeholder="e.g. Q3 Customer Satisfaction"
+                  />
+                  <div class="form-hint">
+                    Used in your dashboard only, not shown to respondents.
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Category / tags</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="tag-input"
+                    placeholder="Press Enter to add a tag"
+                  />
+                  <div class="tag-wrap" id="tag-list">
+                    <span class="tag"
+                      >Product
+                      <span class="tag-remove" onclick="removeTag(this)"
+                        >×</span
+                      ></span
+                    >
+                    <span class="tag"
+                      >Q3
+                      <span class="tag-remove" onclick="removeTag(this)"
+                        >×</span
+                      ></span
+                    >
+                  </div>
+                </div>
+
+                <div class="section-divider">Voting rules</div>
+
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="tl">Allow one vote per person</div>
+                    <div class="td">
+                      Uses cookies and IP to prevent duplicates.
+                    </div>
+                  </div>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" checked />
+                  </div>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="tl">Show results after voting</div>
+                    <div class="td">
+                      Respondents see live results immediately.
+                    </div>
+                  </div>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" checked />
+                  </div>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="tl">Require login to vote</div>
+                    <div class="td">Only authenticated users can respond.</div>
+                  </div>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" />
+                  </div>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-info">
+                    <div class="tl">Anonymous responses</div>
+                    <div class="td">Do not collect respondent identity.</div>
+                  </div>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" />
+                  </div>
+                </div>
+
+                <div class="section-divider">Schedule</div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                  "
+                >
+                  <div class="form-group">
+                    <label class="form-label">Opens on</label>
+                    <input type="datetime-local" class="form-control" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Closes on <span class="opt">(optional)</span></label
+                    >
+                    <input type="datetime-local" class="form-control" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label"
+                    >Response limit <span class="opt">(optional)</span></label
+                  >
+                  <input
+                    type="number"
+                    class="form-control"
+                    placeholder="Unlimited"
+                    min="1"
+                  />
+                  <div class="form-hint">
+                    Poll closes automatically once this number is reached.
+                  </div>
+                </div>
+
+                <div class="section-divider">Audience</div>
+                <div class="callout callout-warn mb-3">
+                  <span class="callout-icon">⚠️</span>
+                  <span
+                    >Public polls are accessible to anyone with the link.
+                    Restrict to a specific audience for internal use.</span
+                  >
+                </div>
+                <div
+                  style="display: flex; flex-wrap: wrap; gap: 8px"
+                  id="audience-chips"
+                >
+                  <div class="audience-chip active" data-audience="public">
+                    🌐 Public
+                  </div>
+                  <div class="audience-chip" data-audience="team">
+                    👥 Team only
+                  </div>
+                  <div class="audience-chip" data-audience="email">
+                    📧 Email list
+                  </div>
+                  <div class="audience-chip" data-audience="embed">
+                    🔗 Embedded
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- /builder-left -->
+
+        <!-- RIGHT COLUMN: Preview -->
+        <div class="preview-panel">
+          <div class="card mb-3">
+            <div class="card-header-bar">
+              <h2>Live preview</h2>
+              <div style="display: flex; gap: 6px">
+                <button
+                  class="btn btn-ghost btn-sm"
+                  id="prev-mobile"
+                  title="Mobile"
+                >
+                  📱
+                </button>
+                <button
+                  class="btn btn-ghost btn-sm"
+                  id="prev-desktop"
+                  title="Desktop"
+                >
+                  🖥️
+                </button>
+              </div>
+            </div>
+            <div style="padding: 16px">
+              <div class="preview-device" id="preview-device">
+                <div class="preview-screen">
+                  <div class="preview-topbar">
+                    <div class="ptb-dot"></div>
+                    <div class="ptb-dot"></div>
+                    <span style="margin-left: 4px; opacity: 0.8">PollDesk</span>
+                  </div>
+                  <div class="preview-body" id="preview-body">
+                    <div class="preview-empty" id="preview-empty">
+                      <div class="pe-icon">📝</div>
+                      <p>
+                        Your poll preview will appear here as you fill in the
+                        question and options.
+                      </p>
+                    </div>
+                    <div id="preview-content" style="display: none">
+                      <div class="preview-poll-title" id="prev-title">
+                        Your question goes here
+                      </div>
+                      <div class="preview-poll-desc" id="prev-desc"></div>
+                      <div id="prev-options"></div>
+                      <button class="preview-submit" id="prev-submit-btn">
+                        Submit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Checklist -->
+          <div class="card">
+            <div class="card-header-bar">
+              <h2>Publish checklist</h2>
+              <span
+                id="checklist-score"
+                style="font-size: 12px; color: var(--ink-3)"
+                >0 / 4</span
+              >
+            </div>
+            <div
+              style="
+                padding: 14px 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+              "
+              id="checklist"
+            >
+              <div class="check-item" data-check="type">
+                <span class="ci-icon">✅</span> Poll type selected
+              </div>
+              <div class="check-item" data-check="question">
+                <span class="ci-icon">⬜</span> Question written
+              </div>
+              <div class="check-item" data-check="options">
+                <span class="ci-icon">⬜</span> Options / content added
+              </div>
+              <div class="check-item" data-check="title">
+                <span class="ci-icon">⬜</span> Internal title set
+              </div>
+            </div>
+            <div style="padding: 0 16px 16px">
+              <button class="btn btn-primary w-100" id="publish-btn-2">
+                Publish poll
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- /builder-wrap -->
+
+      <!-- Footer -->
+      <div class="builder-footer">
+        <div style="font-size: 12.5px; color: var(--ink-3)">
+          <span id="autosave-status">All changes saved</span>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            id="preview-fullscreen-btn"
+          >
+            Open preview ↗
+          </button>
+          <button class="btn btn-primary btn-sm" id="publish-btn-3">
+            Publish poll
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Toast container -->
+    <div id="toast-wrap"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      $(function () {
+        /* ── POLL TYPE SELECTION ── */
+        const typeSections = {
+          single: ["section-options"],
+          multiple: ["section-options"],
+          ranked: ["section-options"],
+          image: ["section-options"],
+          rating: ["section-rating"],
+          nps: ["section-nps"],
+          yesno: ["section-yesno"],
+          slider: ["section-slider"],
+          open: ["section-open"],
+          matrix: ["section-matrix"],
+          datetime: ["section-datetime"],
+        };
+
+        let currentType = "single";
+
+        $("#poll-type-grid .poll-type-card").on("click", function () {
+          $("#poll-type-grid .poll-type-card")
+            .removeClass("selected")
+            .find(".ptc-check")
+            .text("");
+          $(this).addClass("selected").find(".ptc-check").text("✓");
+          currentType = $(this).data("type");
+
+          // show/hide sections
+          $(".poll-section").removeClass("active");
+          const sections = typeSections[currentType] || [];
+          sections.forEach((s) => $("#" + s).addClass("active"));
+
+          // multi-specific
+          $("#multi-limit-row").toggle(currentType === "multiple");
+
+          updatePreview();
+          triggerAutosave();
+        });
+
+        /* ── INNER TABS ── */
+        $(".inner-tab").on("click", function () {
+          const tab = $(this).data("tab");
+          $(".inner-tab").removeClass("active");
+          $(this).addClass("active");
+          $(".tab-pane").removeClass("active");
+          $("#tab-" + tab).addClass("active");
+        });
+
+        /* ── COLLAPSE TOGGLES ── */
+        $(".collapse-trigger").on("click", function () {
+          const target = $(this).attr("id").replace("ct-", "cc-");
+          $(this).toggleClass("collapsed");
+          $("#" + target).slideToggle(180);
+        });
+
+        /* ── CHARACTER COUNT ── */
+        $("#question-input").on("input", function () {
+          $("#q-count").text($(this).val().length + " / 500");
+          updatePreview();
+          checkChecklist();
+        });
+
+        $("#desc-input").on("input", function () {
+          updatePreview();
+        });
+
+        $("#poll-title-input").on("input", function () {
+          checkChecklist();
+          triggerAutosave();
+        });
+
+        /* ── OPTIONS ── */
+        $("#options-list").on("input", ".option-input", function () {
+          updatePreview();
+          checkChecklist();
+          triggerAutosave();
+        });
+
+        $("#add-option-btn").on("click", function () {
+          const idx = $("#options-list .option-row").length + 1;
+          const row = $(`
+      <div class="option-row">
+        <span class="option-drag">⠿</span>
+        <input type="text" class="option-input" placeholder="Option ${idx}" />
+        <button class="option-remove" onclick="removeOption(this)">×</button>
+      </div>`);
+          $("#options-list").append(row);
+          row.find("input").focus();
+          updatePreview();
+        });
+
+        $("#add-slot-btn").on("click", function () {
+          const row = $(`<div class="date-time-row mb-2">
+      <input type="date" class="form-control" />
+      <input type="time" class="form-control" />
+    </div>`);
+          $("#slot-list").append(row);
+        });
+
+        /* ── TAGS ── */
+        $("#tag-input").on("keydown", function (e) {
+          if (e.key === "Enter" && $(this).val().trim()) {
+            e.preventDefault();
+            const val = $(this).val().trim();
+            const tag = $(
+              `<span class="tag">${val} <span class="tag-remove" onclick="removeTag(this)">×</span></span>`,
+            );
+            $("#tag-list").append(tag);
+            $(this).val("");
+          }
+        });
+
+        /* ── AUDIENCE CHIPS ── */
+        $("#audience-chips .audience-chip").on("click", function () {
+          $("#audience-chips .audience-chip").removeClass("active");
+          $(this).addClass("active");
+        });
+
+        /* ── PREVIEW ── */
+        function updatePreview() {
+          const q = $("#question-input").val().trim();
+          const desc = $("#desc-input").val().trim();
+
+          if (!q) {
+            $("#preview-empty").show();
+            $("#preview-content").hide();
+            return;
+          }
+
+          $("#preview-empty").hide();
+          $("#preview-content").show();
+          $("#prev-title").text(q);
+          $("#prev-desc").text(desc);
+
+          const $opts = $("#prev-options").empty();
+
+          if (["single", "multiple", "ranked", "image"].includes(currentType)) {
+            const opts = [];
+            $("#options-list .option-input").each(function () {
+              const v = $(this).val().trim();
+              if (v) opts.push(v);
+            });
+            opts.forEach((o) => {
+              $opts.append(
+                `<div class="preview-option"><div class="po-marker"></div>${o}</div>`,
+              );
+            });
+            if (!opts.length)
+              $opts.append(
+                '<div style="font-size:12px;color:var(--ink-3);font-style:italic;">Add options above to see them here.</div>',
+              );
+          } else if (currentType === "yesno") {
+            $opts.append(`<div style="display:flex;gap:8px;">
+        <div class="preview-option" style="flex:1;justify-content:center;font-weight:600;">👍 Yes</div>
+        <div class="preview-option" style="flex:1;justify-content:center;font-weight:600;">👎 No</div>
+      </div>`);
+          } else if (currentType === "rating") {
+            $opts.append(
+              `<div class="star-preview">${'<span class="star-prev">★</span>'.repeat(5)}</div>`,
+            );
+            $opts
+              .find(".star-prev")
+              .on("mouseenter", function () {
+                const idx = $(this).index();
+                $opts.find(".star-prev").each(function (i) {
+                  $(this).toggleClass("lit", i <= idx);
+                });
+              })
+              .on("mouseleave", function () {
+                $opts.find(".star-prev").removeClass("lit");
+              });
+          } else if (currentType === "nps") {
+            let cells = "";
+            for (let i = 0; i <= 10; i++)
+              cells += `<div class="nps-cell" style="width:30px;height:30px;border:1.5px solid var(--border);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;margin:2px;">${i}</div>`;
+            $opts.append(
+              `<div style="display:flex;flex-wrap:wrap;gap:3px;">${cells}</div>`,
+            );
+          } else if (currentType === "slider") {
+            const mn = $("#slider-min").val() || 0,
+              mx = $("#slider-max").val() || 100;
+            $opts.append(`<div style="padding:8px 0;">
+        <div style="font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:8px;">50</div>
+        <input type="range" min="${mn}" max="${mx}" value="50" style="width:100%;accent-color:var(--accent);" />
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);"><span>${mn}</span><span>${mx}</span></div>
+      </div>`);
+          } else if (currentType === "open") {
+            $opts.append(
+              `<textarea placeholder="Type your answer here…" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:8px;font-size:13px;font-family:inherit;resize:none;outline:none;height:80px;"></textarea>`,
+            );
+          } else if (currentType === "matrix") {
+            $opts.append(
+              '<div style="font-size:12px;color:var(--ink-3);">Matrix grid preview — configure rows and columns on the left.</div>',
+            );
+          } else if (currentType === "datetime") {
+            $opts.append(`
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div style="border:1.5px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;">Mon 9:00 AM</div>
+          <div style="border:1.5px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;">Mon 2:00 PM</div>
+          <div style="border:1.5px solid var(--accent);background:var(--accent-light);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--accent);">Tue 10:00 AM 🔥</div>
+        </div>`);
+          }
+        }
+
+        /* ── CHECKLIST ── */
+        function checkChecklist() {
+          const checks = {
+            type: true,
+            question: $("#question-input").val().trim().length > 0,
+            options:
+              currentType === "open" ||
+              currentType === "nps" ||
+              currentType === "yesno" ||
+              currentType === "slider" ||
+              currentType === "rating" ||
+              currentType === "datetime"
+                ? true
+                : $("#options-list .option-input").filter(function () {
+                    return $(this).val().trim();
+                  }).length >= 2 || $("#matrix-rows .option-input").length >= 1,
+            title: $("#poll-title-input").val().trim().length > 0,
+          };
+          let done = 0;
+          $("#checklist .check-item").each(function () {
+            const key = $(this).data("check");
+            const ok = checks[key];
+            $(this)
+              .find(".ci-icon")
+              .text(ok ? "✅" : "⬜");
+            $(this).css("color", ok ? "var(--success)" : "var(--ink-2)");
+            if (ok) done++;
+          });
+          $("#checklist-score").text(done + " / 4");
+        }
+
+        /* ── AUTOSAVE ── */
+        let saveTimer;
+        function triggerAutosave() {
+          clearTimeout(saveTimer);
+          $("#autosave-status").text("Saving…");
+          saveTimer = setTimeout(() => {
+            $("#autosave-status").text("All changes saved");
+          }, 1200);
+        }
+
+        /* ── PUBLISH ── */
+        function handlePublish() {
+          const q = $("#question-input").val().trim();
+          if (!q) {
+            showToast("Add a question before publishing.", "error");
+            return;
+          }
+          showToast("Poll published! Link copied to clipboard. 🎉", "success");
+          $(".status-badge")
+            .removeClass("status-draft")
+            .addClass("status-live")
+            .html('<span class="status-dot"></span> Live');
+        }
+        $("#publish-btn, #publish-btn-2, #publish-btn-3").on(
+          "click",
+          handlePublish,
+        );
+        $("#save-draft-btn").on("click", function () {
+          showToast("Draft saved.");
+          triggerAutosave();
+        });
+
+        /* ── TOAST ── */
+        function showToast(msg, type = "") {
+          const t = $(
+            `<div class="toast-msg ${type}">${type === "success" ? "✓" : type === "error" ? "✕" : "ℹ"} ${msg}</div>`,
+          );
+          $("#toast-wrap").append(t);
+          setTimeout(() => t.fadeOut(200, () => t.remove()), 3000);
+        }
+
+        /* ── PREVIEW TOGGLE ── */
+        $("#prev-mobile").on("click", function () {
+          $("#preview-device")
+            .css("max-width", "320px")
+            .css("margin", "0 auto");
+        });
+        $("#prev-desktop").on("click", function () {
+          $("#preview-device").css("max-width", "").css("margin", "");
+        });
+
+        /* ── STYLE CHECK-ITEM ── */
+        $(".check-item").css({
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "13px",
+          padding: "4px 0",
+        });
+
+        /* ── INIT ── */
+        checkChecklist();
+        updatePreview();
+
+        // slider inputs update preview
+        $("#slider-min, #slider-max, #slider-step").on("input", updatePreview);
+      });
+
+      /* ── GLOBAL HELPERS ── */
+      function removeOption(btn) {
+        const list = $(btn)
+          .closest(
+            ".options-list, .matrix-row-list, .matrix-col-list, .date-time-row",
+          )
+          .closest(".option-row, .date-time-row");
+        if (
+          $(btn).closest("#options-list").find(".option-row").length <= 2 &&
+          $(btn).closest("#options-list").length
+        ) {
+          return;
+        }
+        $(btn).closest(".option-row, .date-time-row").remove();
+      }
+
+      function removeTag(span) {
+        $(span).closest(".tag").remove();
+      }
+      function addMatrixRow() {
+        const n = $("#matrix-rows .option-row").length + 1;
+        $("#matrix-rows").append(
+          `<div class="option-row"><input type="text" class="option-input" placeholder="Row ${n}" /><button class="option-remove" onclick="removeOption(this)">×</button></div>`,
+        );
+      }
+      function addMatrixCol() {
+        const n = $("#matrix-cols .option-row").length + 1;
+        $("#matrix-cols").append(
+          `<div class="option-row"><input type="text" class="option-input" placeholder="Column ${n}" /><button class="option-remove" onclick="removeOption(this)">×</button></div>`,
+        );
+      }
+    </script>
+  </body>
+</html>

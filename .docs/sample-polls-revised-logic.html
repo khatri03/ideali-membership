@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poll Builder — Logic Tab</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:           #F7F7F5;
+      --surface:      #FFFFFF;
+      --border:       #E2E2DC;
+      --ink:          #111110;
+      --ink-2:        #55554F;
+      --ink-3:        #9B9B93;
+      --accent:       #2A5CFF;
+      --accent-light: #EEF2FF;
+      --accent-dim:   #C7D3FF;
+      --success:      #18794E;
+      --success-bg:   #EDFAF3;
+      --warning:      #8F5E1A;
+      --warning-bg:   #FEF6E4;
+      --danger:       #C12B2B;
+      --danger-bg:    #FEF0F0;
+      --purple:       #6D28D9;
+      --purple-bg:    #F5F3FF;
+      --purple-dim:   #DDD6FE;
+      --radius:       8px;
+      --radius-lg:    12px;
+      --shadow-sm:    0 1px 3px rgba(0,0,0,.07);
+      --shadow-md:    0 4px 16px rgba(0,0,0,.09);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── SHELL ── */
+    .shell {
+      display: grid;
+      grid-template-columns: 240px 1fr 300px;
+      min-height: 100vh;
+    }
+
+    /* ── LEFT CONTEXT PANEL ── */
+    .ctx-panel {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .ctx-label {
+      font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--ink-3);
+      padding: 0 8px; margin-bottom: 4px; margin-top: 10px;
+    }
+    .ctx-label:first-child { margin-top: 0; }
+    .ctx-q {
+      background: var(--accent-light);
+      border: 1.5px solid var(--accent-dim);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 6px;
+    }
+    .ctx-q-num {
+      font-size: 10.5px; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px;
+    }
+    .ctx-q-text { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+    .ctx-option {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: var(--radius);
+      font-size: 13px; color: var(--ink-2); cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: background .1s, border-color .1s;
+    }
+    .ctx-option:hover { background: var(--bg); border-color: var(--border); }
+    .ctx-option.active {
+      background: var(--accent-light); border-color: var(--accent-dim);
+      color: var(--accent); font-weight: 600;
+    }
+    .ctx-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0;
+    }
+    .ctx-option.active .ctx-dot { background: var(--accent); }
+    .ctx-option .ctx-badge {
+      margin-left: auto; font-size: 10px; font-weight: 700;
+      background: var(--accent); color: #fff;
+      border-radius: 10px; padding: 1px 6px;
+    }
+    .ctx-separator {
+      border: none; border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    /* ── MAIN LOGIC PANEL ── */
+    .logic-main {
+      padding: 24px 28px;
+      overflow-y: auto;
+    }
+
+    /* ── HEADER ── */
+    .logic-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 16px;
+    }
+    .logic-header h1 {
+      font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 3px;
+    }
+    .logic-header p {
+      font-size: 13px; color: var(--ink-2);
+    }
+
+    /* ── TABS ── */
+    .logic-tabs {
+      display: flex; gap: 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 22px;
+    }
+    .logic-tab {
+      padding: 9px 16px; font-size: 13px; font-weight: 500;
+      color: var(--ink-2); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .12s, border-color .12s;
+    }
+    .logic-tab:hover { color: var(--ink); }
+    .logic-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+    .logic-pane { display: none; }
+    .logic-pane.active { display: block; }
+
+    /* ── CALLOUT ── */
+    .callout {
+      border-radius: var(--radius); padding: 11px 14px;
+      font-size: 13px; display: flex; gap: 9px; align-items: flex-start;
+      margin-bottom: 18px;
+    }
+    .callout-info { background: var(--accent-light); border: 1px solid var(--accent-dim); color: #1a3a8c; }
+    .callout-warn { background: var(--warning-bg); border: 1px solid #f0d090; color: var(--warning); }
+    .callout-icon { flex-shrink: 0; font-size: 15px; margin-top: 0px; }
+
+    /* ── RULE CARD ── */
+    .rule-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .15s;
+    }
+    .rule-card:hover { box-shadow: var(--shadow-md); }
+    .rule-card.rule-disabled { opacity: .55; }
+
+    .rule-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .rule-drag { color: var(--ink-3); cursor: grab; font-size: 15px; flex-shrink: 0; }
+    .rule-num {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: var(--ink); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
+    }
+    .rule-name {
+      font-size: 13.5px; font-weight: 600; color: var(--ink); flex: 1;
+    }
+    .rule-name input {
+      border: none; background: transparent; font-family: inherit;
+      font-size: 13.5px; font-weight: 600; color: var(--ink);
+      outline: none; width: 100%;
+    }
+    .rule-name input:focus { text-decoration: underline; text-underline-offset: 2px; }
+    .rule-controls { display: flex; align-items: center; gap: 6px; }
+    .rule-toggle { cursor: pointer; font-size: 14px; }
+
+    .rule-body { padding: 16px; }
+
+    /* ── CONDITION ROW ── */
+    .condition-block { margin-bottom: 12px; }
+    .condition-block-label {
+      font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px;
+    }
+    .condition-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px; flex-wrap: wrap;
+    }
+    .condition-connector {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      color: var(--purple); background: var(--purple-bg);
+      border: 1px solid var(--purple-dim);
+      border-radius: 6px; padding: 3px 9px;
+      cursor: pointer; flex-shrink: 0;
+      transition: background .1s;
+    }
+    .condition-connector:hover { background: var(--purple-dim); }
+
+    .cond-select, .cond-input {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      font-size: 13px; font-family: inherit; color: var(--ink);
+      background: var(--surface); outline: none;
+      transition: border-color .12s;
+    }
+    .cond-select:focus, .cond-input:focus { border-color: var(--accent); }
+    .cond-select.cond-field   { min-width: 160px; }
+    .cond-select.cond-op      { min-width: 130px; }
+    .cond-input.cond-val      { min-width: 120px; flex: 1; }
+
+    .cond-remove {
+      width: 26px; height: 26px; border-radius: 6px;
+      border: none; background: transparent; color: var(--ink-3);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 17px; transition: background .1s, color .1s; flex-shrink: 0;
+    }
+    .cond-remove:hover { background: var(--danger-bg); color: var(--danger); }
+
+    .add-condition-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12.5px; font-weight: 500; color: var(--purple);
+      border: 1.5px dashed var(--purple-dim);
+      border-radius: var(--radius); padding: 5px 12px;
+      cursor: pointer; background: transparent;
+      transition: background .12s, border-color .12s;
+      margin-top: 4px;
+    }
+    .add-condition-btn:hover { background: var(--purple-bg); border-color: var(--purple); }
+
+    /* ── ACTION BLOCK ── */
+    .action-divider {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--ink-3);
+      margin: 14px 0 12px;
+    }
+    .action-divider::before, .action-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .then-badge {
+      background: var(--success-bg); color: var(--success);
+      border: 1px solid #a7f0c8; border-radius: 6px;
+      font-size: 11px; font-weight: 700; letter-spacing: .05em;
+      text-transform: uppercase; padding: 3px 9px;
+    }
+
+    .action-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: var(--success-bg);
+      border: 1.5px solid #a7f0c8;
+      border-radius: var(--radius);
+      margin-bottom: 6px; flex-wrap: wrap;
+    }
+    .action-row .action-icon { font-size: 16px; flex-shrink: 0; }
+    .action-row .action-desc { font-size: 13px; color: #0f5132; flex: 1; }
+    .action-row .action-desc strong { font-weight: 700; }
+    .action-remove {
+      width: 24px; height: 24px; border-radius: 6px;
+      border: none; background: transparent; color: #18794E;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; transition: background .1s; flex-shrink: 0;
+    }
+    .action-remove:hover { background: #c6f6d5; }
+
+    .add-action-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12.5px; font-weight: 500; color: var(--success);
+      border: 1.5px dashed #a7f0c8;
+      border-radius: var(--radius); padding: 5px 12px;
+      cursor: pointer; background: transparent;
+      transition: background .12s, border-color .12s;
+    }
+    .add-action-btn:hover { background: var(--success-bg); border-color: var(--success); }
+
+    /* ── STATUS CHIP ── */
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      border-radius: 20px; padding: 3px 10px;
+      font-size: 11.5px; font-weight: 600;
+    }
+    .chip-active { background: var(--success-bg); color: var(--success); border: 1px solid #a7f0c8; }
+    .chip-draft  { background: var(--warning-bg); color: var(--warning); border: 1px solid #f0d090; }
+    .chip-off    { background: var(--bg); color: var(--ink-3); border: 1px solid var(--border); }
+    .chip-dot    { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ── FLOW VIZ ── */
+    .flow-wrap {
+      display: flex; flex-direction: column; gap: 0;
+      align-items: flex-start; margin-top: 6px;
+    }
+    .flow-node {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      position: relative;
+    }
+    .flow-node-q {
+      background: var(--accent-light); border: 1.5px solid var(--accent-dim);
+      color: var(--accent); font-weight: 600;
+    }
+    .flow-node-opt {
+      background: var(--surface); border: 1.5px solid var(--border);
+      color: var(--ink-2); margin-left: 28px;
+    }
+    .flow-node-action {
+      background: var(--success-bg); border: 1.5px solid #a7f0c8;
+      color: var(--success); font-weight: 500; margin-left: 56px;
+    }
+    .flow-node-end {
+      background: var(--bg); border: 1.5px dashed var(--border);
+      color: var(--ink-3); font-style: italic;
+    }
+    .flow-connector {
+      width: 2px; background: var(--border);
+      margin-left: 20px; position: relative;
+    }
+    .flow-connector.fc-opt  { margin-left: 48px; }
+    .flow-connector.fc-act  { margin-left: 76px; }
+    .flow-connector-h {
+      height: 8px;
+    }
+    .flow-arrow {
+      font-size: 10px; color: var(--ink-3); margin-left: 20px; line-height: 1;
+    }
+    .flow-arrow.fa-opt { margin-left: 48px; }
+    .flow-arrow.fa-act { margin-left: 76px; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      color: var(--ink-3);
+    }
+    .empty-state .es-icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+    .empty-state h3 { font-size: 15px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+    .empty-state p  { font-size: 13px; max-width: 320px; margin: 0 auto 18px; }
+
+    /* ── BUTTONS ── */
+    .btn { border-radius: var(--radius); font-size: 13.5px; font-weight: 500; font-family: inherit; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #1e4de0; border-color: #1e4de0; }
+    .btn-outline { border: 1.5px solid var(--border); background: transparent; color: var(--ink-2); }
+    .btn-outline:hover { background: var(--bg); color: var(--ink); }
+    .btn-sm { padding: 5px 12px; font-size: 12.5px; }
+    .btn-xs { padding: 3px 9px; font-size: 12px; }
+
+    /* ── RULE FOOTER ── */
+    .rule-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    }
+
+    /* ── ADD RULE ── */
+    .add-rule-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      border: 1.5px dashed var(--border); border-radius: var(--radius-lg);
+      background: transparent; color: var(--ink-2);
+      font-size: 13.5px; font-weight: 500; font-family: inherit;
+      cursor: pointer; width: 100%;
+      transition: border-color .12s, background .12s, color .12s;
+    }
+    .add-rule-btn:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+
+    /* ── RIGHT PANEL ── */
+    .right-panel {
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      padding: 20px 16px;
+      display: flex; flex-direction: column; gap: 16px;
+      overflow-y: auto;
+    }
+    .rp-section { }
+    .rp-title {
+      font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--ink-3); margin-bottom: 10px;
+    }
+    .rp-stat {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 0; border-bottom: 1px solid var(--bg);
+      font-size: 13px;
+    }
+    .rp-stat:last-child { border-bottom: none; }
+    .rp-stat-label { color: var(--ink-2); }
+    .rp-stat-val   { font-weight: 600; color: var(--ink); }
+    .rp-sep { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+    /* flow mini diagram in right panel */
+    .mini-flow { display: flex; flex-direction: column; gap: 2px; }
+    .mf-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .mf-line { width: 1px; height: 14px; background: var(--border); margin-left: 8px; }
+    .mf-node {
+      border-radius: 6px; padding: 4px 9px; font-size: 12px; font-weight: 500;
+    }
+    .mf-q   { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent-dim); }
+    .mf-opt { background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); }
+    .mf-act { background: var(--success-bg); color: var(--success); border: 1px solid #a7f0c8; font-size: 11.5px; }
+    .mf-end { background: var(--bg); color: var(--ink-3); border: 1px dashed var(--border); font-style: italic; }
+    .mf-indent { margin-left: 16px; }
+    .mf-indent2 { margin-left: 32px; }
+
+    /* ── TEMPLATE PICKER ── */
+    .template-card {
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 10px 12px; cursor: pointer; margin-bottom: 8px;
+      transition: border-color .12s, background .12s;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .template-card:hover { border-color: var(--accent-dim); background: var(--accent-light); }
+    .tc-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .tc-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+    .tc-desc { font-size: 12px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
+
+    /* ── HIGHLIGHT CHIP ── */
+    .hl-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--accent-light); border: 1px solid var(--accent-dim);
+      border-radius: 5px; padding: 2px 7px;
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      font-family: 'DM Mono', monospace;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ LEFT: QUESTION CONTEXT ══ -->
+  <aside class="ctx-panel">
+    <div class="ctx-label">Current poll</div>
+    <div class="ctx-q">
+      <div class="ctx-q-num">Q1 · Single choice</div>
+      <div class="ctx-q-text">How satisfied are you with our product overall?</div>
+    </div>
+
+    <div class="ctx-label" style="margin-top:6px;">Answer options</div>
+    <div class="ctx-option active">
+      <div class="ctx-dot"></div> Very satisfied
+      <span class="ctx-badge">2</span>
+    </div>
+    <div class="ctx-option">
+      <div class="ctx-dot"></div> Somewhat satisfied
+    </div>
+    <div class="ctx-option">
+      <div class="ctx-dot"></div> Neutral
+      <span class="ctx-badge" style="background:var(--warning);display:none;">1</span>
+    </div>
+    <div class="ctx-option">
+      <div class="ctx-dot"></div> Somewhat dissatisfied
+      <span class="ctx-badge" style="background:var(--danger);">1</span>
+    </div>
+    <div class="ctx-option">
+      <div class="ctx-dot"></div> Very dissatisfied
+    </div>
+
+    <hr class="ctx-separator" />
+    <div class="ctx-label">Jump targets</div>
+    <div class="ctx-option" style="font-style:italic;">
+      <div class="ctx-dot" style="background:var(--success);"></div> End of poll
+    </div>
+    <div class="ctx-option">
+      <div class="ctx-dot"></div> Q2 · NPS score
+    </div>
+    <div class="ctx-option">
+      <div class="ctx-dot"></div> Q3 · Open feedback
+    </div>
+    <div class="ctx-option">
+      <div class="ctx-dot"></div> Q4 · Contact details
+    </div>
+
+    <hr class="ctx-separator" />
+    <div style="padding: 4px 8px;">
+      <div style="font-size:12px;color:var(--ink-3);margin-bottom:8px;">Logic rules active</div>
+      <div style="font-size:22px;font-weight:700;color:var(--ink);">3 <span style="font-size:13px;font-weight:400;color:var(--ink-3);">/ 5 rules</span></div>
+      <div style="height:4px;background:var(--border);border-radius:2px;margin-top:8px;">
+        <div style="width:60%;height:100%;background:var(--accent);border-radius:2px;"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ CENTRE: LOGIC BUILDER ══ -->
+  <main class="logic-main">
+
+    <div class="logic-header">
+      <div>
+        <h1>Conditional logic</h1>
+        <p>Rules control what happens after a respondent picks each answer. They run top to bottom — first match wins.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn btn-outline btn-sm" id="btn-flow-view">Flow view</button>
+        <button class="btn btn-primary btn-sm">+ Add rule</button>
+      </div>
+    </div>
+
+    <!-- ── TABS ── -->
+    <div class="logic-tabs">
+      <div class="logic-tab active" data-pane="rules">Rules <span style="font-size:11px;background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;margin-left:4px;">3</span></div>
+      <div class="logic-tab" data-pane="flow">Flow diagram</div>
+      <div class="logic-tab" data-pane="templates">Templates</div>
+    </div>
+
+    <!-- ════════════════════════
+         PANE 1 — RULES
+    ════════════════════════ -->
+    <div class="logic-pane active" id="pane-rules">
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <div>Rules are evaluated <strong>top to bottom</strong>. The first matching rule wins. Use drag handles to reorder. Conditions within a rule use <strong>AND / OR</strong> logic.</div>
+      </div>
+
+      <!-- ─ RULE 1 ─ -->
+      <div class="rule-card" id="rule-1">
+        <div class="rule-header">
+          <span class="rule-drag" title="Drag to reorder">⠿</span>
+          <div class="rule-num">1</div>
+          <div class="rule-name">
+            <input type="text" value="Promoter fast-track" placeholder="Rule name…" />
+          </div>
+          <div class="rule-controls">
+            <span class="status-chip chip-active"><span class="chip-dot"></span> Active</span>
+            <button class="btn btn-outline btn-xs ms-1" onclick="toggleRule('rule-1')">Disable</button>
+            <button class="btn btn-xs ms-1" style="border:none;background:transparent;color:var(--ink-3);font-size:18px;cursor:pointer;" title="Delete rule">🗑</button>
+          </div>
+        </div>
+
+        <div class="rule-body">
+          <!-- IF block -->
+          <div class="condition-block">
+            <div class="condition-block-label">IF all of these conditions are met</div>
+
+            <!-- Condition 1 -->
+            <div class="condition-row">
+              <select class="cond-select cond-field">
+                <option selected>Answer is</option>
+                <option>Answer contains</option>
+                <option>Answer is not</option>
+                <option>Score is</option>
+                <option>Score ≥</option>
+                <option>Score ≤</option>
+              </select>
+              <select class="cond-select cond-op">
+                <option selected>Very satisfied</option>
+                <option>Somewhat satisfied</option>
+                <option>Neutral</option>
+                <option>Somewhat dissatisfied</option>
+                <option>Very dissatisfied</option>
+              </select>
+              <button class="cond-remove" title="Remove condition">×</button>
+            </div>
+
+            <button class="add-condition-btn">
+              <span style="font-size:15px;line-height:1;">+</span> Add condition
+            </button>
+          </div>
+
+          <!-- THEN block -->
+          <div class="action-divider"><span class="then-badge">THEN</span></div>
+
+          <div class="action-row">
+            <span class="action-icon">↪️</span>
+            <div class="action-desc">Jump to <strong>Q2 — NPS score</strong></div>
+            <button class="action-remove">×</button>
+          </div>
+          <div class="action-row">
+            <span class="action-icon">🏷️</span>
+            <div class="action-desc">Tag respondent as <strong>Promoter</strong></div>
+            <button class="action-remove">×</button>
+          </div>
+
+          <button class="add-action-btn mt-2">
+            <span style="font-size:15px;line-height:1;">+</span> Add action
+          </button>
+        </div>
+
+        <div class="rule-footer">
+          <span style="font-size:12px;color:var(--ink-3);">Matches: <strong style="color:var(--ink);">—</strong></span>
+          <span style="font-size:12px;color:var(--ink-3);margin-left:12px;">Last triggered: <strong style="color:var(--ink);">Never</strong></span>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-outline btn-xs">Duplicate</button>
+            <button class="btn btn-outline btn-xs">Test rule</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ RULE 2 ─ -->
+      <div class="rule-card" id="rule-2">
+        <div class="rule-header">
+          <span class="rule-drag">⠿</span>
+          <div class="rule-num">2</div>
+          <div class="rule-name">
+            <input type="text" value="Detractor escalation" placeholder="Rule name…" />
+          </div>
+          <div class="rule-controls">
+            <span class="status-chip chip-active"><span class="chip-dot"></span> Active</span>
+            <button class="btn btn-outline btn-xs ms-1" onclick="toggleRule('rule-2')">Disable</button>
+            <button class="btn btn-xs ms-1" style="border:none;background:transparent;color:var(--ink-3);font-size:18px;cursor:pointer;">🗑</button>
+          </div>
+        </div>
+
+        <div class="rule-body">
+          <div class="condition-block">
+            <div class="condition-block-label">IF ANY of these conditions are met
+              <button class="condition-connector ms-2">AND</button>
+            </div>
+
+            <div class="condition-row">
+              <select class="cond-select cond-field">
+                <option selected>Answer is</option>
+                <option>Answer is not</option>
+                <option>Score is</option>
+              </select>
+              <select class="cond-select cond-op">
+                <option>Very satisfied</option>
+                <option>Somewhat satisfied</option>
+                <option>Neutral</option>
+                <option>Somewhat dissatisfied</option>
+                <option selected>Very dissatisfied</option>
+              </select>
+              <button class="cond-remove">×</button>
+            </div>
+
+            <!-- OR connector -->
+            <div style="display:flex;align-items:center;gap:8px;margin:6px 0 6px 4px;">
+              <div style="width:18px;height:1px;background:var(--border);"></div>
+              <button class="condition-connector">OR</button>
+              <div style="flex:1;height:1px;background:var(--border);"></div>
+            </div>
+
+            <div class="condition-row">
+              <select class="cond-select cond-field">
+                <option selected>Answer is</option>
+                <option>Answer is not</option>
+              </select>
+              <select class="cond-select cond-op">
+                <option>Very satisfied</option>
+                <option>Somewhat satisfied</option>
+                <option>Neutral</option>
+                <option selected>Somewhat dissatisfied</option>
+              </select>
+              <button class="cond-remove">×</button>
+            </div>
+
+            <button class="add-condition-btn">
+              <span style="font-size:15px;line-height:1;">+</span> Add condition
+            </button>
+          </div>
+
+          <div class="action-divider"><span class="then-badge">THEN</span></div>
+
+          <div class="action-row">
+            <span class="action-icon">↪️</span>
+            <div class="action-desc">Jump to <strong>Q3 — Open feedback</strong></div>
+            <button class="action-remove">×</button>
+          </div>
+          <div class="action-row">
+            <span class="action-icon">🏷️</span>
+            <div class="action-desc">Tag respondent as <strong>Detractor</strong></div>
+            <button class="action-remove">×</button>
+          </div>
+          <div class="action-row">
+            <span class="action-icon">📧</span>
+            <div class="action-desc">Send alert to <strong>support@company.com</strong></div>
+            <button class="action-remove">×</button>
+          </div>
+
+          <button class="add-action-btn mt-2">
+            <span style="font-size:15px;line-height:1;">+</span> Add action
+          </button>
+        </div>
+
+        <div class="rule-footer">
+          <span style="font-size:12px;color:var(--ink-3);">Matches: <strong style="color:var(--ink);">—</strong></span>
+          <span style="font-size:12px;color:var(--ink-3);margin-left:12px;">Last triggered: <strong style="color:var(--ink);">Never</strong></span>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-outline btn-xs">Duplicate</button>
+            <button class="btn btn-outline btn-xs">Test rule</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ RULE 3 (disabled) ─ -->
+      <div class="rule-card rule-disabled" id="rule-3">
+        <div class="rule-header">
+          <span class="rule-drag">⠿</span>
+          <div class="rule-num" style="background:var(--ink-3);">3</div>
+          <div class="rule-name">
+            <input type="text" value="Neutral — skip to end" placeholder="Rule name…" />
+          </div>
+          <div class="rule-controls">
+            <span class="status-chip chip-off"><span class="chip-dot"></span> Disabled</span>
+            <button class="btn btn-outline btn-xs ms-1" onclick="toggleRule('rule-3')">Enable</button>
+            <button class="btn btn-xs ms-1" style="border:none;background:transparent;color:var(--ink-3);font-size:18px;cursor:pointer;">🗑</button>
+          </div>
+        </div>
+
+        <div class="rule-body">
+          <div class="condition-block">
+            <div class="condition-block-label">IF all of these conditions are met</div>
+            <div class="condition-row">
+              <select class="cond-select cond-field">
+                <option selected>Answer is</option>
+              </select>
+              <select class="cond-select cond-op">
+                <option>Very satisfied</option>
+                <option>Somewhat satisfied</option>
+                <option selected>Neutral</option>
+              </select>
+              <button class="cond-remove">×</button>
+            </div>
+            <button class="add-condition-btn">
+              <span style="font-size:15px;line-height:1;">+</span> Add condition
+            </button>
+          </div>
+
+          <div class="action-divider"><span class="then-badge">THEN</span></div>
+
+          <div class="action-row">
+            <span class="action-icon">⏭️</span>
+            <div class="action-desc">Skip to <strong>End of poll</strong></div>
+            <button class="action-remove">×</button>
+          </div>
+
+          <button class="add-action-btn mt-2">
+            <span style="font-size:15px;line-height:1;">+</span> Add action
+          </button>
+        </div>
+
+        <div class="rule-footer">
+          <span style="font-size:12px;color:var(--ink-3);">This rule is disabled and will not run.</span>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-outline btn-xs">Duplicate</button>
+            <button class="btn btn-outline btn-xs">Test rule</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ DEFAULT FALLBACK ─ -->
+      <div style="background:var(--bg);border:1.5px dashed var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:16px;">🔚</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink-2);">Default — no rule matched</div>
+          <div style="font-size:12px;color:var(--ink-3);margin-top:2px;">Continue to the next question in sequence.</div>
+        </div>
+        <div style="margin-left:auto;">
+          <select class="cond-select" style="font-size:12.5px;padding:5px 10px;">
+            <option selected>Continue to next question</option>
+            <option>End poll</option>
+            <option>Jump to Q2</option>
+            <option>Jump to Q3</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ─ ADD RULE ─ -->
+      <button class="add-rule-btn">
+        <span style="font-size:18px;line-height:1;">＋</span>
+        Add logic rule
+      </button>
+
+    </div><!-- /pane-rules -->
+
+    <!-- ════════════════════════
+         PANE 2 — FLOW DIAGRAM
+    ════════════════════════ -->
+    <div class="logic-pane" id="pane-flow">
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <span>This diagram shows how respondents move through the poll based on active rules. Disabled rules are shown greyed out.</span>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px 28px;overflow-x:auto;">
+
+        <!-- Q1 Node -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <div style="background:var(--accent);color:#fff;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;">START</div>
+        </div>
+        <div class="flow-node flow-node-q" style="margin-bottom:0;width:fit-content;">
+          📊 Q1 — How satisfied are you with our product?
+        </div>
+
+        <!-- Branches -->
+        <div style="display:flex;gap:32px;margin-top:0;padding-top:0;">
+
+          <!-- Branch: Very satisfied -->
+          <div style="display:flex;flex-direction:column;align-items:center;padding-top:0;">
+            <div style="width:1px;height:20px;background:var(--border);"></div>
+            <div class="flow-node flow-node-opt" style="white-space:nowrap;">😊 Very satisfied</div>
+            <div style="width:1px;height:16px;background:var(--border);"></div>
+            <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px;">Rule 1 ↓</div>
+            <div class="flow-node flow-node-action" style="font-size:12px;white-space:nowrap;">↪ Jump → Q2 · NPS</div>
+            <div style="width:1px;height:8px;background:var(--border);"></div>
+            <div class="flow-node flow-node-action" style="font-size:12px;white-space:nowrap;">🏷 Tag: Promoter</div>
+            <div style="width:1px;height:16px;background:var(--border);"></div>
+            <div class="flow-node flow-node-q" style="font-size:12px;white-space:nowrap;background:var(--accent-light);color:var(--accent);">Q2 · NPS score</div>
+          </div>
+
+          <!-- Branch: Somewhat satisfied / Neutral -->
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="width:1px;height:20px;background:var(--border);"></div>
+            <div class="flow-node flow-node-opt" style="white-space:nowrap;">😐 Neutral / Somewhat satisfied</div>
+            <div style="width:1px;height:16px;background:var(--border);"></div>
+            <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px;">Default (no match) ↓</div>
+            <div class="flow-node flow-node-end" style="font-size:12px;white-space:nowrap;">➡ Continue to Q2</div>
+          </div>
+
+          <!-- Branch: Dissatisfied -->
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="width:1px;height:20px;background:var(--border);"></div>
+            <div class="flow-node flow-node-opt" style="white-space:nowrap;border-color:#fca5a5;color:var(--danger);">😞 Somewhat / Very dissatisfied</div>
+            <div style="width:1px;height:16px;background:var(--border);"></div>
+            <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px;">Rule 2 ↓</div>
+            <div class="flow-node flow-node-action" style="font-size:12px;white-space:nowrap;">↪ Jump → Q3 · Feedback</div>
+            <div style="width:1px;height:8px;background:var(--border);"></div>
+            <div class="flow-node flow-node-action" style="font-size:12px;white-space:nowrap;">🏷 Tag: Detractor</div>
+            <div style="width:1px;height:8px;background:var(--border);"></div>
+            <div class="flow-node flow-node-action" style="font-size:12px;white-space:nowrap;">📧 Alert: support team</div>
+            <div style="width:1px;height:16px;background:var(--border);"></div>
+            <div class="flow-node flow-node-q" style="font-size:12px;white-space:nowrap;background:var(--accent-light);color:var(--accent);">Q3 · Open feedback</div>
+          </div>
+
+        </div><!-- /branches -->
+
+        <!-- End -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:24px;">
+          <div style="width:2px;height:20px;background:var(--border);margin-left:20px;"></div>
+        </div>
+        <div class="flow-node flow-node-end" style="width:fit-content;margin-left:0;">
+          🏁 End of poll
+        </div>
+
+      </div><!-- /flow diagram box -->
+    </div><!-- /pane-flow -->
+
+    <!-- ════════════════════════
+         PANE 3 — TEMPLATES
+    ════════════════════════ -->
+    <div class="logic-pane" id="pane-templates">
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <span>Start from a template to save time. Templates are pre-configured rule sets you can customise after applying.</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+        <div class="template-card">
+          <div class="tc-icon">⭐</div>
+          <div>
+            <div class="tc-name">NPS routing</div>
+            <div class="tc-desc">Route Promoters (9–10), Passives (7–8), and Detractors (0–6) to separate follow-up questions.</div>
+          </div>
+        </div>
+
+        <div class="template-card">
+          <div class="tc-icon">📧</div>
+          <div>
+            <div class="tc-name">Detractor alert</div>
+            <div class="tc-desc">Send an email alert to your support team whenever a negative answer is submitted.</div>
+          </div>
+        </div>
+
+        <div class="template-card">
+          <div class="tc-icon">⏭️</div>
+          <div>
+            <div class="tc-name">Skip logic</div>
+            <div class="tc-desc">Skip irrelevant questions based on a previous answer to shorten the experience.</div>
+          </div>
+        </div>
+
+        <div class="template-card">
+          <div class="tc-icon">🏷️</div>
+          <div>
+            <div class="tc-name">Auto-tagging</div>
+            <div class="tc-desc">Automatically tag respondents based on their answer for segmentation in your CRM.</div>
+          </div>
+        </div>
+
+        <div class="template-card">
+          <div class="tc-icon">🔗</div>
+          <div>
+            <div class="tc-name">Webhook trigger</div>
+            <div class="tc-desc">Fire a webhook to Zapier, Make, or your own endpoint when a condition is met.</div>
+          </div>
+        </div>
+
+        <div class="template-card">
+          <div class="tc-icon">🎯</div>
+          <div>
+            <div class="tc-name">Persona branching</div>
+            <div class="tc-desc">Route respondents down different question paths based on their role or segment.</div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /pane-templates -->
+
+  </main>
+
+  <!-- ══ RIGHT: SUMMARY & HELP ══ -->
+  <aside class="right-panel">
+
+    <div class="rp-section">
+      <div class="rp-title">Rule summary</div>
+      <div class="rp-stat"><span class="rp-stat-label">Total rules</span><span class="rp-stat-val">3</span></div>
+      <div class="rp-stat"><span class="rp-stat-label">Active</span><span class="rp-stat-val" style="color:var(--success);">2</span></div>
+      <div class="rp-stat"><span class="rp-stat-label">Disabled</span><span class="rp-stat-val" style="color:var(--ink-3);">1</span></div>
+      <div class="rp-stat"><span class="rp-stat-label">Options covered</span><span class="rp-stat-val">4 / 5</span></div>
+      <div class="rp-stat"><span class="rp-stat-label">Fallback</span><span class="rp-stat-val">Continue →</span></div>
+    </div>
+
+    <hr class="rp-sep" />
+
+    <div class="rp-section">
+      <div class="rp-title">Mini flow</div>
+      <div class="mini-flow">
+        <div class="mf-row"><div class="mf-node mf-q">Q1 · Satisfaction</div></div>
+        <div class="mf-line"></div>
+        <div class="mf-row mf-indent"><div class="mf-node mf-opt">😊 Very satisfied</div></div>
+        <div class="mf-line" style="margin-left:32px;"></div>
+        <div class="mf-row mf-indent2"><div class="mf-node mf-act">↪ Q2 + 🏷 Promoter</div></div>
+        <div class="mf-line"></div>
+        <div class="mf-row mf-indent"><div class="mf-node mf-opt">😞 Dissatisfied</div></div>
+        <div class="mf-line" style="margin-left:32px;"></div>
+        <div class="mf-row mf-indent2"><div class="mf-node mf-act">↪ Q3 + 🏷 + 📧</div></div>
+        <div class="mf-line"></div>
+        <div class="mf-row mf-indent"><div class="mf-node mf-opt">Others</div></div>
+        <div class="mf-line" style="margin-left:32px;"></div>
+        <div class="mf-row mf-indent2"><div class="mf-node mf-end">Default →</div></div>
+      </div>
+    </div>
+
+    <hr class="rp-sep" />
+
+    <div class="rp-section">
+      <div class="rp-title">Available actions</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);">
+          <span>↪️</span> Jump to question
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);">
+          <span>⏭️</span> Skip to end
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);">
+          <span>🏷️</span> Tag respondent
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);">
+          <span>📧</span> Send email alert
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);">
+          <span>🔗</span> Trigger webhook
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);">
+          <span>📋</span> Copy answer to field
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);">
+          <span>🔒</span> Require login
+        </div>
+      </div>
+    </div>
+
+    <hr class="rp-sep" />
+
+    <div class="rp-section">
+      <div class="rp-title">Uncovered options</div>
+      <div class="callout callout-warn" style="margin-bottom:0;">
+        <span class="callout-icon">⚠️</span>
+        <div style="font-size:12.5px;">
+          <strong>"Somewhat satisfied"</strong> has no rule. It will use the default fallback.
+        </div>
+      </div>
+    </div>
+
+    <hr class="rp-sep" />
+
+    <div class="rp-section">
+      <div class="rp-title">Keyboard shortcuts</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--ink-2);">Add rule</span>
+          <span class="hl-chip">⌘ R</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--ink-2);">Add condition</span>
+          <span class="hl-chip">⌘ K</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--ink-2);">Test rules</span>
+          <span class="hl-chip">⌘ T</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--ink-2);">Undo</span>
+          <span class="hl-chip">⌘ Z</span>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+</div><!-- /shell -->
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script>
+$(function () {
+
+  /* ── TAB SWITCHING ── */
+  $('.logic-tab').on('click', function () {
+    const pane = $(this).data('pane');
+    $('.logic-tab').removeClass('active');
+    $(this).addClass('active');
+    $('.logic-pane').removeClass('active');
+    $('#pane-' + pane).addClass('active');
+  });
+
+  /* ── TOGGLE RULE ENABLE/DISABLE ── */
+  window.toggleRule = function (id) {
+    const $card = $('#' + id);
+    const isDisabled = $card.hasClass('rule-disabled');
+    $card.toggleClass('rule-disabled', !isDisabled);
+    const $btn = $card.find('.rule-controls .btn-outline');
+    const $chip = $card.find('.status-chip');
+    if (isDisabled) {
+      $btn.text('Disable');
+      $chip.removeClass('chip-off').addClass('chip-active').html('<span class="chip-dot"></span> Active');
+      $card.find('.rule-num').css('background', 'var(--ink)');
+    } else {
+      $btn.text('Enable');
+      $chip.removeClass('chip-active').addClass('chip-off').html('<span class="chip-dot"></span> Disabled');
+      $card.find('.rule-num').css('background', 'var(--ink-3)');
+    }
+  };
+
+  /* ── CONTEXT OPTION CLICKS ── */
+  $('.ctx-option').on('click', function () {
+    $('.ctx-option').removeClass('active');
+    $(this).addClass('active');
+  });
+
+  /* ── AND/OR TOGGLE ── */
+  $(document).on('click', '.condition-connector', function () {
+    const cur = $(this).text().trim();
+    $(this).text(cur === 'AND' ? 'OR' : 'AND');
+  });
+
+  /* ── ADD CONDITION ── */
+  $(document).on('click', '.add-condition-btn', function () {
+    const $block = $(this).closest('.condition-block');
+    const hasOr = $block.find('.condition-row').length > 0;
+    if (hasOr) {
+      $block.find('.add-condition-btn').before(`
+        <div style="display:flex;align-items:center;gap:8px;margin:6px 0 6px 4px;">
+          <div style="width:18px;height:1px;background:var(--border);"></div>
+          <button class="condition-connector">AND</button>
+          <div style="flex:1;height:1px;background:var(--border);"></div>
+        </div>`);
+    }
+    $block.find('.add-condition-btn').before(`
+      <div class="condition-row">
+        <select class="cond-select cond-field">
+          <option selected>Answer is</option>
+          <option>Answer is not</option>
+          <option>Score ≥</option>
+          <option>Score ≤</option>
+        </select>
+        <select class="cond-select cond-op">
+          <option selected>Very satisfied</option>
+          <option>Somewhat satisfied</option>
+          <option>Neutral</option>
+          <option>Somewhat dissatisfied</option>
+          <option>Very dissatisfied</option>
+        </select>
+        <button class="cond-remove">×</button>
+      </div>`);
+  });
+
+  /* ── REMOVE CONDITION ── */
+  $(document).on('click', '.cond-remove', function () {
+    $(this).closest('.condition-row').prev('.condition-connector, div:has(.condition-connector)').remove();
+    $(this).closest('.condition-row').remove();
+  });
+
+  /* ── ADD ACTION ── */
+  $(document).on('click', '.add-action-btn', function () {
+    const actions = [
+      { icon: '↪️', text: 'Jump to <strong>Q2 — NPS score</strong>' },
+      { icon: '🏷️', text: 'Tag respondent as <strong>Passive</strong>' },
+      { icon: '📧', text: 'Send alert to <strong>team@company.com</strong>' },
+      { icon: '🔗', text: 'Trigger webhook: <strong>https://hooks.example.com/poll</strong>' },
+    ];
+    const a = actions[Math.floor(Math.random() * actions.length)];
+    $(this).before(`
+      <div class="action-row">
+        <span class="action-icon">${a.icon}</span>
+        <div class="action-desc">${a.text}</div>
+        <button class="action-remove">×</button>
+      </div>`);
+  });
+
+  /* ── REMOVE ACTION ── */
+  $(document).on('click', '.action-remove', function () {
+    $(this).closest('.action-row').remove();
+  });
+
+  /* ── ADD RULE ── */
+  $(document).on('click', '.add-rule-btn', function () {
+    const n = $('.rule-card').length + 1;
+    const html = `
+      <div class="rule-card" id="rule-${n}" style="animation:fadeIn .2s ease;">
+        <div class="rule-header">
+          <span class="rule-drag">⠿</span>
+          <div class="rule-num">${n}</div>
+          <div class="rule-name"><input type="text" value="New rule ${n}" placeholder="Rule name…" /></div>
+          <div class="rule-controls">
+            <span class="status-chip chip-active"><span class="chip-dot"></span> Active</span>
+            <button class="btn btn-outline btn-xs ms-1" onclick="toggleRule('rule-${n}')">Disable</button>
+            <button class="btn btn-xs ms-1" style="border:none;background:transparent;color:var(--ink-3);font-size:18px;cursor:pointer;">🗑</button>
+          </div>
+        </div>
+        <div class="rule-body">
+          <div class="condition-block">
+            <div class="condition-block-label">IF all of these conditions are met</div>
+            <div class="condition-row">
+              <select class="cond-select cond-field">
+                <option selected>Answer is</option>
+                <option>Answer is not</option>
+                <option>Score ≥</option>
+              </select>
+              <select class="cond-select cond-op">
+                <option selected>Very satisfied</option>
+                <option>Somewhat satisfied</option>
+                <option>Neutral</option>
+                <option>Somewhat dissatisfied</option>
+                <option>Very dissatisfied</option>
+              </select>
+              <button class="cond-remove">×</button>
+            </div>
+            <button class="add-condition-btn"><span style="font-size:15px;line-height:1;">+</span> Add condition</button>
+          </div>
+          <div class="action-divider"><span class="then-badge">THEN</span></div>
+          <div class="action-row">
+            <span class="action-icon">↪️</span>
+            <div class="action-desc">Jump to <strong>End of poll</strong></div>
+            <button class="action-remove">×</button>
+          </div>
+          <button class="add-action-btn mt-2"><span style="font-size:15px;line-height:1;">+</span> Add action</button>
+        </div>
+        <div class="rule-footer">
+          <span style="font-size:12px;color:var(--ink-3);">New rule — not yet saved.</span>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-outline btn-xs">Duplicate</button>
+            <button class="btn btn-outline btn-xs">Test rule</button>
+          </div>
+        </div>
+      </div>`;
+    $(this).before(html);
+  });
+
+  /* ── TEMPLATE APPLY ── */
+  $('.template-card').on('click', function () {
+    const name = $(this).find('.tc-name').text();
+    $('.logic-tab[data-pane="rules"]').trigger('click');
+    alert(`"${name}" template applied. Review the rules added above.`);
+  });
+
+});
+</script>
+</body>
+</html>

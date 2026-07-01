@@ -12,6 +12,13 @@ export type PollQuestionType =
   | "OpenText"
   | "Matrix";
 
+export type PollListSortBy =
+  | "title"
+  | "audienceType"
+  | "status"
+  | "questionCount"
+  | "voteCount";
+
 export type PollVoteIdentityType = "Authenticated" | "Anonymous";
 
 export interface OrganizerPollSummary {

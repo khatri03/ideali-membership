@@ -6,6 +6,7 @@ import type {
   OrganizerPollVote,
   OrganizerPollVoteAnswer,
   PollAudienceType,
+  PollListSortBy,
   PollStatus,
   PollVoteIdentityType,
 } from "./polls";
@@ -38,6 +39,8 @@ export interface PollListRequest {
   searchText: string | null;
   audienceType: PollAudienceType | null;
   status: PollStatus | null;
+  sortBy?: PollListSortBy | null;
+  sortOrder?: "asc" | "desc" | null;
 }
 
 export interface PollListResponse {

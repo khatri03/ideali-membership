@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, ChevronRight, Loader2, RotateCcw, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronRight, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   buildMembershipPollCreatePath,
@@ -9,7 +9,7 @@ import {
   buildMembershipPollEditPath,
 } from "../../../app/router/routes";
 import { showToast } from "../../../shared/components/toast/Toast";
-import type { PollAudienceType, PollStatus } from "../../../types/polls";
+import type { PollAudienceType, PollListSortBy, PollStatus } from "../../../types/polls";
 import {
   fetchOrganizerPolls,
   getPollAudienceCopy,
@@ -33,6 +33,74 @@ const STATUS_FILTERS: Array<{ label: string; value: PollStatus | "All" }> = [
   { label: "Archived", value: "Archived" },
 ];
 
+type PollSortOrder = "asc" | "desc";
+
+type PollTableColumn = {
+  label: string;
+  key: PollListSortBy;
+  align?: "right";
+};
+
+const POLL_TABLE_COLUMNS: PollTableColumn[] = [
+  { label: "Poll Name", key: "title" },
+  { label: "Audience", key: "audienceType" },
+  { label: "Status", key: "status" },
+  { label: "Questions", key: "questionCount", align: "right" },
+  { label: "Votes", key: "voteCount", align: "right" },
+];
+
+function formatPollScheduleDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(parsed);
+
+  const lookup = new Map(parts.map((part) => [part.type, part.value] as const));
+  const day = lookup.get("day");
+  const month = lookup.get("month");
+  const year = lookup.get("year");
+  const hour = lookup.get("hour");
+  const minute = lookup.get("minute");
+  const dayPeriod = lookup.get("dayPeriod");
+
+  if (!day || !month || !year || !hour || !minute || !dayPeriod) {
+    return null;
+  }
+
+  return `${day}-${month}-${year} ${hour}:${minute} ${dayPeriod}`;
+}
+
+function getPollScheduleCopy(startsAtUtc: string | null, endsAtUtc: string | null) {
+  if (!startsAtUtc) {
+    return null;
+  }
+
+  const formattedStartsAt = formatPollScheduleDate(startsAtUtc);
+  if (!formattedStartsAt) {
+    return null;
+  }
+
+  if (!endsAtUtc) {
+    return formattedStartsAt;
+  }
+
+  const formattedEndsAt = formatPollScheduleDate(endsAtUtc);
+  if (!formattedEndsAt) {
+    return formattedStartsAt;
+  }
+
+  return `${formattedStartsAt} - ${formattedEndsAt}`;
+}
+
 function DotsIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 fill-current">
@@ -40,6 +108,24 @@ function DotsIcon() {
       <circle cx="10" cy="10" r="1.5" />
       <circle cx="16" cy="10" r="1.5" />
     </svg>
+  );
+}
+
+function SortIcon({
+  active,
+  order,
+}: {
+  active: boolean;
+  order: PollSortOrder;
+}) {
+  if (!active) {
+    return <ArrowUpDown size={14} className="text-slate-400" />;
+  }
+
+  return order === "asc" ? (
+    <ArrowUp size={14} className="text-cyan-700" />
+  ) : (
+    <ArrowDown size={14} className="text-cyan-700" />
   );
 }
 
@@ -407,43 +493,16 @@ function PollListStatusConfirmDialog({
   );
 }
 
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-            {label}
-          </p>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
-        </div>
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-          <Icon className="h-5 w-5" />
-        </span>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{hint}</p>
-    </div>
-  );
-}
-
 export function PollsPage() {
   const [searchText, setSearchText] = useState("");
   const [audienceFilter, setAudienceFilter] = useState<PollAudienceType | "All">("All");
   const [statusFilter, setStatusFilter] = useState<PollStatus | "All">("All");
+  const [sortBy, setSortBy] = useState<PollListSortBy | null>(null);
+  const [sortOrder, setSortOrder] = useState<PollSortOrder | null>(null);
   const deferredSearchText = searchText;
 
   const organizerPollsQuery = useQuery({
-    queryKey: ["polls", "organizer", deferredSearchText, audienceFilter, statusFilter],
+    queryKey: ["polls", "organizer", deferredSearchText, audienceFilter, statusFilter, sortBy, sortOrder],
     queryFn: ({ signal }) =>
       fetchOrganizerPolls(
         {
@@ -452,6 +511,8 @@ export function PollsPage() {
           searchText: deferredSearchText,
           audienceType: audienceFilter === "All" ? null : audienceFilter,
           status: statusFilter === "All" ? null : statusFilter,
+          sortBy,
+          sortOrder,
         },
         signal,
       ),
@@ -460,6 +521,29 @@ export function PollsPage() {
 
   const hasFilters = searchText.trim().length > 0 || audienceFilter !== "All" || statusFilter !== "All";
   const isEmptyState = !organizerPollsQuery.isLoading && organizerPolls.length === 0;
+
+  function handleSort(nextSortBy: PollListSortBy) {
+    const isSameSort = sortBy === nextSortBy;
+    setSortBy(nextSortBy);
+    setSortOrder(isSameSort && sortOrder === "asc" ? "desc" : "asc");
+  }
+
+  function clearSort() {
+    setSortBy(null);
+    setSortOrder(null);
+  }
+
+  function getSortTooltip(columnSortBy: PollListSortBy, label: string) {
+    if (sortBy !== columnSortBy) {
+      return `Sort by ${label}`;
+    }
+
+    if (sortOrder === "asc") {
+      return `Sort by ${label} descending`;
+    }
+
+    return `Clear sort by ${label}`;
+  }
 
   return (
     <section className="space-y-6">
@@ -538,7 +622,22 @@ export function PollsPage() {
           </div>
         </div>
 
-        <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50">
+        <div className="mt-6 space-y-3">
+          {sortBy ? (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={clearSort}
+                title="Clear current sort"
+                className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-cyan-100"
+              >
+                <X size={14} />
+                Clear Sort
+              </button>
+            </div>
+          ) : null}
+
+          <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50">
           {organizerPollsQuery.isLoading ? (
             <div className="px-5 py-10 text-center text-sm text-slate-500">
               Loading polls from the backend...
@@ -575,28 +674,35 @@ export function PollsPage() {
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Actions
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Poll
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Audience
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Questions
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Votes
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Access rule
-                    </th>
+                    {POLL_TABLE_COLUMNS.map((column) => {
+                      const isActive = sortBy === column.key;
+                      const ariaSort = isActive ? (sortOrder === "desc" ? "descending" : "ascending") : "none";
+
+                      return (
+                        <th
+                          key={column.key}
+                          aria-sort={ariaSort}
+                          className={`px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 ${column.align === "right" ? "text-right" : "text-left"}`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleSort(column.key)}
+                            title={getSortTooltip(column.key, column.label)}
+                            className={`inline-flex w-full items-center gap-1.5 ${column.align === "right" ? "justify-end" : "justify-start"}`}
+                          >
+                            {column.label}
+                            <SortIcon active={isActive} order={sortOrder ?? "asc"} />
+                          </button>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {organizerPolls.map((poll) => (
+                  {organizerPolls.map((poll) => {
+                    const scheduleCopy = getPollScheduleCopy(poll.startsAtUtc, poll.endsAtUtc);
+
+                    return (
                     <tr key={poll.uniqueId}>
                       <td className="px-4 py-4 align-top">
                         <PollRowActions pollUniqueId={poll.uniqueId} pollTitle={poll.title} status={poll.status} />
@@ -604,30 +710,13 @@ export function PollsPage() {
                       <td className="px-4 py-4 align-top">
                         <div className="space-y-2">
                           <p className="text-sm font-semibold text-slate-900">{poll.title}</p>
-                          <p className="max-w-xl text-sm leading-6 text-slate-500">
-                            {poll.description || "No description provided yet."}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                              {poll.requiredMembershipTypeUniqueIds.length > 0
-                                ? `${poll.requiredMembershipTypeUniqueIds.length} membership${poll.requiredMembershipTypeUniqueIds.length > 1 ? "s" : ""} mapped`
-                                : "Public open"}
-                            </span>
-                            <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-cyan-700">
-                              {poll.startsAtUtc ? "Scheduled" : "No start window"}
-                            </span>
-                          </div>
+                          {scheduleCopy ? <small className="text-slate-500">{scheduleCopy}</small> : null}
                         </div>
                       </td>
                       <td className="px-4 py-4 align-top">
                         <div>
                           <p className="text-sm font-medium text-slate-900">
                             {getPollAudienceCopy(poll.audienceType)}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {poll.requiredMembershipTypeUniqueIds.length > 0
-                              ? "Visible only to eligible members"
-                              : "Visible to everyone"}
                           </p>
                         </div>
                       </td>
@@ -641,25 +730,20 @@ export function PollsPage() {
                           {poll.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 align-top text-sm font-medium text-slate-700">
+                      <td className="px-4 py-4 align-top text-right text-sm font-medium text-slate-700">
                         {poll.questionCount}
                       </td>
-                      <td className="px-4 py-4 align-top text-sm font-medium text-slate-700">
+                      <td className="px-4 py-4 align-top text-right text-sm font-medium text-slate-700">
                         {poll.voteCount}
                       </td>
-                      <td className="px-4 py-4 align-top">
-                        <p className="text-sm text-slate-600">
-                          {poll.audienceType === "MembersOnly"
-                            ? "Hidden if the current user is not eligible."
-                            : "Shown to all visitors, but still protected from duplicate votes."}
-                        </p>
-                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
+        </div>
         </div>
       </div>
 
