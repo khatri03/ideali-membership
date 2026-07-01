@@ -18,6 +18,7 @@ export const POLL_API_ROUTES = {
     questionTypes: "/api/organizer/polls/question-types",
     detail: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}`,
     update: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}`,
+    status: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/status`,
     publish: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/publish`,
     revertToDraft: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/revert-to-draft`,
     close: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/close`,
@@ -59,6 +60,10 @@ export interface PollSaveRequest extends OrganizerPollDraft {
 
 export interface PollSaveResponse {
   uniqueId: string;
+}
+
+export interface PollStatusUpdateRequest {
+  status: PollStatus;
 }
 
 export interface PollEligibilityRequest {

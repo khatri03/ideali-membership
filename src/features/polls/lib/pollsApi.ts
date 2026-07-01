@@ -3,7 +3,13 @@ import { readResponseData } from "../../../lib/parseUtils";
 import type { PollAudienceType, PollStatus } from "../../../types/polls";
 import type { PollQuestionType } from "../../../types/polls";
 import { POLL_API_ROUTES } from "../../../types/pollsApi";
-import type { PollDetailResponse, PollListResponse, PollSaveRequest, PollSaveResponse } from "../../../types/pollsApi";
+import type {
+  PollDetailResponse,
+  PollListResponse,
+  PollSaveRequest,
+  PollSaveResponse,
+  PollStatusUpdateRequest,
+} from "../../../types/pollsApi";
 
 export interface PollListFilters {
   pageNo: number;
@@ -103,6 +109,11 @@ export async function createAndPublishOrganizerPoll(request: PollSaveRequest) {
 
 export async function updateOrganizerPoll(pollUniqueId: string, request: PollSaveRequest) {
   return putJson<PollSaveResponse>(POLL_API_ROUTES.organizer.update(pollUniqueId), request);
+}
+
+export async function updateOrganizerPollStatus(pollUniqueId: string, status: PollStatus) {
+  const request: PollStatusUpdateRequest = { status };
+  return postJson<unknown>(POLL_API_ROUTES.organizer.status(pollUniqueId), request);
 }
 
 export async function publishOrganizerPoll(pollUniqueId: string) {

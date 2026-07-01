@@ -19,6 +19,7 @@ import {
   BarChart3,
   CheckCircle2,
   ArrowLeft,
+  MoreVertical,
   ChevronDown,
   ChevronRight,
   Loader2,
@@ -26,6 +27,7 @@ import {
   Plus,
   Smartphone,
   Sparkles,
+  RotateCcw,
   Trash2,
   Star,
   X,
@@ -50,7 +52,7 @@ import {
   createAndPublishOrganizerPoll,
   fetchOrganizerPollDetail,
   fetchOrganizerPollQuestionTypes,
-  publishOrganizerPoll,
+  updateOrganizerPollStatus,
   updateOrganizerPoll,
 } from "../lib";
 import {
@@ -101,7 +103,7 @@ type DeleteConfirmState = {
   onConfirm: () => void;
 };
 
-type PublishConfirmMode = "createAndPublish" | "saveAndPublish" | "publish";
+type PublishConfirmMode = "createAndPublish" | "saveAndPublish" | "publish" | "draft";
 
 type PublishConfirmState = {
   mode: PublishConfirmMode;
@@ -377,6 +379,7 @@ export function PollCreatePage() {
   const [draggedOptionId, setDraggedOptionId] = useState<string | null>(null);
   const [draggedOptionWidth, setDraggedOptionWidth] = useState<number | null>(null);
   const [questionTypeMenuOpen, setQuestionTypeMenuOpen] = useState(false);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
   const [focusedMatrixRowId, setFocusedMatrixRowId] = useState<string | null>(null);
   const [focusedMatrixColumnId, setFocusedMatrixColumnId] = useState<string | null>(null);
@@ -384,6 +387,7 @@ export function PollCreatePage() {
   const [publishConfirm, setPublishConfirm] = useState<PublishConfirmState | null>(null);
   const hydratedPollIdRef = useRef<string | null>(null);
   const questionTypeMenuRef = useRef<HTMLDivElement | null>(null);
+  const statusMenuRef = useRef<HTMLDivElement | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
   const optionsListRef = useRef<HTMLDivElement | null>(null);
   const matrixRowsListRef = useRef<HTMLDivElement | null>(null);
@@ -518,8 +522,9 @@ export function PollCreatePage() {
       return createOrganizerPoll(request);
     },
   });
-  const publishPollMutation = useMutation({
-    mutationFn: (targetPollUniqueId: string) => publishOrganizerPoll(targetPollUniqueId),
+  const statusMutation = useMutation({
+    mutationFn: (variables: { pollUniqueId: string; status: "Draft" | "Published" }) =>
+      updateOrganizerPollStatus(variables.pollUniqueId, variables.status),
   });
 
   const validationError = useMemo(() => validatePollDraft(draft), [draft]);
@@ -560,7 +565,8 @@ export function PollCreatePage() {
   const questionCount = draft.questions.length;
   const hasMembersAudience = draft.audienceType === "MembersOnly";
   const canPublishPoll = isEditMode && draft.status === "Draft";
-  const isBusy = savePollMutation.isPending || publishPollMutation.isPending;
+  const canChangeStatus = isEditMode && (draft.status === "Draft" || draft.status === "Published");
+  const isBusy = savePollMutation.isPending || statusMutation.isPending;
   const saveButtonLabel = isEditMode ? "Save poll" : "Create poll";
   const saveAndPublishButtonLabel = isEditMode ? "Save & Publish" : "Create & Publish";
 
@@ -628,6 +634,32 @@ export function PollCreatePage() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [questionTypeMenuOpen]);
+
+  useEffect(() => {
+    if (!statusMenuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(event.target as Node)) {
+        setStatusMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setStatusMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [statusMenuOpen]);
 
   useEffect(() => {
     hydratedPollIdRef.current = null;
@@ -714,6 +746,10 @@ export function PollCreatePage() {
       return;
     }
 
+    openPublishConfirm(nextConfirm);
+  }
+
+  function requestDraftConfirm(nextConfirm: PublishConfirmState) {
     openPublishConfirm(nextConfirm);
   }
 
@@ -983,25 +1019,25 @@ export function PollCreatePage() {
     }
   }
 
-  async function handlePublishPoll() {
+  async function handleSetStatus(nextStatus: "Draft" | "Published") {
     if (!isEditMode || !pollUniqueId) {
       return;
     }
 
-    const nextValidationError = validatePollDraft(draft);
-    if (nextValidationError) {
-      showToast(nextValidationError, "error");
-      return;
-    }
-
     try {
-      await savePollMutation.mutateAsync(buildPollRequest(draft));
-      await publishPollMutation.mutateAsync(pollUniqueId);
-      showToast("Poll published.", "success");
+      await updateOrganizerPollStatus(pollUniqueId, nextStatus);
+      showToast(nextStatus === "Published" ? "Poll published." : "Poll reverted to draft.", "success");
       await invalidatePollQueries();
       navigate(buildMembershipPollsPath());
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Unable to publish the poll.", "error");
+      showToast(
+        error instanceof Error
+          ? error.message
+          : nextStatus === "Published"
+            ? "Unable to publish the poll."
+            : "Unable to revert the poll to draft.",
+        "error",
+      );
     }
   }
 
@@ -1019,7 +1055,7 @@ export function PollCreatePage() {
         }
 
         await savePollMutation.mutateAsync(buildPollRequest(draft));
-        await publishPollMutation.mutateAsync(pollUniqueId);
+        await updateOrganizerPollStatus(pollUniqueId, "Published");
         showToast("Poll saved and published.", "success");
       } else {
         await createAndPublishOrganizerPoll(buildPollRequest(draft));
@@ -1141,15 +1177,98 @@ export function PollCreatePage() {
                 details: draft.title.trim() || "Untitled poll",
                 confirmLabel: "Publish poll",
                 confirmTone: "primary",
-                onConfirm: () => void handlePublishPoll(),
+                onConfirm: () => void handleSetStatus("Published"),
               })
             }
             disabled={isBusy}
             className="inline-flex items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:bg-cyan-50 disabled:text-cyan-400"
           >
-            {publishPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {statusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Publish
           </button>
+        ) : null}
+        {canChangeStatus ? (
+          <div ref={statusMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setStatusMenuOpen((open) => !open)}
+              className="inline-flex h-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+              aria-haspopup="menu"
+              aria-expanded={statusMenuOpen}
+              aria-label="Open status actions"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+
+            {statusMenuOpen ? (
+              <div className="absolute right-0 top-full z-20 mt-2 w-64 overflow-hidden rounded-[1.35rem] border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/70">
+                <div className="px-3 py-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Status</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Publish or move the poll back to draft.</p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={draft.status === "Published" || isBusy}
+                  onClick={() => {
+                    if (draft.status === "Published") {
+                      return;
+                    }
+
+                    setStatusMenuOpen(false);
+                    requestPublishConfirm({
+                      mode: "publish",
+                      title: "Publish poll?",
+                      description: "This will make the poll live and visible to eligible voters.",
+                      details: draft.title.trim() || "Untitled poll",
+                      confirmLabel: "Publish poll",
+                      confirmTone: "primary",
+                      onConfirm: () => void handleSetStatus("Published"),
+                    });
+                  }}
+                  className="flex w-full items-center justify-between rounded-[1rem] px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  role="menuitem"
+                  aria-checked={draft.status === "Published"}
+                >
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-cyan-700" />
+                    Publish
+                  </span>
+                  {draft.status === "Published" ? <span className="text-cyan-700">Check</span> : null}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={draft.status === "Draft" || isBusy}
+                  onClick={() => {
+                    if (draft.status === "Draft") {
+                      return;
+                    }
+
+                    setStatusMenuOpen(false);
+                    requestDraftConfirm({
+                      mode: "draft",
+                      title: "Move poll to draft?",
+                      description: "This will take the poll out of published state and reopen it for editing.",
+                      details: draft.title.trim() || "Untitled poll",
+                      confirmLabel: "Move to draft",
+                      confirmTone: "primary",
+                      onConfirm: () => void handleSetStatus("Draft"),
+                    });
+                  }}
+                  className="flex w-full items-center justify-between rounded-[1rem] px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-amber-50 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  role="menuitem"
+                  aria-checked={draft.status === "Draft"}
+                >
+                  <span className="flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4 text-amber-700" />
+                    Draft
+                  </span>
+                  {draft.status === "Draft" ? <span className="text-amber-700">Check</span> : null}
+                </button>
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -1803,7 +1922,7 @@ export function PollCreatePage() {
                     : "Create the poll and publish it immediately."
                 }
               >
-                {publishPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {statusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {saveAndPublishButtonLabel}
               </button>
               <button
@@ -1939,6 +2058,7 @@ export function PollCreatePage() {
       ) : null}
       {publishConfirm ? (
         <PublishPollConfirmDialog
+          mode={publishConfirm.mode}
           confirmLabel={publishConfirm.confirmLabel}
           description={publishConfirm.description}
           details={publishConfirm.details}
@@ -2039,6 +2159,7 @@ function DeletePollItemConfirmDialog({
 }
 
 function PublishPollConfirmDialog({
+  mode,
   title,
   description,
   details,
@@ -2046,6 +2167,7 @@ function PublishPollConfirmDialog({
   onCancel,
   onConfirm,
 }: {
+  mode: PublishConfirmMode;
   title: string;
   description: string;
   details: string;
@@ -2053,6 +2175,12 @@ function PublishPollConfirmDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const isDraftMode = mode === "draft";
+  const iconBackgroundClassName = isDraftMode ? "bg-amber-50 text-amber-700" : "bg-cyan-50 text-cyan-700";
+  const headingToneClassName = isDraftMode ? "text-amber-700" : "text-cyan-700";
+  const detailBorderClassName = isDraftMode ? "border-amber-200 bg-amber-50" : "border-cyan-200 bg-cyan-50";
+  const icon = isDraftMode ? <RotateCcw className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />;
+
   return createPortal(
     <div
       className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm"
@@ -2068,11 +2196,13 @@ function PublishPollConfirmDialog({
       >
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-              <CheckCircle2 className="h-5 w-5" />
+            <div className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl ${iconBackgroundClassName}`}>
+              {icon}
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Confirm publish</p>
+              <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${headingToneClassName}`}>
+                {isDraftMode ? "Confirm draft" : "Confirm publish"}
+              </p>
               <h3 id="poll-publish-confirm-title" className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
                 {title}
               </h3>
@@ -2091,12 +2221,16 @@ function PublishPollConfirmDialog({
 
         <div className="mt-5 space-y-4">
           <p className="text-sm leading-6 text-slate-600">{description}</p>
-          <div className="rounded-[1.25rem] border border-cyan-200 bg-cyan-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">You are publishing</p>
+          <div className={`rounded-[1.25rem] border px-4 py-3 ${detailBorderClassName}`}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${headingToneClassName}`}>
+              {isDraftMode ? "You are moving" : "You are publishing"}
+            </p>
             <p className="mt-2 text-sm font-semibold text-slate-900">{details}</p>
           </div>
           <p className="text-sm leading-6 text-slate-500">
-            Make sure the title, questions, and opening time are correct before you continue.
+            {isDraftMode
+              ? "This will reopen the poll for editing and hide it from voters."
+              : "Make sure the title, questions, and opening time are correct before you continue."}
           </p>
         </div>
 

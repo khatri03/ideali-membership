@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import {
-  BarChart3,
-  Search,
-  Sparkles,
-  Users,
-  Vote,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   buildMembershipPollCreatePath,
@@ -187,14 +181,6 @@ export function PollsPage() {
   });
   const organizerPolls = organizerPollsQuery.data?.items ?? [];
 
-  const summary = useMemo(() => {
-    const total = organizerPollsQuery.data?.totalRecordsCount ?? organizerPolls.length;
-    const published = organizerPolls.filter((poll) => poll.status === "Published").length;
-    const membersOnly = organizerPolls.filter((poll) => poll.audienceType === "MembersOnly").length;
-
-    return { total, published, membersOnly };
-  }, [organizerPolls, organizerPollsQuery.data?.totalRecordsCount]);
-
   const hasFilters = searchText.trim().length > 0 || audienceFilter !== "All" || statusFilter !== "All";
   const isEmptyState = !organizerPollsQuery.isLoading && organizerPolls.length === 0;
 
@@ -219,33 +205,6 @@ export function PollsPage() {
             </Link>
           </div>
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          icon={BarChart3}
-          label="Total polls"
-          value={String(summary.total)}
-          hint="Organizer-owned polls returned from the live endpoint."
-        />
-        <MetricCard
-          icon={Sparkles}
-          label="Published"
-          value={String(summary.published)}
-          hint="Only published polls are eligible for public rendering."
-        />
-        <MetricCard
-          icon={Users}
-          label="Members only"
-          value={String(summary.membersOnly)}
-          hint="These remain hidden unless the current user is eligible."
-        />
-        <MetricCard
-          icon={Vote}
-          label="Vote integrity"
-          value="1 vote"
-          hint="Authenticated or anonymous identity, but never more than once."
-        />
       </div>
 
       <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
