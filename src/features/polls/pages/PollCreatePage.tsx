@@ -17,19 +17,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CalendarClock,
+  BarChart3,
   CheckCircle2,
   CheckSquare2,
   ChevronRight,
   CircleDot,
   Loader2,
+  ListOrdered,
   Monitor,
   Plus,
   ShieldCheck,
   Smartphone,
   Sparkles,
   MessageSquareText,
+  SlidersHorizontal,
   Trash2,
   ToggleLeft,
+  Star,
   Users,
   Vote,
 } from "lucide-react";
@@ -78,28 +82,56 @@ const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
   {
     value: "SingleChoice",
     label: "Single choice",
-    description: "The default poll format when one answer is allowed.",
+    description: "Respondents pick exactly one option.",
     optionMode: "list",
     icon: CircleDot,
   },
   {
     value: "MultipleChoice",
     label: "Multiple choice",
-    description: "Use when more than one answer can be selected.",
+    description: "Select all options that apply.",
     optionMode: "list",
     icon: CheckSquare2,
   },
   {
+    value: "StarRating",
+    label: "Star rating",
+    description: "Rate something on a 1 to 5 star scale.",
+    optionMode: "none",
+    icon: Star,
+  },
+  {
+    value: "Nps",
+    label: "NPS scale",
+    description: "Capture promoter sentiment on a 0 to 10 scale.",
+    optionMode: "none",
+    icon: BarChart3,
+  },
+  {
     value: "YesNo",
     label: "Yes / No",
-    description: "Fast binary feedback with no extra setup.",
+    description: "Simple binary feedback with no extra setup.",
     optionMode: "fixed",
     icon: ToggleLeft,
   },
   {
+    value: "Slider",
+    label: "Slider",
+    description: "Drag to a numeric value.",
+    optionMode: "none",
+    icon: SlidersHorizontal,
+  },
+  {
+    value: "RankedChoice",
+    label: "Ranked choice",
+    description: "Drag to set preference order.",
+    optionMode: "list",
+    icon: ListOrdered,
+  },
+  {
     value: "OpenText",
-    label: "Open text",
-    description: "Best for free-form feedback or comments.",
+    label: "Open-ended",
+    description: "Free-form text response.",
     optionMode: "none",
     icon: MessageSquareText,
   },
@@ -254,10 +286,14 @@ export function PollCreatePage() {
   const initialQuestion = useMemo(() => createQuestionDraft("SingleChoice"), []);
   const [activeQuestionId, setActiveQuestionId] = useState<string>(initialQuestion.id);
   const [previewMode, setPreviewMode] = useState<"Desktop" | "Mobile">("Desktop");
+  const [draggedQuestionId, setDraggedQuestionId] = useState<string | null>(null);
+  const [draggedQuestionWidth, setDraggedQuestionWidth] = useState<number | null>(null);
   const [draggedOptionId, setDraggedOptionId] = useState<string | null>(null);
   const [draggedOptionWidth, setDraggedOptionWidth] = useState<number | null>(null);
   const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
+  const questionsListRef = useRef<HTMLDivElement | null>(null);
   const optionsListRef = useRef<HTMLDivElement | null>(null);
+  const questionInputRefs = useRef(new Map<string, HTMLButtonElement>());
   const optionInputRefs = useRef(new Map<string, HTMLInputElement>());
   const [draft, setDraft] = useState<PollDraft>({
     title: "",
@@ -275,6 +311,28 @@ export function PollCreatePage() {
     staleTime: 5 * 60 * 1000,
   });
   const dragSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const restrictQuestionDragToParent = useMemo<Modifier>(
+    () =>
+      ({ draggingNodeRect, transform }) => {
+        const questionList = questionsListRef.current;
+        if (!questionList || !draggingNodeRect) {
+          return transform;
+        }
+
+        const bounds = questionList.getBoundingClientRect();
+        const minX = bounds.left - draggingNodeRect.left;
+        const maxX = bounds.right - draggingNodeRect.right;
+        const minY = bounds.top - draggingNodeRect.top;
+        const maxY = bounds.bottom - draggingNodeRect.bottom;
+
+        return {
+          ...transform,
+          x: Math.min(Math.max(transform.x, minX), maxX),
+          y: Math.min(Math.max(transform.y, minY), maxY),
+        };
+      },
+    [],
+  );
   const restrictOptionDragToParent = useMemo<Modifier>(
     () =>
       ({ draggingNodeRect, transform }) => {
@@ -371,6 +429,41 @@ export function PollCreatePage() {
         questions: nextQuestions.length > 0 ? nextQuestions : [replacementQuestion],
       };
     });
+  }
+
+  function handleQuestionDragStart(event: DragStartEvent) {
+    setDraggedQuestionId(String(event.active.id));
+    setDraggedQuestionWidth(event.active.rect.current.initial?.width ?? null);
+  }
+
+  function handleQuestionDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    setDraggedQuestionId(null);
+    setDraggedQuestionWidth(null);
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    setDraft((current) => {
+      const fromIndex = current.questions.findIndex((question) => question.id === String(active.id));
+      const toIndex = current.questions.findIndex((question) => question.id === String(over.id));
+
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+        return current;
+      }
+
+      return {
+        ...current,
+        questions: arrayMove(current.questions, fromIndex, toIndex),
+      };
+    });
+  }
+
+  function handleQuestionDragCancel() {
+    setDraggedQuestionId(null);
+    setDraggedQuestionWidth(null);
   }
 
   function addQuestionOption(questionId: string) {
@@ -614,7 +707,7 @@ export function PollCreatePage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Questions</p>
                 <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">Build the poll structure</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Only the core formats are exposed here. That keeps the builder focused and predictable.
+                  Drag questions to reorder them. The active question stays editable on the right.
                 </p>
               </div>
               <button
@@ -635,37 +728,49 @@ export function PollCreatePage() {
                     {questionCount}
                   </span>
                 </div>
-                <div className="mt-4 space-y-2">
-                  {draft.questions.map((question, index) => {
-                    const choice = questionTypeChoices.find((item) => item.value === question.questionType);
-                    const isActive = question.id === activeQuestionId;
+                <DndContext
+                  sensors={dragSensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictQuestionDragToParent]}
+                  onDragStart={handleQuestionDragStart}
+                  onDragEnd={handleQuestionDragEnd}
+                  onDragCancel={handleQuestionDragCancel}
+                >
+                  <SortableContext items={draft.questions.map((question) => question.id)} strategy={verticalListSortingStrategy}>
+                    <div ref={questionsListRef} className="mt-4 flex flex-col gap-2">
+                      {draft.questions.map((question, index) => (
+                        <SortableQuestionListItem
+                          key={question.id}
+                          question={question}
+                          index={index}
+                          selected={question.id === activeQuestionId}
+                          handleRef={(button) => {
+                            if (button) {
+                              questionInputRefs.current.set(question.id, button);
+                            } else {
+                              questionInputRefs.current.delete(question.id);
+                            }
+                          }}
+                          onSelect={() => setActiveQuestionId(question.id)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
 
-                    return (
-                      <button
-                        key={question.id}
-                        type="button"
-                        onClick={() => setActiveQuestionId(question.id)}
-                        className={[
-                          "w-full rounded-[1.35rem] border px-4 py-3 text-left transition",
-                          isActive
-                            ? "border-cyan-200 bg-white shadow-sm"
-                            : "border-slate-200 bg-white/70 hover:border-cyan-200 hover:bg-white",
-                        ].join(" ")}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                              Question {index + 1}
-                            </p>
-                            <p className="mt-1 truncate text-sm font-semibold text-slate-900">
-                              {question.text || "Untitled question"}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                  {typeof document !== "undefined"
+                    ? createPortal(
+                        <DragOverlay adjustScale={false} dropAnimation={null} modifiers={[restrictQuestionDragToParent]}>
+                          {draggedQuestionId ? (
+                            <QuestionDragPreview
+                              question={draft.questions.find((item) => item.id === draggedQuestionId) ?? null}
+                              width={draggedQuestionWidth}
+                            />
+                          ) : null}
+                        </DragOverlay>,
+                        document.body,
+                      )
+                    : null}
+                </DndContext>
               </div>
 
               <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -985,44 +1090,7 @@ export function PollCreatePage() {
                       </div>
                     </div>
 
-                    <div className="mt-4">
-                      {activeQuestion?.questionType === "OpenText" ? (
-                        <div className="rounded-[1.2rem] border border-slate-200 bg-white p-3 text-sm text-slate-400">
-                          Type your answer here...
-                        </div>
-                      ) : activeQuestion?.questionType === "YesNo" ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            className="rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700"
-                          >
-                            Yes
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700"
-                          >
-                            No
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {(activeQuestion?.options.length
-                            ? activeQuestion.options
-                            : [createOptionDraft("Option 1", "option-1"), createOptionDraft("Option 2", "option-2")]).map(
-                            (option) => (
-                              <div
-                                key={option.id}
-                                className="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"
-                              >
-                                <span className="h-4 w-4 rounded-full border border-slate-300" />
-                                <span>{option.label}</span>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <div className="mt-4">{renderQuestionPreview(activeQuestion)}</div>
 
                     <button
                       type="button"
@@ -1153,6 +1221,91 @@ function SortableQuestionOptionRow({
   );
 }
 
+function SortableQuestionListItem({
+  question,
+  index,
+  selected,
+  onSelect,
+  handleRef,
+}: {
+  question: PollQuestionDraft;
+  index: number;
+  selected: boolean;
+  onSelect: () => void;
+  handleRef: (button: HTMLButtonElement | null) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: question.id,
+  });
+  const choice = QUESTION_TYPE_METADATA.find((item) => item.value === question.questionType) ?? null;
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-dragging={isDragging ? "true" : "false"}
+      className={[
+        "rounded-[1.35rem] border px-4 py-3 text-left transition",
+        selected
+          ? "border-cyan-200 bg-white shadow-sm"
+          : "border-slate-200 bg-white/70 hover:border-cyan-200 hover:bg-white",
+        isDragging ? "opacity-35 ring-2 ring-cyan-100" : "",
+      ].join(" ")}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      <div className="min-w-0">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Question {index + 1}</p>
+          <button
+            type="button"
+            ref={handleRef}
+            className="inline-flex h-7 w-7 items-center justify-center text-slate-400 transition hover:text-cyan-700 active:cursor-grabbing"
+            aria-label={`Drag question ${index + 1} to reorder`}
+            {...attributes}
+            {...listeners}
+          >
+            <span className="select-none text-lg leading-none">⠿</span>
+          </button>
+        </div>
+        <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{question.text || "Untitled question"}</p>
+        <p className="mt-1 text-xs font-medium text-slate-500">{choice?.label ?? "Question"}</p>
+      </div>
+    </div>
+  );
+}
+
+function QuestionDragPreview({ question, width }: { question: PollQuestionDraft | null; width: number | null }) {
+  if (!question) {
+    return null;
+  }
+
+  const choice = QUESTION_TYPE_METADATA.find((item) => item.value === question.questionType) ?? null;
+
+  return (
+    <div
+      className="max-w-[calc(100vw-2rem)] cursor-grabbing rounded-[1.35rem] border border-cyan-300 bg-white p-4 shadow-2xl shadow-slate-900/20 ring-4 ring-cyan-100"
+      style={{ width: width ?? undefined }}
+    >
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-700">Question</p>
+        <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{question.text || "Untitled question"}</p>
+        <p className="mt-1 text-xs font-medium text-slate-500">{choice?.label ?? "Question"}</p>
+      </div>
+    </div>
+  );
+}
+
 function OptionDragPreview({ option, width }: { option: PollQuestionOptionDraft | null; width: number | null }) {
   if (!option) {
     return null;
@@ -1250,6 +1403,118 @@ function SummaryRow({
         <span className="text-sm font-semibold text-slate-800">{label}</span>
       </div>
       <span className="text-sm font-medium text-slate-600">{value}</span>
+    </div>
+  );
+}
+
+function renderQuestionPreview(question?: PollQuestionDraft) {
+  if (!question) {
+    return null;
+  }
+
+  if (question.questionType === "OpenText") {
+    return (
+      <div className="rounded-[1.2rem] border border-slate-200 bg-white p-3 text-sm text-slate-400">
+        Type your answer here...
+      </div>
+    );
+  }
+
+  if (question.questionType === "YesNo") {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" className="rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700">
+          Yes
+        </button>
+        <button type="button" className="rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700">
+          No
+        </button>
+      </div>
+    );
+  }
+
+  if (question.questionType === "StarRating") {
+    return (
+      <div className="space-y-3 rounded-[1.2rem] border border-slate-200 bg-white p-4">
+        <div className="flex items-center gap-2 text-amber-400">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Star key={index} className="h-5 w-5 fill-current" />
+          ))}
+        </div>
+        <p className="text-sm text-slate-500">Tap a star to rate this question.</p>
+      </div>
+    );
+  }
+
+  if (question.questionType === "Nps") {
+    return (
+      <div className="space-y-3 rounded-[1.2rem] border border-slate-200 bg-white p-4">
+        <div className="grid grid-cols-11 gap-1">
+          {Array.from({ length: 11 }).map((_, index) => (
+            <div
+              key={index}
+              className={[
+                "flex h-9 items-center justify-center rounded-lg border text-xs font-semibold",
+                index <= 6
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : index <= 8
+                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700",
+              ].join(" ")}
+            >
+              {index}
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-slate-500">Score from 0 to 10 to measure loyalty.</p>
+      </div>
+    );
+  }
+
+  if (question.questionType === "Slider") {
+    return (
+      <div className="space-y-4 rounded-[1.2rem] border border-slate-200 bg-white p-4">
+        <input type="range" min="0" max="100" defaultValue="50" className="w-full accent-cyan-600" />
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <span>0</span>
+          <span>50</span>
+          <span>100</span>
+        </div>
+      </div>
+    );
+  }
+
+  const previewOptions =
+    question.options.length > 0
+      ? question.options
+      : [createOptionDraft("Option 1", "option-1"), createOptionDraft("Option 2", "option-2")];
+
+  if (question.questionType === "RankedChoice") {
+    return (
+      <div className="space-y-2">
+        {previewOptions.map((option, index) => (
+          <div
+            key={option.id}
+            className="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"
+          >
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-cyan-50 text-xs font-semibold text-cyan-700">
+              {index + 1}
+            </span>
+            <span>{option.label}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {previewOptions.map((option) => (
+        <div key={option.id} className="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+          <span className="h-4 w-4 rounded-full border border-slate-300" />
+          <span>{option.label}</span>
+        </div>
+      ))}
     </div>
   );
 }

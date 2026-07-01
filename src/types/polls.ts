@@ -5,11 +5,12 @@ export type PollStatus = "Draft" | "Published" | "Closed" | "Archived";
 export type PollQuestionType =
   | "SingleChoice"
   | "MultipleChoice"
-  | "YesNo"
-  | "OpenText"
   | "StarRating"
   | "Nps"
-  | "RankedChoice";
+  | "YesNo"
+  | "Slider"
+  | "RankedChoice"
+  | "OpenText";
 
 export type PollVoteIdentityType = "Authenticated" | "Anonymous";
 
