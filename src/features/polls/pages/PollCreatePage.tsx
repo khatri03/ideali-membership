@@ -19,6 +19,7 @@ import {
   CalendarClock,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Loader2,
   Monitor,
@@ -32,19 +33,26 @@ import {
   Vote,
   X,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { APP_ROUTES, buildMembershipPollsPath } from "../../../app/router/routes";
 import { fetchMembershipTypeOptions } from "../../../lib/membershipMembers";
 import { MultiSelectInput } from "../../../shared/components/inputs/MultiSelectInput/MultiSelectInput";
 import { showToast } from "../../../shared/components/toast/Toast";
-import type { PollAudienceType, PollQuestionType } from "../../../types/polls";
+import type {
+  OrganizerPollDetail,
+  OrganizerPollMatrixColumn,
+  OrganizerPollMatrixRow,
+  OrganizerPollOption,
+  OrganizerPollQuestion,
+  PollAudienceType,
+  PollQuestionType,
+} from "../../../types/polls";
 import type { PollSaveRequest } from "../../../types/pollsApi";
-import { createOrganizerPoll, fetchOrganizerPollQuestionTypes } from "../lib";
+import { createOrganizerPoll, fetchOrganizerPollDetail, fetchOrganizerPollQuestionTypes, updateOrganizerPoll } from "../lib";
 import {
   FALLBACK_POLL_QUESTION_TYPES,
   getPollQuestionTypeChoice,
   getPollQuestionTypeChoices,
-  type PollQuestionTypeChoice,
   usesPollMatrix,
   usesPollOptionList,
 } from "../lib/pollQuestionTypes";
@@ -66,9 +74,11 @@ type PollQuestionDraft = {
 };
 
 type PollDraft = {
+  uniqueId: string | null;
   title: string;
   description: string;
   audienceType: PollAudienceType;
+  status: "Draft" | "Published" | "Closed" | "Archived";
   requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string;
   endsAtUtc: string;
@@ -172,6 +182,56 @@ function createQuestionDraft(questionType: PollQuestionType = "SingleChoice"): P
   };
 }
 
+function mapQuestionOptions(options: OrganizerPollOption[]) {
+  return options.map((option) => ({
+    id: option.uniqueId || createId(),
+    label: option.label,
+    value: option.value ?? "",
+  }));
+}
+
+function mapMatrixRows(rows: OrganizerPollMatrixRow[]) {
+  return rows.map((row) => ({
+    id: row.uniqueId || createId(),
+    label: row.label,
+    value: row.label,
+  }));
+}
+
+function mapMatrixColumns(columns: OrganizerPollMatrixColumn[]) {
+  return columns.map((column) => ({
+    id: column.uniqueId || createId(),
+    label: column.label,
+    value: column.value ?? "",
+  }));
+}
+
+function createQuestionDraftFromDetail(question: OrganizerPollQuestion): PollQuestionDraft {
+  return {
+    id: question.uniqueId || createId(),
+    questionType: question.questionType,
+    text: question.text,
+    isRequired: question.isRequired,
+    options: mapQuestionOptions(question.options),
+    matrixRows: mapMatrixRows(question.matrixRows),
+    matrixColumns: mapMatrixColumns(question.matrixColumns),
+  };
+}
+
+function createDraftFromPollDetail(detail: OrganizerPollDetail): PollDraft {
+  return {
+    uniqueId: detail.uniqueId || null,
+    title: detail.title,
+    description: detail.description ?? "",
+    audienceType: detail.audienceType,
+    status: detail.status,
+    requiredMembershipTypeUniqueIds: [...detail.requiredMembershipTypeUniqueIds],
+    startsAtUtc: detail.startsAtUtc ? detail.startsAtUtc.slice(0, 16) : "",
+    endsAtUtc: detail.endsAtUtc ? detail.endsAtUtc.slice(0, 16) : "",
+    questions: detail.questions.length > 0 ? detail.questions.map(createQuestionDraftFromDetail) : [createQuestionDraft()],
+  };
+}
+
 function createMatrixQuestionContent() {
   return {
     matrixRows: createDefaultMatrixRows(),
@@ -190,11 +250,11 @@ function formatDateTimeLocal(value: string) {
 
 function buildPollRequest(draft: PollDraft): PollSaveRequest {
   return {
-    uniqueId: createId(),
+    uniqueId: draft.uniqueId ?? createId(),
     title: draft.title.trim(),
     description: draft.description.trim() || null,
     audienceType: draft.audienceType,
-    status: "Draft",
+    status: draft.status,
     requiredMembershipTypeUniqueIds:
       draft.audienceType === "MembersOnly" ? draft.requiredMembershipTypeUniqueIds : [],
     startsAtUtc: formatDateTimeLocal(draft.startsAtUtc),
@@ -286,7 +346,9 @@ function validatePollDraft(draft: PollDraft) {
 
 export function PollCreatePage() {
   const navigate = useNavigate();
+  const { pollUniqueId } = useParams<{ pollUniqueId?: string }>();
   const queryClient = useQueryClient();
+  const isEditMode = Boolean(pollUniqueId);
   const initialQuestion = useMemo(() => createQuestionDraft("SingleChoice"), []);
   const [activeQuestionId, setActiveQuestionId] = useState<string>(initialQuestion.id);
   const [previewMode, setPreviewMode] = useState<"Desktop" | "Mobile">("Desktop");
@@ -294,10 +356,13 @@ export function PollCreatePage() {
   const [draggedQuestionWidth, setDraggedQuestionWidth] = useState<number | null>(null);
   const [draggedOptionId, setDraggedOptionId] = useState<string | null>(null);
   const [draggedOptionWidth, setDraggedOptionWidth] = useState<number | null>(null);
+  const [questionTypeMenuOpen, setQuestionTypeMenuOpen] = useState(false);
   const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
   const [focusedMatrixRowId, setFocusedMatrixRowId] = useState<string | null>(null);
   const [focusedMatrixColumnId, setFocusedMatrixColumnId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
+  const hydratedPollIdRef = useRef<string | null>(null);
+  const questionTypeMenuRef = useRef<HTMLDivElement | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
   const optionsListRef = useRef<HTMLDivElement | null>(null);
   const matrixRowsListRef = useRef<HTMLDivElement | null>(null);
@@ -307,9 +372,11 @@ export function PollCreatePage() {
   const matrixRowInputRefs = useRef(new Map<string, HTMLInputElement>());
   const matrixColumnInputRefs = useRef(new Map<string, HTMLInputElement>());
   const [draft, setDraft] = useState<PollDraft>({
+    uniqueId: null,
     title: "",
     description: "",
     audienceType: "Public",
+    status: "Draft",
     requiredMembershipTypeUniqueIds: [],
     startsAtUtc: "",
     endsAtUtc: "",
@@ -325,6 +392,11 @@ export function PollCreatePage() {
     queryKey: ["polls", "organizer", "question-types"],
     queryFn: ({ signal }) => fetchOrganizerPollQuestionTypes(signal),
     staleTime: 24 * 60 * 60 * 1000,
+  });
+  const pollDetailQuery = useQuery({
+    queryKey: ["polls", "organizer", "detail", pollUniqueId],
+    queryFn: ({ signal }) => fetchOrganizerPollDetail(pollUniqueId ?? "", signal),
+    enabled: isEditMode && Boolean(pollUniqueId),
   });
   const dragSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const restrictQuestionDragToParent = useMemo<Modifier>(
@@ -416,15 +488,26 @@ export function PollCreatePage() {
     [],
   );
 
-  const createPollMutation = useMutation({
-    mutationFn: createOrganizerPoll,
+  const savePollMutation = useMutation({
+    mutationFn: (request: PollSaveRequest) => {
+      if (isEditMode && pollUniqueId) {
+        return updateOrganizerPoll(pollUniqueId, request);
+      }
+
+      return createOrganizerPoll(request);
+    },
     onSuccess: async () => {
-      showToast("Poll draft created.", "success");
-      await queryClient.invalidateQueries({ queryKey: ["polls", "organizer"] });
+      showToast(isEditMode ? "Poll updated." : "Poll draft created.", "success");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["polls", "organizer"] }),
+        isEditMode && pollUniqueId
+          ? queryClient.invalidateQueries({ queryKey: ["polls", "organizer", "detail", pollUniqueId] })
+          : Promise.resolve(),
+      ]);
       navigate(buildMembershipPollsPath());
     },
     onError: (error) => {
-      showToast(error instanceof Error ? error.message : "Unable to create the poll.", "error");
+      showToast(error instanceof Error ? error.message : isEditMode ? "Unable to update the poll." : "Unable to create the poll.", "error");
     },
   });
 
@@ -452,6 +535,9 @@ export function PollCreatePage() {
     ? questionTypeChoices.find((choice) => choice.value === activeQuestion.questionType) ??
       getPollQuestionTypeChoice(activeQuestion.questionType)
     : null;
+  const selectedQuestionTypeChoice = activeQuestion
+    ? activeQuestionChoice ?? getPollQuestionTypeChoice(activeQuestion.questionType)
+    : getPollQuestionTypeChoice("SingleChoice");
   const draggedQuestion = draggedQuestionId
     ? draft.questions.find((item) => item.id === draggedQuestionId) ?? null
     : null;
@@ -466,6 +552,9 @@ export function PollCreatePage() {
     0,
   );
   const hasMembersAudience = draft.audienceType === "MembersOnly";
+  const saveButtonLabel = isEditMode ? "Save poll" : "Create poll";
+  const heroActionLabel = isEditMode ? "Save changes" : "Create poll";
+  const heroTitle = isEditMode ? "Edit the poll before it goes live" : "Design the poll before it goes live";
   const checklistItems = [
     { label: "Internal title set", done: Boolean(draft.title.trim()) },
     { label: "Audience selected", done: true },
@@ -511,6 +600,63 @@ export function PollCreatePage() {
       setFocusedMatrixColumnId(null);
     }
   }, [focusedMatrixColumnId, draft.questions]);
+
+  useEffect(() => {
+    if (!questionTypeMenuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (questionTypeMenuRef.current && !questionTypeMenuRef.current.contains(event.target as Node)) {
+        setQuestionTypeMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setQuestionTypeMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [questionTypeMenuOpen]);
+
+  useEffect(() => {
+    hydratedPollIdRef.current = null;
+    if (!isEditMode) {
+      const nextQuestion = createQuestionDraft("SingleChoice");
+      setDraft({
+        uniqueId: null,
+        title: "",
+        description: "",
+        audienceType: "Public",
+        status: "Draft",
+        requiredMembershipTypeUniqueIds: [],
+        startsAtUtc: "",
+        endsAtUtc: "",
+        questions: [nextQuestion],
+      });
+      setActiveQuestionId(nextQuestion.id);
+      setQuestionTypeMenuOpen(false);
+    }
+  }, [isEditMode, pollUniqueId]);
+
+  useEffect(() => {
+    if (!isEditMode || !pollUniqueId || !pollDetailQuery.data || hydratedPollIdRef.current === pollUniqueId) {
+      return;
+    }
+
+    const nextDraft = createDraftFromPollDetail(pollDetailQuery.data);
+    setDraft(nextDraft);
+    setActiveQuestionId(nextDraft.questions[0]?.id ?? createId());
+    hydratedPollIdRef.current = pollUniqueId;
+  }, [isEditMode, pollDetailQuery.data, pollUniqueId]);
 
   function updateQuestion(questionId: string, updater: (question: PollQuestionDraft) => PollQuestionDraft) {
     setDraft((current) => ({
@@ -650,6 +796,7 @@ export function PollCreatePage() {
         matrixColumns: matrixDefaults.matrixColumns,
       };
     });
+    setQuestionTypeMenuOpen(false);
   }
 
   function handleOptionDragStart(event: DragStartEvent) {
@@ -787,7 +934,7 @@ export function PollCreatePage() {
       return;
     }
 
-    createPollMutation.mutate(buildPollRequest(draft));
+    savePollMutation.mutate(buildPollRequest(draft));
   }
 
   function requestRemoveQuestion(question: PollQuestionDraft) {
@@ -838,6 +985,37 @@ export function PollCreatePage() {
     });
   }
 
+  if (isEditMode && pollDetailQuery.isLoading) {
+    return (
+      <section className="flex min-h-[50vh] items-center justify-center rounded-[2rem] border border-slate-200 bg-white/90 p-8 shadow-sm">
+        <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+          <Loader2 className="h-5 w-5 animate-spin text-cyan-600" />
+          Loading poll draft...
+        </div>
+      </section>
+    );
+  }
+
+  if (isEditMode && pollDetailQuery.isError) {
+    return (
+      <section className="rounded-[2rem] border border-rose-200 bg-rose-50 p-8 shadow-sm">
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-rose-700">Unable to load poll</p>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">Edit mode failed</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+          The backend did not return a poll detail record. Go back to the poll list and try again.
+        </p>
+        <div className="mt-6">
+          <Link
+            to={APP_ROUTES.membershipPolls}
+            className="inline-flex items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+          >
+            Back to polls
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <>
       <section className="space-y-6">
@@ -855,9 +1033,7 @@ export function PollCreatePage() {
                 Core types only
               </span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Design the poll before it goes live
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{heroTitle}</h1>
             <p className="max-w-2xl text-sm leading-7 text-slate-300">
               This builder keeps the mockup feel, but only exposes the approved MVP poll types for now.
               Everything else stays out of the UI until we genuinely need it.
@@ -880,11 +1056,11 @@ export function PollCreatePage() {
             <button
               type="submit"
               form="poll-create-form"
-              disabled={createPollMutation.isPending}
+              disabled={savePollMutation.isPending}
               className="inline-flex items-center justify-center rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-cyan-300"
             >
-              {createPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create poll
+              {savePollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {heroActionLabel}
             </button>
             <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-300 sm:col-span-2">
               The layout is flexible enough to grow later, but the release surface stays intentionally small.
@@ -1098,11 +1274,11 @@ export function PollCreatePage() {
                             <p className="text-xs text-slate-500">
                               {questionTypesQuery.isLoading
                                 ? "Loading available types from the backend..."
-                                : "Pick a format from the cards below."}
+                                : "Pick a format from the dropdown."}
                             </p>
                           </div>
                           <span className="rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
-                            Select visually
+                            Compact picker
                           </span>
                         </div>
 
@@ -1111,15 +1287,71 @@ export function PollCreatePage() {
                             Loading poll types...
                           </div>
                         ) : (
-                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                            {questionTypeChoices.map((choice) => (
-                              <QuestionTypeCard
-                                key={choice.value}
-                                choice={choice}
-                                selected={activeQuestion.questionType === choice.value}
-                                onSelect={() => setQuestionType(activeQuestion.id, choice.value)}
-                              />
-                            ))}
+                          <div ref={questionTypeMenuRef} className="relative mt-3">
+                            <button
+                              type="button"
+                              onClick={() => setQuestionTypeMenuOpen((open) => !open)}
+                              aria-haspopup="menu"
+                              aria-expanded={questionTypeMenuOpen}
+                              className="flex w-full items-center justify-between gap-4 rounded-[1.35rem] border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50/40 focus:border-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-100"
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <span className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                                  <selectedQuestionTypeChoice.icon className="h-5 w-5" />
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-slate-900">{selectedQuestionTypeChoice.label}</p>
+                                  <p className="text-xs text-slate-500">{selectedQuestionTypeChoice.description}</p>
+                                </div>
+                              </div>
+                              <ChevronDown className="h-4 w-4 flex-none text-slate-400" />
+                            </button>
+
+                            {questionTypeMenuOpen ? (
+                              <div
+                                role="menu"
+                                aria-label="Question type options"
+                                className="absolute z-30 mt-2 w-full overflow-hidden rounded-[1.35rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/10"
+                              >
+                                <div className="max-h-[24rem] overflow-auto p-2">
+                                  {questionTypeChoices.map((choice) => {
+                                    const isSelected = activeQuestion.questionType === choice.value;
+
+                                    return (
+                                      <button
+                                        key={choice.value}
+                                        type="button"
+                                        role="menuitemradio"
+                                        aria-checked={isSelected}
+                                        onClick={() => setQuestionType(activeQuestion.id, choice.value)}
+                                        className={[
+                                          "flex w-full items-start gap-3 rounded-[1rem] px-3 py-3 text-left transition",
+                                          isSelected
+                                            ? "bg-cyan-50 text-cyan-900"
+                                            : "text-slate-700 hover:bg-slate-50",
+                                        ].join(" ")}
+                                      >
+                                        <span
+                                          className={[
+                                            "inline-flex h-9 w-9 flex-none items-center justify-center rounded-2xl",
+                                            isSelected ? "bg-cyan-100 text-cyan-700" : "bg-slate-100 text-slate-500",
+                                          ].join(" ")}
+                                        >
+                                          <choice.icon className="h-4 w-4" />
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex items-center justify-between gap-3">
+                                            <p className="text-sm font-semibold">{choice.label}</p>
+                                            {isSelected ? <CheckCircle2 className="h-4 w-4 flex-none text-cyan-700" /> : null}
+                                          </div>
+                                          <p className="mt-1 text-xs leading-5 text-slate-500">{choice.description}</p>
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
                         )}
                       </div>
@@ -1471,11 +1703,11 @@ export function PollCreatePage() {
             </button>
             <button
               type="submit"
-              disabled={createPollMutation.isPending}
+              disabled={savePollMutation.isPending}
               className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
             >
-              {createPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create poll
+              {savePollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {saveButtonLabel}
             </button>
           </div>
 
@@ -1930,47 +2162,6 @@ function OptionDragPreview({ option, width }: { option: PollQuestionOptionDraft 
         </div>
       </div>
     </div>
-  );
-}
-
-function QuestionTypeCard({
-  choice,
-  selected,
-  onSelect,
-}: {
-  choice: PollQuestionTypeChoice;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={[
-        "rounded-[1.35rem] border p-4 text-left transition",
-        selected
-          ? "border-cyan-300 bg-cyan-50 shadow-sm ring-1 ring-cyan-100"
-          : "border-slate-200 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
-      ].join(" ")}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className={selected ? "inline-flex text-cyan-700" : "inline-flex text-slate-500"}>
-              <choice.icon className="h-5 w-5" />
-            </span>
-            <p className="min-w-0 text-sm font-semibold text-slate-900">{choice.label}</p>
-          </div>
-          <p className="text-sm leading-6 text-slate-500">{choice.description}</p>
-        </div>
-        {selected ? (
-          <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-cyan-600 text-white shadow-sm">
-            <CheckCircle2 className="h-4 w-4" />
-          </span>
-        ) : null}
-      </div>
-    </button>
   );
 }
 

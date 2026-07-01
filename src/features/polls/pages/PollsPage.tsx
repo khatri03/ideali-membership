@@ -1,28 +1,20 @@
-import { useDeferredValue, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
-  EyeOff,
-  Filter,
   Search,
-  ShieldCheck,
   Sparkles,
   Users,
   Vote,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { APP_ROUTES, buildMembershipPollCreatePath } from "../../../app/router/routes";
+import { buildMembershipPollCreatePath, buildMembershipPollEditPath } from "../../../app/router/routes";
 import type { PollAudienceType, PollStatus } from "../../../types/polls";
-import { POLL_API_ROUTES } from "../../../types/pollsApi";
 import {
-  buildSamplePolls,
   fetchOrganizerPolls,
-  fetchOrganizerPollQuestionTypes,
-  FALLBACK_POLL_QUESTION_TYPES,
   getPollAudienceCopy,
   getPollStatusTone,
-  getPollQuestionTypeChoices,
-  POLL_PAGE_ROUTE_SUMMARY,
 } from "../lib";
 
 const PAGE_SIZE = 8;
@@ -41,11 +33,102 @@ const STATUS_FILTERS: Array<{ label: string; value: PollStatus | "All" }> = [
   { label: "Archived", value: "Archived" },
 ];
 
-function PollTypeChip({ label }: { label: string }) {
+function DotsIcon() {
   return (
-    <span className="inline-flex rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-700">
-      {label}
-    </span>
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 fill-current">
+      <circle cx="4" cy="10" r="1.5" />
+      <circle cx="10" cy="10" r="1.5" />
+      <circle cx="16" cy="10" r="1.5" />
+    </svg>
+  );
+}
+
+function PollRowActions({ pollUniqueId }: { pollUniqueId: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+
+      setIsOpen(false);
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  function openMenu() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setIsOpen(true);
+      return;
+    }
+
+    const gap = 8;
+    const menuWidth = 176;
+    const menuHeight = 52;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
+
+    setMenuPosition({
+      top: openUpward ? Math.max(gap, rect.top - menuHeight - gap) : rect.bottom + gap,
+      left: Math.max(gap, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - gap)),
+    });
+    setIsOpen(true);
+  }
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={openMenu}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={`Open actions for poll ${pollUniqueId}`}
+        title="Actions"
+      >
+        <DotsIcon />
+      </button>
+
+      {isOpen && menuPosition
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="fixed z-[1200] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-2xl shadow-slate-900/10"
+              style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+            >
+              <Link
+                to={buildMembershipPollEditPath(pollUniqueId)}
+                onClick={() => setIsOpen(false)}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+              >
+                Edit
+              </Link>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
   );
 }
 
@@ -79,11 +162,10 @@ function MetricCard({
 }
 
 export function PollsPage() {
-  const samplePolls = buildSamplePolls();
   const [searchText, setSearchText] = useState("");
   const [audienceFilter, setAudienceFilter] = useState<PollAudienceType | "All">("All");
   const [statusFilter, setStatusFilter] = useState<PollStatus | "All">("All");
-  const deferredSearchText = useDeferredValue(searchText);
+  const deferredSearchText = searchText;
 
   const organizerPollsQuery = useQuery({
     queryKey: ["polls", "organizer", deferredSearchText, audienceFilter, statusFilter],
@@ -99,12 +181,6 @@ export function PollsPage() {
         signal,
       ),
   });
-  const questionTypesQuery = useQuery({
-    queryKey: ["polls", "organizer", "question-types"],
-    queryFn: ({ signal }) => fetchOrganizerPollQuestionTypes(signal),
-    staleTime: 24 * 60 * 60 * 1000,
-  });
-
   const organizerPolls = organizerPollsQuery.data?.items ?? [];
 
   const summary = useMemo(() => {
@@ -115,15 +191,6 @@ export function PollsPage() {
     return { total, published, membersOnly };
   }, [organizerPolls, organizerPollsQuery.data?.totalRecordsCount]);
 
-  const pollTypeChoices = useMemo(
-    () =>
-      questionTypesQuery.data?.length
-        ? getPollQuestionTypeChoices(questionTypesQuery.data)
-        : questionTypesQuery.isError
-          ? getPollQuestionTypeChoices(FALLBACK_POLL_QUESTION_TYPES)
-          : [],
-    [questionTypesQuery.data, questionTypesQuery.isError],
-  );
   const hasFilters = searchText.trim().length > 0 || audienceFilter !== "All" || statusFilter !== "All";
   const isEmptyState = !organizerPollsQuery.isLoading && organizerPolls.length === 0;
 
@@ -136,25 +203,6 @@ export function PollsPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
                 Organizer polls
               </p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                Polls MVP surface
-              </h1>
-              <p className="mt-3 max-w-2xl text-slate-600">
-                Polls belong to the organizer, can be public or members only, and stay hidden
-                when the current user is not eligible. That keeps the experience clean and avoids
-                revealing locked content.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-800">
-                Phase 3/5
-              </span>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
-                Best-practice hardening
-              </span>
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                Hidden-by-default access
-              </span>
             </div>
           </div>
 
@@ -165,15 +213,6 @@ export function PollsPage() {
             >
               Create poll
             </Link>
-            <Link
-              to={APP_ROUTES.membershipDashboard}
-              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-            >
-              Back to dashboard
-            </Link>
-            <span className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white">
-              Live route: {POLL_API_ROUTES.organizer.list}
-            </span>
           </div>
         </div>
       </div>
@@ -203,62 +242,6 @@ export function PollsPage() {
           value="1 vote"
           hint="Authenticated or anonymous identity, but never more than once."
         />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-              <EyeOff className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-                Access
-              </p>
-              <h2 className="text-lg font-semibold text-slate-900">Render only when eligible</h2>
-            </div>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            Members-only polls are hidden from ineligible users. Public polls are visible to
-            everyone, including anonymous visitors.
-          </p>
-        </div>
-
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-              <ShieldCheck className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-                Eligibility
-              </p>
-              <h2 className="text-lg font-semibold text-slate-900">Checked on read and vote</h2>
-            </div>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            We check access when rendering the poll and again when the vote is submitted. That is
-            the safer pattern for a membership product.
-          </p>
-        </div>
-
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
-              <Filter className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-                Filters
-              </p>
-              <h2 className="text-lg font-semibold text-slate-900">Searchable organizer list</h2>
-            </div>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            Search, audience, and status filters are wired to the backend contract so the list
-            can grow without changing the page shape.
-          </p>
-        </div>
       </div>
 
       <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
@@ -350,6 +333,9 @@ export function PollsPage() {
                 <thead className="bg-slate-100/80">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Actions
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Poll
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -372,6 +358,9 @@ export function PollsPage() {
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {organizerPolls.map((poll) => (
                     <tr key={poll.uniqueId}>
+                      <td className="px-4 py-4 align-top">
+                        <PollRowActions pollUniqueId={poll.uniqueId} />
+                      </td>
                       <td className="px-4 py-4 align-top">
                         <div className="space-y-2">
                           <p className="text-sm font-semibold text-slate-900">{poll.title}</p>
@@ -434,114 +423,6 @@ export function PollsPage() {
         </div>
       </div>
 
-      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-              Core types
-            </p>
-            <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-              First-wave poll formats
-            </h2>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide">
-            <span className="rounded-full bg-cyan-50 px-3 py-1 text-cyan-700">
-              {POLL_PAGE_ROUTE_SUMMARY.organizerRouteCount} organizer routes
-            </span>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
-              {POLL_PAGE_ROUTE_SUMMARY.publicRouteCount} public routes
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {questionTypesQuery.isLoading && pollTypeChoices.length === 0 ? (
-            <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500 md:col-span-2 xl:col-span-3">
-              Loading question types from the backend...
-            </div>
-          ) : (
-            pollTypeChoices.map((choice) => (
-              <article
-                key={choice.value}
-                className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 transition hover:border-cyan-200 hover:bg-white"
-              >
-                <div className="space-y-2">
-                  <PollTypeChip label={choice.label} />
-                  <h3 className="text-lg font-semibold text-slate-900">{choice.label}</h3>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{choice.description}</p>
-              </article>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-            MVP preview
-          </p>
-          <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-            Sample polls we are keeping around for design review
-          </h2>
-
-          <div className="mt-6 space-y-4">
-            {samplePolls.map((poll) => (
-              <div key={poll.uniqueId} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{poll.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{poll.description}</p>
-                  </div>
-                  <span
-                    className={[
-                      "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
-                      getPollStatusTone(poll.status),
-                    ].join(" ")}
-                  >
-                    {poll.status}
-                  </span>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                    {getPollAudienceCopy(poll.audienceType)}
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                    {poll.questionCount} questions
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                    {poll.voteCount} votes
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-            Delivery rules
-          </p>
-          <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-            What the frontend is now enforcing
-          </h2>
-
-          <ul className="mt-6 space-y-4 text-sm leading-6 text-slate-600">
-            <li className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3">
-              Organizer polls stay in the organizer surface.
-            </li>
-            <li className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3">
-              Public polls render only when the backend says they are eligible.
-            </li>
-            <li className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3">
-              Members-only polls remain hidden for ineligible users instead of showing a locked shell.
-            </li>
-            <li className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3">
-              Duplicate voting is treated as a product rule, not a UI convenience.
-            </li>
-          </ul>
-        </div>
-      </div>
     </section>
   );
 }

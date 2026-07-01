@@ -123,6 +123,7 @@ function RouterApp() {
               <Route path="organizer/polls">
                 <Route index element={<PollsPage />} />
                 <Route path="create" element={<PollCreatePage />} />
+                <Route path=":pollUniqueId/edit" element={<PollCreatePage />} />
               </Route>
               <Route path="organizer/membership/type/polls" element={<Navigate to={APP_ROUTES.membershipPolls} replace />} />
               <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />
