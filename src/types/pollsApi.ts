@@ -14,7 +14,6 @@ export const POLL_API_ROUTES = {
   organizer: {
     list: "/api/organizer/polls",
     create: "/api/organizer/polls",
-    questionTypes: "/api/organizer/polls/question-types",
     detail: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}`,
     update: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}`,
     publish: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/publish`,
@@ -43,11 +42,6 @@ export interface PollListResponse {
   pageSize: number;
   pageCount: number;
   totalRecordsCount: number;
-}
-
-export interface PollQuestionTypeOption {
-  text: string;
-  value: string;
 }
 
 export interface PollDetailResponse extends OrganizerPollDetail {

@@ -1,9 +1,7 @@
-import { getJson } from "../../../lib/api";
+import { getJson, postJson } from "../../../lib/api";
 import type { PollAudienceType, PollStatus } from "../../../types/polls";
 import { POLL_API_ROUTES } from "../../../types/pollsApi";
-import type { PollListResponse, PollQuestionTypeOption, PollSaveRequest, PollSaveResponse } from "../../../types/pollsApi";
-import { postJson } from "../../../lib/api";
-import { readResponseData, readText } from "../../../lib/parseUtils";
+import type { PollListResponse, PollSaveRequest, PollSaveResponse } from "../../../types/pollsApi";
 
 export interface PollListFilters {
   pageNo: number;
@@ -41,30 +39,4 @@ export async function fetchOrganizerPolls(filters: PollListFilters, signal?: Abo
 
 export async function createOrganizerPoll(request: PollSaveRequest) {
   return postJson<PollSaveResponse>(POLL_API_ROUTES.organizer.create, request);
-}
-
-export async function fetchPollQuestionTypes() {
-  const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.questionTypes);
-  const responseData = readResponseData(payload);
-  const items = Array.isArray(responseData)
-    ? responseData
-    : Array.isArray((responseData as { Data?: unknown } | null)?.Data)
-      ? ((responseData as { Data?: unknown }).Data as unknown[])
-      : Array.isArray((responseData as { PageData?: unknown } | null)?.PageData)
-        ? ((responseData as { PageData?: unknown }).PageData as unknown[])
-        : [];
-
-  return items
-    .map((item): PollQuestionTypeOption | null => {
-      if (!item || typeof item !== "object") {
-        return null;
-      }
-
-      const record = item as Record<string, unknown>;
-      return {
-        text: readText(record.Text ?? record.text),
-        value: readText(record.Value ?? record.value),
-      };
-    })
-    .filter((item): item is PollQuestionTypeOption => Boolean(item?.text && item?.value));
 }

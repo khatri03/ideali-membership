@@ -1,12 +1,34 @@
-import { useMemo, useState, type ComponentType, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CalendarClock,
+  CheckCircle2,
+  CheckSquare2,
+  ChevronRight,
+  CircleDot,
   Loader2,
+  Monitor,
   Plus,
   ShieldCheck,
+  Smartphone,
+  Sparkles,
+  MessageSquareText,
   Trash2,
+  ToggleLeft,
   Users,
   Vote,
 } from "lucide-react";
@@ -17,7 +39,7 @@ import { MultiSelectInput } from "../../../shared/components/inputs/MultiSelectI
 import { showToast } from "../../../shared/components/toast/Toast";
 import type { PollAudienceType, PollQuestionType } from "../../../types/polls";
 import type { PollSaveRequest } from "../../../types/pollsApi";
-import { createOrganizerPoll, fetchPollQuestionTypes } from "../lib";
+import { createOrganizerPoll } from "../lib";
 
 type PollQuestionOptionDraft = {
   id: string;
@@ -48,6 +70,8 @@ type QuestionTypeChoice = {
   label: string;
   description: string;
   optionMode: "none" | "fixed" | "list";
+  badge: string;
+  icon: ComponentType<{ className?: string }>;
 };
 
 const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
@@ -56,42 +80,32 @@ const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
     label: "Single choice",
     description: "The default poll format when one answer is allowed.",
     optionMode: "list",
+    badge: "Core",
+    icon: CircleDot,
   },
   {
     value: "MultipleChoice",
     label: "Multiple choice",
     description: "Use when more than one answer can be selected.",
     optionMode: "list",
+    badge: "Core",
+    icon: CheckSquare2,
   },
   {
     value: "YesNo",
     label: "Yes / No",
     description: "Fast binary feedback with no extra setup.",
     optionMode: "fixed",
+    badge: "Built-in",
+    icon: ToggleLeft,
   },
   {
     value: "OpenText",
     label: "Open text",
     description: "Best for free-form feedback or comments.",
     optionMode: "none",
-  },
-  {
-    value: "StarRating",
-    label: "Star rating",
-    description: "Good for quick sentiment scoring.",
-    optionMode: "none",
-  },
-  {
-    value: "Nps",
-    label: "NPS",
-    description: "Simple 0-10 loyalty scoring.",
-    optionMode: "none",
-  },
-  {
-    value: "RankedChoice",
-    label: "Ranked choice",
-    description: "Useful when respondents should rank options by preference.",
-    optionMode: "list",
+    badge: "Simple",
+    icon: MessageSquareText,
   },
 ];
 
@@ -122,6 +136,14 @@ function createOptionDraft(label: string, value: string): PollQuestionOptionDraf
     label,
     value,
   };
+}
+
+function createOptionValueFromLabel(label: string) {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function createDefaultOptions(questionType: PollQuestionType) {
@@ -245,6 +267,13 @@ function buildQuestionTypeTone(optionMode: QuestionTypeChoice["optionMode"]) {
 export function PollCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const initialQuestion = useMemo(() => createQuestionDraft("SingleChoice"), []);
+  const [activeQuestionId, setActiveQuestionId] = useState<string>(initialQuestion.id);
+  const [previewMode, setPreviewMode] = useState<"Desktop" | "Mobile">("Desktop");
+  const [draggedOptionId, setDraggedOptionId] = useState<string | null>(null);
+  const [draggedOptionWidth, setDraggedOptionWidth] = useState<number | null>(null);
+  const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
+  const optionInputRefs = useRef(new Map<string, HTMLInputElement>());
   const [draft, setDraft] = useState<PollDraft>({
     title: "",
     description: "",
@@ -252,7 +281,7 @@ export function PollCreatePage() {
     requiredMembershipTypeUniqueIds: [],
     startsAtUtc: "",
     endsAtUtc: "",
-    questions: [createQuestionDraft("SingleChoice")],
+    questions: [initialQuestion],
   });
 
   const membershipTypesQuery = useQuery({
@@ -260,12 +289,7 @@ export function PollCreatePage() {
     queryFn: fetchMembershipTypeOptions,
     staleTime: 5 * 60 * 1000,
   });
-
-  const questionTypesQuery = useQuery({
-    queryKey: ["poll-question-types"],
-    queryFn: fetchPollQuestionTypes,
-    staleTime: 5 * 60 * 1000,
-  });
+  const dragSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const createPollMutation = useMutation({
     mutationFn: createOrganizerPoll,
@@ -281,11 +305,35 @@ export function PollCreatePage() {
 
   const validationError = useMemo(() => validatePollDraft(draft), [draft]);
   const membershipTypeOptions = membershipTypesQuery.data ?? [];
-  const liveQuestionTypeOptions = questionTypesQuery.data ?? [];
-  const questionTypeChoices = QUESTION_TYPE_METADATA.map((choice) => ({
-    ...choice,
-    label: liveQuestionTypeOptions.find((item) => item.value === choice.value)?.text ?? choice.label,
-  }));
+  const questionTypeChoices = QUESTION_TYPE_METADATA;
+  const activeQuestion = useMemo(
+    () => draft.questions.find((question) => question.id === activeQuestionId) ?? draft.questions[0],
+    [activeQuestionId, draft.questions],
+  );
+  const activeQuestionIndex = draft.questions.findIndex((question) => question.id === activeQuestion?.id);
+  const activeQuestionChoice = activeQuestion ? questionTypeChoices.find((choice) => choice.value === activeQuestion.questionType) ?? null : null;
+  const questionCount = draft.questions.length;
+  const optionCount = draft.questions.reduce((total, question) => total + question.options.length, 0);
+  const hasMembersAudience = draft.audienceType === "MembersOnly";
+  const checklistItems = [
+    { label: "Internal title set", done: Boolean(draft.title.trim()) },
+    { label: "Audience selected", done: true },
+    { label: "At least one question", done: draft.questions.length > 0 },
+    { label: "Ready to publish", done: !validationError },
+  ];
+
+  useEffect(() => {
+    if (!focusedOptionId) {
+      return;
+    }
+
+    const input = optionInputRefs.current.get(focusedOptionId);
+    if (input) {
+      input.focus();
+      input.select();
+      setFocusedOptionId(null);
+    }
+  }, [focusedOptionId, draft.questions]);
 
   function updateQuestion(questionId: string, updater: (question: PollQuestionDraft) => PollQuestionDraft) {
     setDraft((current) => ({
@@ -295,27 +343,36 @@ export function PollCreatePage() {
   }
 
   function addQuestion() {
+    const nextQuestion = createQuestionDraft();
     setDraft((current) => ({
       ...current,
-      questions: [...current.questions, createQuestionDraft()],
+      questions: [...current.questions, nextQuestion],
     }));
+    setActiveQuestionId(nextQuestion.id);
   }
 
   function removeQuestion(questionId: string) {
-    setDraft((current) => ({
-      ...current,
-      questions: current.questions.filter((question) => question.id !== questionId),
-    }));
+    setDraft((current) => {
+      const nextQuestions = current.questions.filter((question) => question.id !== questionId);
+      const replacementQuestion = createQuestionDraft();
+      if (questionId === activeQuestionId) {
+        setActiveQuestionId(nextQuestions[0]?.id ?? replacementQuestion.id);
+      }
+
+      return {
+        ...current,
+        questions: nextQuestions.length > 0 ? nextQuestions : [replacementQuestion],
+      };
+    });
   }
 
   function addQuestionOption(questionId: string) {
+    const newOption = createOptionDraft("Option", "");
     updateQuestion(questionId, (question) => ({
       ...question,
-      options: [
-        ...question.options,
-        createOptionDraft(`Option ${question.options.length + 1}`, `option-${question.options.length + 1}`),
-      ],
+      options: [...question.options, newOption],
     }));
+    setFocusedOptionId(newOption.id);
   }
 
   function removeQuestionOption(questionId: string, optionId: string) {
@@ -339,6 +396,48 @@ export function PollCreatePage() {
     });
   }
 
+  function handleOptionDragStart(event: DragStartEvent) {
+    setDraggedOptionId(String(event.active.id));
+    setDraggedOptionWidth(event.active.rect.current.initial?.width ?? null);
+  }
+
+  function handleOptionDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    setDraggedOptionId(null);
+    setDraggedOptionWidth(null);
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    setDraft((current) => ({
+      ...current,
+      questions: current.questions.map((question) => {
+        if (question.id !== activeQuestionId) {
+          return question;
+        }
+
+        const fromIndex = question.options.findIndex((option) => option.id === String(active.id));
+        const toIndex = question.options.findIndex((option) => option.id === String(over.id));
+
+        if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+          return question;
+        }
+
+        return {
+          ...question,
+          options: arrayMove(question.options, fromIndex, toIndex),
+        };
+      }),
+    }));
+  }
+
+  function handleOptionDragCancel() {
+    setDraggedOptionId(null);
+    setDraggedOptionWidth(null);
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -351,31 +450,40 @@ export function PollCreatePage() {
     createPollMutation.mutate(buildPollRequest(draft));
   }
 
-  const questionCount = draft.questions.length;
-  const optionCount = draft.questions.reduce((total, question) => total + question.options.length, 0);
-  const hasMembersAudience = draft.audienceType === "MembersOnly";
-
   return (
     <section className="space-y-6">
-      <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-              Organizer polls
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Create a poll draft
+      <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-xl shadow-slate-200/50">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">
+                Poll builder
+              </span>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200">
+                Phase 3/5
+              </span>
+              <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-200">
+                Core types only
+              </span>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Design the poll before it goes live
             </h1>
-            <p className="max-w-2xl text-slate-600">
-              This is the entry point for organizer-created polls. Keep it simple for now:
-              title, audience, membership access, questions, then save as draft.
+            <p className="max-w-2xl text-sm leading-7 text-slate-300">
+              This builder keeps the mockup feel, but only exposes the approved MVP poll types for now.
+              Everything else stays out of the UI until we genuinely need it.
             </p>
+            <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide text-slate-200">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">One vote per user</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Public or members only</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Hidden if ineligible</span>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="grid gap-3 sm:grid-cols-2 lg:w-[21rem] lg:flex-none">
             <Link
               to={APP_ROUTES.membershipPolls}
-              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to polls
@@ -384,20 +492,37 @@ export function PollCreatePage() {
               type="submit"
               form="poll-create-form"
               disabled={createPollMutation.isPending}
-              className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
+              className="inline-flex items-center justify-center rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-cyan-300"
             >
               {createPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Create poll
             </button>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-300 sm:col-span-2">
+              The layout is flexible enough to grow later, but the release surface stays intentionally small.
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_392px]">
         <form id="poll-create-form" onSubmit={handleSubmit} className="space-y-6">
-          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-            <div className="grid gap-4 lg:grid-cols-2">
-              <label className="block lg:col-span-2">
+          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Basics</p>
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">Set the poll identity</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Keep the metadata tight. The rest of the screen focuses on the question builder.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <Sparkles className="h-4 w-4 text-cyan-600" />
+                MVP form
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <label className="block md:col-span-2">
                 <span className="mb-2 block text-sm font-semibold text-slate-800">
                   Poll title <span className="text-rose-600">*</span>
                 </span>
@@ -409,7 +534,7 @@ export function PollCreatePage() {
                 />
               </label>
 
-              <label className="block lg:col-span-2">
+              <label className="block md:col-span-2">
                 <span className="mb-2 block text-sm font-semibold text-slate-800">Description</span>
                 <textarea
                   value={draft.description}
@@ -443,9 +568,7 @@ export function PollCreatePage() {
                 <span className="mb-2 block text-sm font-semibold text-slate-800">Membership access</span>
                 <MultiSelectInput
                   value={draft.requiredMembershipTypeUniqueIds}
-                  onChange={(value) =>
-                    setDraft((current) => ({ ...current, requiredMembershipTypeUniqueIds: value }))
-                  }
+                  onChange={(value) => setDraft((current) => ({ ...current, requiredMembershipTypeUniqueIds: value }))}
                   options={membershipTypeOptions}
                   placeholder="Select one or more membership types"
                   isDisabled={!hasMembersAudience}
@@ -478,18 +601,15 @@ export function PollCreatePage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Questions</p>
-                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-                  Build the poll structure
-                </h2>
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">Build the poll structure</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Start with the common formats first. The model can expand later without changing this screen.
+                  Only the core formats are exposed here. That keeps the builder focused and predictable.
                 </p>
               </div>
-
               <button
                 type="button"
                 onClick={addQuestion}
@@ -500,65 +620,142 @@ export function PollCreatePage() {
               </button>
             </div>
 
-            <div className="mt-6 space-y-4">
-              {draft.questions.map((question, questionIndex) => {
-                const typeConfig = questionTypeChoices.find((item) => item.value === question.questionType);
-                const questionTitle = `Question ${questionIndex + 1}`;
+            <div className="mt-6 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Supported formats</p>
+                  <p className="text-sm leading-6 text-slate-500">The builder is intentionally narrow for MVP.</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  4 core types
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {QUESTION_TYPE_METADATA.map((choice) => (
+                  <QuestionTypeCard
+                    key={choice.value}
+                    choice={choice}
+                    selected={activeQuestion?.questionType === choice.value}
+                    onSelect={() => activeQuestion && setQuestionType(activeQuestion.id, choice.value)}
+                  />
+                ))}
+              </div>
+            </div>
 
-                return (
-                  <article key={question.id} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="mt-6 grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
+              <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-900">Questions in this poll</p>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
+                    {questionCount}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {draft.questions.map((question, index) => {
+                    const choice = questionTypeChoices.find((item) => item.value === question.questionType);
+                    const isActive = question.id === activeQuestionId;
+
+                    return (
+                      <button
+                        key={question.id}
+                        type="button"
+                        onClick={() => setActiveQuestionId(question.id)}
+                        className={[
+                          "w-full rounded-[1.35rem] border px-4 py-3 text-left transition",
+                          isActive
+                            ? "border-cyan-200 bg-white shadow-sm"
+                            : "border-slate-200 bg-white/70 hover:border-cyan-200 hover:bg-white",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                              Question {index + 1}
+                            </p>
+                            <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                              {question.text || "Untitled question"}
+                            </p>
+                          </div>
+                          <span
+                            className={[
+                              "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ring-1",
+                              buildQuestionTypeTone(choice?.optionMode ?? "none"),
+                            ].join(" ")}
+                          >
+                            {choice?.badge ?? "Core"}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+                {activeQuestion ? (
+                  <>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">
-                          {questionTitle}
+                          Active question
                         </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {typeConfig?.description ?? "Choose a question type."}
+                        <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900">
+                          Question {activeQuestionIndex + 1}
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          {activeQuestionChoice?.description ?? "Choose a core format and keep the question focused."}
                         </p>
                       </div>
-
                       <button
                         type="button"
-                        onClick={() => removeQuestion(question.id)}
+                        onClick={() => removeQuestion(activeQuestion.id)}
                         disabled={draft.questions.length === 1}
-                        className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Remove
                       </button>
                     </div>
 
-                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                      <label className="block lg:col-span-2">
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      <div className="md:col-span-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">Question type</p>
+                            <p className="text-xs text-slate-500">Pick a format from the cards below.</p>
+                          </div>
+                          <span className="rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                            Select visually
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          {QUESTION_TYPE_METADATA.map((choice) => (
+                            <QuestionTypeCard
+                              key={choice.value}
+                              choice={choice}
+                              selected={activeQuestion.questionType === choice.value}
+                              onSelect={() => setQuestionType(activeQuestion.id, choice.value)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <label className="block md:col-span-2">
                         <span className="mb-2 block text-sm font-semibold text-slate-800">
                           Question text <span className="text-rose-600">*</span>
                         </span>
                         <input
-                          value={question.text}
+                          value={activeQuestion.text}
                           onChange={(event) =>
-                            updateQuestion(question.id, (current) => ({ ...current, text: event.target.value }))
+                            updateQuestion(activeQuestion.id, (current) => ({ ...current, text: event.target.value }))
                           }
                           placeholder="What would you like to ask?"
-                          className="w-full rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                          className="w-full rounded-[1.35rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                         />
                       </label>
 
-                      <label className="block">
-                        <span className="mb-2 block text-sm font-semibold text-slate-800">Question type</span>
-                        <select
-                          value={question.questionType}
-                          onChange={(event) => setQuestionType(question.id, event.target.value as PollQuestionType)}
-                          className="w-full rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                        >
-                          {questionTypeChoices.map((choice) => (
-                            <option key={choice.value} value={choice.value}>
-                              {choice.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <div className="flex items-end justify-between gap-3 rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3">
+                      <div className="flex items-end justify-between gap-3 rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-3">
                         <div>
                           <p className="text-sm font-semibold text-slate-800">Required response</p>
                           <p className="text-xs text-slate-500">Treat this question as mandatory.</p>
@@ -566,11 +763,14 @@ export function PollCreatePage() {
                         <button
                           type="button"
                           onClick={() =>
-                            updateQuestion(question.id, (current) => ({ ...current, isRequired: !current.isRequired }))
+                            updateQuestion(activeQuestion.id, (current) => ({
+                              ...current,
+                              isRequired: !current.isRequired,
+                            }))
                           }
                           className={[
                             "relative inline-flex h-8 w-14 items-center rounded-full border transition",
-                            question.isRequired
+                            activeQuestion.isRequired
                               ? "border-cyan-500 bg-cyan-500"
                               : "border-slate-300 bg-slate-200 hover:bg-slate-300",
                           ].join(" ")}
@@ -578,108 +778,118 @@ export function PollCreatePage() {
                           <span
                             className={[
                               "inline-block h-6 w-6 rounded-full bg-white shadow-sm transition",
-                              question.isRequired ? "translate-x-7" : "translate-x-1",
+                              activeQuestion.isRequired ? "translate-x-7" : "translate-x-1",
                             ].join(" ")}
                           />
                         </button>
                       </div>
 
-                      {typeConfig?.optionMode === "list" ? (
-                        <div className="lg:col-span-2">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">Options</p>
-                              <p className="text-xs text-slate-500">Use at least two options.</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => addQuestionOption(question.id)}
-                              className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-3.5 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add option
-                            </button>
-                          </div>
-
-                          <div className="mt-4 space-y-3">
-                            {question.options.map((option, optionIndex) => (
-                              <div
-                                key={option.id}
-                                className="grid gap-3 rounded-[1.35rem] border border-slate-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-                              >
-                                <label className="block">
-                                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                    Label
-                                  </span>
-                                  <input
-                                    value={option.label}
-                                    onChange={(event) =>
-                                      updateQuestion(question.id, (current) => ({
-                                        ...current,
-                                        options: current.options.map((currentOption) =>
-                                          currentOption.id === option.id
-                                            ? { ...currentOption, label: event.target.value }
-                                            : currentOption,
-                                        ),
-                                      }))
-                                    }
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                                    placeholder={`Option ${optionIndex + 1}`}
-                                  />
-                                </label>
-
-                                <label className="block">
-                                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                    Value
-                                  </span>
-                                  <input
-                                    value={option.value}
-                                    onChange={(event) =>
-                                      updateQuestion(question.id, (current) => ({
-                                        ...current,
-                                        options: current.options.map((currentOption) =>
-                                          currentOption.id === option.id
-                                            ? { ...currentOption, value: event.target.value }
-                                            : currentOption,
-                                        ),
-                                      }))
-                                    }
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-                                    placeholder="option-value"
-                                  />
-                                </label>
-
-                                <div className="flex items-end justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeQuestionOption(question.id, option.id)}
-                                    disabled={question.options.length === 1}
-                                    className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
+                      {activeQuestionChoice?.optionMode === "list" ? (
+                        <div className="md:col-span-2">
+                          <DndContext
+                            sensors={dragSensors}
+                            collisionDetection={closestCenter}
+                            onDragStart={handleOptionDragStart}
+                            onDragEnd={handleOptionDragEnd}
+                            onDragCancel={handleOptionDragCancel}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-800">Options</p>
+                                <p className="text-xs text-slate-500">Use at least two options.</p>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+
+                            <p className="mt-2 text-xs text-slate-500">
+                              Drag the handle to reorder options. Keep the row itself for editing only.
+                            </p>
+
+                            <SortableContext
+                              items={activeQuestion.options.map((option) => option.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="mt-4 flex flex-col gap-3">
+                                {activeQuestion.options.map((option, optionIndex) => (
+                                  <SortableQuestionOptionRow
+                                    key={option.id}
+                                    option={option}
+                                    optionIndex={optionIndex}
+                                    optionCount={activeQuestion.options.length}
+                                    onChange={(nextLabel) =>
+                                      updateQuestion(activeQuestion.id, (current) => ({
+                                        ...current,
+                                        options: current.options.map((currentOption) =>
+                                          currentOption.id === option.id
+                                            ? {
+                                                ...currentOption,
+                                                label: nextLabel,
+                                                value: createOptionValueFromLabel(nextLabel) || currentOption.value,
+                                              }
+                                            : currentOption,
+                                        ),
+                                      }))
+                                    }
+                                    onRemove={() => removeQuestionOption(activeQuestion.id, option.id)}
+                                    inputRef={(input) => {
+                                      if (input) {
+                                        optionInputRefs.current.set(option.id, input);
+                                      } else {
+                                        optionInputRefs.current.delete(option.id);
+                                      }
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </SortableContext>
+
+                            {typeof document !== "undefined"
+                              ? createPortal(
+                                  <DragOverlay adjustScale={false} dropAnimation={null}>
+                                    {draggedOptionId ? (
+                                      <OptionDragPreview
+                                        option={
+                                          activeQuestion.options.find((option) => option.id === draggedOptionId) ??
+                                          null
+                                        }
+                                        width={draggedOptionWidth}
+                                      />
+                                    ) : null}
+                                  </DragOverlay>,
+                                  document.body,
+                                )
+                              : null}
+                          </DndContext>
+
+                          <button
+                            type="button"
+                            onClick={() => addQuestionOption(activeQuestion.id)}
+                            className="mt-3 inline-flex w-full items-center justify-center rounded-[1rem] border border-dashed border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add option
+                          </button>
                         </div>
                       ) : null}
 
-                      {typeConfig?.optionMode === "fixed" ? (
-                        <div className="lg:col-span-2 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                      {activeQuestionChoice?.optionMode === "fixed" ? (
+                        <div className="md:col-span-2 rounded-[1.35rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
                           This question uses the built-in Yes / No options. No extra setup is required.
                         </div>
                       ) : null}
 
-                      {typeConfig?.optionMode === "none" ? (
-                        <div className="lg:col-span-2 rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                      {activeQuestionChoice?.optionMode === "none" ? (
+                        <div className="md:col-span-2 rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                           This question type does not need options.
                         </div>
                       ) : null}
                     </div>
-                  </article>
-                );
-              })}
+                  </>
+                ) : (
+                  <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                    No question selected.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -709,72 +919,357 @@ export function PollCreatePage() {
         </form>
 
         <aside className="space-y-6">
-          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-              Live summary
-            </p>
-            <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">What will be created</h2>
-
-            <div className="mt-6 grid gap-3">
-              <SummaryRow icon={Vote} label="Questions" value={String(questionCount)} />
-              <SummaryRow icon={Users} label="Options" value={String(optionCount)} />
-              <SummaryRow
-                icon={ShieldCheck}
-                label="Audience"
-                value={draft.audienceType === "Public" ? "Public" : "Members only"}
-              />
-              <SummaryRow
-                icon={CalendarClock}
-                label="Schedule"
-                value={draft.startsAtUtc || draft.endsAtUtc ? "Timed poll" : "No schedule yet"}
-              />
+          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Live preview</p>
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">What the voter will see</h2>
+              </div>
+              <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("Desktop")}
+                  className={[
+                    "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                    previewMode === "Desktop"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-500 hover:text-slate-900",
+                  ].join(" ")}
+                >
+                  <Monitor className="h-4 w-4" />
+                  Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("Mobile")}
+                  className={[
+                    "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                    previewMode === "Mobile"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-500 hover:text-slate-900",
+                  ].join(" ")}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  Mobile
+                </button>
+              </div>
             </div>
 
-            <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">Delivery rule</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Organizer polls stay hidden if the current visitor is not eligible. That keeps the UI clean
-                and avoids exposing locked content.
-              </p>
+            <div className="mt-6 rounded-[2rem] border border-slate-900/10 bg-slate-950 p-3 shadow-xl">
+              <div
+                className={[
+                  "mx-auto overflow-hidden rounded-[1.5rem] bg-white shadow-sm transition-all",
+                  previewMode === "Mobile" ? "max-w-[360px]" : "w-full",
+                ].join(" ")}
+              >
+                <div className="flex items-center gap-2 bg-cyan-600 px-4 py-3 text-sm font-semibold text-white">
+                  <Sparkles className="h-4 w-4" />
+                  PollDesk preview
+                </div>
+                <div className="space-y-4 p-5">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Live poll</p>
+                    <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900">
+                      {draft.title || "Your poll title appears here"}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      {draft.description || "Add a short description if voters need context."}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-3 py-1">
+                      {draft.audienceType === "Public" ? "Public" : "Members only"}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1">
+                      {hasMembersAudience
+                        ? `${draft.requiredMembershipTypeUniqueIds.length} memberships`
+                        : "No membership gate"}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1">
+                      {draft.startsAtUtc || draft.endsAtUtc ? "Timed" : "No schedule"}
+                    </span>
+                  </div>
+
+                  <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          Question {activeQuestionIndex + 1}
+                        </p>
+                        <p className="mt-2 text-sm font-semibold text-slate-900">
+                          {activeQuestion?.text || "Write the question text here"}
+                        </p>
+                      </div>
+                      <span
+                        className={[
+                          "rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ring-1",
+                          activeQuestionChoice ? buildQuestionTypeTone(activeQuestionChoice.optionMode) : "bg-slate-100 text-slate-500 ring-slate-200",
+                        ].join(" ")}
+                      >
+                        {activeQuestionChoice?.optionMode === "fixed"
+                          ? "Built-in"
+                          : activeQuestionChoice?.optionMode === "none"
+                            ? "Simple"
+                            : "Core"}
+                      </span>
+                    </div>
+
+                    <div className="mt-4">
+                      {activeQuestion?.questionType === "OpenText" ? (
+                        <div className="rounded-[1.2rem] border border-slate-200 bg-white p-3 text-sm text-slate-400">
+                          Type your answer here...
+                        </div>
+                      ) : activeQuestion?.questionType === "YesNo" ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            className="rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {(activeQuestion?.options.length
+                            ? activeQuestion.options
+                            : [createOptionDraft("Option 1", "option-1"), createOptionDraft("Option 2", "option-2")]).map(
+                            (option) => (
+                              <div
+                                key={option.id}
+                                className="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"
+                              >
+                                <span className="h-4 w-4 rounded-full border border-slate-300" />
+                                <span>{option.label}</span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-[1rem] bg-cyan-600 px-4 py-3 text-sm font-semibold text-white"
+                    >
+                      Submit vote
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-              Common poll types
-            </p>
-            <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-              What we are supporting first
-            </h2>
+          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Publish checklist</p>
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">Ready to ship?</h2>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {checklistItems.filter((item) => item.done).length} / {checklistItems.length}
+              </span>
+            </div>
 
             <div className="mt-6 space-y-3">
-              {questionTypeChoices.map((choice) => (
-                <div key={choice.value} className="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{choice.label}</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-500">{choice.description}</p>
-                    </div>
-                    <span
-                      className={[
-                        "rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
-                        buildQuestionTypeTone(choice.optionMode),
-                      ].join(" ")}
-                    >
-                      {choice.optionMode === "list"
-                        ? "Core"
-                        : choice.optionMode === "fixed"
-                          ? "Built-in"
-                          : "Simple"}
-                    </span>
-                  </div>
-                </div>
+              {checklistItems.map((item) => (
+                <ChecklistRow key={item.label} label={item.label} done={item.done} />
               ))}
+            </div>
+
+            <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-cyan-700 shadow-sm">
+                  <Vote className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Live summary</p>
+                  <p className="text-sm text-slate-500">
+                    {questionCount} questions and {optionCount} options configured.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3">
+                <SummaryRow
+                  icon={ShieldCheck}
+                  label="Audience"
+                  value={draft.audienceType === "Public" ? "Public" : "Members only"}
+                />
+                <SummaryRow icon={Users} label="Memberships" value={hasMembersAudience ? String(draft.requiredMembershipTypeUniqueIds.length) : "0"} />
+                <SummaryRow
+                  icon={CalendarClock}
+                  label="Schedule"
+                  value={draft.startsAtUtc || draft.endsAtUtc ? "Timed poll" : "No schedule yet"}
+                />
+              </div>
             </div>
           </div>
         </aside>
       </div>
     </section>
+  );
+}
+
+function SortableQuestionOptionRow({
+  option,
+  optionIndex,
+  optionCount,
+  onChange,
+  onRemove,
+  inputRef,
+}: {
+  option: PollQuestionOptionDraft;
+  optionIndex: number;
+  optionCount: number;
+  onChange: (nextLabel: string) => void;
+  onRemove: () => void;
+  inputRef: (input: HTMLInputElement | null) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: option.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-dragging={isDragging ? "true" : "false"}
+      className={[
+        "grid gap-3 rounded-[1rem] border bg-slate-50 p-2.5 md:grid-cols-[auto_minmax(0,1fr)_auto] will-change-transform",
+        isDragging ? "border-cyan-200 bg-cyan-50/50 opacity-35 ring-2 ring-cyan-100" : "border-slate-200",
+      ].join(" ")}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+    >
+      <button
+        type="button"
+        className="flex h-full cursor-grab items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white px-3 py-3 text-sm text-slate-400 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 active:cursor-grabbing"
+        aria-label="Drag option to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <span className="select-none text-lg leading-none">⠿</span>
+      </button>
+
+      <label className="block">
+        <input
+          value={option.label}
+          onChange={(event) => onChange(event.target.value)}
+          ref={inputRef}
+          className="w-full rounded-[0.85rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+          placeholder={`Option ${optionIndex + 1}`}
+        />
+      </label>
+
+      <div className="flex items-end justify-end">
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={optionCount === 1}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Remove option"
+        >
+          <span className="text-lg leading-none">×</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OptionDragPreview({ option, width }: { option: PollQuestionOptionDraft | null; width: number | null }) {
+  if (!option) {
+    return null;
+  }
+
+  return (
+    <div
+      className="grid max-w-[calc(100vw-2rem)] cursor-grabbing gap-3 rounded-[1rem] border border-cyan-300 bg-white p-2.5 shadow-2xl shadow-slate-900/20 ring-4 ring-cyan-100 md:grid-cols-[auto_minmax(0,1fr)_auto]"
+      style={{ width: width ?? undefined }}
+    >
+      <div className="flex h-full items-center justify-center rounded-[0.85rem] border border-cyan-200 bg-cyan-50 px-3 py-3 text-sm text-cyan-700">
+        <span className="select-none text-lg leading-none">⠿</span>
+      </div>
+      <div className="rounded-[0.85rem] border border-cyan-100 bg-cyan-50/60 px-4 py-3 text-sm font-medium text-slate-900">
+        {option.label || "Option"}
+      </div>
+      <div className="flex items-end justify-end">
+        <div className="inline-flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-cyan-100 bg-cyan-50 text-cyan-500">
+          ×
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuestionTypeCard({
+  choice,
+  selected,
+  onSelect,
+}: {
+  choice: QuestionTypeChoice;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={[
+        "rounded-[1.35rem] border p-4 text-left transition",
+        selected
+          ? "border-cyan-300 bg-cyan-50 shadow-sm"
+          : "border-slate-200 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
+      ].join(" ")}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-3">
+          <span
+            className={[
+              "inline-flex h-10 w-10 items-center justify-center rounded-2xl ring-1 transition",
+              selected ? "bg-white text-cyan-700 ring-cyan-200" : "bg-slate-50 text-slate-500 ring-slate-200",
+            ].join(" ")}
+          >
+            <choice.icon className="h-5 w-5" />
+          </span>
+          <p className="text-sm font-semibold text-slate-900">{choice.label}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{choice.description}</p>
+        </div>
+        <span
+          className={[
+            "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ring-1",
+            buildQuestionTypeTone(choice.optionMode),
+          ].join(" ")}
+        >
+          {choice.optionMode === "list" ? "Core" : choice.optionMode === "fixed" ? "Built-in" : "Simple"}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function ChecklistRow({ label, done }: { label: string; done: boolean }) {
+  return (
+    <div
+      className={[
+        "flex items-center gap-3 rounded-[1.1rem] border px-4 py-3 text-sm",
+        done ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600",
+      ].join(" ")}
+    >
+      {done ? (
+        <CheckCircle2 className="h-4 w-4 flex-none text-emerald-600" />
+      ) : (
+        <ChevronRight className="h-4 w-4 flex-none text-slate-400" />
+      )}
+      <span className="font-medium">{label}</span>
+    </div>
   );
 }
 

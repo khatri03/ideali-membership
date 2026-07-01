@@ -5,15 +5,11 @@ import { buildPollListQuery } from "./pollsApi";
 describe("poll display helpers", () => {
   it("keeps the supported question types categorized", () => {
     expect(POLL_TYPE_COPY.SingleChoice.status).toBe("Core");
-    expect(POLL_TYPE_COPY.RankedChoice.status).toBe("Core");
     expect(Object.keys(POLL_TYPE_COPY)).toEqual([
       "SingleChoice",
       "MultipleChoice",
       "YesNo",
       "OpenText",
-      "StarRating",
-      "Nps",
-      "RankedChoice",
     ]);
   });
 

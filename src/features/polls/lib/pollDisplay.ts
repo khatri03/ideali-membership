@@ -1,6 +1,8 @@
 import type { OrganizerPollSummary, PollAudienceType, PollQuestionType, PollStatus } from "../../../types/polls";
 
-export const POLL_TYPE_COPY: Record<PollQuestionType, { label: string; description: string; status: "Core" }> = {
+type SupportedPollQuestionType = "SingleChoice" | "MultipleChoice" | "YesNo" | "OpenText";
+
+export const POLL_TYPE_COPY: Record<SupportedPollQuestionType, { label: string; description: string; status: "Core" }> = {
   SingleChoice: {
     label: "Single choice",
     description: "Best default when one answer is required.",
@@ -19,21 +21,6 @@ export const POLL_TYPE_COPY: Record<PollQuestionType, { label: string; descripti
   OpenText: {
     label: "Open-ended",
     description: "Best for feedback, suggestions, and comments.",
-    status: "Core",
-  },
-  StarRating: {
-    label: "Star rating",
-    description: "Good for quick sentiment scoring.",
-    status: "Core",
-  },
-  Nps: {
-    label: "NPS",
-    description: "Simple loyalty scoring on a 0-10 scale.",
-    status: "Core",
-  },
-  RankedChoice: {
-    label: "Ranked choice",
-    description: "Useful when prioritization matters.",
     status: "Core",
   },
 };
