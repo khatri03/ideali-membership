@@ -19,20 +19,14 @@ import {
   CalendarClock,
   BarChart3,
   CheckCircle2,
-  CheckSquare2,
   ChevronRight,
-  CircleDot,
   Loader2,
-  ListOrdered,
   Monitor,
   Plus,
   ShieldCheck,
   Smartphone,
   Sparkles,
-  MessageSquareText,
-  SlidersHorizontal,
   Trash2,
-  ToggleLeft,
   Star,
   Users,
   Vote,
@@ -44,7 +38,15 @@ import { MultiSelectInput } from "../../../shared/components/inputs/MultiSelectI
 import { showToast } from "../../../shared/components/toast/Toast";
 import type { PollAudienceType, PollQuestionType } from "../../../types/polls";
 import type { PollSaveRequest } from "../../../types/pollsApi";
-import { createOrganizerPoll } from "../lib";
+import { createOrganizerPoll, fetchOrganizerPollQuestionTypes } from "../lib";
+import {
+  FALLBACK_POLL_QUESTION_TYPES,
+  getPollQuestionTypeChoice,
+  getPollQuestionTypeChoices,
+  type PollQuestionTypeChoice,
+  usesPollMatrix,
+  usesPollOptionList,
+} from "../lib/pollQuestionTypes";
 
 type PollQuestionOptionDraft = {
   id: string;
@@ -58,6 +60,8 @@ type PollQuestionDraft = {
   text: string;
   isRequired: boolean;
   options: PollQuestionOptionDraft[];
+  matrixRows: PollQuestionOptionDraft[];
+  matrixColumns: PollQuestionOptionDraft[];
 };
 
 type PollDraft = {
@@ -69,73 +73,6 @@ type PollDraft = {
   endsAtUtc: string;
   questions: PollQuestionDraft[];
 };
-
-type QuestionTypeChoice = {
-  value: PollQuestionType;
-  label: string;
-  description: string;
-  optionMode: "none" | "fixed" | "list";
-  icon: ComponentType<{ className?: string }>;
-};
-
-const QUESTION_TYPE_METADATA: QuestionTypeChoice[] = [
-  {
-    value: "SingleChoice",
-    label: "Single choice",
-    description: "Respondents pick exactly one option.",
-    optionMode: "list",
-    icon: CircleDot,
-  },
-  {
-    value: "MultipleChoice",
-    label: "Multiple choice",
-    description: "Select all options that apply.",
-    optionMode: "list",
-    icon: CheckSquare2,
-  },
-  {
-    value: "StarRating",
-    label: "Star rating",
-    description: "Rate something on a 1 to 5 star scale.",
-    optionMode: "none",
-    icon: Star,
-  },
-  {
-    value: "Nps",
-    label: "NPS scale",
-    description: "Capture promoter sentiment on a 0 to 10 scale.",
-    optionMode: "none",
-    icon: BarChart3,
-  },
-  {
-    value: "YesNo",
-    label: "Yes / No",
-    description: "Simple binary feedback with no extra setup.",
-    optionMode: "fixed",
-    icon: ToggleLeft,
-  },
-  {
-    value: "Slider",
-    label: "Slider",
-    description: "Drag to a numeric value.",
-    optionMode: "none",
-    icon: SlidersHorizontal,
-  },
-  {
-    value: "RankedChoice",
-    label: "Ranked choice",
-    description: "Drag to set preference order.",
-    optionMode: "list",
-    icon: ListOrdered,
-  },
-  {
-    value: "OpenText",
-    label: "Open-ended",
-    description: "Free-form text response.",
-    optionMode: "none",
-    icon: MessageSquareText,
-  },
-];
 
 function createId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -166,6 +103,10 @@ function createOptionDraft(label: string, value: string): PollQuestionOptionDraf
   };
 }
 
+function createMatrixRowDraft(label: string, value: string) {
+  return createOptionDraft(label, value);
+}
+
 function createOptionValueFromLabel(label: string) {
   return label
     .trim()
@@ -192,6 +133,20 @@ function createDefaultOptions(questionType: PollQuestionType) {
   return [];
 }
 
+function createDefaultMatrixRows() {
+  return [
+    createMatrixRowDraft("Row 1", "row-1"),
+    createMatrixRowDraft("Row 2", "row-2"),
+  ];
+}
+
+function createDefaultMatrixColumns() {
+  return [
+    createOptionDraft("Column 1", "column-1"),
+    createOptionDraft("Column 2", "column-2"),
+  ];
+}
+
 function createQuestionDraft(questionType: PollQuestionType = "SingleChoice"): PollQuestionDraft {
   return {
     id: createId(),
@@ -199,11 +154,16 @@ function createQuestionDraft(questionType: PollQuestionType = "SingleChoice"): P
     text: "",
     isRequired: false,
     options: createDefaultOptions(questionType),
+    matrixRows: questionType === "Matrix" ? createDefaultMatrixRows() : [],
+    matrixColumns: questionType === "Matrix" ? createDefaultMatrixColumns() : [],
   };
 }
 
-function usesOptionList(questionType: PollQuestionType) {
-  return questionType === "SingleChoice" || questionType === "MultipleChoice" || questionType === "RankedChoice";
+function createMatrixQuestionContent() {
+  return {
+    matrixRows: createDefaultMatrixRows(),
+    matrixColumns: createDefaultMatrixColumns(),
+  };
 }
 
 function formatDateTimeLocal(value: string) {
@@ -238,6 +198,17 @@ function buildPollRequest(draft: PollDraft): PollSaveRequest {
         value: option.value.trim() || null,
         displayOrder: optionIndex + 1,
       })),
+      matrixRows: question.matrixRows.map((row, rowIndex) => ({
+        uniqueId: row.id,
+        label: row.label.trim(),
+        displayOrder: rowIndex + 1,
+      })),
+      matrixColumns: question.matrixColumns.map((column, columnIndex) => ({
+        uniqueId: column.id,
+        label: column.label.trim(),
+        value: column.value.trim() || null,
+        displayOrder: columnIndex + 1,
+      })),
     })),
   };
 }
@@ -264,7 +235,27 @@ function validatePollDraft(draft: PollDraft) {
       continue;
     }
 
-    if (usesOptionList(question.questionType)) {
+    if (usesPollMatrix(question.questionType)) {
+      if (question.matrixRows.length < 2 || question.matrixColumns.length < 2) {
+        return `Question ${questionIndex + 1} needs at least two rows and two columns.`;
+      }
+
+      for (const [rowIndex, row] of question.matrixRows.entries()) {
+        if (!row.label.trim()) {
+          return `Question ${questionIndex + 1}, row ${rowIndex + 1} needs text.`;
+        }
+      }
+
+      for (const [columnIndex, column] of question.matrixColumns.entries()) {
+        if (!column.label.trim()) {
+          return `Question ${questionIndex + 1}, column ${columnIndex + 1} needs text.`;
+        }
+      }
+
+      continue;
+    }
+
+    if (usesPollOptionList(question.questionType)) {
       if (question.options.length < 2) {
         return `Question ${questionIndex + 1} needs at least two options.`;
       }
@@ -291,10 +282,14 @@ export function PollCreatePage() {
   const [draggedOptionId, setDraggedOptionId] = useState<string | null>(null);
   const [draggedOptionWidth, setDraggedOptionWidth] = useState<number | null>(null);
   const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
+  const [focusedMatrixRowId, setFocusedMatrixRowId] = useState<string | null>(null);
+  const [focusedMatrixColumnId, setFocusedMatrixColumnId] = useState<string | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
   const optionsListRef = useRef<HTMLDivElement | null>(null);
   const questionInputRefs = useRef(new Map<string, HTMLButtonElement>());
   const optionInputRefs = useRef(new Map<string, HTMLInputElement>());
+  const matrixRowInputRefs = useRef(new Map<string, HTMLInputElement>());
+  const matrixColumnInputRefs = useRef(new Map<string, HTMLInputElement>());
   const [draft, setDraft] = useState<PollDraft>({
     title: "",
     description: "",
@@ -309,6 +304,11 @@ export function PollCreatePage() {
     queryKey: ["membership-type-options"],
     queryFn: fetchMembershipTypeOptions,
     staleTime: 5 * 60 * 1000,
+  });
+  const questionTypesQuery = useQuery({
+    queryKey: ["polls", "organizer", "question-types"],
+    queryFn: ({ signal }) => fetchOrganizerPollQuestionTypes(signal),
+    staleTime: 24 * 60 * 60 * 1000,
   });
   const dragSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const restrictQuestionDragToParent = useMemo<Modifier>(
@@ -370,15 +370,30 @@ export function PollCreatePage() {
 
   const validationError = useMemo(() => validatePollDraft(draft), [draft]);
   const membershipTypeOptions = membershipTypesQuery.data ?? [];
+  const questionTypeChoices = useMemo(
+    () =>
+      questionTypesQuery.data?.length
+        ? getPollQuestionTypeChoices(questionTypesQuery.data)
+        : questionTypesQuery.isError
+          ? getPollQuestionTypeChoices(FALLBACK_POLL_QUESTION_TYPES)
+          : [],
+    [questionTypesQuery.data, questionTypesQuery.isError],
+  );
   const activeQuestion = useMemo(
     () => draft.questions.find((question) => question.id === activeQuestionId) ?? draft.questions[0],
     [activeQuestionId, draft.questions],
   );
-  const questionTypeChoices = QUESTION_TYPE_METADATA;
   const activeQuestionIndex = draft.questions.findIndex((question) => question.id === activeQuestion?.id);
-  const activeQuestionChoice = activeQuestion ? questionTypeChoices.find((choice) => choice.value === activeQuestion.questionType) ?? null : null;
+  const activeQuestionChoice = activeQuestion
+    ? questionTypeChoices.find((choice) => choice.value === activeQuestion.questionType) ??
+      getPollQuestionTypeChoice(activeQuestion.questionType)
+    : null;
+  const defaultQuestionType = questionTypeChoices[0]?.value ?? "SingleChoice";
   const questionCount = draft.questions.length;
-  const optionCount = draft.questions.reduce((total, question) => total + question.options.length, 0);
+  const contentItemCount = draft.questions.reduce(
+    (total, question) => total + question.options.length + question.matrixRows.length + question.matrixColumns.length,
+    0,
+  );
   const hasMembersAudience = draft.audienceType === "MembersOnly";
   const checklistItems = [
     { label: "Internal title set", done: Boolean(draft.title.trim()) },
@@ -400,6 +415,32 @@ export function PollCreatePage() {
     }
   }, [focusedOptionId, draft.questions]);
 
+  useEffect(() => {
+    if (!focusedMatrixRowId) {
+      return;
+    }
+
+    const input = matrixRowInputRefs.current.get(focusedMatrixRowId);
+    if (input) {
+      input.focus();
+      input.select();
+      setFocusedMatrixRowId(null);
+    }
+  }, [focusedMatrixRowId, draft.questions]);
+
+  useEffect(() => {
+    if (!focusedMatrixColumnId) {
+      return;
+    }
+
+    const input = matrixColumnInputRefs.current.get(focusedMatrixColumnId);
+    if (input) {
+      input.focus();
+      input.select();
+      setFocusedMatrixColumnId(null);
+    }
+  }, [focusedMatrixColumnId, draft.questions]);
+
   function updateQuestion(questionId: string, updater: (question: PollQuestionDraft) => PollQuestionDraft) {
     setDraft((current) => ({
       ...current,
@@ -408,7 +449,7 @@ export function PollCreatePage() {
   }
 
   function addQuestion() {
-    const nextQuestion = createQuestionDraft();
+    const nextQuestion = createQuestionDraft(defaultQuestionType);
     setDraft((current) => ({
       ...current,
       questions: [...current.questions, nextQuestion],
@@ -482,16 +523,52 @@ export function PollCreatePage() {
     }));
   }
 
+  function addMatrixRow(questionId: string) {
+    const newRow = createMatrixRowDraft("Row", "");
+    updateQuestion(questionId, (question) => ({
+      ...question,
+      matrixRows: [...question.matrixRows, newRow],
+    }));
+    setFocusedMatrixRowId(newRow.id);
+  }
+
+  function removeMatrixRow(questionId: string, rowId: string) {
+    updateQuestion(questionId, (question) => ({
+      ...question,
+      matrixRows: question.matrixRows.filter((row) => row.id !== rowId),
+    }));
+  }
+
+  function addMatrixColumn(questionId: string) {
+    const newColumn = createOptionDraft("Column", "");
+    updateQuestion(questionId, (question) => ({
+      ...question,
+      matrixColumns: [...question.matrixColumns, newColumn],
+    }));
+    setFocusedMatrixColumnId(newColumn.id);
+  }
+
+  function removeMatrixColumn(questionId: string, columnId: string) {
+    updateQuestion(questionId, (question) => ({
+      ...question,
+      matrixColumns: question.matrixColumns.filter((column) => column.id !== columnId),
+    }));
+  }
+
   function setQuestionType(questionId: string, nextType: PollQuestionType) {
     updateQuestion(questionId, (question) => {
       if (question.questionType === nextType) {
         return question;
       }
 
+      const matrixDefaults = nextType === "Matrix" ? createMatrixQuestionContent() : { matrixRows: [], matrixColumns: [] };
+
       return {
         ...question,
         questionType: nextType,
         options: createDefaultOptions(nextType),
+        matrixRows: matrixDefaults.matrixRows,
+        matrixColumns: matrixDefaults.matrixColumns,
       };
     });
   }
@@ -804,23 +881,33 @@ export function PollCreatePage() {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-semibold text-slate-800">Question type</p>
-                            <p className="text-xs text-slate-500">Pick a format from the cards below.</p>
+                            <p className="text-xs text-slate-500">
+                              {questionTypesQuery.isLoading
+                                ? "Loading available types from the backend..."
+                                : "Pick a format from the cards below."}
+                            </p>
                           </div>
                           <span className="rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
                             Select visually
                           </span>
                         </div>
 
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                          {QUESTION_TYPE_METADATA.map((choice) => (
-                            <QuestionTypeCard
-                              key={choice.value}
-                              choice={choice}
-                              selected={activeQuestion.questionType === choice.value}
-                              onSelect={() => setQuestionType(activeQuestion.id, choice.value)}
-                            />
-                          ))}
-                        </div>
+                        {questionTypesQuery.isLoading && questionTypeChoices.length === 0 ? (
+                          <div className="mt-3 rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                            Loading poll types...
+                          </div>
+                        ) : (
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            {questionTypeChoices.map((choice) => (
+                              <QuestionTypeCard
+                                key={choice.value}
+                                choice={choice}
+                                selected={activeQuestion.questionType === choice.value}
+                                onSelect={() => setQuestionType(activeQuestion.id, choice.value)}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <label className="block md:col-span-2">
@@ -955,6 +1042,148 @@ export function PollCreatePage() {
                             <Plus className="mr-2 h-4 w-4" />
                             Add option
                           </button>
+                        </div>
+                      ) : null}
+
+                      {activeQuestionChoice?.optionMode === "matrix" ? (
+                        <div className="md:col-span-2 space-y-4">
+                          <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            Matrix questions use rows and columns. Keep both lists simple and focused.
+                          </div>
+
+                          <div className="grid gap-4 lg:grid-cols-2">
+                            <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-800">Rows</p>
+                                  <p className="text-xs text-slate-500">Add the statements voters will evaluate.</p>
+                                </div>
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  {activeQuestion.matrixRows.length}
+                                </span>
+                              </div>
+
+                              <div className="space-y-2">
+                                {activeQuestion.matrixRows.map((row, rowIndex) => (
+                                  <div
+                                    key={row.id}
+                                    className="grid gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 p-2.5 md:grid-cols-[minmax(0,1fr)_auto]"
+                                  >
+                                    <input
+                                      value={row.label}
+                                      onChange={(event) =>
+                                        updateQuestion(activeQuestion.id, (current) => ({
+                                          ...current,
+                                          matrixRows: current.matrixRows.map((currentRow) =>
+                                            currentRow.id === row.id
+                                              ? {
+                                                  ...currentRow,
+                                                  label: event.target.value,
+                                                  value: createOptionValueFromLabel(event.target.value) || currentRow.value,
+                                                }
+                                              : currentRow,
+                                          ),
+                                        }))
+                                      }
+                                      ref={(input) => {
+                                        if (input) {
+                                          matrixRowInputRefs.current.set(row.id, input);
+                                        } else {
+                                          matrixRowInputRefs.current.delete(row.id);
+                                        }
+                                      }}
+                                      className="w-full rounded-[0.85rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                                      placeholder={`Row ${rowIndex + 1}`}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeMatrixRow(activeQuestion.id, row.id)}
+                                      disabled={activeQuestion.matrixRows.length === 1}
+                                      className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                      aria-label="Remove row"
+                                    >
+                                      <span className="text-lg leading-none">×</span>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => addMatrixRow(activeQuestion.id)}
+                                className="inline-flex w-full items-center justify-center rounded-[1rem] border border-dashed border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add row
+                              </button>
+                            </div>
+
+                            <div className="space-y-3 rounded-[1.35rem] border border-slate-200 bg-white p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-800">Columns</p>
+                                  <p className="text-xs text-slate-500">Add the response options for each row.</p>
+                                </div>
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  {activeQuestion.matrixColumns.length}
+                                </span>
+                              </div>
+
+                              <div className="space-y-2">
+                                {activeQuestion.matrixColumns.map((column, columnIndex) => (
+                                  <div
+                                    key={column.id}
+                                    className="grid gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 p-2.5 md:grid-cols-[minmax(0,1fr)_auto]"
+                                  >
+                                    <input
+                                      value={column.label}
+                                      onChange={(event) =>
+                                        updateQuestion(activeQuestion.id, (current) => ({
+                                          ...current,
+                                          matrixColumns: current.matrixColumns.map((currentColumn) =>
+                                            currentColumn.id === column.id
+                                              ? {
+                                                  ...currentColumn,
+                                                  label: event.target.value,
+                                                  value: createOptionValueFromLabel(event.target.value) || currentColumn.value,
+                                                }
+                                              : currentColumn,
+                                          ),
+                                        }))
+                                      }
+                                      ref={(input) => {
+                                        if (input) {
+                                          matrixColumnInputRefs.current.set(column.id, input);
+                                        } else {
+                                          matrixColumnInputRefs.current.delete(column.id);
+                                        }
+                                      }}
+                                      className="w-full rounded-[0.85rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                                      placeholder={`Column ${columnIndex + 1}`}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeMatrixColumn(activeQuestion.id, column.id)}
+                                      disabled={activeQuestion.matrixColumns.length === 1}
+                                      className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                      aria-label="Remove column"
+                                    >
+                                      <span className="text-lg leading-none">×</span>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => addMatrixColumn(activeQuestion.id)}
+                                className="inline-flex w-full items-center justify-center rounded-[1rem] border border-dashed border-cyan-300 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add column
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ) : null}
 
@@ -1129,7 +1358,7 @@ export function PollCreatePage() {
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Live summary</p>
                   <p className="text-sm text-slate-500">
-                    {questionCount} questions and {optionCount} options configured.
+                    {questionCount} questions and {contentItemCount} configurable items configured.
                   </p>
                 </div>
               </div>
@@ -1237,7 +1466,7 @@ function SortableQuestionListItem({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: question.id,
   });
-  const choice = QUESTION_TYPE_METADATA.find((item) => item.value === question.questionType) ?? null;
+  const choice = getPollQuestionTypeChoice(question.questionType);
 
   return (
     <div
@@ -1290,7 +1519,7 @@ function QuestionDragPreview({ question, width }: { question: PollQuestionDraft 
     return null;
   }
 
-  const choice = QUESTION_TYPE_METADATA.find((item) => item.value === question.questionType) ?? null;
+  const choice = getPollQuestionTypeChoice(question.questionType);
 
   return (
     <div
@@ -1336,7 +1565,7 @@ function QuestionTypeCard({
   selected,
   onSelect,
 }: {
-  choice: QuestionTypeChoice;
+  choice: PollQuestionTypeChoice;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -1471,23 +1700,49 @@ function renderQuestionPreview(question?: PollQuestionDraft) {
     );
   }
 
-  if (question.questionType === "Slider") {
-    return (
-      <div className="space-y-4 rounded-[1.2rem] border border-slate-200 bg-white p-4">
-        <input type="range" min="0" max="100" defaultValue="50" className="w-full accent-cyan-600" />
-        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-          <span>0</span>
-          <span>50</span>
-          <span>100</span>
-        </div>
-      </div>
-    );
-  }
-
   const previewOptions =
     question.options.length > 0
       ? question.options
       : [createOptionDraft("Option 1", "option-1"), createOptionDraft("Option 2", "option-2")];
+
+  if (question.questionType === "Matrix") {
+    const previewRows =
+      question.matrixRows.length > 0 ? question.matrixRows : [createMatrixRowDraft("Row 1", "row-1"), createMatrixRowDraft("Row 2", "row-2")];
+    const previewColumns =
+      question.matrixColumns.length > 0
+        ? question.matrixColumns
+        : [createOptionDraft("Column 1", "column-1"), createOptionDraft("Column 2", "column-2")];
+    const matrixGridColumns = `minmax(0, 1.2fr) repeat(${previewColumns.length}, minmax(0, 1fr))`;
+
+    return (
+      <div className="overflow-hidden rounded-[1.2rem] border border-slate-200 bg-white">
+        <div
+          className="grid border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+          style={{ gridTemplateColumns: matrixGridColumns }}
+        >
+          <div className="px-3 py-3">Row</div>
+          {previewColumns.map((column) => (
+            <div key={column.id} className="px-3 py-3 text-center">
+              {column.label || "Column"}
+            </div>
+          ))}
+        </div>
+
+        <div className="divide-y divide-slate-200">
+          {previewRows.map((row) => (
+            <div key={row.id} className="grid" style={{ gridTemplateColumns: matrixGridColumns }}>
+              <div className="px-3 py-3 text-sm font-medium text-slate-700">{row.label || "Row"}</div>
+              {previewColumns.map((column) => (
+                <div key={`${row.id}-${column.id}`} className="flex items-center justify-center px-3 py-3">
+                  <span className="h-4 w-4 rounded-full border border-slate-300" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (question.questionType === "RankedChoice") {
     return (

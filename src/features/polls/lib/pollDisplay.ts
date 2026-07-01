@@ -1,29 +1,21 @@
-import type { OrganizerPollSummary, PollAudienceType, PollQuestionType, PollStatus } from "../../../types/polls";
+import type { OrganizerPollSummary, PollAudienceType, PollStatus } from "../../../types/polls";
+import { FALLBACK_POLL_QUESTION_TYPES, POLL_QUESTION_TYPE_CATALOG } from "./pollQuestionTypes";
 
-type SupportedPollQuestionType = "SingleChoice" | "MultipleChoice" | "YesNo" | "OpenText";
-
-export const POLL_TYPE_COPY: Record<SupportedPollQuestionType, { label: string; description: string; status: "Core" }> = {
-  SingleChoice: {
-    label: "Single choice",
-    description: "Best default when one answer is required.",
-    status: "Core",
-  },
-  MultipleChoice: {
-    label: "Multiple choice",
-    description: "Use when more than one answer is valid.",
-    status: "Core",
-  },
-  YesNo: {
-    label: "Yes / No",
-    description: "Fast binary decision with minimal friction.",
-    status: "Core",
-  },
-  OpenText: {
-    label: "Open-ended",
-    description: "Best for feedback, suggestions, and comments.",
-    status: "Core",
-  },
-};
+export const POLL_TYPE_COPY = Object.fromEntries(
+  FALLBACK_POLL_QUESTION_TYPES.map((questionType) => [
+    questionType,
+    {
+      label: POLL_QUESTION_TYPE_CATALOG[questionType].label,
+      description: POLL_QUESTION_TYPE_CATALOG[questionType].description,
+    },
+  ]),
+) as Record<
+  (typeof FALLBACK_POLL_QUESTION_TYPES)[number],
+  {
+    label: string;
+    description: string;
+  }
+>;
 
 export const POLL_PAGE_ROUTE_SUMMARY = {
   organizerRouteCount: 6,

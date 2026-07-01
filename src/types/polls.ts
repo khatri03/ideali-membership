@@ -8,9 +8,9 @@ export type PollQuestionType =
   | "StarRating"
   | "Nps"
   | "YesNo"
-  | "Slider"
   | "RankedChoice"
-  | "OpenText";
+  | "OpenText"
+  | "Matrix";
 
 export type PollVoteIdentityType = "Authenticated" | "Anonymous";
 
@@ -37,6 +37,19 @@ export interface OrganizerPollOption {
   displayOrder: number;
 }
 
+export interface OrganizerPollMatrixRow {
+  uniqueId: string;
+  label: string;
+  displayOrder: number;
+}
+
+export interface OrganizerPollMatrixColumn {
+  uniqueId: string;
+  label: string;
+  value: string | null;
+  displayOrder: number;
+}
+
 export interface OrganizerPollQuestion {
   uniqueId: string;
   questionType: PollQuestionType;
@@ -44,6 +57,8 @@ export interface OrganizerPollQuestion {
   displayOrder: number;
   isRequired: boolean;
   options: OrganizerPollOption[];
+  matrixRows: OrganizerPollMatrixRow[];
+  matrixColumns: OrganizerPollMatrixColumn[];
 }
 
 export interface OrganizerPollDetail {
@@ -68,6 +83,8 @@ export interface OrganizerPollQuestionDraft {
   displayOrder: number;
   isRequired: boolean;
   options: OrganizerPollOption[];
+  matrixRows: OrganizerPollMatrixRow[];
+  matrixColumns: OrganizerPollMatrixColumn[];
 }
 
 export interface OrganizerPollDraft {
@@ -88,6 +105,12 @@ export interface OrganizerPollVoteAnswer {
   textValue: string | null;
   numericValue: number | null;
   rankValue: number | null;
+  matrixSelections: OrganizerPollVoteMatrixSelection[];
+}
+
+export interface OrganizerPollVoteMatrixSelection {
+  rowUniqueId: string;
+  columnUniqueId: string;
 }
 
 export interface OrganizerPollVoteIdentity {

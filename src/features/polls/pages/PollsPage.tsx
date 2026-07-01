@@ -448,21 +448,9 @@ export function PollsPage() {
                 key={type}
                 className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 transition hover:border-cyan-200 hover:bg-white"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-2">
-                    <PollTypeChip type={type} />
-                    <h3 className="text-lg font-semibold text-slate-900">{item.label}</h3>
-                  </div>
-                  <span
-                    className={[
-                      "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
-                      item.status === "Core"
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-slate-200 text-slate-700",
-                    ].join(" ")}
-                  >
-                    {item.status}
-                  </span>
+                <div className="space-y-2">
+                  <PollTypeChip type={type} />
+                  <h3 className="text-lg font-semibold text-slate-900">{item.label}</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-slate-600">{item.description}</p>
               </article>

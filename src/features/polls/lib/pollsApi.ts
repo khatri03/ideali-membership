@@ -1,5 +1,7 @@
 import { getJson, postJson } from "../../../lib/api";
+import { readResponseData } from "../../../lib/parseUtils";
 import type { PollAudienceType, PollStatus } from "../../../types/polls";
+import type { PollQuestionType } from "../../../types/polls";
 import { POLL_API_ROUTES } from "../../../types/pollsApi";
 import type { PollListResponse, PollSaveRequest, PollSaveResponse } from "../../../types/pollsApi";
 
@@ -39,4 +41,21 @@ export async function fetchOrganizerPolls(filters: PollListFilters, signal?: Abo
 
 export async function createOrganizerPoll(request: PollSaveRequest) {
   return postJson<PollSaveResponse>(POLL_API_ROUTES.organizer.create, request);
+}
+
+export async function fetchOrganizerPollQuestionTypes(signal?: AbortSignal) {
+  const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.questionTypes, { signal });
+  const data = readResponseData(payload);
+
+  if (!Array.isArray(data)) {
+    return [] as PollQuestionType[];
+  }
+
+  return data
+    .map((item) => {
+      const candidate = item as Record<string, unknown>;
+      const value = candidate.Value ?? candidate.value;
+      return typeof value === "string" ? value : "";
+    })
+    .filter((item): item is PollQuestionType => item.length > 0);
 }
