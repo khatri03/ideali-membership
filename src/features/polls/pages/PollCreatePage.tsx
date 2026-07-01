@@ -587,7 +587,7 @@ export function PollCreatePage() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-800">Starts at</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-800">Opens On</span>
                 <input
                   type="datetime-local"
                   value={draft.startsAtUtc}
@@ -597,7 +597,7 @@ export function PollCreatePage() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-800">Ends at</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-800">Closes On</span>
                 <input
                   type="datetime-local"
                   value={draft.endsAtUtc}
