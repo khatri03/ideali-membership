@@ -9,7 +9,11 @@ import {
   Vote,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { buildMembershipPollCreatePath, buildMembershipPollEditPath } from "../../../app/router/routes";
+import {
+  buildMembershipPollCreatePath,
+  buildMembershipPollDetailPath,
+  buildMembershipPollEditPath,
+} from "../../../app/router/routes";
 import type { PollAudienceType, PollStatus } from "../../../types/polls";
 import {
   fetchOrganizerPolls,
@@ -43,7 +47,7 @@ function DotsIcon() {
   );
 }
 
-function PollRowActions({ pollUniqueId }: { pollUniqueId: string }) {
+function PollRowActions({ pollUniqueId, status }: { pollUniqueId: string; status: PollStatus }) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -118,11 +122,11 @@ function PollRowActions({ pollUniqueId }: { pollUniqueId: string }) {
               style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
             >
               <Link
-                to={buildMembershipPollEditPath(pollUniqueId)}
+                to={status === "Published" ? buildMembershipPollDetailPath(pollUniqueId) : buildMembershipPollEditPath(pollUniqueId)}
                 onClick={() => setIsOpen(false)}
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
               >
-                Edit
+                {status === "Published" ? "Detail" : "Edit"}
               </Link>
             </div>,
             document.body,
@@ -359,7 +363,7 @@ export function PollsPage() {
                   {organizerPolls.map((poll) => (
                     <tr key={poll.uniqueId}>
                       <td className="px-4 py-4 align-top">
-                        <PollRowActions pollUniqueId={poll.uniqueId} />
+                        <PollRowActions pollUniqueId={poll.uniqueId} status={poll.status} />
                       </td>
                       <td className="px-4 py-4 align-top">
                         <div className="space-y-2">

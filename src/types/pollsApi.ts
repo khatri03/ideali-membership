@@ -18,6 +18,7 @@ export const POLL_API_ROUTES = {
     detail: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}`,
     update: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}`,
     publish: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/publish`,
+    revertToDraft: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/revert-to-draft`,
     close: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/close`,
     votes: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/votes`,
   },

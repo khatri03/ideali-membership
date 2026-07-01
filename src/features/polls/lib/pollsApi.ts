@@ -101,6 +101,14 @@ export async function updateOrganizerPoll(pollUniqueId: string, request: PollSav
   return putJson<PollSaveResponse>(POLL_API_ROUTES.organizer.update(pollUniqueId), request);
 }
 
+export async function publishOrganizerPoll(pollUniqueId: string) {
+  return postJson<unknown>(POLL_API_ROUTES.organizer.publish(pollUniqueId), undefined);
+}
+
+export async function revertOrganizerPollToDraft(pollUniqueId: string) {
+  return postJson<unknown>(POLL_API_ROUTES.organizer.revertToDraft(pollUniqueId), undefined);
+}
+
 export async function fetchOrganizerPollDetail(pollUniqueId: string, signal?: AbortSignal) {
   const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.detail(pollUniqueId), { signal });
   const responseData = readResponseData(payload) as Record<string, unknown> | null;

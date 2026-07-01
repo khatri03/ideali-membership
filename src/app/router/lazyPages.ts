@@ -27,6 +27,9 @@ export const PollsPage = React.lazy(() =>
 export const PollCreatePage = React.lazy(() =>
   import("../../features/polls/pages").then((m) => ({ default: m.PollCreatePage })),
 );
+export const PollDetailPage = React.lazy(() =>
+  import("../../features/polls/pages").then((m) => ({ default: m.PollDetailPage })),
+);
 export const CustomFormsPage = React.lazy(() =>
   import("../../pages/CustomFormsPage").then((m) => ({ default: m.CustomFormsPage })),
 );

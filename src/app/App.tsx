@@ -38,6 +38,7 @@ import {
   MembershipTitleStepPage,
   MembershipTypesPage,
   MembershipWizardResumePage,
+  PollDetailPage,
   PollCreatePage,
   PollsPage,
 } from "./router/lazyPages";
@@ -123,6 +124,7 @@ function RouterApp() {
               <Route path="organizer/polls">
                 <Route index element={<PollsPage />} />
                 <Route path="create" element={<PollCreatePage />} />
+                <Route path=":pollUniqueId/detail" element={<PollDetailPage />} />
                 <Route path=":pollUniqueId/edit" element={<PollCreatePage />} />
               </Route>
               <Route path="organizer/membership/type/polls" element={<Navigate to={APP_ROUTES.membershipPolls} replace />} />

@@ -15,7 +15,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   CalendarClock,
   BarChart3,
   CheckCircle2,
@@ -48,7 +47,13 @@ import type {
   PollQuestionType,
 } from "../../../types/polls";
 import type { PollSaveRequest } from "../../../types/pollsApi";
-import { createOrganizerPoll, fetchOrganizerPollDetail, fetchOrganizerPollQuestionTypes, updateOrganizerPoll } from "../lib";
+import {
+  createOrganizerPoll,
+  fetchOrganizerPollDetail,
+  fetchOrganizerPollQuestionTypes,
+  publishOrganizerPoll,
+  updateOrganizerPoll,
+} from "../lib";
 import {
   FALLBACK_POLL_QUESTION_TYPES,
   getPollQuestionTypeChoice,
@@ -496,19 +501,9 @@ export function PollCreatePage() {
 
       return createOrganizerPoll(request);
     },
-    onSuccess: async () => {
-      showToast(isEditMode ? "Poll updated." : "Poll draft created.", "success");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["polls", "organizer"] }),
-        isEditMode && pollUniqueId
-          ? queryClient.invalidateQueries({ queryKey: ["polls", "organizer", "detail", pollUniqueId] })
-          : Promise.resolve(),
-      ]);
-      navigate(buildMembershipPollsPath());
-    },
-    onError: (error) => {
-      showToast(error instanceof Error ? error.message : isEditMode ? "Unable to update the poll." : "Unable to create the poll.", "error");
-    },
+  });
+  const publishPollMutation = useMutation({
+    mutationFn: (targetPollUniqueId: string) => publishOrganizerPoll(targetPollUniqueId),
   });
 
   const validationError = useMemo(() => validatePollDraft(draft), [draft]);
@@ -551,16 +546,11 @@ export function PollCreatePage() {
     (total, question) => total + question.options.length + question.matrixRows.length + question.matrixColumns.length,
     0,
   );
+  const canCreateAndPublish = !isEditMode && !validationError;
   const hasMembersAudience = draft.audienceType === "MembersOnly";
+  const canPublishPoll = isEditMode && draft.status === "Draft" && !validationError;
+  const isBusy = savePollMutation.isPending || publishPollMutation.isPending;
   const saveButtonLabel = isEditMode ? "Save poll" : "Create poll";
-  const heroActionLabel = isEditMode ? "Save changes" : "Create poll";
-  const heroTitle = isEditMode ? "Edit the poll before it goes live" : "Design the poll before it goes live";
-  const checklistItems = [
-    { label: "Internal title set", done: Boolean(draft.title.trim()) },
-    { label: "Audience selected", done: true },
-    { label: "At least one question", done: draft.questions.length > 0 },
-    { label: "Ready to publish", done: !validationError },
-  ];
 
   useEffect(() => {
     if (!focusedOptionId) {
@@ -927,6 +917,46 @@ export function PollCreatePage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    void handleSaveDraft();
+  }
+
+  async function invalidatePollQueries() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["polls", "organizer"] }),
+      isEditMode && pollUniqueId
+        ? queryClient.invalidateQueries({ queryKey: ["polls", "organizer", "detail", pollUniqueId] })
+        : Promise.resolve(),
+    ]);
+  }
+
+  async function handleSaveDraft() {
+    const nextValidationError = validatePollDraft(draft);
+    if (nextValidationError) {
+      showToast(nextValidationError, "error");
+      return;
+    }
+
+    try {
+      await savePollMutation.mutateAsync(buildPollRequest(draft));
+      showToast(isEditMode ? "Poll updated." : "Poll draft created.", "success");
+      await invalidatePollQueries();
+      navigate(buildMembershipPollsPath());
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : isEditMode
+            ? "Unable to update the poll."
+            : "Unable to create the poll.",
+        "error",
+      );
+    }
+  }
+
+  async function handlePublishPoll() {
+    if (!isEditMode || !pollUniqueId) {
+      return;
+    }
 
     const nextValidationError = validatePollDraft(draft);
     if (nextValidationError) {
@@ -934,7 +964,42 @@ export function PollCreatePage() {
       return;
     }
 
-    savePollMutation.mutate(buildPollRequest(draft));
+    try {
+      await savePollMutation.mutateAsync(buildPollRequest(draft));
+      await publishPollMutation.mutateAsync(pollUniqueId);
+      showToast("Poll published.", "success");
+      await invalidatePollQueries();
+      navigate(buildMembershipPollsPath());
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Unable to publish the poll.", "error");
+    }
+  }
+
+  async function handleCreateAndPublish() {
+    if (isEditMode) {
+      return;
+    }
+
+    const nextValidationError = validatePollDraft(draft);
+    if (nextValidationError) {
+      showToast(nextValidationError, "error");
+      return;
+    }
+
+    try {
+      const savedPoll = await savePollMutation.mutateAsync(buildPollRequest(draft));
+      const nextPollUniqueId = savedPoll.uniqueId || null;
+      if (!nextPollUniqueId) {
+        throw new Error("Unable to create the poll.");
+      }
+
+      await publishPollMutation.mutateAsync(nextPollUniqueId);
+      showToast("Poll created and published.", "success");
+      await invalidatePollQueries();
+      navigate(buildMembershipPollsPath());
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Unable to create and publish the poll.", "error");
+    }
   }
 
   function requestRemoveQuestion(question: PollQuestionDraft) {
@@ -1018,57 +1083,6 @@ export function PollCreatePage() {
 
   return (
     <>
-      <section className="space-y-6">
-      <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-xl shadow-slate-200/50">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">
-                Poll builder
-              </span>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200">
-                Phase 3/5
-              </span>
-              <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-200">
-                Core types only
-              </span>
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{heroTitle}</h1>
-            <p className="max-w-2xl text-sm leading-7 text-slate-300">
-              This builder keeps the mockup feel, but only exposes the approved MVP poll types for now.
-              Everything else stays out of the UI until we genuinely need it.
-            </p>
-            <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide text-slate-200">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">One vote per user</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Public or members only</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Hidden if ineligible</span>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:w-[21rem] lg:flex-none">
-            <Link
-              to={APP_ROUTES.membershipPolls}
-              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to polls
-            </Link>
-            <button
-              type="submit"
-              form="poll-create-form"
-              disabled={savePollMutation.isPending}
-              className="inline-flex items-center justify-center rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-cyan-300"
-            >
-              {savePollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {heroActionLabel}
-            </button>
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-300 sm:col-span-2">
-              The layout is flexible enough to grow later, but the release surface stays intentionally small.
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_392px]">
         <form id="poll-create-form" onSubmit={handleSubmit} className="space-y-6">
           <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
@@ -1702,13 +1716,34 @@ export function PollCreatePage() {
               Cancel
             </button>
             <button
+              type="button"
+              onClick={() => void handleCreateAndPublish()}
+              disabled={isBusy || !canCreateAndPublish}
+              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-slate-200 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-black/70"
+              title={canCreateAndPublish ? "Create the poll and publish it immediately." : "Fill out the required fields to enable create and publish."}
+            >
+              {publishPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Create & Publish
+            </button>
+            <button
               type="submit"
-              disabled={savePollMutation.isPending}
+              disabled={isBusy}
               className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
             >
               {savePollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {saveButtonLabel}
             </button>
+            {canPublishPoll ? (
+              <button
+                type="button"
+                onClick={() => void handlePublishPoll()}
+                disabled={isBusy}
+                className="inline-flex items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:bg-cyan-50 disabled:text-cyan-400"
+              >
+                {publishPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Publish
+              </button>
+            ) : null}
           </div>
 
           {validationError ? (
@@ -1818,23 +1853,7 @@ export function PollCreatePage() {
           </div>
 
           <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Publish checklist</p>
-                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">Ready to ship?</h2>
-              </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {checklistItems.filter((item) => item.done).length} / {checklistItems.length}
-              </span>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              {checklistItems.map((item) => (
-                <ChecklistRow key={item.label} label={item.label} done={item.done} />
-              ))}
-            </div>
-
-            <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-cyan-700 shadow-sm">
                   <Vote className="h-5 w-5" />
@@ -1863,7 +1882,6 @@ export function PollCreatePage() {
           </div>
         </aside>
       </div>
-      </section>
       {deleteConfirm ? (
         <DeletePollItemConfirmDialog
           confirmLabel={deleteConfirm.confirmLabel}
@@ -2161,24 +2179,6 @@ function OptionDragPreview({ option, width }: { option: PollQuestionOptionDraft 
           ×
         </div>
       </div>
-    </div>
-  );
-}
-
-function ChecklistRow({ label, done }: { label: string; done: boolean }) {
-  return (
-    <div
-      className={[
-        "flex items-center gap-3 rounded-[1.1rem] border px-4 py-3 text-sm",
-        done ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600",
-      ].join(" ")}
-    >
-      {done ? (
-        <CheckCircle2 className="h-4 w-4 flex-none text-emerald-600" />
-      ) : (
-        <ChevronRight className="h-4 w-4 flex-none text-slate-400" />
-      )}
-      <span className="font-medium">{label}</span>
     </div>
   );
 }

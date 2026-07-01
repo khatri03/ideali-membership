@@ -16,6 +16,7 @@ export const APP_ROUTES = {
   membershipInvoiceView: "/organizer/membership/type/invoices/:invoiceUniqueId/view",
   membershipPolls: "/organizer/polls",
   membershipPollCreate: "/organizer/polls/create",
+  membershipPollDetail: "/organizer/polls/:pollUniqueId/detail",
   membershipPollEdit: "/organizer/polls/:pollUniqueId/edit",
   publicMembershipInvoiceView: "/public/membership-invoice/:invoiceUniqueId/view",
   membershipPendingApprovals: "/organizer/membership/type/pending-approvals",
@@ -175,6 +176,10 @@ export function buildMembershipPollsPath() {
 
 export function buildMembershipPollCreatePath() {
   return APP_ROUTES.membershipPollCreate;
+}
+
+export function buildMembershipPollDetailPath(pollUniqueId: string) {
+  return generatePath(APP_ROUTES.membershipPollDetail as string, { pollUniqueId });
 }
 
 export function buildMembershipPollEditPath(pollUniqueId: string) {
