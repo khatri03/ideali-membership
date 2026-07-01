@@ -18,18 +18,16 @@ import {
   CalendarClock,
   BarChart3,
   CheckCircle2,
+  ArrowLeft,
   ChevronDown,
   ChevronRight,
   Loader2,
   Monitor,
   Plus,
-  ShieldCheck,
   Smartphone,
   Sparkles,
   Trash2,
   Star,
-  Users,
-  Vote,
   X,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -49,6 +47,7 @@ import type {
 import type { PollSaveRequest } from "../../../types/pollsApi";
 import {
   createOrganizerPoll,
+  createAndPublishOrganizerPoll,
   fetchOrganizerPollDetail,
   fetchOrganizerPollQuestionTypes,
   publishOrganizerPoll,
@@ -99,6 +98,18 @@ type DeleteConfirmState = {
   details: string;
   confirmLabel: string;
   confirmTone: "danger";
+  onConfirm: () => void;
+};
+
+type PublishConfirmMode = "createAndPublish" | "saveAndPublish" | "publish";
+
+type PublishConfirmState = {
+  mode: PublishConfirmMode;
+  title: string;
+  description: string;
+  details: string;
+  confirmLabel: string;
+  confirmTone: "primary";
   onConfirm: () => void;
 };
 
@@ -296,6 +307,10 @@ function validatePollDraft(draft: PollDraft) {
     return "Poll title is required.";
   }
 
+  if (!draft.startsAtUtc.trim()) {
+    return "Opens On is required.";
+  }
+
   if (draft.audienceType === "MembersOnly" && draft.requiredMembershipTypeUniqueIds.length === 0) {
     return "Choose at least one membership type for members-only polls.";
   }
@@ -366,6 +381,7 @@ export function PollCreatePage() {
   const [focusedMatrixRowId, setFocusedMatrixRowId] = useState<string | null>(null);
   const [focusedMatrixColumnId, setFocusedMatrixColumnId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
+  const [publishConfirm, setPublishConfirm] = useState<PublishConfirmState | null>(null);
   const hydratedPollIdRef = useRef<string | null>(null);
   const questionTypeMenuRef = useRef<HTMLDivElement | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
@@ -542,15 +558,11 @@ export function PollCreatePage() {
     : null;
   const defaultQuestionType = questionTypeChoices[0]?.value ?? "SingleChoice";
   const questionCount = draft.questions.length;
-  const contentItemCount = draft.questions.reduce(
-    (total, question) => total + question.options.length + question.matrixRows.length + question.matrixColumns.length,
-    0,
-  );
-  const canCreateAndPublish = !isEditMode && !validationError;
   const hasMembersAudience = draft.audienceType === "MembersOnly";
-  const canPublishPoll = isEditMode && draft.status === "Draft" && !validationError;
+  const canPublishPoll = isEditMode && draft.status === "Draft";
   const isBusy = savePollMutation.isPending || publishPollMutation.isPending;
   const saveButtonLabel = isEditMode ? "Save poll" : "Create poll";
+  const saveAndPublishButtonLabel = isEditMode ? "Save & Publish" : "Create & Publish";
 
   useEffect(() => {
     if (!focusedOptionId) {
@@ -685,6 +697,24 @@ export function PollCreatePage() {
 
   function closeDeleteConfirm() {
     setDeleteConfirm(null);
+  }
+
+  function openPublishConfirm(nextConfirm: PublishConfirmState) {
+    setPublishConfirm(nextConfirm);
+  }
+
+  function closePublishConfirm() {
+    setPublishConfirm(null);
+  }
+
+  function requestPublishConfirm(nextConfirm: PublishConfirmState) {
+    const nextValidationError = validatePollDraft(draft);
+    if (nextValidationError) {
+      showToast(nextValidationError, "error");
+      return;
+    }
+
+    openPublishConfirm(nextConfirm);
   }
 
   function handleQuestionDragStart(event: DragStartEvent) {
@@ -976,10 +1006,6 @@ export function PollCreatePage() {
   }
 
   async function handleCreateAndPublish() {
-    if (isEditMode) {
-      return;
-    }
-
     const nextValidationError = validatePollDraft(draft);
     if (nextValidationError) {
       showToast(nextValidationError, "error");
@@ -987,18 +1013,30 @@ export function PollCreatePage() {
     }
 
     try {
-      const savedPoll = await savePollMutation.mutateAsync(buildPollRequest(draft));
-      const nextPollUniqueId = savedPoll.uniqueId || null;
-      if (!nextPollUniqueId) {
-        throw new Error("Unable to create the poll.");
+      if (isEditMode) {
+        if (!pollUniqueId) {
+          throw new Error("Unable to save and publish the poll.");
+        }
+
+        await savePollMutation.mutateAsync(buildPollRequest(draft));
+        await publishPollMutation.mutateAsync(pollUniqueId);
+        showToast("Poll saved and published.", "success");
+      } else {
+        await createAndPublishOrganizerPoll(buildPollRequest(draft));
+        showToast("Poll created and published.", "success");
       }
 
-      await publishPollMutation.mutateAsync(nextPollUniqueId);
-      showToast("Poll created and published.", "success");
       await invalidatePollQueries();
       navigate(buildMembershipPollsPath());
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Unable to create and publish the poll.", "error");
+      showToast(
+        error instanceof Error
+          ? error.message
+          : isEditMode
+            ? "Unable to save and publish the poll."
+            : "Unable to create and publish the poll.",
+        "error",
+      );
     }
   }
 
@@ -1083,6 +1121,38 @@ export function PollCreatePage() {
 
   return (
     <>
+      <div className="mb-4 flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => navigate(APP_ROUTES.membershipPolls)}
+          className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to polls
+        </button>
+        {canPublishPoll ? (
+          <button
+            type="button"
+            onClick={() =>
+              requestPublishConfirm({
+                mode: "publish",
+                title: "Publish poll?",
+                description: "This will make the poll live and visible to eligible voters.",
+                details: draft.title.trim() || "Untitled poll",
+                confirmLabel: "Publish poll",
+                confirmTone: "primary",
+                onConfirm: () => void handlePublishPoll(),
+              })
+            }
+            disabled={isBusy}
+            className="inline-flex items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:bg-cyan-50 disabled:text-cyan-400"
+          >
+            {publishPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Publish
+          </button>
+        ) : null}
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_392px]">
         <form id="poll-create-form" onSubmit={handleSubmit} className="space-y-6">
           <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
@@ -1159,7 +1229,9 @@ export function PollCreatePage() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-800">Opens On</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-800">
+                  Opens On <span className="text-rose-600">*</span>
+                </span>
                 <input
                   type="datetime-local"
                   value={draft.startsAtUtc}
@@ -1708,42 +1780,40 @@ export function PollCreatePage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={() => navigate(APP_ROUTES.membershipPolls)}
-              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleCreateAndPublish()}
-              disabled={isBusy || !canCreateAndPublish}
-              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-slate-200 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-black/70"
-              title={canCreateAndPublish ? "Create the poll and publish it immediately." : "Fill out the required fields to enable create and publish."}
-            >
-              {publishPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create & Publish
-            </button>
-            <button
-              type="submit"
-              disabled={isBusy}
-              className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
-            >
-              {savePollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {saveButtonLabel}
-            </button>
-            {canPublishPoll ? (
               <button
                 type="button"
-                onClick={() => void handlePublishPoll()}
+                onClick={() =>
+                  requestPublishConfirm({
+                    mode: isEditMode ? "saveAndPublish" : "createAndPublish",
+                    title: isEditMode ? "Save and publish poll?" : "Create and publish poll?",
+                    description: isEditMode
+                      ? "This will save your changes and then publish the updated poll."
+                      : "This will create the poll and publish it immediately.",
+                    details: draft.title.trim() || "Untitled poll",
+                    confirmLabel: isEditMode ? "Save & Publish" : "Create & Publish",
+                    confirmTone: "primary",
+                    onConfirm: () => void handleCreateAndPublish(),
+                  })
+                }
                 disabled={isBusy}
-                className="inline-flex items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 px-5 py-2.5 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:bg-cyan-50 disabled:text-cyan-400"
+                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-200 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white/70"
+                title={
+                  isEditMode
+                    ? "Save the poll changes and publish it immediately."
+                    : "Create the poll and publish it immediately."
+                }
               >
                 {publishPollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Publish
+                {saveAndPublishButtonLabel}
               </button>
-            ) : null}
+              <button
+                type="submit"
+                disabled={isBusy}
+                className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-cyan-300"
+              >
+                {savePollMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {saveButtonLabel}
+              </button>
           </div>
 
           {validationError ? (
@@ -1753,7 +1823,7 @@ export function PollCreatePage() {
           ) : null}
         </form>
 
-        <aside className="space-y-6">
+        <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
           <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -1852,37 +1922,9 @@ export function PollCreatePage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
-            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-cyan-700 shadow-sm">
-                  <Vote className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Live summary</p>
-                  <p className="text-sm text-slate-500">
-                    {questionCount} questions and {contentItemCount} configurable items configured.
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3">
-                <SummaryRow
-                  icon={ShieldCheck}
-                  label="Audience"
-                  value={draft.audienceType === "Public" ? "Public" : "Members only"}
-                />
-                <SummaryRow icon={Users} label="Memberships" value={hasMembersAudience ? String(draft.requiredMembershipTypeUniqueIds.length) : "0"} />
-                <SummaryRow
-                  icon={CalendarClock}
-                  label="Schedule"
-                  value={draft.startsAtUtc || draft.endsAtUtc ? "Timed poll" : "No schedule yet"}
-                />
-              </div>
-            </div>
-          </div>
         </aside>
       </div>
-      {deleteConfirm ? (
+        {deleteConfirm ? (
         <DeletePollItemConfirmDialog
           confirmLabel={deleteConfirm.confirmLabel}
           description={deleteConfirm.description}
@@ -1893,6 +1935,19 @@ export function PollCreatePage() {
             closeDeleteConfirm();
           }}
           title={deleteConfirm.title}
+        />
+      ) : null}
+      {publishConfirm ? (
+        <PublishPollConfirmDialog
+          confirmLabel={publishConfirm.confirmLabel}
+          description={publishConfirm.description}
+          details={publishConfirm.details}
+          onCancel={closePublishConfirm}
+          onConfirm={() => {
+            publishConfirm.onConfirm();
+            closePublishConfirm();
+          }}
+          title={publishConfirm.title}
         />
       ) : null}
     </>
@@ -1973,6 +2028,90 @@ function DeletePollItemConfirmDialog({
             type="button"
             onClick={onConfirm}
             className="inline-flex items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function PublishPollConfirmDialog({
+  title,
+  description,
+  details,
+  confirmLabel,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  description: string;
+  details: string;
+  confirmLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm"
+      onClick={onCancel}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="poll-publish-confirm-title"
+        className="w-full max-w-lg rounded-[2rem] border border-cyan-200 bg-white p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Confirm publish</p>
+              <h3 id="poll-publish-confirm-title" className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                {title}
+              </h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            aria-label="Close dialog"
+            title="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <p className="text-sm leading-6 text-slate-600">{description}</p>
+          <div className="rounded-[1.25rem] border border-cyan-200 bg-cyan-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">You are publishing</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{details}</p>
+          </div>
+          <p className="text-sm leading-6 text-slate-500">
+            Make sure the title, questions, and opening time are correct before you continue.
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700"
           >
             {confirmLabel}
           </button>
@@ -2179,28 +2318,6 @@ function OptionDragPreview({ option, width }: { option: PollQuestionOptionDraft 
           ×
         </div>
       </div>
-    </div>
-  );
-}
-
-function SummaryRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-3">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-cyan-700 shadow-sm">
-          <Icon className="h-4 w-4" />
-        </span>
-        <span className="text-sm font-semibold text-slate-800">{label}</span>
-      </div>
-      <span className="text-sm font-medium text-slate-600">{value}</span>
     </div>
   );
 }

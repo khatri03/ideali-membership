@@ -97,6 +97,10 @@ export async function createOrganizerPoll(request: PollSaveRequest) {
   return postJson<PollSaveResponse>(POLL_API_ROUTES.organizer.create, request);
 }
 
+export async function createAndPublishOrganizerPoll(request: PollSaveRequest) {
+  return postJson<PollSaveResponse>(POLL_API_ROUTES.organizer.createAndPublish, request);
+}
+
 export async function updateOrganizerPoll(pollUniqueId: string, request: PollSaveRequest) {
   return putJson<PollSaveResponse>(POLL_API_ROUTES.organizer.update(pollUniqueId), request);
 }
