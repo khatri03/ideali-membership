@@ -30,6 +30,7 @@ import {
   Star,
   Users,
   Vote,
+  X,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { APP_ROUTES, buildMembershipPollsPath } from "../../../app/router/routes";
@@ -72,6 +73,18 @@ type PollDraft = {
   startsAtUtc: string;
   endsAtUtc: string;
   questions: PollQuestionDraft[];
+};
+
+type DeleteTargetType = "question" | "option" | "row" | "column";
+
+type DeleteConfirmState = {
+  type: DeleteTargetType;
+  title: string;
+  description: string;
+  details: string;
+  confirmLabel: string;
+  confirmTone: "danger";
+  onConfirm: () => void;
 };
 
 function createId() {
@@ -284,6 +297,7 @@ export function PollCreatePage() {
   const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
   const [focusedMatrixRowId, setFocusedMatrixRowId] = useState<string | null>(null);
   const [focusedMatrixColumnId, setFocusedMatrixColumnId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
   const optionsListRef = useRef<HTMLDivElement | null>(null);
   const matrixRowsListRef = useRef<HTMLDivElement | null>(null);
@@ -425,6 +439,10 @@ export function PollCreatePage() {
           : [],
     [questionTypesQuery.data, questionTypesQuery.isError],
   );
+  const questionTypeLabelByValue = useMemo(
+    () => new Map(questionTypeChoices.map((choice) => [choice.value, choice.label] as const)),
+    [questionTypeChoices],
+  );
   const activeQuestion = useMemo(
     () => draft.questions.find((question) => question.id === activeQuestionId) ?? draft.questions[0],
     [activeQuestionId, draft.questions],
@@ -433,6 +451,13 @@ export function PollCreatePage() {
   const activeQuestionChoice = activeQuestion
     ? questionTypeChoices.find((choice) => choice.value === activeQuestion.questionType) ??
       getPollQuestionTypeChoice(activeQuestion.questionType)
+    : null;
+  const draggedQuestion = draggedQuestionId
+    ? draft.questions.find((item) => item.id === draggedQuestionId) ?? null
+    : null;
+  const draggedQuestionTypeLabel = draggedQuestion
+    ? questionTypeLabelByValue.get(draggedQuestion.questionType) ??
+      getPollQuestionTypeChoice(draggedQuestion.questionType).label
     : null;
   const defaultQuestionType = questionTypeChoices[0]?.value ?? "SingleChoice";
   const questionCount = draft.questions.length;
@@ -516,6 +541,14 @@ export function PollCreatePage() {
         questions: nextQuestions.length > 0 ? nextQuestions : [replacementQuestion],
       };
     });
+  }
+
+  function openDeleteConfirm(nextConfirm: DeleteConfirmState) {
+    setDeleteConfirm(nextConfirm);
+  }
+
+  function closeDeleteConfirm() {
+    setDeleteConfirm(null);
   }
 
   function handleQuestionDragStart(event: DragStartEvent) {
@@ -757,8 +790,57 @@ export function PollCreatePage() {
     createPollMutation.mutate(buildPollRequest(draft));
   }
 
+  function requestRemoveQuestion(question: PollQuestionDraft) {
+    openDeleteConfirm({
+      type: "question",
+      title: "Delete question?",
+      description: "This removes the selected question from the poll.",
+      details: question.text.trim() || "Untitled question",
+      confirmLabel: "Delete question",
+      confirmTone: "danger",
+      onConfirm: () => removeQuestion(question.id),
+    });
+  }
+
+  function requestRemoveQuestionOption(questionId: string, option: PollQuestionOptionDraft) {
+    openDeleteConfirm({
+      type: "option",
+      title: "Delete option?",
+      description: "This removes the option from the question.",
+      details: option.label.trim() || "Untitled option",
+      confirmLabel: "Delete option",
+      confirmTone: "danger",
+      onConfirm: () => removeQuestionOption(questionId, option.id),
+    });
+  }
+
+  function requestRemoveMatrixRow(questionId: string, row: PollQuestionOptionDraft) {
+    openDeleteConfirm({
+      type: "row",
+      title: "Delete matrix row?",
+      description: "This removes the row from the matrix question.",
+      details: row.label.trim() || "Untitled row",
+      confirmLabel: "Delete row",
+      confirmTone: "danger",
+      onConfirm: () => removeMatrixRow(questionId, row.id),
+    });
+  }
+
+  function requestRemoveMatrixColumn(questionId: string, column: PollQuestionOptionDraft) {
+    openDeleteConfirm({
+      type: "column",
+      title: "Delete matrix column?",
+      description: "This removes the column from the matrix question.",
+      details: column.label.trim() || "Untitled column",
+      confirmLabel: "Delete column",
+      confirmTone: "danger",
+      onConfirm: () => removeMatrixColumn(questionId, column.id),
+    });
+  }
+
   return (
-    <section className="space-y-6">
+    <>
+      <section className="space-y-6">
       <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-xl shadow-slate-200/50">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl space-y-4">
@@ -950,6 +1032,7 @@ export function PollCreatePage() {
                           key={question.id}
                           question={question}
                           index={index}
+                          questionTypeLabel={questionTypeLabelByValue.get(question.questionType) ?? getPollQuestionTypeChoice(question.questionType).label}
                           selected={question.id === activeQuestionId}
                           handleRef={(button) => {
                             if (button) {
@@ -969,7 +1052,8 @@ export function PollCreatePage() {
                         <DragOverlay adjustScale={false} dropAnimation={null} modifiers={[restrictQuestionDragToParent]}>
                           {draggedQuestionId ? (
                             <QuestionDragPreview
-                              question={draft.questions.find((item) => item.id === draggedQuestionId) ?? null}
+                              question={draggedQuestion}
+                              questionTypeLabel={draggedQuestionTypeLabel}
                               width={draggedQuestionWidth}
                             />
                           ) : null}
@@ -997,7 +1081,7 @@ export function PollCreatePage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeQuestion(activeQuestion.id)}
+                        onClick={() => requestRemoveQuestion(activeQuestion)}
                         disabled={draft.questions.length === 1}
                         className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -1129,7 +1213,7 @@ export function PollCreatePage() {
                                         ),
                                       }))
                                     }
-                                    onRemove={() => removeQuestionOption(activeQuestion.id, option.id)}
+                                    onRemove={() => requestRemoveQuestionOption(activeQuestion.id, option)}
                                     inputRef={(input) => {
                                       if (input) {
                                         optionInputRefs.current.set(option.id, input);
@@ -1229,7 +1313,7 @@ export function PollCreatePage() {
                                             ),
                                           }))
                                         }
-                                        onRemove={() => removeMatrixRow(activeQuestion.id, row.id)}
+                                        onRemove={() => requestRemoveMatrixRow(activeQuestion.id, row)}
                                         inputRef={(input) => {
                                           if (input) {
                                             matrixRowInputRefs.current.set(row.id, input);
@@ -1314,7 +1398,7 @@ export function PollCreatePage() {
                                             ),
                                           }))
                                         }
-                                        onRemove={() => removeMatrixColumn(activeQuestion.id, column.id)}
+                                        onRemove={() => requestRemoveMatrixColumn(activeQuestion.id, column)}
                                         inputRef={(input) => {
                                           if (input) {
                                             matrixColumnInputRefs.current.set(column.id, input);
@@ -1547,7 +1631,105 @@ export function PollCreatePage() {
           </div>
         </aside>
       </div>
-    </section>
+      </section>
+      {deleteConfirm ? (
+        <DeletePollItemConfirmDialog
+          confirmLabel={deleteConfirm.confirmLabel}
+          description={deleteConfirm.description}
+          details={deleteConfirm.details}
+          onCancel={closeDeleteConfirm}
+          onConfirm={() => {
+            deleteConfirm.onConfirm();
+            closeDeleteConfirm();
+          }}
+          title={deleteConfirm.title}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function DeletePollItemConfirmDialog({
+  title,
+  description,
+  details,
+  confirmLabel,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  description: string;
+  details: string;
+  confirmLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm"
+      onClick={onCancel}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="poll-delete-confirm-title"
+        className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-700">
+              <Trash2 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">Confirm delete</p>
+              <h3 id="poll-delete-confirm-title" className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                {title}
+              </h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            aria-label="Close dialog"
+            title="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <p className="text-sm leading-6 text-slate-600">{description}</p>
+          <div className="rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">You are deleting</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{details}</p>
+          </div>
+          <p className="text-sm leading-6 text-slate-500">
+            This action cannot be undone. If you are not sure, cancel now and keep editing.
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1627,12 +1809,14 @@ function SortableQuestionOptionRow({
 function SortableQuestionListItem({
   question,
   index,
+  questionTypeLabel,
   selected,
   onSelect,
   handleRef,
 }: {
   question: PollQuestionDraft;
   index: number;
+  questionTypeLabel: string;
   selected: boolean;
   onSelect: () => void;
   handleRef: (button: HTMLButtonElement | null) => void;
@@ -1640,18 +1824,17 @@ function SortableQuestionListItem({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: question.id,
   });
-  const choice = getPollQuestionTypeChoice(question.questionType);
 
   return (
     <div
       ref={setNodeRef}
       data-dragging={isDragging ? "true" : "false"}
       className={[
-        "rounded-[1.35rem] border px-4 py-3 text-left transition",
+        "rounded-[1.35rem] border-2 px-4 py-3 text-left transition",
         selected
-          ? "border-cyan-200 bg-white shadow-sm"
-          : "border-slate-200 bg-white/70 hover:border-cyan-200 hover:bg-white",
-        isDragging ? "opacity-35 ring-2 ring-cyan-100" : "",
+          ? "border-cyan-300 bg-white shadow-md translate-y-[-1px]"
+          : "border-slate-300 bg-white/70 hover:border-cyan-300 hover:bg-white",
+        isDragging ? "opacity-35" : "",
       ].join(" ")}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -1668,12 +1851,18 @@ function SortableQuestionListItem({
       }}
     >
       <div className="min-w-0">
+        {selected ? <div className="mb-2 h-1 w-16 rounded-full bg-cyan-500" /> : null}
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Question {index + 1}</p>
+          <p className={["text-[11px] font-semibold uppercase tracking-[0.2em]", selected ? "text-cyan-700" : "text-slate-400"].join(" ")}>
+            Question {index + 1}
+          </p>
           <button
             type="button"
             ref={handleRef}
-            className="inline-flex h-7 w-7 items-center justify-center text-slate-400 transition hover:text-cyan-700 active:cursor-grabbing"
+            className={[
+              "inline-flex h-7 w-7 items-center justify-center transition active:cursor-grabbing",
+              selected ? "text-cyan-700" : "text-slate-400 hover:text-cyan-700",
+            ].join(" ")}
             aria-label={`Drag question ${index + 1} to reorder`}
             {...attributes}
             {...listeners}
@@ -1681,19 +1870,29 @@ function SortableQuestionListItem({
             <span className="select-none text-lg leading-none">⠿</span>
           </button>
         </div>
-        <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{question.text || "Untitled question"}</p>
-        <p className="mt-1 text-xs font-medium text-slate-500">{choice?.label ?? "Question"}</p>
+        <p className={["mt-1 text-sm font-semibold leading-6", selected ? "text-slate-950" : "text-slate-900"].join(" ")}>
+          {question.text || "Untitled question"}
+        </p>
+        <p className={["mt-1 text-xs font-medium", selected ? "text-cyan-700" : "text-slate-500"].join(" ")}>
+          {questionTypeLabel}
+        </p>
       </div>
     </div>
   );
 }
 
-function QuestionDragPreview({ question, width }: { question: PollQuestionDraft | null; width: number | null }) {
+function QuestionDragPreview({
+  question,
+  questionTypeLabel,
+  width,
+}: {
+  question: PollQuestionDraft | null;
+  questionTypeLabel: string | null;
+  width: number | null;
+}) {
   if (!question) {
     return null;
   }
-
-  const choice = getPollQuestionTypeChoice(question.questionType);
 
   return (
     <div
@@ -1703,7 +1902,7 @@ function QuestionDragPreview({ question, width }: { question: PollQuestionDraft 
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-700">Question</p>
         <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{question.text || "Untitled question"}</p>
-        <p className="mt-1 text-xs font-medium text-slate-500">{choice?.label ?? "Question"}</p>
+        <p className="mt-1 text-xs font-medium text-slate-500">{questionTypeLabel ?? getPollQuestionTypeChoice(question.questionType).label}</p>
       </div>
     </div>
   );
@@ -1751,7 +1950,7 @@ function QuestionTypeCard({
       className={[
         "rounded-[1.35rem] border p-4 text-left transition",
         selected
-          ? "border-cyan-300 bg-cyan-50 shadow-sm"
+          ? "border-cyan-300 bg-cyan-50 shadow-sm ring-1 ring-cyan-100"
           : "border-slate-200 bg-white hover:border-cyan-200 hover:bg-cyan-50/60",
       ].join(" ")}
     >
@@ -1765,6 +1964,11 @@ function QuestionTypeCard({
           </div>
           <p className="text-sm leading-6 text-slate-500">{choice.description}</p>
         </div>
+        {selected ? (
+          <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-cyan-600 text-white shadow-sm">
+            <CheckCircle2 className="h-4 w-4" />
+          </span>
+        ) : null}
       </div>
     </button>
   );

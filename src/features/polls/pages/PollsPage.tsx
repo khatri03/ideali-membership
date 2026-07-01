@@ -17,10 +17,12 @@ import { POLL_API_ROUTES } from "../../../types/pollsApi";
 import {
   buildSamplePolls,
   fetchOrganizerPolls,
+  fetchOrganizerPollQuestionTypes,
+  FALLBACK_POLL_QUESTION_TYPES,
   getPollAudienceCopy,
   getPollStatusTone,
+  getPollQuestionTypeChoices,
   POLL_PAGE_ROUTE_SUMMARY,
-  POLL_TYPE_COPY,
 } from "../lib";
 
 const PAGE_SIZE = 8;
@@ -39,10 +41,10 @@ const STATUS_FILTERS: Array<{ label: string; value: PollStatus | "All" }> = [
   { label: "Archived", value: "Archived" },
 ];
 
-function PollTypeChip({ type }: { type: keyof typeof POLL_TYPE_COPY }) {
+function PollTypeChip({ label }: { label: string }) {
   return (
     <span className="inline-flex rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-700">
-      {type}
+      {label}
     </span>
   );
 }
@@ -97,6 +99,11 @@ export function PollsPage() {
         signal,
       ),
   });
+  const questionTypesQuery = useQuery({
+    queryKey: ["polls", "organizer", "question-types"],
+    queryFn: ({ signal }) => fetchOrganizerPollQuestionTypes(signal),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
   const organizerPolls = organizerPollsQuery.data?.items ?? [];
 
@@ -108,7 +115,15 @@ export function PollsPage() {
     return { total, published, membersOnly };
   }, [organizerPolls, organizerPollsQuery.data?.totalRecordsCount]);
 
-  const pollTypeKeys = Object.keys(POLL_TYPE_COPY) as Array<keyof typeof POLL_TYPE_COPY>;
+  const pollTypeChoices = useMemo(
+    () =>
+      questionTypesQuery.data?.length
+        ? getPollQuestionTypeChoices(questionTypesQuery.data)
+        : questionTypesQuery.isError
+          ? getPollQuestionTypeChoices(FALLBACK_POLL_QUESTION_TYPES)
+          : [],
+    [questionTypesQuery.data, questionTypesQuery.isError],
+  );
   const hasFilters = searchText.trim().length > 0 || audienceFilter !== "All" || statusFilter !== "All";
   const isEmptyState = !organizerPollsQuery.isLoading && organizerPolls.length === 0;
 
@@ -440,22 +455,24 @@ export function PollsPage() {
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {pollTypeKeys.map((type) => {
-            const item = POLL_TYPE_COPY[type];
-
-            return (
+          {questionTypesQuery.isLoading && pollTypeChoices.length === 0 ? (
+            <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+              Loading question types from the backend...
+            </div>
+          ) : (
+            pollTypeChoices.map((choice) => (
               <article
-                key={type}
+                key={choice.value}
                 className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 transition hover:border-cyan-200 hover:bg-white"
               >
                 <div className="space-y-2">
-                  <PollTypeChip type={type} />
-                  <h3 className="text-lg font-semibold text-slate-900">{item.label}</h3>
+                  <PollTypeChip label={choice.label} />
+                  <h3 className="text-lg font-semibold text-slate-900">{choice.label}</h3>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{item.description}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{choice.description}</p>
               </article>
-            );
-          })}
+            ))
+          )}
         </div>
       </div>
 

@@ -13,6 +13,11 @@ export interface PollListFilters {
   status: PollStatus | null;
 }
 
+export interface PollQuestionTypeListItem {
+  value: PollQuestionType;
+  text: string;
+}
+
 export function buildPollListQuery(filters: PollListFilters) {
   const searchParams = new URLSearchParams();
   searchParams.set("pageNo", String(filters.pageNo));
@@ -48,14 +53,22 @@ export async function fetchOrganizerPollQuestionTypes(signal?: AbortSignal) {
   const data = readResponseData(payload);
 
   if (!Array.isArray(data)) {
-    return [] as PollQuestionType[];
+    return [] as PollQuestionTypeListItem[];
   }
 
   return data
     .map((item) => {
       const candidate = item as Record<string, unknown>;
       const value = candidate.Value ?? candidate.value;
-      return typeof value === "string" ? value : "";
+      const text = candidate.Text ?? candidate.text;
+      if (typeof value !== "string" || typeof text !== "string") {
+        return null;
+      }
+
+      return {
+        value,
+        text,
+      };
     })
-    .filter((item): item is PollQuestionType => item.length > 0);
+    .filter((item): item is PollQuestionTypeListItem => item !== null && item.value.length > 0 && item.text.length > 0);
 }

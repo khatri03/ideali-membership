@@ -10,6 +10,7 @@ import {
   ToggleLeft,
 } from "lucide-react";
 import type { PollQuestionType } from "../../../types/polls";
+import type { PollQuestionTypeListItem } from "./pollsApi";
 
 export type PollQuestionTypeOptionMode = "none" | "fixed" | "list" | "matrix";
 
@@ -20,6 +21,8 @@ export type PollQuestionTypeChoice = {
   optionMode: PollQuestionTypeOptionMode;
   icon: ComponentType<{ className?: string }>;
 };
+
+type PollQuestionTypeSource = PollQuestionType | PollQuestionTypeListItem;
 
 export const POLL_QUESTION_TYPE_CATALOG: Record<PollQuestionType, PollQuestionTypeChoice> = {
   SingleChoice: {
@@ -82,20 +85,44 @@ export const POLL_QUESTION_TYPE_CATALOG: Record<PollQuestionType, PollQuestionTy
 
 export const FALLBACK_POLL_QUESTION_TYPES = Object.keys(POLL_QUESTION_TYPE_CATALOG) as PollQuestionType[];
 
-export function getPollQuestionTypeChoices(availableTypes: PollQuestionType[]) {
+function normalizePollQuestionTypeSource(source: PollQuestionTypeSource) {
+  if (typeof source === "string") {
+    return {
+      value: source,
+      label: POLL_QUESTION_TYPE_CATALOG[source]?.label ?? source,
+    };
+  }
+
+  return {
+    value: source.value,
+    label: (source.text.trim() || POLL_QUESTION_TYPE_CATALOG[source.value]?.label) ?? source.value,
+  };
+}
+
+export function getPollQuestionTypeChoices(availableTypes: PollQuestionTypeSource[]) {
   const source = availableTypes.length > 0 ? availableTypes : FALLBACK_POLL_QUESTION_TYPES;
   const seen = new Set<PollQuestionType>();
 
   return source
     .filter((type) => {
-      if (seen.has(type)) {
+      const value = typeof type === "string" ? type : type.value;
+
+      if (seen.has(value)) {
         return false;
       }
 
-      seen.add(type);
-      return Boolean(POLL_QUESTION_TYPE_CATALOG[type]);
+      seen.add(value);
+      return Boolean(POLL_QUESTION_TYPE_CATALOG[value]);
     })
-    .map((type) => POLL_QUESTION_TYPE_CATALOG[type]);
+    .map((type) => {
+      const normalized = normalizePollQuestionTypeSource(type);
+      const catalogItem = POLL_QUESTION_TYPE_CATALOG[normalized.value];
+
+      return {
+        ...catalogItem,
+        label: normalized.label,
+      };
+    });
 }
 
 export function getPollQuestionTypeChoice(questionType: PollQuestionType) {
