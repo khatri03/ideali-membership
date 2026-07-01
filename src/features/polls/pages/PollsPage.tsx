@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
-import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, ChevronRight, Loader2, RotateCcw, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   buildMembershipPollCreatePath,
   buildMembershipPollDetailPath,
   buildMembershipPollEditPath,
 } from "../../../app/router/routes";
+import { showToast } from "../../../shared/components/toast/Toast";
 import type { PollAudienceType, PollStatus } from "../../../types/polls";
 import {
   fetchOrganizerPolls,
   getPollAudienceCopy,
   getPollStatusTone,
+  updateOrganizerPollStatus,
 } from "../lib";
 
 const PAGE_SIZE = 8;
@@ -41,25 +43,62 @@ function DotsIcon() {
   );
 }
 
-function PollRowActions({ pollUniqueId, status }: { pollUniqueId: string; status: PollStatus }) {
+type PollListStatusConfirmState = {
+  nextStatus: "Draft" | "Published";
+  pollTitle: string;
+};
+
+function PollRowActions({
+  pollUniqueId,
+  pollTitle,
+  status,
+}: {
+  pollUniqueId: string;
+  pollTitle: string;
+  status: PollStatus;
+}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState<PollListStatusConfirmState | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+  const statusCloseTimerRef = useRef<number | null>(null);
+  const queryClient = useQueryClient();
+  const statusMutation = useMutation({
+    mutationFn: (nextStatus: "Draft" | "Published") => updateOrganizerPollStatus(pollUniqueId, nextStatus),
+    onSuccess: async (_, nextStatus) => {
+      showToast(nextStatus === "Published" ? "Poll published." : "Poll reverted to draft.", "success");
+      await queryClient.invalidateQueries({ queryKey: ["polls", "organizer"] });
+    },
+    onError: (error) => {
+      showToast(error instanceof Error ? error.message : "Unable to update poll status.", "error");
+    },
+  });
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node;
-      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
+      if (
+        buttonRef.current?.contains(target) ||
+        menuRef.current?.contains(target) ||
+        statusRef.current?.contains(target) ||
+        statusMenuRef.current?.contains(target)
+      ) {
         return;
       }
 
       setIsOpen(false);
+      setIsStatusOpen(false);
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setIsStatusOpen(false);
       }
     }
 
@@ -71,6 +110,20 @@ function PollRowActions({ pollUniqueId, status }: { pollUniqueId: string; status
       document.removeEventListener("keydown", handleEscape);
     };
   }, []);
+
+  function clearStatusCloseTimer() {
+    if (statusCloseTimerRef.current !== null) {
+      window.clearTimeout(statusCloseTimerRef.current);
+      statusCloseTimerRef.current = null;
+    }
+  }
+
+  function scheduleStatusClose() {
+    clearStatusCloseTimer();
+    statusCloseTimerRef.current = window.setTimeout(() => {
+      setIsStatusOpen(false);
+    }, 120);
+  }
 
   function openMenu() {
     const rect = buttonRef.current?.getBoundingClientRect();
@@ -91,41 +144,265 @@ function PollRowActions({ pollUniqueId, status }: { pollUniqueId: string; status
       left: Math.max(gap, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - gap)),
     });
     setIsOpen(true);
+    setIsStatusOpen(false);
+  }
+
+  const canChangeStatus = status === "Draft" || status === "Published";
+
+  function openStatusMenu(targetElement: HTMLDivElement | null) {
+    if (!targetElement) {
+      return;
+    }
+
+    const rect = targetElement.getBoundingClientRect();
+    const submenuWidth = 180;
+    const submenuHeight = 96;
+    const gap = 8;
+    const spaceRight = window.innerWidth - rect.right;
+    const spaceLeft = rect.left;
+    const openLeft = spaceRight < submenuWidth + gap && spaceLeft > submenuWidth + gap;
+
+    setStatusMenuPosition({
+      top: Math.max(gap, Math.min(rect.top, window.innerHeight - submenuHeight - gap)),
+      left: openLeft ? rect.left - submenuWidth - gap : rect.right + gap,
+    });
+    setIsStatusOpen(true);
+    clearStatusCloseTimer();
+  }
+
+  function requestStatusChange(nextStatus: "Draft" | "Published") {
+    setIsStatusOpen(false);
+    setIsOpen(false);
+    setConfirmState({
+      nextStatus,
+      pollTitle,
+    });
   }
 
   return (
-    <div className="relative inline-flex">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={openMenu}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        aria-label={`Open actions for poll ${pollUniqueId}`}
-        title="Actions"
-      >
-        <DotsIcon />
-      </button>
+    <>
+      <div className="relative inline-flex">
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={openMenu}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          aria-label={`Open actions for poll ${pollUniqueId}`}
+          title="Actions"
+        >
+          <DotsIcon />
+        </button>
 
-      {isOpen && menuPosition
-        ? createPortal(
-            <div
-              ref={menuRef}
-              className="fixed z-[1200] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-2xl shadow-slate-900/10"
-              style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
-            >
-              <Link
-                to={status === "Published" ? buildMembershipPollDetailPath(pollUniqueId) : buildMembershipPollEditPath(pollUniqueId)}
-                onClick={() => setIsOpen(false)}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+        {isOpen && menuPosition
+          ? createPortal(
+              <div
+                ref={menuRef}
+                className="fixed z-[1200] w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-2xl shadow-slate-900/10"
+                style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
               >
-                {status === "Published" ? "Detail" : "Edit"}
-              </Link>
-            </div>,
-            document.body,
-          )
-        : null}
+                <Link
+                  to={status === "Published" ? buildMembershipPollDetailPath(pollUniqueId) : buildMembershipPollEditPath(pollUniqueId)}
+                  onClick={() => setIsOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  {status === "Published" ? "Detail" : "Edit"}
+                </Link>
+                {canChangeStatus ? (
+                  <>
+                    <div className="my-1 border-t border-slate-200" />
+                    <div
+                      ref={statusRef}
+                      className="relative"
+                      onMouseEnter={() => {
+                        clearStatusCloseTimer();
+                        openStatusMenu(statusRef.current);
+                      }}
+                      onMouseLeave={scheduleStatusClose}
+                    >
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                        aria-haspopup="menu"
+                        aria-expanded={isStatusOpen}
+                      >
+                        <span className="flex items-center gap-2">Status</span>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>,
+              document.body,
+            )
+          : null}
+
+        {isStatusOpen && statusMenuPosition
+          ? createPortal(
+              <div
+                ref={statusMenuRef}
+                className="fixed z-[1201] w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
+                style={{
+                  top: `${statusMenuPosition.top}px`,
+                  left: `${statusMenuPosition.left}px`,
+                }}
+                onMouseEnter={clearStatusCloseTimer}
+                onMouseLeave={scheduleStatusClose}
+              >
+                <button
+                  type="button"
+                  disabled={status === "Published" || statusMutation.isPending}
+                  onClick={() => {
+                    if (status === "Published") {
+                      return;
+                    }
+
+                    requestStatusChange("Published");
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className={status === "Published" ? "text-cyan-700" : "invisible"}>
+                    <CheckCircle2 className="h-4 w-4" />
+                  </span>
+                  Published
+                </button>
+
+                <button
+                  type="button"
+                  disabled={status === "Draft" || statusMutation.isPending}
+                  onClick={() => {
+                    if (status === "Draft") {
+                      return;
+                    }
+
+                    requestStatusChange("Draft");
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className={status === "Draft" ? "text-slate-500" : "invisible"}>
+                    <CheckCircle2 className="h-4 w-4" />
+                  </span>
+                  Draft
+                </button>
+              </div>,
+              document.body,
+            )
+          : null}
+      </div>
+
+      {confirmState ? (
+        <PollListStatusConfirmDialog
+          isBusy={statusMutation.isPending}
+          nextStatus={confirmState.nextStatus}
+          pollTitle={confirmState.pollTitle}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={() => {
+            void statusMutation.mutateAsync(confirmState.nextStatus, {
+              onSettled: () => {
+                setConfirmState(null);
+              },
+            });
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function PollListStatusConfirmDialog({
+  isBusy,
+  nextStatus,
+  pollTitle,
+  onCancel,
+  onConfirm,
+}: {
+  isBusy: boolean;
+  nextStatus: "Draft" | "Published";
+  pollTitle: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const isDraftMode = nextStatus === "Draft";
+
+  return (
+    <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-cyan-950/20 px-4 py-6 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-cyan-50 p-6 shadow-2xl shadow-cyan-950/10">
+        <div className="flex items-start gap-4">
+          <div
+            className={[
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl",
+              isDraftMode ? "bg-amber-100 text-amber-700" : "bg-cyan-100 text-cyan-700",
+            ].join(" ")}
+          >
+            {isDraftMode ? <RotateCcw className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+          </div>
+          <div className="space-y-2">
+            <p
+              className={[
+                "text-xs font-semibold uppercase tracking-[0.24em]",
+                isDraftMode ? "text-amber-700" : "text-cyan-700",
+              ].join(" ")}
+            >
+              {isDraftMode ? "Confirm draft" : "Confirm publish"}
+            </p>
+            <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+              {isDraftMode ? "Move poll to draft?" : "Publish poll?"}
+            </h3>
+            <p className="text-sm leading-6 text-slate-600">
+              {isDraftMode ? "This will move " : "This will publish "}
+              <span className="font-semibold text-slate-900">{pollTitle}</span>
+              {isDraftMode
+                ? " back to draft so it can be edited again."
+                : " and make it visible to eligible voters."}
+            </p>
+          </div>
+        </div>
+
+        <div
+          className={[
+            "mt-6 rounded-[1.25rem] border px-4 py-3 text-sm",
+            isDraftMode
+              ? "border-amber-200 bg-amber-50 text-amber-900"
+              : "border-cyan-200 bg-cyan-50 text-cyan-900",
+          ].join(" ")}
+        >
+          {isDraftMode
+            ? "If votes already exist, the backend may block the draft change."
+            : "Only use publish when the poll is fully ready for live participation."}
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isBusy}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isBusy}
+            className={[
+              "inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+              isDraftMode
+                ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                : "bg-cyan-600 text-white hover:bg-cyan-700",
+            ].join(" ")}
+          >
+            {isBusy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : isDraftMode ? (
+              <RotateCcw className="mr-2 h-4 w-4" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            )}
+            {isDraftMode ? "Revert to draft" : "Publish poll"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -322,7 +599,7 @@ export function PollsPage() {
                   {organizerPolls.map((poll) => (
                     <tr key={poll.uniqueId}>
                       <td className="px-4 py-4 align-top">
-                        <PollRowActions pollUniqueId={poll.uniqueId} status={poll.status} />
+                        <PollRowActions pollUniqueId={poll.uniqueId} pollTitle={poll.title} status={poll.status} />
                       </td>
                       <td className="px-4 py-4 align-top">
                         <div className="space-y-2">

@@ -19,7 +19,6 @@ import {
   BarChart3,
   CheckCircle2,
   ArrowLeft,
-  MoreVertical,
   ChevronDown,
   ChevronRight,
   Loader2,
@@ -379,7 +378,6 @@ export function PollCreatePage() {
   const [draggedOptionId, setDraggedOptionId] = useState<string | null>(null);
   const [draggedOptionWidth, setDraggedOptionWidth] = useState<number | null>(null);
   const [questionTypeMenuOpen, setQuestionTypeMenuOpen] = useState(false);
-  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [focusedOptionId, setFocusedOptionId] = useState<string | null>(null);
   const [focusedMatrixRowId, setFocusedMatrixRowId] = useState<string | null>(null);
   const [focusedMatrixColumnId, setFocusedMatrixColumnId] = useState<string | null>(null);
@@ -387,7 +385,6 @@ export function PollCreatePage() {
   const [publishConfirm, setPublishConfirm] = useState<PublishConfirmState | null>(null);
   const hydratedPollIdRef = useRef<string | null>(null);
   const questionTypeMenuRef = useRef<HTMLDivElement | null>(null);
-  const statusMenuRef = useRef<HTMLDivElement | null>(null);
   const questionsListRef = useRef<HTMLDivElement | null>(null);
   const optionsListRef = useRef<HTMLDivElement | null>(null);
   const matrixRowsListRef = useRef<HTMLDivElement | null>(null);
@@ -565,7 +562,6 @@ export function PollCreatePage() {
   const questionCount = draft.questions.length;
   const hasMembersAudience = draft.audienceType === "MembersOnly";
   const canPublishPoll = isEditMode && draft.status === "Draft";
-  const canChangeStatus = isEditMode && (draft.status === "Draft" || draft.status === "Published");
   const isBusy = savePollMutation.isPending || statusMutation.isPending;
   const saveButtonLabel = isEditMode ? "Save poll" : "Create poll";
   const saveAndPublishButtonLabel = isEditMode ? "Save & Publish" : "Create & Publish";
@@ -634,32 +630,6 @@ export function PollCreatePage() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [questionTypeMenuOpen]);
-
-  useEffect(() => {
-    if (!statusMenuOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: MouseEvent) {
-      if (statusMenuRef.current && !statusMenuRef.current.contains(event.target as Node)) {
-        setStatusMenuOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setStatusMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [statusMenuOpen]);
 
   useEffect(() => {
     hydratedPollIdRef.current = null;
@@ -746,10 +716,6 @@ export function PollCreatePage() {
       return;
     }
 
-    openPublishConfirm(nextConfirm);
-  }
-
-  function requestDraftConfirm(nextConfirm: PublishConfirmState) {
     openPublishConfirm(nextConfirm);
   }
 
@@ -1186,89 +1152,6 @@ export function PollCreatePage() {
             {statusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Publish
           </button>
-        ) : null}
-        {canChangeStatus ? (
-          <div ref={statusMenuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setStatusMenuOpen((open) => !open)}
-              className="inline-flex h-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
-              aria-haspopup="menu"
-              aria-expanded={statusMenuOpen}
-              aria-label="Open status actions"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-
-            {statusMenuOpen ? (
-              <div className="absolute right-0 top-full z-20 mt-2 w-64 overflow-hidden rounded-[1.35rem] border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/70">
-                <div className="px-3 py-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Status</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">Publish or move the poll back to draft.</p>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={draft.status === "Published" || isBusy}
-                  onClick={() => {
-                    if (draft.status === "Published") {
-                      return;
-                    }
-
-                    setStatusMenuOpen(false);
-                    requestPublishConfirm({
-                      mode: "publish",
-                      title: "Publish poll?",
-                      description: "This will make the poll live and visible to eligible voters.",
-                      details: draft.title.trim() || "Untitled poll",
-                      confirmLabel: "Publish poll",
-                      confirmTone: "primary",
-                      onConfirm: () => void handleSetStatus("Published"),
-                    });
-                  }}
-                  className="flex w-full items-center justify-between rounded-[1rem] px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  role="menuitem"
-                  aria-checked={draft.status === "Published"}
-                >
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-cyan-700" />
-                    Publish
-                  </span>
-                  {draft.status === "Published" ? <span className="text-cyan-700">Check</span> : null}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={draft.status === "Draft" || isBusy}
-                  onClick={() => {
-                    if (draft.status === "Draft") {
-                      return;
-                    }
-
-                    setStatusMenuOpen(false);
-                    requestDraftConfirm({
-                      mode: "draft",
-                      title: "Move poll to draft?",
-                      description: "This will take the poll out of published state and reopen it for editing.",
-                      details: draft.title.trim() || "Untitled poll",
-                      confirmLabel: "Move to draft",
-                      confirmTone: "primary",
-                      onConfirm: () => void handleSetStatus("Draft"),
-                    });
-                  }}
-                  className="flex w-full items-center justify-between rounded-[1rem] px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-amber-50 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  role="menuitem"
-                  aria-checked={draft.status === "Draft"}
-                >
-                  <span className="flex items-center gap-2">
-                    <RotateCcw className="h-4 w-4 text-amber-700" />
-                    Draft
-                  </span>
-                  {draft.status === "Draft" ? <span className="text-amber-700">Check</span> : null}
-                </button>
-              </div>
-            ) : null}
-          </div>
         ) : null}
       </div>
 
