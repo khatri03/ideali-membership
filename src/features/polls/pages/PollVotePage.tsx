@@ -42,6 +42,11 @@ type QuestionVoteDraft = {
   rankedOptionIds: string[];
 };
 
+type VoteValidationIssue = {
+  message: string;
+  questionUniqueId: string | null;
+};
+
 function createQuestionVoteDraft(question: OrganizerPollQuestion): QuestionVoteDraft {
   return {
     selectedOptionIds: [],
@@ -199,28 +204,30 @@ function buildVoteRequest(detail: OrganizerPollDetail, draft: Record<string, Que
   };
 }
 
-function validateVoteDraft(detail: OrganizerPollDetail, draft: Record<string, QuestionVoteDraft>) {
+function validateVoteDraftIssues(detail: OrganizerPollDetail, draft: Record<string, QuestionVoteDraft>): VoteValidationIssue[] {
+  const issues: VoteValidationIssue[] = [];
+
   for (const [index, question] of detail.questions.entries()) {
     const questionDraft = draft[question.uniqueId] ?? createQuestionVoteDraft(question);
     const questionLabel = `Question ${index + 1}`;
 
     if (question.questionType === "OpenText") {
       if (question.isRequired && !questionDraft.textValue.trim()) {
-        return `${questionLabel} requires an answer.`;
+        issues.push({ message: `${questionLabel} requires an answer.`, questionUniqueId: question.uniqueId });
       }
       continue;
     }
 
     if (question.questionType === "StarRating" || question.questionType === "Nps") {
       if (question.isRequired && questionDraft.numericValue.trim().length === 0) {
-        return `${questionLabel} requires a rating.`;
+        issues.push({ message: `${questionLabel} requires a rating.`, questionUniqueId: question.uniqueId });
       }
       continue;
     }
 
     if (question.questionType === "RankedChoice") {
       if (question.isRequired && questionDraft.rankedOptionIds.length === 0) {
-        return `${questionLabel} requires at least one ranked option.`;
+        issues.push({ message: `${questionLabel} requires at least one ranked option.`, questionUniqueId: question.uniqueId });
       }
       continue;
     }
@@ -228,19 +235,23 @@ function validateVoteDraft(detail: OrganizerPollDetail, draft: Record<string, Qu
     if (question.questionType === "YesNo") {
       if (question.options.length > 0) {
         if (question.isRequired && questionDraft.selectedOptionIds.length === 0) {
-          return `${questionLabel} requires a selection.`;
+          issues.push({ message: `${questionLabel} requires a selection.`, questionUniqueId: question.uniqueId });
         }
       } else if (question.isRequired && !questionDraft.textValue.trim()) {
-        return `${questionLabel} requires a selection.`;
+        issues.push({ message: `${questionLabel} requires a selection.`, questionUniqueId: question.uniqueId });
       }
       continue;
     }
 
     if (usesPollMatrix(question.questionType)) {
       if (question.isRequired) {
+        if (question.matrixRows.length === 0) {
+          issues.push({ message: `${questionLabel} requires matrix rows to be configured.`, questionUniqueId: question.uniqueId });
+        }
+
         const hasMissingSelection = question.matrixRows.some((row) => !questionDraft.matrixSelections[row.uniqueId]);
         if (hasMissingSelection) {
-          return `${questionLabel} requires a selection for each row.`;
+          issues.push({ message: `${questionLabel} requires a selection for each row.`, questionUniqueId: question.uniqueId });
         }
       }
       continue;
@@ -248,12 +259,12 @@ function validateVoteDraft(detail: OrganizerPollDetail, draft: Record<string, Qu
 
     if ((usesPollOptionList(question.questionType) || question.questionType === "YesNo") && question.isRequired) {
       if (questionDraft.selectedOptionIds.length === 0) {
-        return `${questionLabel} requires at least one choice.`;
+        issues.push({ message: `${questionLabel} requires at least one choice.`, questionUniqueId: question.uniqueId });
       }
     }
   }
 
-  return null;
+  return issues;
 }
 
 function isQuestionAnswered(question: OrganizerPollQuestion, draft: QuestionVoteDraft) {
@@ -278,7 +289,7 @@ function isQuestionAnswered(question: OrganizerPollQuestion, draft: QuestionVote
     }
 
     if (usesPollMatrix(question.questionType)) {
-      return question.matrixRows.every((row) => Boolean(draft.matrixSelections[row.uniqueId]));
+      return question.matrixRows.length > 0 && question.matrixRows.every((row) => Boolean(draft.matrixSelections[row.uniqueId]));
     }
 
   if (usesPollOptionList(question.questionType) || question.questionType === "YesNo") {
@@ -302,10 +313,12 @@ export function PollVotePage() {
   const [rankedConfirmedByQuestion, setRankedConfirmedByQuestion] = useState<Record<string, boolean>>({});
   const [rankedNeedsReconfirmByQuestion, setRankedNeedsReconfirmByQuestion] = useState<Record<string, boolean>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [validationIssues, setValidationIssues] = useState<VoteValidationIssue[]>([]);
   const [submittedVote, setSubmittedVote] = useState<PollVoteResponse | null>(null);
 
   useEffect(() => {
     setFormError(null);
+    setValidationIssues([]);
     setSubmittedVote(null);
     setRankedConfirmedByQuestion({});
     setRankedNeedsReconfirmByQuestion({});
@@ -316,10 +329,12 @@ export function PollVotePage() {
     onSuccess: (result) => {
       setSubmittedVote(result);
       setFormError(null);
+      setValidationIssues([]);
       showToast("Your vote was submitted.", "success");
     },
     onError: (error) => {
       setFormError(error instanceof Error ? error.message : "Unable to submit your vote.");
+      setValidationIssues([]);
     },
   });
 
@@ -375,9 +390,11 @@ export function PollVotePage() {
       return;
     }
 
-    const validationError = validateVoteDraft(detail, draft);
-    if (validationError) {
-      setFormError(validationError);
+    const issues = validateVoteDraftIssues(detail, draft);
+    if (issues.length > 0) {
+      const firstIssue = issues[0];
+      setValidationIssues(issues);
+      setFormError(firstIssue?.message ?? "Please fix the highlighted questions.");
       return;
     }
 
@@ -389,10 +406,12 @@ export function PollVotePage() {
     );
     if (pendingRankedQuestion) {
       setFormError(`Question ${detail.questions.findIndex((question) => question.uniqueId === pendingRankedQuestion.uniqueId) + 1} requires confirmation for the ranking.`);
+      setValidationIssues([{ message: "Ranking needs confirmation.", questionUniqueId: pendingRankedQuestion.uniqueId }]);
       return;
     }
 
     setFormError(null);
+    setValidationIssues([]);
     const request = buildVoteRequest(detail, draft);
     await submitVoteMutation.mutateAsync(request);
   }
@@ -514,6 +533,7 @@ export function PollVotePage() {
                   question={question}
                   index={index}
                   draft={draft[question.uniqueId] ?? createQuestionVoteDraft(question)}
+                  validationMessage={validationIssues.find((issue) => issue.questionUniqueId === question.uniqueId)?.message ?? null}
                   isRankedConfirmed={Boolean(rankedConfirmedByQuestion[question.uniqueId])}
                   needsRankedReconfirm={Boolean(rankedNeedsReconfirmByQuestion[question.uniqueId])}
                   onChange={(nextDraft) => {
@@ -553,7 +573,37 @@ export function PollVotePage() {
 
             {formError ? (
               <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-700" aria-live="polite">
-                {formError}
+                <div className="space-y-1">
+                  {validationIssues.length > 0 ? validationIssues.map((issue) => {
+                    const questionIndex = detail.questions.findIndex((question) => question.uniqueId === issue.questionUniqueId);
+                    if (questionIndex < 0) {
+                      return <p key={issue.message}>{issue.message}</p>;
+                    }
+
+                    return (
+                      <p key={issue.questionUniqueId}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const element = document.getElementById(`poll-question-${issue.questionUniqueId}`);
+                            if (!element) {
+                              return;
+                            }
+
+                            element.scrollIntoView({ behavior: "smooth", block: "center" });
+                            if (element instanceof HTMLElement) {
+                              element.focus({ preventScroll: true });
+                            }
+                          }}
+                          className="font-semibold text-rose-800 underline decoration-rose-300 underline-offset-2 transition hover:text-rose-900"
+                        >
+                          Question {questionIndex + 1}
+                        </button>
+                        <span>{issue.message.replace(new RegExp(`^Question ${questionIndex + 1}\\s*`), "")}</span>
+                      </p>
+                    );
+                  }) : <p>{formError}</p>}
+                </div>
               </div>
             ) : null}
 
@@ -598,6 +648,7 @@ function PollVoteQuestionCard({
   question,
   index,
   draft,
+  validationMessage,
   isRankedConfirmed,
   needsRankedReconfirm,
   onChange,
@@ -607,6 +658,7 @@ function PollVoteQuestionCard({
   question: OrganizerPollQuestion;
   index: number;
   draft: QuestionVoteDraft;
+  validationMessage: string | null;
   isRankedConfirmed: boolean;
   needsRankedReconfirm: boolean;
   onChange: (nextDraft: QuestionVoteDraft) => void;
@@ -618,9 +670,15 @@ function PollVoteQuestionCard({
 
   return (
     <article
+      id={`poll-question-${question.uniqueId}`}
+      tabIndex={-1}
       className={[
         "rounded-[2rem] border p-5 shadow-sm transition-colors",
-        isAnswered ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200 bg-white",
+        validationMessage
+          ? "border-rose-200 bg-rose-50/60 ring-1 ring-rose-100"
+          : isAnswered
+            ? "border-emerald-200 bg-emerald-50/60"
+            : "border-slate-200 bg-white",
       ].join(" ")}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -633,6 +691,7 @@ function PollVoteQuestionCard({
           <p className="text-sm text-slate-500">
             {question.isRequired ? "Required question" : "Optional question"}
           </p>
+          {validationMessage ? <p className="text-sm font-medium text-rose-700">{validationMessage}</p> : null}
         </div>
       </div>
 
