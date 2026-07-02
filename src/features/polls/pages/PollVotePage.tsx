@@ -458,16 +458,9 @@ export function PollVotePage() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl space-y-4">
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{detail.title}</h1>
-              <p className="max-w-2xl text-sm leading-7 text-slate-600">
-                {detail.description || "Vote on the items below. Your submission will be recorded once you confirm it."}
-              </p>
+              <p className="max-w-2xl text-sm leading-7 text-slate-600">{detail.questions.length} Question{detail.questions.length === 1 ? "" : "s"}</p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:w-[22rem] lg:flex-none">
-              <SummaryCard label="Questions" value={`${detail.questions.length}`} />
-              <SummaryCard label="Your votes" value={`${detail.currentUserVoteCount}`} />
-              <SummaryCard label="Eligibility" value={detail.isEligibleToVote ? "Eligible" : "Locked"} tone={detail.isEligibleToVote ? "emerald" : "rose"} />
-            </div>
           </div>
 
           <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white/80 p-4">
