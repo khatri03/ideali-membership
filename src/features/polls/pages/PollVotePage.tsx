@@ -628,7 +628,7 @@ export function PollVotePage() {
             </li>
             <li className="flex gap-3">
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-cyan-500" />
-              Ranked choices and matrix questions support drag and click selection.
+              Ranked choices support drag.
             </li>
           </ul>
         </div>
@@ -680,10 +680,10 @@ function PollVoteQuestionCard({
             Question {index + 1}
             {question.isRequired ? <span className="ml-1 text-rose-500">*</span> : null}
           </p>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">{question.text}</h2>
-          <p className="text-sm text-slate-500">
-            {question.isRequired ? "Required question" : "Optional question"}
-          </p>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">{question.text}</h2>
+            {!question.isRequired ? <span className="text-sm font-medium text-slate-500">Optional</span> : null}
+          </div>
           {validationMessage ? <p className="text-sm font-medium text-rose-700">{validationMessage}</p> : null}
         </div>
       </div>
