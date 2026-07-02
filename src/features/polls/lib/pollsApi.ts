@@ -1,14 +1,16 @@
 import { getJson, postJson, putJson } from "../../../lib/api";
 import { readResponseData } from "../../../lib/parseUtils";
-import type { PollAudienceType, PollListSortBy, PollStatus } from "../../../types/polls";
+import type { OrganizerPollDetail, PollAudienceType, PollListSortBy, PollStatus } from "../../../types/polls";
 import type { PollQuestionType } from "../../../types/polls";
 import { POLL_API_ROUTES } from "../../../types/pollsApi";
 import type {
-  PollDetailResponse,
   PollListResponse,
+  PollVoteListResponse,
   PollSaveRequest,
   PollSaveResponse,
   PollStatusUpdateRequest,
+  PollVoteRequest,
+  PollVoteResponse,
 } from "../../../types/pollsApi";
 
 export interface PollListFilters {
@@ -38,11 +40,125 @@ function readNumber(value: unknown, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function buildPollVotesResponse(payload: unknown): PollVoteListResponse {
+  const responseData = readResponseData(payload);
+  const responseRecord = responseData && typeof responseData === "object" ? (responseData as Record<string, unknown>) : null;
+  const voteData = readArray(
+    responseRecord?.PageData ??
+      responseRecord?.pageData ??
+      responseRecord?.Items ??
+      responseRecord?.items ??
+      responseData,
+  ) as Array<Record<string, unknown>>;
+
+  return voteData.map((item) => {
+    const voteIdentity = readRecord(item.VoteIdentity ?? item.voteIdentity);
+    return {
+      uniqueId: String(item.UniqueId ?? item.uniqueId ?? ""),
+      pollUniqueId: String(item.PollUniqueId ?? item.pollUniqueId ?? ""),
+      votedAtUtc: String(item.SubmittedAtUtc ?? item.submittedAtUtc ?? item.VotedAtUtc ?? item.votedAtUtc ?? ""),
+      voteIdentity: {
+        voteIdentityType: String(voteIdentity?.VoteIdentityType ?? voteIdentity?.voteIdentityType ?? "Anonymous") as "Authenticated" | "Anonymous",
+        userUniqueId: (voteIdentity?.UserUniqueId ?? voteIdentity?.userUniqueId ?? null) as string | null,
+        anonymousVoteKeyHash: (voteIdentity?.AnonymousVoteKeyHash ?? voteIdentity?.anonymousVoteKeyHash ?? null) as string | null,
+      },
+      answers: readArray(item.Answers ?? item.answers).map((answer) => {
+        const answerRecord = readRecord(answer);
+        return {
+          questionUniqueId: String(answerRecord?.QuestionUniqueId ?? answerRecord?.questionUniqueId ?? ""),
+          optionUniqueIds: readArray(answerRecord?.OptionUniqueIds ?? answerRecord?.optionUniqueIds).map((value) => String(value)),
+          textValue: (answerRecord?.TextValue ?? answerRecord?.textValue ?? null) as string | null,
+          numericValue: (answerRecord?.NumericValue ?? answerRecord?.numericValue ?? null) as number | null,
+          rankValue: (answerRecord?.RankValue ?? answerRecord?.rankValue ?? null) as number | null,
+          matrixSelections: readArray(answerRecord?.MatrixSelections ?? answerRecord?.matrixSelections).map((selection) => {
+            const selectionRecord = readRecord(selection);
+            return {
+              rowUniqueId: String(selectionRecord?.RowUniqueId ?? selectionRecord?.rowUniqueId ?? ""),
+              columnUniqueId: String(selectionRecord?.ColumnUniqueId ?? selectionRecord?.columnUniqueId ?? ""),
+            };
+          }),
+        };
+      }),
+      canDelete: Boolean(item.CanDelete ?? item.canDelete),
+    };
+  });
+}
+
+function buildPollDetailResponse(payload: unknown): OrganizerPollDetail {
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  if (!responseData) {
+    throw new Error("Unable to load poll detail.");
+  }
+
+  const questions = readArray(responseData.Questions ?? responseData.questions).map((item) => {
+    const record = readRecord(item);
+    return {
+      uniqueId: String(record?.UniqueId ?? record?.uniqueId ?? ""),
+      questionType: String(record?.QuestionType ?? record?.questionType ?? "SingleChoice") as PollQuestionType,
+      text: String(record?.Text ?? record?.text ?? ""),
+      displayOrder: readNumber(record?.DisplayOrder ?? record?.displayOrder, 0),
+      isRequired: Boolean(record?.IsRequired ?? record?.isRequired),
+      options: readArray(record?.Options ?? record?.options).map((option) => {
+        const optionRecord = readRecord(option);
+        return {
+          uniqueId: String(optionRecord?.UniqueId ?? optionRecord?.uniqueId ?? ""),
+          label: String(optionRecord?.Label ?? optionRecord?.label ?? ""),
+          value: (optionRecord?.Value ?? optionRecord?.value ?? null) as string | null,
+          displayOrder: readNumber(optionRecord?.DisplayOrder ?? optionRecord?.displayOrder, 0),
+        };
+      }),
+      matrixRows: readArray(record?.MatrixRows ?? record?.matrixRows).map((row) => {
+        const rowRecord = readRecord(row);
+        return {
+          uniqueId: String(rowRecord?.UniqueId ?? rowRecord?.uniqueId ?? ""),
+          label: String(rowRecord?.Label ?? rowRecord?.label ?? ""),
+          displayOrder: readNumber(rowRecord?.DisplayOrder ?? rowRecord?.displayOrder, 0),
+        };
+      }),
+      matrixColumns: readArray(record?.MatrixColumns ?? record?.matrixColumns).map((column) => {
+        const columnRecord = readRecord(column);
+        return {
+          uniqueId: String(columnRecord?.UniqueId ?? columnRecord?.uniqueId ?? ""),
+          label: String(columnRecord?.Label ?? columnRecord?.label ?? ""),
+          value: (columnRecord?.Value ?? columnRecord?.value ?? null) as string | null,
+          displayOrder: readNumber(columnRecord?.DisplayOrder ?? columnRecord?.displayOrder, 0),
+        };
+      }),
+    };
+  });
+
+  return {
+    uniqueId: String(responseData.UniqueId ?? responseData.uniqueId ?? ""),
+    organizerUniqueId: String(responseData.OrganizerUniqueId ?? responseData.organizerUniqueId ?? ""),
+    title: String(responseData.Title ?? responseData.title ?? ""),
+    description: (responseData.Description ?? responseData.description ?? null) as string | null,
+    audienceType: String(responseData.AudienceType ?? responseData.audienceType ?? "Public") as PollAudienceType,
+    status: String(responseData.Status ?? responseData.status ?? "Draft") as PollStatus,
+    requiredMembershipTypeUniqueIds: readArray(
+      responseData.RequiredMembershipTypeUniqueIds ?? responseData.requiredMembershipTypeUniqueIds,
+    ).map((item) => String(item)),
+    startsAtUtc: (responseData.StartsAtUtc ?? responseData.startsAtUtc ?? null) as string | null,
+    endsAtUtc: (responseData.EndsAtUtc ?? responseData.endsAtUtc ?? null) as string | null,
+    questions: questions.map((question) => ({
+      uniqueId: question.uniqueId,
+      questionType: question.questionType,
+      text: question.text,
+      displayOrder: question.displayOrder,
+      isRequired: question.isRequired,
+      options: question.options,
+      matrixRows: question.matrixRows,
+      matrixColumns: question.matrixColumns,
+    })),
+    createdAtUtc: String(responseData.CreatedAtUtc ?? responseData.createdAtUtc ?? ""),
+    updatedAtUtc: (responseData.UpdatedAtUtc ?? responseData.updatedAtUtc ?? null) as string | null,
+  };
+}
+
 function buildPollListResponse(payload: unknown): PollListResponse {
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
   const pageData = readArray(
-    responseData?.PageData ??
-      responseData?.pageData ??
+    responseData?.PageData ?? 
+      responseData?.pageData ?? 
       responseData?.Items ??
       responseData?.items ??
       responseData?.Data ??
@@ -136,79 +252,37 @@ export async function revertOrganizerPollToDraft(pollUniqueId: string) {
 
 export async function fetchOrganizerPollDetail(pollUniqueId: string, signal?: AbortSignal) {
   const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.detail(pollUniqueId), { signal });
+  const detail = buildPollDetailResponse(payload);
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
-  if (!responseData) {
-    throw new Error("Unable to load poll detail.");
-  }
-
-  const questions = readArray(responseData.Questions ?? responseData.questions).map((item) => {
-    const record = readRecord(item);
-    return {
-      uniqueId: String(record?.UniqueId ?? record?.uniqueId ?? ""),
-      questionType: String(record?.QuestionType ?? record?.questionType ?? "SingleChoice") as PollQuestionType,
-      text: String(record?.Text ?? record?.text ?? ""),
-      displayOrder: readNumber(record?.DisplayOrder ?? record?.displayOrder, 0),
-      isRequired: Boolean(record?.IsRequired ?? record?.isRequired),
-      options: readArray(record?.Options ?? record?.options).map((option) => {
-        const optionRecord = readRecord(option);
-        return {
-          uniqueId: String(optionRecord?.UniqueId ?? optionRecord?.uniqueId ?? ""),
-          label: String(optionRecord?.Label ?? optionRecord?.label ?? ""),
-          value: (optionRecord?.Value ?? optionRecord?.value ?? null) as string | null,
-          displayOrder: readNumber(optionRecord?.DisplayOrder ?? optionRecord?.displayOrder, 0),
-        };
-      }),
-      matrixRows: readArray(record?.MatrixRows ?? record?.matrixRows).map((row) => {
-        const rowRecord = readRecord(row);
-        return {
-          uniqueId: String(rowRecord?.UniqueId ?? rowRecord?.uniqueId ?? ""),
-          label: String(rowRecord?.Label ?? rowRecord?.label ?? ""),
-          displayOrder: readNumber(rowRecord?.DisplayOrder ?? rowRecord?.displayOrder, 0),
-        };
-      }),
-      matrixColumns: readArray(record?.MatrixColumns ?? record?.matrixColumns).map((column) => {
-        const columnRecord = readRecord(column);
-        return {
-          uniqueId: String(columnRecord?.UniqueId ?? columnRecord?.uniqueId ?? ""),
-          label: String(columnRecord?.Label ?? columnRecord?.label ?? ""),
-          value: (columnRecord?.Value ?? columnRecord?.value ?? null) as string | null,
-          displayOrder: readNumber(columnRecord?.DisplayOrder ?? columnRecord?.displayOrder, 0),
-        };
-      }),
-    };
-  });
-
-  const detail: PollDetailResponse = {
-    uniqueId: String(responseData.UniqueId ?? responseData.uniqueId ?? ""),
-    organizerUniqueId: String(responseData.OrganizerUniqueId ?? responseData.organizerUniqueId ?? ""),
-    title: String(responseData.Title ?? responseData.title ?? ""),
-    description: (responseData.Description ?? responseData.description ?? null) as string | null,
-    audienceType: String(responseData.AudienceType ?? responseData.audienceType ?? "Public") as PollAudienceType,
-    status: String(responseData.Status ?? responseData.status ?? "Draft") as PollStatus,
-    requiredMembershipTypeUniqueIds: readArray(
-      responseData.RequiredMembershipTypeUniqueIds ?? responseData.requiredMembershipTypeUniqueIds,
-    ).map((item) => String(item)),
-    startsAtUtc: (responseData.StartsAtUtc ?? responseData.startsAtUtc ?? null) as string | null,
-    endsAtUtc: (responseData.EndsAtUtc ?? responseData.endsAtUtc ?? null) as string | null,
-    questions: questions.map((question) => ({
-      uniqueId: question.uniqueId,
-      questionType: question.questionType,
-      text: question.text,
-      displayOrder: question.displayOrder,
-      isRequired: question.isRequired,
-      options: question.options,
-      matrixRows: question.matrixRows,
-      matrixColumns: question.matrixColumns,
-    })),
-    createdAtUtc: String(responseData.CreatedAtUtc ?? responseData.createdAtUtc ?? ""),
-    updatedAtUtc: (responseData.UpdatedAtUtc ?? responseData.updatedAtUtc ?? null) as string | null,
-    isEligibleToVote: Boolean(responseData.IsEligibleToVote ?? responseData.isEligibleToVote),
-    eligibilityMessage: (responseData.EligibilityMessage ?? responseData.eligibilityMessage ?? null) as string | null,
-    currentUserVoteCount: readNumber(responseData.CurrentUserVoteCount ?? responseData.currentUserVoteCount, 0),
+  return {
+    ...detail,
+    isEligibleToVote: Boolean(responseData?.IsEligibleToVote ?? responseData?.isEligibleToVote),
+    eligibilityMessage: (responseData?.EligibilityMessage ?? responseData?.eligibilityMessage ?? null) as string | null,
+    currentUserVoteCount: readNumber(responseData?.CurrentUserVoteCount ?? responseData?.currentUserVoteCount, 0),
   };
+}
 
-  return detail;
+export async function fetchPublicPollDetail(pollUniqueId: string, signal?: AbortSignal) {
+  const payload = await getJson<unknown>(POLL_API_ROUTES.public.detail(pollUniqueId), { signal });
+  const detail = buildPollDetailResponse(payload);
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+
+  return {
+    ...detail,
+    isEligibleToVote: Boolean(responseData?.IsEligibleToVote ?? responseData?.isEligibleToVote),
+    eligibilityMessage: (responseData?.EligibilityMessage ?? responseData?.eligibilityMessage ?? null) as string | null,
+    currentUserVoteCount: readNumber(responseData?.CurrentUserVoteCount ?? responseData?.currentUserVoteCount, 0),
+  };
+}
+
+export async function submitPublicPollVote(pollUniqueId: string, request: PollVoteRequest) {
+  return postJson<PollVoteResponse>(POLL_API_ROUTES.public.vote(pollUniqueId), request);
+}
+
+export async function fetchOrganizerPollVotes(pollUniqueId: string, signal?: AbortSignal) {
+  const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.votes(pollUniqueId), { signal });
+  return buildPollVotesResponse(payload);
 }
 
 export async function fetchOrganizerPollQuestionTypes(signal?: AbortSignal) {

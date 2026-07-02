@@ -81,7 +81,6 @@ export interface PollEligibilityResponse {
 }
 
 export interface PollVoteRequest {
-  voteIdentityType: PollVoteIdentityType;
   userUniqueId: string | null;
   anonymousVoteKeyHash: string | null;
   answers: OrganizerPollVoteAnswer[];
@@ -97,3 +96,5 @@ export interface PollVoteResponse {
 export interface PollVoteListItem extends OrganizerPollVote {
   canDelete: boolean;
 }
+
+export type PollVoteListResponse = PollVoteListItem[];

@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
+  Copy,
   Edit3,
   Loader2,
   MessageSquareText,
@@ -13,9 +14,10 @@ import {
   Vote,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { APP_ROUTES, buildMembershipPollEditPath } from "../../../app/router/routes";
+import { APP_ROUTES, buildMembershipPollEditPath, buildMembershipPollReviewsPath, buildPublicPollPath } from "../../../app/router/routes";
 import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
 import type { OrganizerPollDetail, OrganizerPollQuestion, PollQuestionType } from "../../../types/polls";
+import { showToast } from "../../../shared/components/toast/Toast";
 import { fetchOrganizerPollDetail, getPollAudienceCopy, getPollStatusTone, revertOrganizerPollToDraft } from "../lib";
 import {
   getPollQuestionTypeChoice,
@@ -162,6 +164,8 @@ export function PollDetailPage() {
   });
   const [isRevertConfirmOpen, setIsRevertConfirmOpen] = useState(false);
   const [revertError, setRevertError] = useState<string | null>(null);
+  const livePollPath = detail ? buildPublicPollPath(detail.uniqueId) : "";
+  const livePollUrl = detail ? `${window.location.origin}${livePollPath}` : "";
   const summaryLabels = useMemo(
     () => ({
       audience: detail ? getPollAudienceCopy(detail.audienceType) : "Unknown",
@@ -187,6 +191,19 @@ export function PollDetailPage() {
       navigate(buildMembershipPollEditPath(detail.uniqueId));
     } catch (error) {
       setRevertError(error instanceof Error ? error.message : "Unable to revert the poll to draft.");
+    }
+  }
+
+  async function handleCopyLiveRoute() {
+    if (!livePollUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(livePollUrl);
+      showToast("Live poll link copied.", "success");
+    } catch {
+      showToast("Unable to copy live poll link.", "error");
     }
   }
 
@@ -267,6 +284,29 @@ export function PollDetailPage() {
                 </button>
               </div>
             ) : null}
+            {detail.status === "Published" ? (
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Public vote route</p>
+                    <p className="text-sm text-slate-600">This is the route members and public users will use to vote.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyLiveRoute()}
+                    className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy link
+                  </button>
+                </div>
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Route</p>
+                  <p className="mt-1 break-all font-mono text-sm text-slate-800">{livePollPath}</p>
+                  <p className="mt-1 break-all text-xs text-slate-500">{livePollUrl}</p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-none">
@@ -284,6 +324,24 @@ export function PollDetailPage() {
               >
                 <Edit3 className="mr-2 h-4 w-4" />
                 Edit poll
+              </Link>
+            ) : (
+              <Link
+                to={buildPublicPollPath(detail.uniqueId)}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center justify-center rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+              >
+                <Vote className="mr-2 h-4 w-4" />
+                View live poll
+              </Link>
+            )}
+            {detail.status !== "Draft" ? (
+              <Link
+                to={buildMembershipPollReviewsPath(detail.uniqueId)}
+                className="inline-flex items-center justify-center rounded-full border border-cyan-200 bg-white px-5 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
+              >
+                Reviews
               </Link>
             ) : null}
           </div>

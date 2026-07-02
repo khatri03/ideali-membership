@@ -18,8 +18,8 @@ export const POLL_TYPE_COPY = Object.fromEntries(
 >;
 
 export const POLL_PAGE_ROUTE_SUMMARY = {
-  organizerRouteCount: 6,
-  publicRouteCount: 3,
+  organizerRouteCount: 7,
+  publicRouteCount: 4,
 } as const;
 
 export function getPollAudienceCopy(audienceType: PollAudienceType) {

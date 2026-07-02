@@ -41,6 +41,8 @@ import {
   PollDetailPage,
   PollCreatePage,
   PollsPage,
+  PollVotePage,
+  PollReviewsPage,
 } from "./router/lazyPages";
 
 function PageSpinner() {
@@ -93,6 +95,7 @@ function RouterApp() {
           <Route path={APP_ROUTES.membershipRegister} element={<MembershipRegisterPage />} />
           <Route path={APP_ROUTES.publicMembershipInvoiceView} element={<MembershipInvoiceDetailPage isPublicView />} />
           <Route path={APP_ROUTES.membershipInvoiceView} element={<MembershipInvoiceDetailPage isPublicView />} />
+          <Route path={APP_ROUTES.publicMembershipPollView} element={<PollVotePage />} />
           <Route path={APP_ROUTES.root} element={<AppHome />} />
           <Route path={APP_ROUTES.login} element={<LoginRoute />} />
           <Route
@@ -126,6 +129,7 @@ function RouterApp() {
                 <Route path="create" element={<PollCreatePage />} />
                 <Route path=":pollUniqueId/detail" element={<PollDetailPage />} />
                 <Route path=":pollUniqueId/edit" element={<PollCreatePage />} />
+                <Route path=":pollUniqueId/reviews" element={<PollReviewsPage />} />
               </Route>
               <Route path="organizer/membership/type/polls" element={<Navigate to={APP_ROUTES.membershipPolls} replace />} />
               <Route path="organizer/custom-form/list" element={<CustomFormsPage />} />

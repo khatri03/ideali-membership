@@ -1,12 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronRight, Loader2, RotateCcw, Search, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CheckCircle2,
+  ChevronRight,
+  Copy,
+  FileText,
+  Loader2,
+  MessageSquareText,
+  PencilLine,
+  RotateCcw,
+  Search,
+  Vote,
+  X,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   buildMembershipPollCreatePath,
   buildMembershipPollDetailPath,
   buildMembershipPollEditPath,
+  buildMembershipPollReviewsPath,
+  buildPublicPollPath,
 } from "../../../app/router/routes";
 import { showToast } from "../../../shared/components/toast/Toast";
 import type { PollAudienceType, PollListSortBy, PollStatus } from "../../../types/polls";
@@ -220,7 +237,7 @@ function PollRowActions({
 
     const gap = 8;
     const menuWidth = 176;
-    const menuHeight = 52;
+    const menuHeight = status === "Draft" ? 96 : 168;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
     const openUpward = spaceBelow < menuHeight + gap && spaceAbove > menuHeight + gap;
@@ -293,8 +310,50 @@ function PollRowActions({
                   onClick={() => setIsOpen(false)}
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                 >
+                  {status === "Published" ? <FileText className="h-4 w-4 text-cyan-700" /> : <PencilLine className="h-4 w-4 text-cyan-700" />}
                   {status === "Published" ? "Detail" : "Edit"}
                 </Link>
+                {status === "Published" ? (
+                  <Link
+                    to={buildPublicPollPath(pollUniqueId)}
+                    onClick={() => setIsOpen(false)}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <Vote className="h-4 w-4 text-cyan-700" />
+                    View live poll
+                  </Link>
+                ) : null}
+                {status === "Published" ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(`${window.location.origin}${buildPublicPollPath(pollUniqueId)}`);
+                        showToast("Live poll link copied.", "success");
+                      } catch {
+                        showToast("Unable to copy live poll link.", "error");
+                      }
+
+                      setIsOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <Copy className="h-4 w-4 text-cyan-700" />
+                    Copy link
+                  </button>
+                ) : null}
+                {status !== "Draft" ? (
+                  <Link
+                    to={buildMembershipPollReviewsPath(pollUniqueId)}
+                    onClick={() => setIsOpen(false)}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <MessageSquareText className="h-4 w-4 text-cyan-700" />
+                    Reviews
+                  </Link>
+                ) : null}
                 {canChangeStatus ? (
                   <>
                     <div className="my-1 border-t border-slate-200" />
