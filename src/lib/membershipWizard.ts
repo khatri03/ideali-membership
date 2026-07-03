@@ -95,6 +95,27 @@ function formatMembershipTypePlaceholderGroupLabel(value: string) {
     .join(" ");
 }
 
+function normalizeListResponseItems(value: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(value)) {
+    return value as Array<Record<string, unknown>>;
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidates = [record.PageData, record.pageData, record.Data, record.data, record.Items, record.items];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate as Array<Record<string, unknown>>;
+    }
+  }
+
+  return [];
+}
+
 const wizardResponseCache = new Map<string, unknown>();
 const wizardRequestCache = new Map<string, Promise<unknown>>();
 
@@ -226,12 +247,8 @@ export async function saveMembershipTitleStep(
 
 export async function getMembershipTypes() {
   const payload = await getJson<unknown>("/api/organizer/membership/type/list");
-  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null;
-  const items = (Array.isArray(responseData?.PageData)
-    ? responseData?.PageData
-    : Array.isArray(responseData?.Data)
-      ? responseData?.Data
-      : responseData) as Array<Record<string, unknown>>;
+  const responseData = readResponseData(payload);
+  const items = normalizeListResponseItems(responseData);
 
   return items
     .map((item): MembershipTypeListItem => ({
@@ -260,12 +277,8 @@ export async function getMembershipTypes() {
 
 export async function getMembershipTypeOrderList() {
   const payload = await getJson<unknown>("/api/organizer/membership/type/order-list");
-  const responseData = readResponseData(payload) as { PageData?: unknown; Data?: unknown } | null;
-  const items = (Array.isArray(responseData?.PageData)
-    ? responseData?.PageData
-    : Array.isArray(responseData?.Data)
-      ? responseData?.Data
-      : responseData) as Array<Record<string, unknown>>;
+  const responseData = readResponseData(payload);
+  const items = normalizeListResponseItems(responseData);
 
   return items
     .map((item): MembershipTypeOrderListItem => ({
