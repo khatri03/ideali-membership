@@ -84,6 +84,7 @@ type PollDraft = {
   description: string;
   audienceType: PollAudienceType;
   status: "Draft" | "Published" | "Closed" | "Archived";
+  allowOneVotePerPerson: boolean;
   requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string;
   endsAtUtc: string;
@@ -242,6 +243,7 @@ function createDraftFromPollDetail(detail: OrganizerPollDetail): PollDraft {
     description: detail.description ?? "",
     audienceType: detail.audienceType,
     status: detail.status,
+    allowOneVotePerPerson: detail.allowOneVotePerPerson,
     requiredMembershipTypeUniqueIds: [...detail.requiredMembershipTypeUniqueIds],
     startsAtUtc: detail.startsAtUtc ? detail.startsAtUtc.slice(0, 16) : "",
     endsAtUtc: detail.endsAtUtc ? detail.endsAtUtc.slice(0, 16) : "",
@@ -272,6 +274,7 @@ function buildPollRequest(draft: PollDraft): PollSaveRequest {
     description: draft.description.trim() || null,
     audienceType: draft.audienceType,
     status: draft.status,
+    allowOneVotePerPerson: draft.allowOneVotePerPerson,
     requiredMembershipTypeUniqueIds:
       draft.audienceType === "MembersOnly" ? draft.requiredMembershipTypeUniqueIds : [],
     startsAtUtc: formatDateTimeLocal(draft.startsAtUtc),
@@ -399,6 +402,7 @@ export function PollCreatePage() {
     description: "",
     audienceType: "Public",
     status: "Draft",
+    allowOneVotePerPerson: true,
     requiredMembershipTypeUniqueIds: [],
     startsAtUtc: "",
     endsAtUtc: "",
@@ -641,6 +645,7 @@ export function PollCreatePage() {
         description: "",
         audienceType: "Public",
         status: "Draft",
+        allowOneVotePerPerson: true,
         requiredMembershipTypeUniqueIds: [],
         startsAtUtc: "",
         endsAtUtc: "",

@@ -135,6 +135,7 @@ function buildPollDetailResponse(payload: unknown): OrganizerPollDetail {
     description: (responseData.Description ?? responseData.description ?? null) as string | null,
     audienceType: String(responseData.AudienceType ?? responseData.audienceType ?? "Public") as PollAudienceType,
     status: String(responseData.Status ?? responseData.status ?? "Draft") as PollStatus,
+    allowOneVotePerPerson: Boolean(responseData.AllowOneVotePerPerson ?? responseData.allowOneVotePerPerson ?? true),
     requiredMembershipTypeUniqueIds: readArray(
       responseData.RequiredMembershipTypeUniqueIds ?? responseData.requiredMembershipTypeUniqueIds,
     ).map((item) => String(item)),
@@ -210,6 +211,7 @@ function buildPollListResponse(payload: unknown): PollListResponse {
       description: (item.Description ?? item.description ?? null) as string | null,
       audienceType: String(item.AudienceType ?? item.audienceType ?? "Public") as PollAudienceType,
       status: String(item.Status ?? item.status ?? "Draft") as PollStatus,
+      allowOneVotePerPerson: Boolean(item.AllowOneVotePerPerson ?? item.allowOneVotePerPerson ?? true),
       requiredMembershipTypeUniqueIds: readArray(item.RequiredMembershipTypeUniqueIds ?? item.requiredMembershipTypeUniqueIds).map(
         (membershipTypeUniqueId) => String(membershipTypeUniqueId),
       ),

@@ -28,6 +28,7 @@ export interface OrganizerPollSummary {
   description: string | null;
   audienceType: PollAudienceType;
   status: PollStatus;
+  allowOneVotePerPerson: boolean;
   requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string | null;
   endsAtUtc: string | null;
@@ -75,6 +76,7 @@ export interface OrganizerPollDetail {
   description: string | null;
   audienceType: PollAudienceType;
   status: PollStatus;
+  allowOneVotePerPerson: boolean;
   requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string | null;
   endsAtUtc: string | null;
@@ -101,6 +103,7 @@ export interface OrganizerPollDraft {
   description: string | null;
   audienceType: PollAudienceType;
   status: PollStatus;
+  allowOneVotePerPerson: boolean;
   requiredMembershipTypeUniqueIds: string[];
   startsAtUtc: string | null;
   endsAtUtc: string | null;

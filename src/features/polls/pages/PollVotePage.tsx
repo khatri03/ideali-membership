@@ -513,12 +513,17 @@ export function PollVotePage() {
   }
 
   if (pollQuery.isError || !detail) {
+    const loadErrorMessage = pollQuery.error instanceof Error ? pollQuery.error.message : "The backend did not return a poll record.";
+    const isMembersOnlyPoll = /membership|members-only/i.test(loadErrorMessage);
+
     return (
       <section className="rounded-[2rem] border border-rose-200 bg-rose-50 p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-rose-700">Unable to load poll</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">Public poll not available</h1>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+          {isMembersOnlyPoll ? "Members-only poll" : "Public poll not available"}
+        </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-          {pollQuery.error instanceof Error ? pollQuery.error.message : "The backend did not return a poll record."}
+          {loadErrorMessage}
         </p>
       </section>
     );
