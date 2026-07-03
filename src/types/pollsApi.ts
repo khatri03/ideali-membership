@@ -2,6 +2,7 @@ import type {
   OrganizerPollDraft,
   OrganizerPollDetail,
   OrganizerPollQuestionDraft,
+  OrganizerPollReviewSummary,
   OrganizerPollSummary,
   OrganizerPollVote,
   OrganizerPollVoteAnswer,
@@ -23,6 +24,7 @@ export const POLL_API_ROUTES = {
     publish: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/publish`,
     revertToDraft: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/revert-to-draft`,
     close: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/close`,
+    reviewSummary: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/review-summary`,
     votes: (pollUniqueId: string) => `/api/organizer/polls/${encodeURIComponent(pollUniqueId)}/votes`,
   },
   public: {
@@ -98,3 +100,4 @@ export interface PollVoteListItem extends OrganizerPollVote {
 }
 
 export type PollVoteListResponse = PollVoteListItem[];
+export type PollReviewSummaryResponse = OrganizerPollReviewSummary;

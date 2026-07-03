@@ -137,3 +137,62 @@ export interface OrganizerPollVote {
   voteIdentity: OrganizerPollVoteIdentity;
   answers: OrganizerPollVoteAnswer[];
 }
+
+export interface OrganizerPollReviewSummary {
+  pollUniqueId: string;
+  totalResponses: number;
+  authenticatedResponses: number;
+  anonymousResponses: number;
+  questionCount: number;
+  requiredQuestionCount: number;
+  optionalQuestionCount: number;
+  firstSubmittedAtUtc: string | null;
+  lastSubmittedAtUtc: string | null;
+  questions: OrganizerPollQuestionReviewSummary[];
+}
+
+export interface OrganizerPollQuestionReviewSummary {
+  questionUniqueId: string;
+  text: string;
+  questionType: PollQuestionType;
+  displayOrder: number;
+  isRequired: boolean;
+  responseCount: number;
+  totalSelections: number;
+  completionRatePercentage: number;
+  averageNumericValue: number | null;
+  minimumNumericValue: number | null;
+  maximumNumericValue: number | null;
+  averageRankValue: number | null;
+  firstPlaceVotes: number;
+  npsPromoterCount: number;
+  npsPassiveCount: number;
+  npsDetractorCount: number;
+  npsScore: number | null;
+  optionSummaries: OrganizerPollReviewOptionSummary[];
+  matrixCellSummaries: OrganizerPollReviewMatrixCellSummary[];
+  textSamples: OrganizerPollReviewTextSample[];
+}
+
+export interface OrganizerPollReviewOptionSummary {
+  optionUniqueId: string | null;
+  label: string;
+  count: number;
+  percentage: number;
+  averageRankValue: number | null;
+  firstPlaceVotes: number;
+}
+
+export interface OrganizerPollReviewMatrixCellSummary {
+  rowUniqueId: string;
+  rowLabel: string;
+  columnUniqueId: string;
+  columnLabel: string;
+  count: number;
+  percentage: number;
+}
+
+export interface OrganizerPollReviewTextSample {
+  value: string;
+  submittedAtUtc: string;
+}

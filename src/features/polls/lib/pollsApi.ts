@@ -328,6 +328,77 @@ export async function fetchOrganizerPollVotes(pollUniqueId: string, signal?: Abo
   return buildPollVotesResponse(payload);
 }
 
+export async function fetchOrganizerPollReviewSummary(pollUniqueId: string, signal?: AbortSignal) {
+  const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.reviewSummary(pollUniqueId), { signal });
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  if (!responseData) {
+    throw new Error("Unable to load poll review summary.");
+  }
+
+  return {
+    pollUniqueId: String(responseData.PollUniqueId ?? responseData.pollUniqueId ?? ""),
+    totalResponses: readNumber(responseData.TotalResponses ?? responseData.totalResponses, 0),
+    authenticatedResponses: readNumber(responseData.AuthenticatedResponses ?? responseData.authenticatedResponses, 0),
+    anonymousResponses: readNumber(responseData.AnonymousResponses ?? responseData.anonymousResponses, 0),
+    questionCount: readNumber(responseData.QuestionCount ?? responseData.questionCount, 0),
+    requiredQuestionCount: readNumber(responseData.RequiredQuestionCount ?? responseData.requiredQuestionCount, 0),
+    optionalQuestionCount: readNumber(responseData.OptionalQuestionCount ?? responseData.optionalQuestionCount, 0),
+    firstSubmittedAtUtc: (responseData.FirstSubmittedAtUtc ?? responseData.firstSubmittedAtUtc ?? null) as string | null,
+    lastSubmittedAtUtc: (responseData.LastSubmittedAtUtc ?? responseData.lastSubmittedAtUtc ?? null) as string | null,
+    questions: readArray(responseData.Questions ?? responseData.questions).map((item) => {
+      const question = readRecord(item);
+      return {
+        questionUniqueId: String(question?.QuestionUniqueId ?? question?.questionUniqueId ?? ""),
+        text: String(question?.Text ?? question?.text ?? ""),
+        questionType: String(question?.QuestionType ?? question?.questionType ?? "SingleChoice") as PollQuestionType,
+        displayOrder: readNumber(question?.DisplayOrder ?? question?.displayOrder, 0),
+        isRequired: Boolean(question?.IsRequired ?? question?.isRequired),
+        totalSelections: readNumber(question?.TotalSelections ?? question?.totalSelections, 0),
+        responseCount: readNumber(question?.ResponseCount ?? question?.responseCount, 0),
+        completionRatePercentage: readNumber(question?.CompletionRatePercentage ?? question?.completionRatePercentage, 0),
+        averageNumericValue: (question?.AverageNumericValue ?? question?.averageNumericValue ?? null) as number | null,
+        minimumNumericValue: (question?.MinimumNumericValue ?? question?.minimumNumericValue ?? null) as number | null,
+        maximumNumericValue: (question?.MaximumNumericValue ?? question?.maximumNumericValue ?? null) as number | null,
+        averageRankValue: (question?.AverageRankValue ?? question?.averageRankValue ?? null) as number | null,
+        firstPlaceVotes: readNumber(question?.FirstPlaceVotes ?? question?.firstPlaceVotes, 0),
+        npsPromoterCount: readNumber(question?.NpsPromoterCount ?? question?.npsPromoterCount, 0),
+        npsPassiveCount: readNumber(question?.NpsPassiveCount ?? question?.npsPassiveCount, 0),
+        npsDetractorCount: readNumber(question?.NpsDetractorCount ?? question?.npsDetractorCount, 0),
+        npsScore: (question?.NpsScore ?? question?.npsScore ?? null) as number | null,
+        optionSummaries: readArray(question?.OptionSummaries ?? question?.optionSummaries).map((option) => {
+          const optionRecord = readRecord(option);
+          return {
+            optionUniqueId: (optionRecord?.OptionUniqueId ?? optionRecord?.optionUniqueId ?? null) as string | null,
+            label: String(optionRecord?.Label ?? optionRecord?.label ?? ""),
+            count: readNumber(optionRecord?.Count ?? optionRecord?.count, 0),
+            percentage: readNumber(optionRecord?.Percentage ?? optionRecord?.percentage, 0),
+            averageRankValue: (optionRecord?.AverageRankValue ?? optionRecord?.averageRankValue ?? null) as number | null,
+            firstPlaceVotes: readNumber(optionRecord?.FirstPlaceVotes ?? optionRecord?.firstPlaceVotes, 0),
+          };
+        }),
+        matrixCellSummaries: readArray(question?.MatrixCellSummaries ?? question?.matrixCellSummaries).map((cell) => {
+          const cellRecord = readRecord(cell);
+          return {
+            rowUniqueId: String(cellRecord?.RowUniqueId ?? cellRecord?.rowUniqueId ?? ""),
+            rowLabel: String(cellRecord?.RowLabel ?? cellRecord?.rowLabel ?? ""),
+            columnUniqueId: String(cellRecord?.ColumnUniqueId ?? cellRecord?.columnUniqueId ?? ""),
+            columnLabel: String(cellRecord?.ColumnLabel ?? cellRecord?.columnLabel ?? ""),
+            count: readNumber(cellRecord?.Count ?? cellRecord?.count, 0),
+            percentage: readNumber(cellRecord?.Percentage ?? cellRecord?.percentage, 0),
+          };
+        }),
+        textSamples: readArray(question?.TextSamples ?? question?.textSamples).map((sample) => {
+          const sampleRecord = readRecord(sample);
+          return {
+            value: String(sampleRecord?.Value ?? sampleRecord?.value ?? ""),
+            submittedAtUtc: String(sampleRecord?.SubmittedAtUtc ?? sampleRecord?.submittedAtUtc ?? ""),
+          };
+        }),
+      };
+    }),
+  };
+}
+
 export async function fetchOrganizerPollQuestionTypes(signal?: AbortSignal) {
   const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.questionTypes, { signal });
   const data = readResponseData(payload);
