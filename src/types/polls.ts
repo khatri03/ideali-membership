@@ -81,6 +81,7 @@ export interface OrganizerPollDetail {
   questions: OrganizerPollQuestion[];
   createdAtUtc: string;
   updatedAtUtc: string | null;
+  currentUserVote: OrganizerPollVote | null;
 }
 
 export interface OrganizerPollQuestionDraft {

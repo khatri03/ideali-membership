@@ -26,6 +26,7 @@ import { showToast } from "../../../shared/components/toast/Toast";
 import type {
   OrganizerPollDetail,
   OrganizerPollQuestion,
+  OrganizerPollVote,
   OrganizerPollVoteAnswer,
   OrganizerPollVoteMatrixSelection,
 } from "../../../types/polls";
@@ -57,16 +58,81 @@ function createQuestionVoteDraft(question: OrganizerPollQuestion): QuestionVoteD
   };
 }
 
+function buildQuestionVoteDraft(question: OrganizerPollQuestion, vote: OrganizerPollVote | null): QuestionVoteDraft {
+  const answer = vote?.answers.find((item) => item.questionUniqueId === question.uniqueId);
+  if (!answer) {
+    return createQuestionVoteDraft(question);
+  }
+
+  if (question.questionType === "OpenText") {
+    return {
+      selectedOptionIds: [],
+      textValue: answer.textValue ?? "",
+      numericValue: "",
+      matrixSelections: {},
+      rankedOptionIds: [],
+    };
+  }
+
+  if (question.questionType === "StarRating" || question.questionType === "Nps") {
+    return {
+      selectedOptionIds: [],
+      textValue: "",
+      numericValue: answer.numericValue == null ? "" : String(answer.numericValue),
+      matrixSelections: {},
+      rankedOptionIds: [],
+    };
+  }
+
+  if (question.questionType === "RankedChoice") {
+    return {
+      selectedOptionIds: [],
+      textValue: "",
+      numericValue: "",
+      matrixSelections: {},
+      rankedOptionIds: [...answer.optionUniqueIds],
+    };
+  }
+
+  if (question.questionType === "YesNo") {
+    return {
+      selectedOptionIds: [...answer.optionUniqueIds],
+      textValue: answer.textValue ?? "",
+      numericValue: "",
+      matrixSelections: {},
+      rankedOptionIds: [],
+    };
+  }
+
+  if (usesPollMatrix(question.questionType)) {
+    const matrixSelections = answer.matrixSelections.reduce<Record<string, string>>((accumulator, selection) => {
+      accumulator[selection.rowUniqueId] = selection.columnUniqueId;
+      return accumulator;
+    }, {});
+
+    return {
+      selectedOptionIds: [],
+      textValue: "",
+      numericValue: "",
+      matrixSelections,
+      rankedOptionIds: [],
+    };
+  }
+
+  return {
+    selectedOptionIds: [...answer.optionUniqueIds],
+    textValue: "",
+    numericValue: "",
+    matrixSelections: {},
+    rankedOptionIds: [],
+  };
+}
+
 function buildVoteDraft(detail: OrganizerPollDetail) {
   return Object.fromEntries(
     detail.questions.map((question) => [
       question.uniqueId,
-      question.questionType === "RankedChoice"
-        ? {
-            ...createQuestionVoteDraft(question),
-            rankedOptionIds: [],
-          }
-        : createQuestionVoteDraft(question),
+      buildQuestionVoteDraft(question, detail.currentUserVote),
     ]),
   ) as Record<string, QuestionVoteDraft>;
 }
@@ -338,8 +404,15 @@ export function PollVotePage() {
     },
   });
 
-  const isLocked = detail ? !detail.isEligibleToVote : false;
+  const persistedVote = submittedVote ?? detail?.currentUserVote ?? null;
+  const persistedVoteSubmittedAt = persistedVote
+    ? "submittedAtUtc" in persistedVote
+      ? persistedVote.submittedAtUtc
+      : persistedVote.votedAtUtc
+    : null;
+  const isLocked = detail ? !detail.isEligibleToVote && !persistedVote : false;
   const blockedMessage = detail?.eligibilityMessage || "This poll is currently not available for voting.";
+  const isReadOnly = Boolean(persistedVote);
   const rankedDragSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const voteProgress = useMemo(() => {
     if (!detail) {
@@ -382,7 +455,7 @@ export function PollVotePage() {
       optionalTotal,
     };
   }, [detail, draft, rankedConfirmedByQuestion]);
-  const canSubmit = !isLocked && !submittedVote;
+  const canSubmit = !isLocked && !persistedVote;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -502,23 +575,26 @@ export function PollVotePage() {
               </div>
             </div>
           </div>
-        ) : submittedVote ? (
-          <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">Vote submitted</p>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">Your response has been saved</h2>
-                <p className="text-sm leading-6 text-slate-700">
-                  Submitted at {formatUtcToLocalDateTime(submittedVote.submittedAtUtc, { includeSeconds: true })}.
-                </p>
-              </div>
-            </div>
-          </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <>
+            {persistedVote ? (
+              <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">Vote submitted</p>
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-900">Your response has been saved</h2>
+                    <p className="text-sm leading-6 text-slate-700">
+                      Submitted at {persistedVoteSubmittedAt ? formatUtcToLocalDateTime(persistedVoteSubmittedAt, { includeSeconds: true }) : "just now"}.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4 xl:max-h-[calc(100vh-20rem)] xl:overflow-y-auto xl:pr-2">
               {detail.questions.map((question, index) => (
                 <PollVoteQuestionCard
@@ -529,6 +605,7 @@ export function PollVotePage() {
                   validationMessage={validationIssues.find((issue) => issue.questionUniqueId === question.uniqueId)?.message ?? null}
                   isRankedConfirmed={Boolean(rankedConfirmedByQuestion[question.uniqueId])}
                   needsRankedReconfirm={Boolean(rankedNeedsReconfirmByQuestion[question.uniqueId])}
+                  isReadOnly={isReadOnly}
                   onChange={(nextDraft) => {
                     setDraft((current) => ({
                       ...current,
@@ -600,7 +677,8 @@ export function PollVotePage() {
               </div>
             ) : null}
 
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              {!isReadOnly ? (
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="submit"
                 disabled={submitVoteMutation.isPending || !canSubmit}
@@ -609,8 +687,10 @@ export function PollVotePage() {
                 {submitVoteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Submit vote
               </button>
-            </div>
-          </form>
+              </div>
+              ) : null}
+            </form>
+          </>
         )}
       </div>
 
@@ -647,6 +727,7 @@ function PollVoteQuestionCard({
   onChange,
   onConfirmRanked,
   rankedDragSensors,
+  isReadOnly,
 }: {
   question: OrganizerPollQuestion;
   index: number;
@@ -657,6 +738,7 @@ function PollVoteQuestionCard({
   onChange: (nextDraft: QuestionVoteDraft) => void;
   onConfirmRanked: () => void;
   rankedDragSensors: ReturnType<typeof useSensors>;
+  isReadOnly: boolean;
 }) {
   const isOptionListQuestion = usesPollOptionList(question.questionType);
   const isAnswered = isQuestionAnswered(question, draft);
@@ -694,12 +776,14 @@ function PollVoteQuestionCard({
             value={draft.textValue}
             onChange={(event) => onChange({ ...draft, textValue: event.target.value })}
             rows={5}
+            disabled={isReadOnly}
             className="w-full rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
             placeholder="Type your answer here..."
           />
         ) : question.questionType === "StarRating" ? (
           <StarRatingControl
             value={draft.numericValue ? Number(draft.numericValue) : null}
+            disabled={isReadOnly}
             onChange={(value) => onChange({ ...draft, numericValue: value == null ? "" : String(value) })}
           />
         ) : question.questionType === "Nps" ? (
@@ -707,6 +791,7 @@ function PollVoteQuestionCard({
             max={10}
             min={0}
             value={draft.numericValue ? Number(draft.numericValue) : null}
+            disabled={isReadOnly}
             onChange={(value) => onChange({ ...draft, numericValue: value == null ? "" : String(value) })}
             labels={["0", "10"]}
           />
@@ -716,6 +801,7 @@ function PollVoteQuestionCard({
             value={draft.rankedOptionIds}
             isConfirmed={isRankedConfirmed}
             needsReconfirm={needsRankedReconfirm}
+            isReadOnly={isReadOnly}
             onChange={(nextValue) => onChange({ ...draft, rankedOptionIds: nextValue })}
             onConfirm={() => onConfirmRanked()}
             sensors={rankedDragSensors}
@@ -724,6 +810,7 @@ function PollVoteQuestionCard({
           <MatrixVoteGrid
             question={question}
             value={draft.matrixSelections}
+            isReadOnly={isReadOnly}
             onChange={(rowUniqueId, columnUniqueId) =>
               onChange({
                 ...draft,
@@ -738,6 +825,7 @@ function PollVoteQuestionCard({
           <YesNoVoteControl
             question={question}
             draft={draft}
+            isReadOnly={isReadOnly}
             onChange={onChange}
           />
         ) : isOptionListQuestion ? (
@@ -745,6 +833,7 @@ function PollVoteQuestionCard({
             question={question}
             value={draft.selectedOptionIds}
             multiple={question.questionType === "MultipleChoice"}
+            isReadOnly={isReadOnly}
             onChange={(nextValue) => onChange({ ...draft, selectedOptionIds: nextValue })}
           />
         ) : null}
@@ -762,11 +851,13 @@ function OptionVoteList({
   question,
   value,
   multiple,
+  isReadOnly,
   onChange,
 }: {
   question: OrganizerPollQuestion;
   value: string[];
   multiple: boolean;
+  isReadOnly: boolean;
   onChange: (nextValue: string[]) => void;
 }) {
   const selected = new Set(value);
@@ -780,7 +871,12 @@ function OptionVoteList({
           <button
             key={option.uniqueId}
             type="button"
+            disabled={isReadOnly}
             onClick={() => {
+              if (isReadOnly) {
+                return;
+              }
+
               if (multiple) {
                 onChange(isSelected ? value.filter((item) => item !== option.uniqueId) : [...value, option.uniqueId]);
                 return;
@@ -789,7 +885,7 @@ function OptionVoteList({
               onChange([option.uniqueId]);
             }}
             className={[
-              "flex w-full items-center gap-3 rounded-[1.15rem] border px-4 py-3 text-left text-sm transition",
+              "flex w-full items-center gap-3 rounded-[1.15rem] border px-4 py-3 text-left text-sm transition disabled:cursor-not-allowed",
               isSelected
                 ? "border-cyan-300 bg-cyan-50 text-slate-900 shadow-sm"
                 : "border-slate-200 bg-slate-50 text-slate-700 hover:border-cyan-200 hover:bg-white",
@@ -826,10 +922,12 @@ function OptionVoteList({
 function YesNoVoteControl({
   question,
   draft,
+  isReadOnly,
   onChange,
 }: {
   question: OrganizerPollQuestion;
   draft: QuestionVoteDraft;
+  isReadOnly: boolean;
   onChange: (nextDraft: QuestionVoteDraft) => void;
 }) {
   const yesOptionId = question.options[0]?.uniqueId ?? null;
@@ -841,7 +939,12 @@ function YesNoVoteControl({
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       <button
         type="button"
+        disabled={isReadOnly}
         onClick={() => {
+          if (isReadOnly) {
+            return;
+          }
+
           if (yesOptionId) {
             onChange({ ...draft, selectedOptionIds: [yesOptionId], textValue: "" });
             return;
@@ -850,7 +953,7 @@ function YesNoVoteControl({
           onChange({ ...draft, textValue: "Yes", selectedOptionIds: [] });
         }}
         className={[
-          "flex items-center justify-center gap-2 rounded-[1.15rem] border px-4 py-4 text-sm font-semibold transition",
+          "flex items-center justify-center gap-2 rounded-[1.15rem] border px-4 py-4 text-sm font-semibold transition disabled:cursor-not-allowed",
           yesSelected
             ? "border-cyan-300 bg-cyan-50 text-slate-900 shadow-sm"
             : "border-slate-200 bg-slate-50 text-slate-700 hover:border-cyan-200 hover:bg-white",
@@ -869,7 +972,12 @@ function YesNoVoteControl({
       </button>
       <button
         type="button"
+        disabled={isReadOnly}
         onClick={() => {
+          if (isReadOnly) {
+            return;
+          }
+
           if (noOptionId) {
             onChange({ ...draft, selectedOptionIds: [noOptionId], textValue: "" });
             return;
@@ -878,7 +986,7 @@ function YesNoVoteControl({
           onChange({ ...draft, textValue: "No", selectedOptionIds: [] });
         }}
         className={[
-          "flex items-center justify-center gap-2 rounded-[1.15rem] border px-4 py-4 text-sm font-semibold transition",
+          "flex items-center justify-center gap-2 rounded-[1.15rem] border px-4 py-4 text-sm font-semibold transition disabled:cursor-not-allowed",
           noSelected
             ? "border-cyan-300 bg-cyan-50 text-slate-900 shadow-sm"
             : "border-slate-200 bg-slate-50 text-slate-700 hover:border-cyan-200 hover:bg-white",
@@ -902,10 +1010,12 @@ function YesNoVoteControl({
 function MatrixVoteGrid({
   question,
   value,
+  isReadOnly,
   onChange,
 }: {
   question: OrganizerPollQuestion;
   value: Record<string, string>;
+  isReadOnly: boolean;
   onChange: (rowUniqueId: string, columnUniqueId: string) => void;
 }) {
   const matrixColumns = question.matrixColumns;
@@ -939,9 +1049,10 @@ function MatrixVoteGrid({
                 <button
                   key={column.uniqueId}
                   type="button"
+                  disabled={isReadOnly}
                   onClick={() => onChange(row.uniqueId, column.uniqueId)}
                   className={[
-                    "flex items-center justify-center px-4 py-4 transition",
+                    "flex items-center justify-center px-4 py-4 transition disabled:cursor-not-allowed",
                     isSelected ? "bg-cyan-50" : "bg-white hover:bg-slate-50",
                   ].join(" ")}
                   aria-label={`${row.label} - ${column.label}`}
@@ -968,12 +1079,14 @@ function RatingScale({
   max,
   min = 1,
   value,
+  disabled,
   onChange,
   labels,
 }: {
   max: number;
   min?: number;
   value: number | null;
+  disabled: boolean;
   onChange: (value: number | null) => void;
   labels?: [string, string];
 }) {
@@ -988,9 +1101,10 @@ function RatingScale({
             <button
               key={option}
               type="button"
+              disabled={disabled}
               onClick={() => onChange(option)}
               className={[
-                "flex h-11 items-center justify-center rounded-xl border text-sm font-semibold transition",
+                "flex h-11 items-center justify-center rounded-xl border text-sm font-semibold transition disabled:cursor-not-allowed",
                 isSelected
                   ? "border-cyan-500 bg-cyan-500 text-white shadow-sm"
                   : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50",
@@ -1011,9 +1125,11 @@ function RatingScale({
 
 function StarRatingControl({
   value,
+  disabled,
   onChange,
 }: {
   value: number | null;
+  disabled: boolean;
   onChange: (value: number | null) => void;
 }) {
   return (
@@ -1026,9 +1142,10 @@ function StarRatingControl({
             <button
               key={option}
               type="button"
+              disabled={disabled}
               onClick={() => onChange(option)}
               className={[
-                "inline-flex h-12 w-12 items-center justify-center rounded-xl border transition",
+                "inline-flex h-12 w-12 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed",
                 isSelected
                   ? "border-amber-300 bg-amber-400 text-white shadow-sm"
                   : "border-slate-200 bg-white text-slate-300 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-400",
@@ -1049,6 +1166,7 @@ function RankedChoiceControl({
   value,
   isConfirmed,
   needsReconfirm,
+  isReadOnly,
   onChange,
   onConfirm,
   sensors,
@@ -1057,6 +1175,7 @@ function RankedChoiceControl({
   value: string[];
   isConfirmed: boolean;
   needsReconfirm: boolean;
+  isReadOnly: boolean;
   onChange: (nextValue: string[]) => void;
   onConfirm: () => void;
   sensors: ReturnType<typeof useSensors>;
@@ -1086,10 +1205,19 @@ function RankedChoiceControl({
   };
 
   function handleDragStart(event: DragStartEvent) {
+    if (isReadOnly) {
+      return;
+    }
+
     setActiveOptionId(String(event.active.id));
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    if (isReadOnly) {
+      setActiveOptionId(null);
+      return;
+    }
+
     setActiveOptionId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) {
@@ -1105,6 +1233,24 @@ function RankedChoiceControl({
     onChange(arrayMove(orderedOptions, oldIndex, newIndex).map((option) => option.uniqueId));
   }
 
+  if (isReadOnly) {
+    return (
+      <div className="space-y-2">
+        {orderedOptions.map((option, index) => (
+          <div
+            key={option.uniqueId}
+            className="flex cursor-not-allowed items-center gap-3 rounded-[1.15rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-cyan-50 text-xs font-semibold text-cyan-700">
+              {index + 1}
+            </span>
+            <span className="min-w-0 flex-1 truncate">{option.label}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <DndContext
@@ -1117,7 +1263,7 @@ function RankedChoiceControl({
         <SortableContext items={orderedOptions.map((option) => option.uniqueId)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {orderedOptions.map((option, index) => (
-              <SortableRankedOption key={option.uniqueId} option={option} index={index} />
+              <SortableRankedOption key={option.uniqueId} option={option} index={index} isReadOnly={isReadOnly} />
             ))}
           </div>
         </SortableContext>
@@ -1139,6 +1285,7 @@ function RankedChoiceControl({
           ) : null}
           <button
             type="button"
+            disabled={isReadOnly}
             onClick={onConfirm}
             className={[
               "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition",
@@ -1156,7 +1303,15 @@ function RankedChoiceControl({
   );
 }
 
-function SortableRankedOption({ option, index }: { option: OrganizerPollQuestion["options"][number]; index: number }) {
+function SortableRankedOption({
+  option,
+  index,
+  isReadOnly,
+}: {
+  option: OrganizerPollQuestion["options"][number];
+  index: number;
+  isReadOnly: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: option.uniqueId,
   });
@@ -1178,7 +1333,8 @@ function SortableRankedOption({ option, index }: { option: OrganizerPollQuestion
       </span>
       <button
         type="button"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-cyan-700 active:cursor-grabbing"
+        disabled={isReadOnly}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-cyan-700 disabled:cursor-not-allowed active:cursor-grabbing"
         aria-label={`Drag ${option.label} to reorder`}
         {...attributes}
         {...listeners}

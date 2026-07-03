@@ -3,6 +3,7 @@ import { readResponseData } from "../../../lib/parseUtils";
 import type { OrganizerPollDetail, PollAudienceType, PollListSortBy, PollStatus } from "../../../types/polls";
 import type { PollQuestionType } from "../../../types/polls";
 import { POLL_API_ROUTES } from "../../../types/pollsApi";
+import { getOrCreateAnonymousPollVoteKey } from "./pollVoteIdentity";
 import type {
   PollListResponse,
   PollVoteListResponse,
@@ -151,6 +152,42 @@ function buildPollDetailResponse(payload: unknown): OrganizerPollDetail {
     })),
     createdAtUtc: String(responseData.CreatedAtUtc ?? responseData.createdAtUtc ?? ""),
     updatedAtUtc: (responseData.UpdatedAtUtc ?? responseData.updatedAtUtc ?? null) as string | null,
+    currentUserVote: (() => {
+      const voteRecord = readRecord(responseData.CurrentUserVote ?? responseData.currentUserVote);
+      if (!voteRecord) {
+        return null;
+      }
+
+      const voteIdentity = readRecord(voteRecord.VoteIdentity ?? voteRecord.voteIdentity);
+      return {
+        uniqueId: String(voteRecord.UniqueId ?? voteRecord.uniqueId ?? ""),
+        pollUniqueId: String(voteRecord.PollUniqueId ?? voteRecord.pollUniqueId ?? ""),
+        votedAtUtc: String(voteRecord.SubmittedAtUtc ?? voteRecord.submittedAtUtc ?? voteRecord.VotedAtUtc ?? voteRecord.votedAtUtc ?? ""),
+        voteIdentity: {
+          voteIdentityType: String(voteIdentity?.VoteIdentityType ?? voteIdentity?.voteIdentityType ?? "Anonymous") as "Authenticated" | "Anonymous",
+          userUniqueId: (voteIdentity?.UserUniqueId ?? voteIdentity?.userUniqueId ?? null) as string | null,
+          anonymousVoteKeyHash: (voteIdentity?.AnonymousVoteKeyHash ?? voteIdentity?.anonymousVoteKeyHash ?? null) as string | null,
+        },
+        answers: readArray(voteRecord.Answers ?? voteRecord.answers).map((answer) => {
+          const answerRecord = readRecord(answer);
+          return {
+            questionUniqueId: String(answerRecord?.QuestionUniqueId ?? answerRecord?.questionUniqueId ?? ""),
+            optionUniqueIds: readArray(answerRecord?.OptionUniqueIds ?? answerRecord?.optionUniqueIds).map((value) => String(value)),
+            textValue: (answerRecord?.TextValue ?? answerRecord?.textValue ?? null) as string | null,
+            numericValue: (answerRecord?.NumericValue ?? answerRecord?.numericValue ?? null) as number | null,
+            rankValue: (answerRecord?.RankValue ?? answerRecord?.rankValue ?? null) as number | null,
+            matrixSelections: readArray(answerRecord?.MatrixSelections ?? answerRecord?.matrixSelections).map((selection) => {
+              const selectionRecord = readRecord(selection);
+              return {
+                rowUniqueId: String(selectionRecord?.RowUniqueId ?? selectionRecord?.rowUniqueId ?? ""),
+                columnUniqueId: String(selectionRecord?.ColumnUniqueId ?? selectionRecord?.columnUniqueId ?? ""),
+              };
+            }),
+          };
+        }),
+        canDelete: Boolean(voteRecord.CanDelete ?? voteRecord.canDelete),
+      };
+    })(),
   };
 }
 
@@ -264,7 +301,11 @@ export async function fetchOrganizerPollDetail(pollUniqueId: string, signal?: Ab
 }
 
 export async function fetchPublicPollDetail(pollUniqueId: string, signal?: AbortSignal) {
-  const payload = await getJson<unknown>(POLL_API_ROUTES.public.detail(pollUniqueId), { signal });
+  const anonymousVoteKeyHash = getOrCreateAnonymousPollVoteKey(pollUniqueId);
+  const path = anonymousVoteKeyHash
+    ? `${POLL_API_ROUTES.public.detail(pollUniqueId)}?anonymousVoteKeyHash=${encodeURIComponent(anonymousVoteKeyHash)}`
+    : POLL_API_ROUTES.public.detail(pollUniqueId);
+  const payload = await getJson<unknown>(path, { signal });
   const detail = buildPollDetailResponse(payload);
   const responseData = readResponseData(payload) as Record<string, unknown> | null;
 
