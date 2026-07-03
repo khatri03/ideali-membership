@@ -169,9 +169,17 @@ export interface OrganizerPollQuestionReviewSummary {
   npsPassiveCount: number;
   npsDetractorCount: number;
   npsScore: number | null;
+  starRatingSummaries: OrganizerPollReviewRatingSummary[];
   optionSummaries: OrganizerPollReviewOptionSummary[];
   matrixCellSummaries: OrganizerPollReviewMatrixCellSummary[];
   textSamples: OrganizerPollReviewTextSample[];
+}
+
+export interface OrganizerPollReviewRatingSummary {
+  ratingValue: number;
+  label: string;
+  count: number;
+  percentage: number;
 }
 
 export interface OrganizerPollReviewOptionSummary {

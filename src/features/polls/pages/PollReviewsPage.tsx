@@ -37,7 +37,8 @@ import { getPollQuestionTypeChoice, usesPollMatrix, usesPollOptionList } from ".
 export function PollReviewsPage() {
   const { pollUniqueId } = useParams<{ pollUniqueId?: string }>();
   const [isResponsesOpen, setIsResponsesOpen] = useState(false);
-  const [selectedQuestionType, setSelectedQuestionType] = useState<PollQuestionType | "All">("All");
+  const [searchText, setSearchText] = useState("");
+  const [selectedQuestionType, setSelectedQuestionType] = useState<PollQuestionType | "all">("all");
 
   const detailQuery = useQuery({
     queryKey: ["polls", "organizer", "detail", pollUniqueId],
@@ -69,29 +70,90 @@ export function PollReviewsPage() {
   }, [detail?.questions]);
 
   const availableQuestionTypes = useMemo(() => {
+    if (!summary) {
+      return [];
+    }
+
     const seen = new Set<PollQuestionType>();
-    return (summary?.questions ?? [])
-      .map((question) => question.questionType)
-      .filter((questionType) => {
-        if (seen.has(questionType)) {
-          return false;
-        }
-        seen.add(questionType);
-        return true;
-      });
-  }, [summary?.questions]);
+    const types: PollQuestionType[] = [];
+
+    summary.questions.forEach((question) => {
+      if (!seen.has(question.questionType)) {
+        seen.add(question.questionType);
+        types.push(question.questionType);
+      }
+    });
+
+    return types;
+  }, [summary]);
+
+  const normalizedSearchText = searchText.trim().toLowerCase();
 
   const filteredQuestions = useMemo(() => {
     if (!summary) {
       return [];
     }
 
-    if (selectedQuestionType === "All") {
-      return summary.questions;
+    if (!normalizedSearchText) {
+      return summary.questions.filter((question) =>
+        selectedQuestionType === "all" ? true : question.questionType === selectedQuestionType,
+      );
     }
 
-    return summary.questions.filter((question) => question.questionType === selectedQuestionType);
-  }, [selectedQuestionType, summary]);
+    return summary.questions.filter((question) => {
+      if (selectedQuestionType !== "all" && question.questionType !== selectedQuestionType) {
+        return false;
+      }
+
+      const questionSearchText = buildQuestionSearchText(question, questionMap);
+      const responseMatches = votes.some((vote) =>
+        vote.answers.some((answer) => {
+          if (answer.questionUniqueId !== question.questionUniqueId) {
+            return false;
+          }
+
+          return buildAnswerSearchText(questionMap.get(answer.questionUniqueId), answer, vote).includes(normalizedSearchText);
+        }),
+      );
+      return questionSearchText.includes(normalizedSearchText) || responseMatches;
+    });
+  }, [normalizedSearchText, questionMap, selectedQuestionType, summary, votes]);
+
+  const filteredVotes = useMemo(() => {
+    if (!votesQuery.isSuccess) {
+      return votes;
+    }
+
+    return votes.filter((vote) => {
+      if (selectedQuestionType === "all" && !normalizedSearchText) {
+        return true;
+      }
+
+      if (selectedQuestionType === "all") {
+        const voteSearchText = buildVoteSearchText(vote, questionMap);
+        return voteSearchText.includes(normalizedSearchText);
+      }
+
+      const matchingAnswers = vote.answers.filter((answer) => {
+        const question = questionMap.get(answer.questionUniqueId);
+        if (!question) {
+          return false;
+        }
+
+        if (question.questionType !== selectedQuestionType) {
+          return false;
+        }
+
+        if (!normalizedSearchText) {
+          return true;
+        }
+
+        return buildAnswerSearchText(question, answer, vote).includes(normalizedSearchText);
+      });
+
+      return matchingAnswers.length > 0;
+    });
+  }, [normalizedSearchText, questionMap, selectedQuestionType, votes, votesQuery.isSuccess]);
 
   if (!pollUniqueId) {
     return (
@@ -170,46 +232,69 @@ export function PollReviewsPage() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedQuestionType("All")}
-            className={[
-              "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition",
-              selectedQuestionType === "All"
-                ? "border-cyan-200 bg-cyan-50 text-cyan-700 shadow-sm"
-                : "border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:text-cyan-700",
-            ].join(" ")}
-            aria-pressed={selectedQuestionType === "All"}
-          >
-            <span>All types</span>
-            <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">{summary.questionCount}</span>
-          </button>
-
-          {availableQuestionTypes.map((questionType) => {
-            const choice = getPollQuestionTypeChoice(questionType);
-            const isActive = selectedQuestionType === questionType;
-            const questionCount = summary.questions.filter((question) => question.questionType === questionType).length;
-
-            return (
+        <div className="mt-5">
+          <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500" htmlFor="pollReviewSearch">
+            Filter questions, options, and responses
+          </label>
+          <div className="mt-2 flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm focus-within:border-cyan-300 focus-within:bg-white">
+            <MessageSquareText className="h-5 w-5 shrink-0 text-slate-400" />
+            <input
+              id="pollReviewSearch"
+              type="text"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Search question, option, or response..."
+              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            />
+            {searchText ? (
               <button
-                key={questionType}
                 type="button"
-                onClick={() => setSelectedQuestionType(questionType)}
-                className={[
-                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition",
-                  isActive
-                    ? "border-cyan-200 bg-cyan-50 text-cyan-700 shadow-sm"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:text-cyan-700",
-                ].join(" ")}
-                aria-pressed={isActive}
+                onClick={() => setSearchText("")}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-200 hover:text-cyan-700"
               >
-                <QuestionTypeIcon questionType={questionType} className="h-4 w-4" />
-                <span>{choice.label}</span>
-                <span className="rounded-full bg-slate-50 px-2 py-0.5 text-xs text-slate-500">{questionCount}</span>
+                Clear
               </button>
-            );
-          })}
+            ) : null}
+          </div>
+
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Question type</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedQuestionType("all")}
+                className={[
+                  "inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                  selectedQuestionType === "all"
+                    ? "border-cyan-900 bg-cyan-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800",
+                ].join(" ")}
+              >
+                All types
+              </button>
+              {availableQuestionTypes.map((questionType) => {
+                const choice = getPollQuestionTypeChoice(questionType);
+                const active = selectedQuestionType === questionType;
+
+                return (
+                  <button
+                    key={questionType}
+                    type="button"
+                    onClick={() => setSelectedQuestionType(questionType)}
+                    className={[
+                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                      active
+                        ? "border-cyan-900 bg-cyan-900 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800",
+                    ].join(" ")}
+                  >
+                    <QuestionTypeIcon questionType={questionType} className="h-3.5 w-3.5" />
+                    {choice.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {filteredQuestions.length === 0 ? (
@@ -217,7 +302,7 @@ export function PollReviewsPage() {
             <EmptyReviewsState />
           </div>
         ) : (
-          <div className="mt-6 grid gap-4 xl:grid-cols-2">
+          <div className="mt-6 grid gap-4">
             {filteredQuestions.map((question) => (
               <QuestionSummaryCard key={question.questionUniqueId} question={question} totalResponses={summary.totalResponses} />
             ))}
@@ -253,15 +338,15 @@ export function PollReviewsPage() {
             <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
               Unable to load individual submissions.
             </div>
-          ) : votes.length === 0 ? (
+          ) : filteredVotes.length === 0 ? (
             <EmptyReviewsState />
           ) : (
-            votes.map((vote) => (
+            filteredVotes.map((vote) => (
               <PollResponseCard
                 key={vote.uniqueId}
                 vote={vote}
                 questionMap={questionMap}
-                selectedQuestionType={selectedQuestionType}
+                searchText={normalizedSearchText}
               />
             ))
           )}
@@ -334,52 +419,56 @@ function QuestionSummaryCard({
   const questionTypeChoice = getPollQuestionTypeChoice(question.questionType);
 
   return (
-    <article className="rounded-[2rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-700">Question {question.displayOrder}</p>
-          <h3 className="text-lg font-semibold text-slate-900">{question.text}</h3>
+    <details open className="group rounded-[2rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+      <summary className="flex cursor-pointer list-none flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-2 text-left">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-              <QuestionTypeIcon questionType={question.questionType} className="h-4 w-4 text-cyan-700" />
-              {questionTypeChoice.label}
-            </span>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-700">Question {question.displayOrder}</p>
             <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${question.isRequired ? "bg-emerald-50 text-emerald-700" : "bg-white text-slate-500"}`}>
               {question.isRequired ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
               {question.isRequired ? "Required" : "Optional"}
             </span>
           </div>
+          <h3 className="text-lg font-semibold text-slate-900">{question.text}</h3>
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+            <QuestionTypeIcon questionType={question.questionType} className="h-4 w-4 text-cyan-300" />
+            {questionTypeChoice.label}
+          </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:w-52">
-          <StatPill label="Responses" value={`${question.responseCount}`} />
-          <StatPill label="Completion" value={`${question.completionRatePercentage}%`} />
-          {question.questionType === "RankedChoice" ? (
-            <StatPill label="Selections" value={`${question.totalSelections}`} />
-          ) : question.questionType === "Nps" ? (
-            <StatPill label="NPS score" value={question.npsScore !== null ? String(question.npsScore) : "No data"} />
-          ) : question.averageNumericValue !== null ? (
-            <StatPill label="Average" value={`${question.averageNumericValue}`} />
-          ) : (
-            <StatPill label="Total selections" value={`${question.totalSelections || totalResponses}`} />
-          )}
-          {question.questionType === "RankedChoice" ? (
-            <StatPill label="Top votes" value={`${question.optionSummaries[0]?.firstPlaceVotes ?? 0}`} />
-          ) : question.questionType === "Nps" ? (
-            <StatPill label="Detractors" value={`${question.npsDetractorCount}`} />
-          ) : question.minimumNumericValue !== null && question.maximumNumericValue !== null ? (
-            <StatPill label="Range" value={`${question.minimumNumericValue} - ${question.maximumNumericValue}`} />
-          ) : (
-            <StatPill label="Type" value={questionTypeChoice.label} />
-          )}
+        <div className="flex items-start gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:w-52">
+            <StatPill label="Responses" value={`${question.responseCount}`} />
+            <StatPill label="Completion" value={`${question.completionRatePercentage}%`} />
+            {question.questionType === "RankedChoice" ? (
+              <StatPill label="Selections" value={`${question.totalSelections}`} />
+            ) : question.questionType === "Nps" ? (
+              <StatPill label="NPS score" value={question.npsScore !== null ? String(question.npsScore) : "No data"} />
+            ) : question.averageNumericValue !== null ? (
+              <StatPill label="Average" value={`${question.averageNumericValue}`} />
+            ) : (
+              <StatPill label="Total selections" value={`${question.totalSelections || totalResponses}`} />
+            )}
+            {question.questionType === "RankedChoice" ? (
+              <StatPill label="Top votes" value={`${question.optionSummaries[0]?.firstPlaceVotes ?? 0}`} />
+            ) : question.questionType === "Nps" ? (
+              <StatPill label="Detractors" value={`${question.npsDetractorCount}`} />
+            ) : question.minimumNumericValue !== null && question.maximumNumericValue !== null ? (
+              <StatPill label="Range" value={`${question.minimumNumericValue} - ${question.maximumNumericValue}`} />
+            ) : (
+              <StatPill label="Type" value={questionTypeChoice.label} />
+            )}
+          </div>
+
+          <ChevronDown className="mt-1 h-5 w-5 shrink-0 text-slate-400 transition group-open:rotate-180" />
         </div>
-      </div>
+      </summary>
 
       <div className="mt-5">
         {question.questionType === "OpenText" ? (
           <TextSamplesPanel samples={question.textSamples} />
         ) : question.questionType === "StarRating" || question.questionType === "Nps" ? (
-          question.questionType === "Nps" ? <NpsSummaryPanel question={question} /> : <NumericSummaryPanel question={question} />
+          question.questionType === "Nps" ? <NpsSummaryPanel question={question} /> : <StarRatingSummaryPanel question={question} />
         ) : question.questionType === "RankedChoice" ? (
           <RankedSummaryPanel question={question} />
         ) : usesPollMatrix(question.questionType) ? (
@@ -390,7 +479,7 @@ function QuestionSummaryCard({
           <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">No summary available.</div>
         )}
       </div>
-    </article>
+    </details>
   );
 }
 
@@ -490,16 +579,37 @@ function MatrixSummaryPanel({
   );
 }
 
-function NumericSummaryPanel({
+function StarRatingSummaryPanel({
   question,
 }: {
   question: OrganizerPollQuestionReviewSummary;
 }) {
+  if (question.starRatingSummaries.length === 0) {
+    return <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">No rating distribution available.</div>;
+  }
+
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <NumericPill label="Average" value={question.averageNumericValue !== null ? String(question.averageNumericValue) : "No data"} />
-      <NumericPill label="Minimum" value={question.minimumNumericValue !== null ? String(question.minimumNumericValue) : "No data"} />
-      <NumericPill label="Maximum" value={question.maximumNumericValue !== null ? String(question.maximumNumericValue) : "No data"} />
+    <div className="space-y-3">
+      {question.starRatingSummaries.map((summary, index) => (
+        <div key={`${summary.ratingValue}-${summary.label}`} className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900">{summary.label}</p>
+              <p className="text-xs text-slate-500">{summary.count} response(s)</p>
+            </div>
+            <span className="text-sm font-semibold text-slate-700">{summary.percentage}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={[
+                "h-full rounded-full",
+                index < 2 ? "bg-amber-500" : "bg-slate-400",
+              ].join(" ")}
+              style={{ width: `${summary.percentage}%` }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -587,19 +697,19 @@ function TextSamplesPanel({
 function PollResponseCard({
   vote,
   questionMap,
-  selectedQuestionType,
+  searchText,
 }: {
   vote: PollVoteListItem;
   questionMap: Map<string, OrganizerPollQuestion>;
-  selectedQuestionType: PollQuestionType | "All";
+  searchText: string;
 }) {
   const visibleAnswers = vote.answers.filter((answer) => {
-    if (selectedQuestionType === "All") {
+    if (!searchText) {
       return true;
     }
 
     const question = questionMap.get(answer.questionUniqueId);
-    return question?.questionType === selectedQuestionType;
+    return buildAnswerSearchText(question, answer, vote).includes(searchText);
   });
 
   return (
@@ -633,7 +743,7 @@ function PollResponseCard({
             <div key={answer.questionUniqueId} className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-slate-900">{question.text}</p>
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-slate-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
                   <QuestionTypeIcon questionType={question.questionType} />
                   {getPollQuestionTypeChoice(question.questionType).label}
                 </span>
@@ -733,6 +843,58 @@ function VoteAnswerDisplay({
   }
 
   return <p className="text-sm text-slate-500">No answer captured.</p>;
+}
+
+function buildQuestionSearchText(
+  question: OrganizerPollQuestionReviewSummary,
+  questionMap: Map<string, OrganizerPollQuestion>,
+) {
+  const relatedQuestion = questionMap.get(question.questionUniqueId);
+  const optionText = question.optionSummaries.map((option) => option.label).join(" ");
+  const matrixText = question.matrixCellSummaries.map((cell) => `${cell.rowLabel} ${cell.columnLabel}`).join(" ");
+  const sampleText = question.textSamples.map((sample) => sample.value).join(" ");
+  return [question.text, relatedQuestion?.text, optionText, matrixText, sampleText].filter(Boolean).join(" ").toLowerCase();
+}
+
+function buildVoteSearchText(vote: PollVoteListItem, questionMap: Map<string, OrganizerPollQuestion>) {
+  return vote.answers
+    .map((answer) => buildAnswerSearchText(questionMap.get(answer.questionUniqueId), answer, vote))
+    .join(" ")
+    .toLowerCase();
+}
+
+function buildAnswerSearchText(
+  question: OrganizerPollQuestion | undefined,
+  answer: PollVoteListItem["answers"][number],
+  vote?: PollVoteListItem,
+) {
+  const optionLabels = question?.options
+    .filter((option) => answer.optionUniqueIds.includes(option.uniqueId))
+    .map((option) => option.label)
+    .join(" ");
+  const matrixSelectionLabels = question?.matrixRows && question?.matrixColumns
+    ? answer.matrixSelections
+        .map((selection) => {
+          const rowLabel = question.matrixRows.find((row) => row.uniqueId === selection.rowUniqueId)?.label ?? selection.rowUniqueId;
+          const columnLabel = question.matrixColumns.find((column) => column.uniqueId === selection.columnUniqueId)?.label ?? selection.columnUniqueId;
+          return `${rowLabel} ${columnLabel}`;
+        })
+        .join(" ")
+    : "";
+
+  return [
+    question?.text,
+    question ? getPollQuestionTypeChoice(question.questionType).label : "",
+    optionLabels,
+    matrixSelectionLabels,
+    answer.textValue,
+    answer.numericValue !== null && answer.numericValue !== undefined ? String(answer.numericValue) : "",
+    answer.rankValue !== null && answer.rankValue !== undefined ? String(answer.rankValue) : "",
+    vote?.voteIdentity.voteIdentityType ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 function SummaryCard({

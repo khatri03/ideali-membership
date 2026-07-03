@@ -1,1225 +1,1453 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <title>Poll Results | Production Mockup</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
 
     <style>
-        :root {
-            --bg: #f6f8fb;
-            --surface: #ffffff;
-            --surface-muted: #f9fafb;
-            --border: #e5e7eb;
-            --border-strong: #d1d5db;
-            --text: #111827;
-            --muted: #6b7280;
-            --muted-2: #9ca3af;
-            --primary: #2563eb;
-            --primary-soft: #eff6ff;
-            --success: #16a34a;
-            --success-soft: #f0fdf4;
-            --warning: #d97706;
-            --warning-soft: #fffbeb;
-            --danger: #dc2626;
-            --danger-soft: #fef2f2;
-            --purple: #7c3aed;
-            --purple-soft: #f5f3ff;
-            --radius: 14px;
-            --shadow: 0 1px 2px rgba(16, 24, 40, .04);
-        }
+      :root {
+        --bg: #f6f8fb;
+        --surface: #ffffff;
+        --surface-muted: #f9fafb;
+        --border: #e5e7eb;
+        --border-strong: #d1d5db;
+        --text: #111827;
+        --muted: #6b7280;
+        --muted-2: #9ca3af;
+        --primary: #2563eb;
+        --primary-soft: #eff6ff;
+        --success: #16a34a;
+        --success-soft: #f0fdf4;
+        --warning: #d97706;
+        --warning-soft: #fffbeb;
+        --danger: #dc2626;
+        --danger-soft: #fef2f2;
+        --purple: #7c3aed;
+        --purple-soft: #f5f3ff;
+        --radius: 14px;
+        --shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+      }
 
-        * {
-            box-sizing: border-box;
-        }
+      * {
+        box-sizing: border-box;
+      }
 
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            font-size: 14px;
-        }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        font-size: 14px;
+      }
 
-        .app {
-            min-height: 100vh;
-        }
+      .app {
+        min-height: 100vh;
+      }
 
+      .sidebar {
+        width: 272px;
+        background: #0f172a;
+        color: #cbd5e1;
+        position: fixed;
+        inset: 0 auto 0 0;
+        padding: 22px 16px;
+      }
+
+      .brand {
+        color: #fff;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 8px 22px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 18px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nav-section-title {
+        color: #64748b;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        margin: 20px 8px 8px;
+      }
+
+      .side-link {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        color: #cbd5e1;
+        text-decoration: none;
+        padding: 10px 12px;
+        border-radius: 10px;
+        margin-bottom: 4px;
+      }
+
+      .side-link:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+      }
+
+      .side-link.active {
+        background: rgba(37, 99, 235, 0.22);
+        color: #fff;
+      }
+
+      .content {
+        margin-left: 272px;
+        min-height: 100vh;
+      }
+
+      .topbar {
+        height: 68px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 28px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .page {
+        padding: 26px 28px 40px;
+        max-width: 1440px;
+      }
+
+      .breadcrumb-lite {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .page-title {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin: 0;
+      }
+
+      .page-subtitle {
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      .cardx {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin: 22px 0;
+      }
+
+      .metric {
+        padding: 16px;
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .metric-value {
+        font-size: 25px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-top: 7px;
+      }
+
+      .metric-note {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 3px;
+      }
+
+      .metric-icon {
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 11px;
+        font-size: 18px;
+      }
+
+      .soft-primary {
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+      .soft-success {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+      .soft-warning {
+        background: var(--warning-soft);
+        color: var(--warning);
+      }
+      .soft-purple {
+        background: var(--purple-soft);
+        color: var(--purple);
+      }
+      .soft-danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .toolbar {
+        padding: 14px;
+        margin-bottom: 18px;
+      }
+
+      .form-control,
+      .form-select,
+      .btn {
+        border-radius: 10px;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+
+      .tabs-wrap {
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+        border-radius: var(--radius) var(--radius) 0 0;
+        padding: 0 16px;
+      }
+
+      .nav-tabs {
+        border-bottom: 0;
+      }
+
+      .nav-tabs .nav-link {
+        border: 0;
+        color: var(--muted);
+        font-weight: 700;
+        padding: 15px 12px;
+        border-bottom: 2px solid transparent;
+      }
+
+      .nav-tabs .nav-link.active {
+        color: var(--primary);
+        background: transparent;
+        border-bottom-color: var(--primary);
+      }
+
+      .results-shell {
+        overflow: hidden;
+      }
+
+      .question-card {
+        border-bottom: 1px solid var(--border);
+        padding: 20px;
+      }
+
+      .question-card:last-child {
+        border-bottom: 0;
+      }
+
+      .q-head {
+        display: flex;
+        gap: 14px;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .q-left {
+        display: flex;
+        gap: 13px;
+        min-width: 0;
+      }
+
+      .q-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 18px;
+      }
+
+      .q-title {
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+
+      .q-meta {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .q-actions {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        white-space: nowrap;
+      }
+
+      .type-pill {
+        border: 1px solid var(--border);
+        background: var(--surface-muted);
+        color: #374151;
+        border-radius: 999px;
+        padding: 5px 9px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .result-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 22px;
+        align-items: start;
+      }
+
+      .insight-box {
+        border: 1px solid var(--border);
+        background: var(--surface-muted);
+        border-radius: 12px;
+        padding: 14px;
+      }
+
+      .insight-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 5px;
+      }
+
+      .insight-value {
+        font-weight: 800;
+        font-size: 18px;
+      }
+
+      .option-row {
+        display: grid;
+        grid-template-columns: minmax(160px, 230px) minmax(0, 1fr) 82px;
+        gap: 12px;
+        align-items: center;
+        padding: 9px 0;
+      }
+
+      .option-name {
+        font-weight: 700;
+        color: #374151;
+      }
+
+      .count {
+        color: var(--muted);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .bar {
+        height: 10px;
+        background: #eef2f7;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .bar > span {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--primary);
+      }
+
+      .bar.success > span {
+        background: var(--success);
+      }
+      .bar.warning > span {
+        background: var(--warning);
+      }
+      .bar.danger > span {
+        background: var(--danger);
+      }
+      .bar.purple > span {
+        background: var(--purple);
+      }
+
+      .response-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .text-response {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 13px 14px;
+        background: #fff;
+        color: #374151;
+        line-height: 1.55;
+      }
+
+      .rating-summary {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .rating-number {
+        font-size: 48px;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+        line-height: 1;
+      }
+
+      .stars {
+        color: #f59e0b;
+        font-size: 22px;
+        letter-spacing: 1px;
+      }
+
+      .nps-gauge {
+        width: 104px;
+        height: 104px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at center, #fff 0 56%, transparent 57%),
+          conic-gradient(
+            var(--success) 0 68%,
+            var(--warning) 68% 94%,
+            var(--danger) 94% 100%
+          );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        border: 1px solid var(--border);
+      }
+
+      .nps-score {
+        font-size: 28px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .rank-table,
+      .matrix-table {
+        margin: 0;
+      }
+
+      .rank-table th,
+      .matrix-table th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: #f9fafb;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .rank-table td,
+      .matrix-table td {
+        vertical-align: middle;
+      }
+
+      .rank-badge {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-weight: 900;
+      }
+
+      .matrix-cell {
+        min-width: 120px;
+      }
+
+      .small-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .small-bar .bar {
+        min-width: 70px;
+        flex: 1;
+      }
+
+      .empty {
+        display: none;
+        padding: 44px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .mobile-menu {
+        display: none;
+      }
+
+      @media (max-width: 1100px) {
         .sidebar {
-            width: 272px;
-            background: #0f172a;
-            color: #cbd5e1;
-            position: fixed;
-            inset: 0 auto 0 0;
-            padding: 22px 16px;
-        }
-
-        .brand {
-            color: #fff;
-            font-weight: 800;
-            letter-spacing: -.02em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0 8px 22px;
-            border-bottom: 1px solid rgba(255,255,255,.08);
-            margin-bottom: 18px;
-        }
-
-        .brand-mark {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #2563eb, #7c3aed);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .nav-section-title {
-            color: #64748b;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            font-weight: 700;
-            margin: 20px 8px 8px;
-        }
-
-        .side-link {
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            color: #cbd5e1;
-            text-decoration: none;
-            padding: 10px 12px;
-            border-radius: 10px;
-            margin-bottom: 4px;
-        }
-
-        .side-link:hover {
-            background: rgba(255,255,255,.06);
-            color: #fff;
-        }
-
-        .side-link.active {
-            background: rgba(37, 99, 235, .22);
-            color: #fff;
+          display: none;
         }
 
         .content {
-            margin-left: 272px;
-            min-height: 100vh;
-        }
-
-        .topbar {
-            height: 68px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 28px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .page {
-            padding: 26px 28px 40px;
-            max-width: 1440px;
-        }
-
-        .breadcrumb-lite {
-            color: var(--muted);
-            font-size: 13px;
-            margin-bottom: 8px;
-        }
-
-        .page-title {
-            font-size: 26px;
-            font-weight: 800;
-            letter-spacing: -.025em;
-            margin: 0;
-        }
-
-        .page-subtitle {
-            color: var(--muted);
-            margin-top: 6px;
-        }
-
-        .cardx {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
-            margin: 22px 0;
-        }
-
-        .metric {
-            padding: 16px;
-        }
-
-        .metric-label {
-            color: var(--muted);
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-        }
-
-        .metric-value {
-            font-size: 25px;
-            font-weight: 800;
-            letter-spacing: -.025em;
-            margin-top: 7px;
-        }
-
-        .metric-note {
-            color: var(--muted);
-            font-size: 13px;
-            margin-top: 3px;
-        }
-
-        .metric-icon {
-            width: 38px;
-            height: 38px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 11px;
-            font-size: 18px;
-        }
-
-        .soft-primary { background: var(--primary-soft); color: var(--primary); }
-        .soft-success { background: var(--success-soft); color: var(--success); }
-        .soft-warning { background: var(--warning-soft); color: var(--warning); }
-        .soft-purple { background: var(--purple-soft); color: var(--purple); }
-        .soft-danger { background: var(--danger-soft); color: var(--danger); }
-
-        .toolbar {
-            padding: 14px;
-            margin-bottom: 18px;
-        }
-
-        .form-control,
-        .form-select,
-        .btn {
-            border-radius: 10px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .tabs-wrap {
-            border-bottom: 1px solid var(--border);
-            background: var(--surface);
-            border-radius: var(--radius) var(--radius) 0 0;
-            padding: 0 16px;
-        }
-
-        .nav-tabs {
-            border-bottom: 0;
-        }
-
-        .nav-tabs .nav-link {
-            border: 0;
-            color: var(--muted);
-            font-weight: 700;
-            padding: 15px 12px;
-            border-bottom: 2px solid transparent;
-        }
-
-        .nav-tabs .nav-link.active {
-            color: var(--primary);
-            background: transparent;
-            border-bottom-color: var(--primary);
-        }
-
-        .results-shell {
-            overflow: hidden;
-        }
-
-        .question-card {
-            border-bottom: 1px solid var(--border);
-            padding: 20px;
-        }
-
-        .question-card:last-child {
-            border-bottom: 0;
-        }
-
-        .q-head {
-            display: flex;
-            gap: 14px;
-            justify-content: space-between;
-            margin-bottom: 18px;
-        }
-
-        .q-left {
-            display: flex;
-            gap: 13px;
-            min-width: 0;
-        }
-
-        .q-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 11px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 18px;
-        }
-
-        .q-title {
-            font-size: 15px;
-            font-weight: 800;
-            margin-bottom: 4px;
-        }
-
-        .q-meta {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .q-actions {
-            display: flex;
-            gap: 8px;
-            align-items: flex-start;
-            white-space: nowrap;
-        }
-
-        .type-pill {
-            border: 1px solid var(--border);
-            background: var(--surface-muted);
-            color: #374151;
-            border-radius: 999px;
-            padding: 5px 9px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .type-pill-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .type-filter-pill {
-            border: 1px solid var(--border);
-            background: #fff;
-            color: #475569;
-            border-radius: 999px;
-            padding: 8px 14px;
-            font-size: 13px;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: border-color .15s ease, background-color .15s ease, color .15s ease, transform .15s ease;
-        }
-
-        .type-filter-pill:hover {
-            border-color: #bfdbfe;
-            color: var(--primary);
-            transform: translateY(-1px);
-        }
-
-        .type-filter-pill.active {
-            border-color: #93c5fd;
-            background: var(--primary-soft);
-            color: var(--primary);
-            box-shadow: 0 1px 2px rgba(37, 99, 235, .08);
-        }
-
-        .result-layout {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 260px;
-            gap: 22px;
-            align-items: start;
-        }
-
-        .insight-box {
-            border: 1px solid var(--border);
-            background: var(--surface-muted);
-            border-radius: 12px;
-            padding: 14px;
-        }
-
-        .insight-label {
-            color: var(--muted);
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            margin-bottom: 5px;
-        }
-
-        .insight-value {
-            font-weight: 800;
-            font-size: 18px;
-        }
-
-        .option-row {
-            display: grid;
-            grid-template-columns: minmax(160px, 230px) minmax(0, 1fr) 82px;
-            gap: 12px;
-            align-items: center;
-            padding: 9px 0;
-        }
-
-        .option-name {
-            font-weight: 700;
-            color: #374151;
-        }
-
-        .count {
-            color: var(--muted);
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .bar {
-            height: 10px;
-            background: #eef2f7;
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .bar > span {
-            display: block;
-            height: 100%;
-            border-radius: 999px;
-            background: var(--primary);
-        }
-
-        .bar.success > span { background: var(--success); }
-        .bar.warning > span { background: var(--warning); }
-        .bar.danger > span { background: var(--danger); }
-        .bar.purple > span { background: var(--purple); }
-
-        .response-grid {
-            display: grid;
-            gap: 10px;
-        }
-
-        .text-response {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 13px 14px;
-            background: #fff;
-            color: #374151;
-            line-height: 1.55;
-        }
-
-        .rating-summary {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-        }
-
-        .rating-number {
-            font-size: 48px;
-            font-weight: 900;
-            letter-spacing: -.05em;
-            line-height: 1;
-        }
-
-        .stars {
-            color: #f59e0b;
-            font-size: 22px;
-            letter-spacing: 1px;
-        }
-
-        .nps-gauge {
-            width: 104px;
-            height: 104px;
-            border-radius: 50%;
-            background:
-                radial-gradient(circle at center, #fff 0 56%, transparent 57%),
-                conic-gradient(var(--success) 0 68%, var(--warning) 68% 94%, var(--danger) 94% 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            border: 1px solid var(--border);
-        }
-
-        .nps-score {
-            font-size: 28px;
-            font-weight: 900;
-            line-height: 1;
-        }
-
-        .rank-table,
-        .matrix-table {
-            margin: 0;
-        }
-
-        .rank-table th,
-        .matrix-table th {
-            color: var(--muted);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            background: #f9fafb;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .rank-table td,
-        .matrix-table td {
-            vertical-align: middle;
-        }
-
-        .rank-badge {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-soft);
-            color: var(--primary);
-            font-weight: 900;
-        }
-
-        .matrix-cell {
-            min-width: 120px;
-        }
-
-        .small-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .small-bar .bar {
-            min-width: 70px;
-            flex: 1;
-        }
-
-        .empty {
-            display: none;
-            padding: 44px;
-            text-align: center;
-            color: var(--muted);
+          margin-left: 0;
         }
 
         .mobile-menu {
-            display: none;
+          display: inline-flex;
         }
 
-        @media (max-width: 1100px) {
-            .sidebar {
-                display: none;
-            }
-
-            .content {
-                margin-left: 0;
-            }
-
-            .mobile-menu {
-                display: inline-flex;
-            }
-
-            .summary-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .result-layout {
-                grid-template-columns: 1fr;
-            }
+        .summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        @media (max-width: 700px) {
-            .topbar {
-                padding: 0 16px;
-            }
-
-            .page {
-                padding: 20px 16px 34px;
-            }
-
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .q-head {
-                flex-direction: column;
-            }
-
-            .q-actions {
-                white-space: normal;
-            }
-
-            .option-row {
-                grid-template-columns: 1fr;
-                gap: 6px;
-            }
-
-            .count {
-                text-align: left;
-            }
+        .result-layout {
+          grid-template-columns: 1fr;
         }
+      }
+
+      @media (max-width: 700px) {
+        .topbar {
+          padding: 0 16px;
+        }
+
+        .page {
+          padding: 20px 16px 34px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .q-head {
+          flex-direction: column;
+        }
+
+        .q-actions {
+          white-space: normal;
+        }
+
+        .option-row {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+
+        .count {
+          text-align: left;
+        }
+      }
     </style>
-</head>
-<body>
-
-<div class="app">
-    <aside class="sidebar">
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
         <div class="brand">
-            <span class="brand-mark"><i class="bi bi-bar-chart-fill"></i></span>
-            <span>Poll Admin</span>
+          <span class="brand-mark"><i class="bi bi-bar-chart-fill"></i></span>
+          <span>Poll Admin</span>
         </div>
 
         <div class="nav-section-title">Main</div>
-        <a href="#" class="side-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="#" class="side-link"><i class="bi bi-calendar-event"></i> Events</a>
-        <a href="#" class="side-link active"><i class="bi bi-ui-checks-grid"></i> Polls</a>
+        <a href="#" class="side-link"
+          ><i class="bi bi-speedometer2"></i> Dashboard</a
+        >
+        <a href="#" class="side-link"
+          ><i class="bi bi-calendar-event"></i> Events</a
+        >
+        <a href="#" class="side-link active"
+          ><i class="bi bi-ui-checks-grid"></i> Polls</a
+        >
         <a href="#" class="side-link"><i class="bi bi-people"></i> Contacts</a>
 
         <div class="nav-section-title">Reports</div>
-        <a href="#" class="side-link"><i class="bi bi-graph-up-arrow"></i> Analytics</a>
-        <a href="#" class="side-link"><i class="bi bi-file-earmark-arrow-down"></i> Exports</a>
+        <a href="#" class="side-link"
+          ><i class="bi bi-graph-up-arrow"></i> Analytics</a
+        >
+        <a href="#" class="side-link"
+          ><i class="bi bi-file-earmark-arrow-down"></i> Exports</a
+        >
 
         <div class="nav-section-title">Setup</div>
         <a href="#" class="side-link"><i class="bi bi-gear"></i> Settings</a>
-    </aside>
+      </aside>
 
-    <div class="content">
+      <div class="content">
         <div class="topbar">
-            <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-outline-secondary btn-sm mobile-menu">
-                    <i class="bi bi-list"></i>
-                </button>
-                <div>
-                    <div class="fw-bold">Poll Results</div>
-                    <div class="text-muted small">Organizer workspace</div>
-                </div>
+          <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-outline-secondary btn-sm mobile-menu">
+              <i class="bi bi-list"></i>
+            </button>
+            <div>
+              <div class="fw-bold">Poll Results</div>
+              <div class="text-muted small">Organizer workspace</div>
             </div>
+          </div>
 
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-share me-1"></i> Share
-                </button>
-                <button class="btn btn-primary btn-sm">
-                    <i class="bi bi-download me-1"></i> Export
-                </button>
-            </div>
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-share me-1"></i> Share
+            </button>
+            <button class="btn btn-primary btn-sm">
+              <i class="bi bi-download me-1"></i> Export
+            </button>
+          </div>
         </div>
 
         <main class="page">
-            <div class="breadcrumb-lite">Polls / Annual Members Feedback / Results</div>
+          <div class="breadcrumb-lite">
+            Polls / Annual Members Feedback / Results
+          </div>
 
-            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
-                <div>
-                    <h1 class="page-title">Annual Members Feedback</h1>
-                    <div class="page-subtitle">
-                        Published poll · Public audience · 01 Jul 2026 to 15 Jul 2026
-                    </div>
-                </div>
-
-                <div class="d-flex flex-wrap gap-2 align-items-start">
-                    <span class="badge rounded-pill text-bg-success px-3 py-2">
-                        <i class="bi bi-check-circle me-1"></i> Published
-                    </span>
-                    <span class="badge rounded-pill text-bg-light border text-dark px-3 py-2">
-                        <i class="bi bi-person-check me-1"></i> One vote per person
-                    </span>
-                </div>
+          <div
+            class="d-flex flex-column flex-lg-row justify-content-between gap-3"
+          >
+            <div>
+              <h1 class="page-title">Annual Members Feedback</h1>
+              <div class="page-subtitle">
+                Published poll · Public audience · 01 Jul 2026 to 15 Jul 2026
+              </div>
             </div>
 
-            <section class="summary-grid">
-                <div class="cardx metric">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="metric-label">Total responses</div>
-                            <div class="metric-value">1,248</div>
-                            <div class="metric-note">+18% vs previous poll</div>
-                        </div>
-                        <span class="metric-icon soft-primary"><i class="bi bi-people-fill"></i></span>
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+              <span class="badge rounded-pill text-bg-success px-3 py-2">
+                <i class="bi bi-check-circle me-1"></i> Published
+              </span>
+              <span
+                class="badge rounded-pill text-bg-light border text-dark px-3 py-2"
+              >
+                <i class="bi bi-person-check me-1"></i> One vote per person
+              </span>
+            </div>
+          </div>
+
+          <section class="summary-grid">
+            <div class="cardx metric">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="metric-label">Total responses</div>
+                  <div class="metric-value">1,248</div>
+                  <div class="metric-note">+18% vs previous poll</div>
+                </div>
+                <span class="metric-icon soft-primary"
+                  ><i class="bi bi-people-fill"></i
+                ></span>
+              </div>
+            </div>
+
+            <div class="cardx metric">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="metric-label">Completion rate</div>
+                  <div class="metric-value">84%</div>
+                  <div class="metric-note">1,049 completed fully</div>
+                </div>
+                <span class="metric-icon soft-success"
+                  ><i class="bi bi-check2-circle"></i
+                ></span>
+              </div>
+            </div>
+
+            <div class="cardx metric">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="metric-label">Avg. rating</div>
+                  <div class="metric-value">4.4/5</div>
+                  <div class="metric-note">Strong satisfaction</div>
+                </div>
+                <span class="metric-icon soft-warning"
+                  ><i class="bi bi-star-fill"></i
+                ></span>
+              </div>
+            </div>
+
+            <div class="cardx metric">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="metric-label">NPS</div>
+                  <div class="metric-value">62</div>
+                  <div class="metric-note">Healthy promoter score</div>
+                </div>
+                <span class="metric-icon soft-purple"
+                  ><i class="bi bi-speedometer2"></i
+                ></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="cardx toolbar">
+            <div class="row g-2 align-items-center">
+              <div class="col-lg-5">
+                <div class="input-group">
+                  <span class="input-group-text bg-white"
+                    ><i class="bi bi-search"></i
+                  ></span>
+                  <input
+                    id="searchInput"
+                    class="form-control"
+                    placeholder="Search question, option, or response"
+                  />
+                </div>
+              </div>
+
+              <div class="col-lg-3">
+                <select id="typeFilter" class="form-select">
+                  <option value="">All question types</option>
+                  <option value="single">Single Choice</option>
+                  <option value="multi">Multiple Choice</option>
+                  <option value="yesno">Yes/No</option>
+                  <option value="text">Open Text</option>
+                  <option value="star">Star Rating</option>
+                  <option value="nps">NPS</option>
+                  <option value="ranked">Ranked Choice</option>
+                  <option value="matrix">Matrix</option>
+                </select>
+              </div>
+
+              <div class="col-lg-4 text-lg-end">
+                <div class="btn-group">
+                  <button
+                    class="btn btn-outline-secondary btn-sm active"
+                    data-view="all"
+                  >
+                    All
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    data-view="choice"
+                  >
+                    Choice Based
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    data-view="text"
+                  >
+                    Text
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="cardx results-shell">
+            <div class="tabs-wrap">
+              <ul class="nav nav-tabs">
+                <li class="nav-item">
+                  <button class="nav-link active" data-tab="summary">
+                    Summary
+                  </button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" data-tab="questions">
+                    Questions
+                  </button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" data-tab="responses">
+                    Responses
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div id="resultsContainer">
+              <article
+                class="question-card"
+                data-type="single"
+                data-group="choice"
+                data-search="single choice preferred event format hybrid in person online"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-primary"
+                      ><i class="bi bi-record-circle"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">
+                        Which event format do you prefer?
+                      </div>
+                      <div class="q-meta">
+                        Q1 · Single Choice · 1,248 responses
+                      </div>
                     </div>
-                </div>
-
-                <div class="cardx metric">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="metric-label">Completion rate</div>
-                            <div class="metric-value">84%</div>
-                            <div class="metric-note">1,049 completed fully</div>
-                        </div>
-                        <span class="metric-icon soft-success"><i class="bi bi-check2-circle"></i></span>
-                    </div>
-                </div>
-
-                <div class="cardx metric">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="metric-label">Avg. rating</div>
-                            <div class="metric-value">4.4/5</div>
-                            <div class="metric-note">Strong satisfaction</div>
-                        </div>
-                        <span class="metric-icon soft-warning"><i class="bi bi-star-fill"></i></span>
-                    </div>
-                </div>
-
-                <div class="cardx metric">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div class="metric-label">NPS</div>
-                            <div class="metric-value">62</div>
-                            <div class="metric-note">Healthy promoter score</div>
-                        </div>
-                        <span class="metric-icon soft-purple"><i class="bi bi-speedometer2"></i></span>
-                    </div>
-                </div>
-            </section>
-
-            <section class="cardx toolbar">
-                <div class="row g-2 align-items-center">
-                    <div class="col-lg-5">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                            <input id="searchInput" class="form-control" placeholder="Search question, option, or response">
-                        </div>
-                    </div>
-
-                    <div class="col-lg-7">
-                        <div id="typePills" class="type-pill-row"></div>
-                    </div>
-
-                    <div class="col-lg-4 text-lg-end">
-                        <div class="btn-group">
-                            <button class="btn btn-outline-secondary btn-sm active" data-view="all">
-                                All
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" data-view="choice">
-                                Choice Based
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm" data-view="text">
-                                Text
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="cardx results-shell">
-                <div class="tabs-wrap">
-                    <ul class="nav nav-tabs">
-                        <li class="nav-item"><button class="nav-link active" data-tab="summary">Summary</button></li>
-                        <li class="nav-item"><button class="nav-link" data-tab="questions">Questions</button></li>
-                        <li class="nav-item"><button class="nav-link" data-tab="responses">Responses</button></li>
-                    </ul>
-                </div>
-
-                <div id="resultsContainer">
-
-                    <article class="question-card" data-type="single" data-group="choice" data-search="single choice preferred event format hybrid in person online">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-primary"><i class="bi bi-record-circle"></i></span>
-                                <div>
-                                    <div class="q-title">Which event format do you prefer?</div>
-                                    <div class="q-meta">Q1 · Single Choice · 1,248 responses</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">Single Choice</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body result-layout">
-                            <div>
-                                <div class="option-row">
-                                    <div class="option-name">Hybrid</div>
-                                    <div class="bar"><span style="width:50%"></span></div>
-                                    <div class="count">624 · 50%</div>
-                                </div>
-                                <div class="option-row">
-                                    <div class="option-name">In-person</div>
-                                    <div class="bar"><span style="width:30%"></span></div>
-                                    <div class="count">374 · 30%</div>
-                                </div>
-                                <div class="option-row">
-                                    <div class="option-name">Online only</div>
-                                    <div class="bar"><span style="width:20%"></span></div>
-                                    <div class="count">250 · 20%</div>
-                                </div>
-                            </div>
-                            <aside class="insight-box">
-                                <div class="insight-label">Top answer</div>
-                                <div class="insight-value">Hybrid</div>
-                                <div class="text-muted mt-1">Half of voters prefer a flexible attendance model.</div>
-                            </aside>
-                        </div>
-                    </article>
-
-                    <article class="question-card" data-type="multi" data-group="choice" data-search="multiple choice valuable features networking recorded sessions certificate workshops">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-purple"><i class="bi bi-check2-square"></i></span>
-                                <div>
-                                    <div class="q-title">Which features are most valuable to you?</div>
-                                    <div class="q-meta">Q2 · Multiple Choice · 1,248 responses · 2,434 total selections</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">Multiple Choice</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body result-layout">
-                            <div>
-                                <div class="option-row">
-                                    <div class="option-name">Networking opportunities</div>
-                                    <div class="bar purple"><span style="width:65%"></span></div>
-                                    <div class="count">812 · 65%</div>
-                                </div>
-                                <div class="option-row">
-                                    <div class="option-name">Recorded sessions</div>
-                                    <div class="bar purple"><span style="width:55%"></span></div>
-                                    <div class="count">686 · 55%</div>
-                                </div>
-                                <div class="option-row">
-                                    <div class="option-name">Certificate</div>
-                                    <div class="bar purple"><span style="width:40%"></span></div>
-                                    <div class="count">499 · 40%</div>
-                                </div>
-                                <div class="option-row">
-                                    <div class="option-name">Hands-on workshops</div>
-                                    <div class="bar purple"><span style="width:35%"></span></div>
-                                    <div class="count">437 · 35%</div>
-                                </div>
-                            </div>
-                            <aside class="insight-box">
-                                <div class="insight-label">Selection behavior</div>
-                                <div class="insight-value">1.95 avg</div>
-                                <div class="text-muted mt-1">Average selections per response.</div>
-                            </aside>
-                        </div>
-                    </article>
-
-                    <article class="question-card" data-type="yesno" data-group="choice" data-search="yes no recommend event friend">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-success"><i class="bi bi-hand-thumbs-up"></i></span>
-                                <div>
-                                    <div class="q-title">Would you recommend this event to a friend?</div>
-                                    <div class="q-meta">Q3 · Yes/No · 1,248 responses</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">Yes/No</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body result-layout">
-                            <div>
-                                <div class="option-row">
-                                    <div class="option-name"><i class="bi bi-check-circle-fill text-success me-1"></i> Yes</div>
-                                    <div class="bar success"><span style="width:91%"></span></div>
-                                    <div class="count">1,136 · 91%</div>
-                                </div>
-                                <div class="option-row">
-                                    <div class="option-name"><i class="bi bi-x-circle-fill text-danger me-1"></i> No</div>
-                                    <div class="bar danger"><span style="width:9%"></span></div>
-                                    <div class="count">112 · 9%</div>
-                                </div>
-                            </div>
-                            <aside class="insight-box">
-                                <div class="insight-label">Signal</div>
-                                <div class="insight-value text-success">Very positive</div>
-                                <div class="text-muted mt-1">Recommendation intent is strong.</div>
-                            </aside>
-                        </div>
-                    </article>
-
-                    <article class="question-card" data-type="text" data-group="text" data-search="open text improve next time registration workshops food venue parking reminders">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-warning"><i class="bi bi-chat-left-text"></i></span>
-                                <div>
-                                    <div class="q-title">What should we improve next time?</div>
-                                    <div class="q-meta">Q4 · Open Text · 386 written responses</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">Open Text</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body result-layout">
-                            <div class="response-grid">
-                                <div class="text-response">The registration flow was smooth, but the session reminders should be sent earlier.</div>
-                                <div class="text-response">Please add more hands-on workshops and keep the recording available for at least 30 days.</div>
-                                <div class="text-response">Food quality was good, but lunch timing felt rushed.</div>
-                                <div class="text-response">The venue was professional and easy to access. Parking guidance can be improved.</div>
-                            </div>
-                            <aside class="insight-box">
-                                <div class="insight-label">Common themes</div>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge text-bg-light border">Reminders</span>
-                                    <span class="badge text-bg-light border">Workshops</span>
-                                    <span class="badge text-bg-light border">Food</span>
-                                    <span class="badge text-bg-light border">Parking</span>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary mt-3 w-100">View all responses</button>
-                            </aside>
-                        </div>
-                    </article>
-
-                    <article class="question-card" data-type="star" data-group="choice" data-search="star rating overall event experience">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-warning"><i class="bi bi-star"></i></span>
-                                <div>
-                                    <div class="q-title">Rate your overall event experience</div>
-                                    <div class="q-meta">Q5 · Star Rating · 1,248 responses</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">Star Rating</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body result-layout">
-                            <div class="rating-summary">
-                                <div>
-                                    <div class="rating-number">4.4</div>
-                                    <div class="text-muted">Average out of 5</div>
-                                </div>
-                                <div>
-                                    <div class="stars">★★★★☆</div>
-                                    <div class="text-muted small mt-1">85% rated 4 stars or above</div>
-                                </div>
-                            </div>
-                            <aside class="insight-box">
-                                <div class="insight-label">Distribution</div>
-                                <div class="option-row" style="grid-template-columns: 46px 1fr 42px;">
-                                    <div class="option-name">5★</div><div class="bar warning"><span style="width:55%"></span></div><div class="count">55%</div>
-                                </div>
-                                <div class="option-row" style="grid-template-columns: 46px 1fr 42px;">
-                                    <div class="option-name">4★</div><div class="bar warning"><span style="width:30%"></span></div><div class="count">30%</div>
-                                </div>
-                                <div class="option-row" style="grid-template-columns: 46px 1fr 42px;">
-                                    <div class="option-name">≤3★</div><div class="bar"><span style="width:15%"></span></div><div class="count">15%</div>
-                                </div>
-                            </aside>
-                        </div>
-                    </article>
-
-                    <article class="question-card" data-type="nps" data-group="choice" data-search="nps net promoter score likely recommend promoters passives detractors">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-success"><i class="bi bi-speedometer2"></i></span>
-                                <div>
-                                    <div class="q-title">How likely are you to recommend us?</div>
-                                    <div class="q-meta">Q6 · NPS · Scale 0 to 10 · 1,248 responses</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">NPS</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body result-layout">
-                            <div class="d-flex align-items-center gap-4 flex-wrap">
-                                <div class="nps-gauge">
-                                    <div class="nps-score">62</div>
-                                    <div class="text-muted small">NPS</div>
-                                </div>
-
-                                <div class="flex-grow-1">
-                                    <div class="option-row">
-                                        <div class="option-name">Promoters 9-10</div>
-                                        <div class="bar success"><span style="width:68%"></span></div>
-                                        <div class="count">849 · 68%</div>
-                                    </div>
-                                    <div class="option-row">
-                                        <div class="option-name">Passives 7-8</div>
-                                        <div class="bar warning"><span style="width:26%"></span></div>
-                                        <div class="count">324 · 26%</div>
-                                    </div>
-                                    <div class="option-row">
-                                        <div class="option-name">Detractors 0-6</div>
-                                        <div class="bar danger"><span style="width:6%"></span></div>
-                                        <div class="count">75 · 6%</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <aside class="insight-box">
-                                <div class="insight-label">Interpretation</div>
-                                <div class="insight-value text-success">Strong</div>
-                                <div class="text-muted mt-1">Promoters significantly outweigh detractors.</div>
-                            </aside>
-                        </div>
-                    </article>
-
-                    <article class="question-card" data-type="ranked" data-group="choice" data-search="ranked choice future topics ai cloud architecture cybersecurity">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-purple"><i class="bi bi-list-ol"></i></span>
-                                <div>
-                                    <div class="q-title">Rank the topics you want next</div>
-                                    <div class="q-meta">Q7 · Ranked Choice · Lower average rank is better</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">Ranked Choice</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body">
-                            <div class="table-responsive">
-                                <table class="table rank-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 70px;">Rank</th>
-                                            <th>Option</th>
-                                            <th>Avg. Rank</th>
-                                            <th>First-place votes</th>
-                                            <th>Share</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td><span class="rank-badge">1</span></td>
-                                            <td class="fw-bold">AI for Business Automation</td>
-                                            <td>1.8</td>
-                                            <td>782</td>
-                                            <td>
-                                                <div class="small-bar"><div class="bar purple"><span style="width:63%"></span></div><span>63%</span></div>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="rank-badge">2</span></td>
-                                            <td class="fw-bold">Cloud Architecture</td>
-                                            <td>2.4</td>
-                                            <td>355</td>
-                                            <td>
-                                                <div class="small-bar"><div class="bar purple"><span style="width:28%"></span></div><span>28%</span></div>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="rank-badge">3</span></td>
-                                            <td class="fw-bold">Cybersecurity Basics</td>
-                                            <td>3.1</td>
-                                            <td>111</td>
-                                            <td>
-                                                <div class="small-bar"><div class="bar purple"><span style="width:9%"></span></div><span>9%</span></div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="question-card" data-type="matrix" data-group="choice" data-search="matrix rating areas registration venue speakers food excellent good average poor">
-                        <div class="q-head">
-                            <div class="q-left">
-                                <span class="q-icon soft-danger"><i class="bi bi-grid-3x3-gap"></i></span>
-                                <div>
-                                    <div class="q-title">Rate each area of the event</div>
-                                    <div class="q-meta">Q8 · Matrix · 1,248 responses</div>
-                                </div>
-                            </div>
-                            <div class="q-actions">
-                                <span class="type-pill">Matrix</span>
-                                <button class="btn btn-sm btn-outline-secondary js-toggle"><i class="bi bi-chevron-up"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="q-body">
-                            <div class="table-responsive">
-                                <table class="table matrix-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Area</th>
-                                            <th>Top result</th>
-                                            <th class="matrix-cell">Excellent</th>
-                                            <th class="matrix-cell">Good</th>
-                                            <th class="matrix-cell">Average</th>
-                                            <th class="matrix-cell">Poor</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td class="fw-bold">Registration</td>
-                                            <td><span class="badge text-bg-success">Excellent</span></td>
-                                            <td><div class="small-bar"><div class="bar success"><span style="width:72%"></span></div><span>72%</span></div></td>
-                                            <td>20%</td>
-                                            <td>6%</td>
-                                            <td>2%</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-bold">Venue</td>
-                                            <td><span class="badge text-bg-primary">Good</span></td>
-                                            <td>35%</td>
-                                            <td><div class="small-bar"><div class="bar"><span style="width:48%"></span></div><span>48%</span></div></td>
-                                            <td>14%</td>
-                                            <td>3%</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-bold">Speakers</td>
-                                            <td><span class="badge text-bg-success">Excellent</span></td>
-                                            <td><div class="small-bar"><div class="bar success"><span style="width:64%"></span></div><span>64%</span></div></td>
-                                            <td>27%</td>
-                                            <td>7%</td>
-                                            <td>2%</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="fw-bold">Food</td>
-                                            <td><span class="badge text-bg-warning">Average</span></td>
-                                            <td>18%</td>
-                                            <td>30%</td>
-                                            <td><div class="small-bar"><div class="bar warning"><span style="width:39%"></span></div><span>39%</span></div></td>
-                                            <td>13%</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </article>
-
-                </div>
-
-                <div id="emptyState" class="empty">
-                    <i class="bi bi-search fs-1 d-block mb-3"></i>
-                    <div class="fw-bold text-dark">No matching poll results</div>
-                    <div>Try changing the search text or question type filter.</div>
-                </div>
-            </section>
-        </main>
-    </div>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    $(function () {
-        let activeGroup = "all";
-        let activeType = "";
-
-        const typeCatalog = {
-            single: { label: "Single Choice", icon: "ui-radios" },
-            multi: { label: "Multiple Choice", icon: "check2-square" },
-            yesno: { label: "Yes/No", icon: "check2-circle" },
-            text: { label: "Open Text", icon: "chat-left-text" },
-            star: { label: "Star Rating", icon: "star" },
-            nps: { label: "NPS", icon: "speedometer2" },
-            ranked: { label: "Ranked Choice", icon: "list-ol" },
-            matrix: { label: "Matrix", icon: "grid-3x3-gap" }
-        };
-
-        function renderTypePills() {
-            const presentTypes = [];
-            $(".question-card").each(function () {
-                const type = String($(this).data("type") || "");
-                if (type && !presentTypes.includes(type)) {
-                    presentTypes.push(type);
-                }
-            });
-
-            const $container = $("#typePills");
-            $container.empty();
-
-            $container.append(`
-                <button type="button" class="type-filter-pill active" data-type="">
-                    <i class="bi bi-funnel"></i>
-                    <span>All types</span>
-                </button>
-            `);
-
-            presentTypes.forEach((type) => {
-                const typeInfo = typeCatalog[type];
-                if (!typeInfo) {
-                    return;
-                }
-
-                $container.append(`
-                    <button type="button" class="type-filter-pill" data-type="${type}">
-                        <i class="bi bi-${typeInfo.icon}"></i>
-                        <span>${typeInfo.label}</span>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">Single Choice</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
                     </button>
-                `);
-            });
-        }
+                  </div>
+                </div>
+
+                <div class="q-body result-layout">
+                  <div>
+                    <div class="option-row">
+                      <div class="option-name">Hybrid</div>
+                      <div class="bar"><span style="width: 50%"></span></div>
+                      <div class="count">624 · 50%</div>
+                    </div>
+                    <div class="option-row">
+                      <div class="option-name">In-person</div>
+                      <div class="bar"><span style="width: 30%"></span></div>
+                      <div class="count">374 · 30%</div>
+                    </div>
+                    <div class="option-row">
+                      <div class="option-name">Online only</div>
+                      <div class="bar"><span style="width: 20%"></span></div>
+                      <div class="count">250 · 20%</div>
+                    </div>
+                  </div>
+                  <aside class="insight-box">
+                    <div class="insight-label">Top answer</div>
+                    <div class="insight-value">Hybrid</div>
+                    <div class="text-muted mt-1">
+                      Half of voters prefer a flexible attendance model.
+                    </div>
+                  </aside>
+                </div>
+              </article>
+
+              <article
+                class="question-card"
+                data-type="multi"
+                data-group="choice"
+                data-search="multiple choice valuable features networking recorded sessions certificate workshops"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-purple"
+                      ><i class="bi bi-check2-square"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">
+                        Which features are most valuable to you?
+                      </div>
+                      <div class="q-meta">
+                        Q2 · Multiple Choice · 1,248 responses · 2,434 total
+                        selections
+                      </div>
+                    </div>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">Multiple Choice</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="q-body result-layout">
+                  <div>
+                    <div class="option-row">
+                      <div class="option-name">Networking opportunities</div>
+                      <div class="bar purple">
+                        <span style="width: 65%"></span>
+                      </div>
+                      <div class="count">812 · 65%</div>
+                    </div>
+                    <div class="option-row">
+                      <div class="option-name">Recorded sessions</div>
+                      <div class="bar purple">
+                        <span style="width: 55%"></span>
+                      </div>
+                      <div class="count">686 · 55%</div>
+                    </div>
+                    <div class="option-row">
+                      <div class="option-name">Certificate</div>
+                      <div class="bar purple">
+                        <span style="width: 40%"></span>
+                      </div>
+                      <div class="count">499 · 40%</div>
+                    </div>
+                    <div class="option-row">
+                      <div class="option-name">Hands-on workshops</div>
+                      <div class="bar purple">
+                        <span style="width: 35%"></span>
+                      </div>
+                      <div class="count">437 · 35%</div>
+                    </div>
+                  </div>
+                  <aside class="insight-box">
+                    <div class="insight-label">Selection behavior</div>
+                    <div class="insight-value">1.95 avg</div>
+                    <div class="text-muted mt-1">
+                      Average selections per response.
+                    </div>
+                  </aside>
+                </div>
+              </article>
+
+              <article
+                class="question-card"
+                data-type="yesno"
+                data-group="choice"
+                data-search="yes no recommend event friend"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-success"
+                      ><i class="bi bi-hand-thumbs-up"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">
+                        Would you recommend this event to a friend?
+                      </div>
+                      <div class="q-meta">Q3 · Yes/No · 1,248 responses</div>
+                    </div>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">Yes/No</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="q-body result-layout">
+                  <div>
+                    <div class="option-row">
+                      <div class="option-name">
+                        <i
+                          class="bi bi-check-circle-fill text-success me-1"
+                        ></i>
+                        Yes
+                      </div>
+                      <div class="bar success">
+                        <span style="width: 91%"></span>
+                      </div>
+                      <div class="count">1,136 · 91%</div>
+                    </div>
+                    <div class="option-row">
+                      <div class="option-name">
+                        <i class="bi bi-x-circle-fill text-danger me-1"></i> No
+                      </div>
+                      <div class="bar danger">
+                        <span style="width: 9%"></span>
+                      </div>
+                      <div class="count">112 · 9%</div>
+                    </div>
+                  </div>
+                  <aside class="insight-box">
+                    <div class="insight-label">Signal</div>
+                    <div class="insight-value text-success">Very positive</div>
+                    <div class="text-muted mt-1">
+                      Recommendation intent is strong.
+                    </div>
+                  </aside>
+                </div>
+              </article>
+
+              <article
+                class="question-card"
+                data-type="text"
+                data-group="text"
+                data-search="open text improve next time registration workshops food venue parking reminders"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-warning"
+                      ><i class="bi bi-chat-left-text"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">
+                        What should we improve next time?
+                      </div>
+                      <div class="q-meta">
+                        Q4 · Open Text · 386 written responses
+                      </div>
+                    </div>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">Open Text</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="q-body result-layout">
+                  <div class="response-grid">
+                    <div class="text-response">
+                      The registration flow was smooth, but the session
+                      reminders should be sent earlier.
+                    </div>
+                    <div class="text-response">
+                      Please add more hands-on workshops and keep the recording
+                      available for at least 30 days.
+                    </div>
+                    <div class="text-response">
+                      Food quality was good, but lunch timing felt rushed.
+                    </div>
+                    <div class="text-response">
+                      The venue was professional and easy to access. Parking
+                      guidance can be improved.
+                    </div>
+                  </div>
+                  <aside class="insight-box">
+                    <div class="insight-label">Common themes</div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <span class="badge text-bg-light border">Reminders</span>
+                      <span class="badge text-bg-light border">Workshops</span>
+                      <span class="badge text-bg-light border">Food</span>
+                      <span class="badge text-bg-light border">Parking</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary mt-3 w-100">
+                      View all responses
+                    </button>
+                  </aside>
+                </div>
+              </article>
+
+              <article
+                class="question-card"
+                data-type="star"
+                data-group="choice"
+                data-search="star rating overall event experience"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-warning"
+                      ><i class="bi bi-star"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">
+                        Rate your overall event experience
+                      </div>
+                      <div class="q-meta">
+                        Q5 · Star Rating · 1,248 responses
+                      </div>
+                    </div>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">Star Rating</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="q-body result-layout">
+                  <div class="rating-summary">
+                    <div>
+                      <div class="rating-number">4.4</div>
+                      <div class="text-muted">Average out of 5</div>
+                    </div>
+                    <div>
+                      <div class="stars">★★★★☆</div>
+                      <div class="text-muted small mt-1">
+                        85% rated 4 stars or above
+                      </div>
+                    </div>
+                  </div>
+                  <aside class="insight-box">
+                    <div class="insight-label">Distribution</div>
+                    <div
+                      class="option-row"
+                      style="grid-template-columns: 46px 1fr 42px"
+                    >
+                      <div class="option-name">5★</div>
+                      <div class="bar warning">
+                        <span style="width: 55%"></span>
+                      </div>
+                      <div class="count">55%</div>
+                    </div>
+                    <div
+                      class="option-row"
+                      style="grid-template-columns: 46px 1fr 42px"
+                    >
+                      <div class="option-name">4★</div>
+                      <div class="bar warning">
+                        <span style="width: 30%"></span>
+                      </div>
+                      <div class="count">30%</div>
+                    </div>
+                    <div
+                      class="option-row"
+                      style="grid-template-columns: 46px 1fr 42px"
+                    >
+                      <div class="option-name">≤3★</div>
+                      <div class="bar"><span style="width: 15%"></span></div>
+                      <div class="count">15%</div>
+                    </div>
+                  </aside>
+                </div>
+              </article>
+
+              <article
+                class="question-card"
+                data-type="nps"
+                data-group="choice"
+                data-search="nps net promoter score likely recommend promoters passives detractors"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-success"
+                      ><i class="bi bi-speedometer2"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">
+                        How likely are you to recommend us?
+                      </div>
+                      <div class="q-meta">
+                        Q6 · NPS · Scale 0 to 10 · 1,248 responses
+                      </div>
+                    </div>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">NPS</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="q-body result-layout">
+                  <div class="d-flex align-items-center gap-4 flex-wrap">
+                    <div class="nps-gauge">
+                      <div class="nps-score">62</div>
+                      <div class="text-muted small">NPS</div>
+                    </div>
+
+                    <div class="flex-grow-1">
+                      <div class="option-row">
+                        <div class="option-name">Promoters 9-10</div>
+                        <div class="bar success">
+                          <span style="width: 68%"></span>
+                        </div>
+                        <div class="count">849 · 68%</div>
+                      </div>
+                      <div class="option-row">
+                        <div class="option-name">Passives 7-8</div>
+                        <div class="bar warning">
+                          <span style="width: 26%"></span>
+                        </div>
+                        <div class="count">324 · 26%</div>
+                      </div>
+                      <div class="option-row">
+                        <div class="option-name">Detractors 0-6</div>
+                        <div class="bar danger">
+                          <span style="width: 6%"></span>
+                        </div>
+                        <div class="count">75 · 6%</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <aside class="insight-box">
+                    <div class="insight-label">Interpretation</div>
+                    <div class="insight-value text-success">Strong</div>
+                    <div class="text-muted mt-1">
+                      Promoters significantly outweigh detractors.
+                    </div>
+                  </aside>
+                </div>
+              </article>
+
+              <article
+                class="question-card"
+                data-type="ranked"
+                data-group="choice"
+                data-search="ranked choice future topics ai cloud architecture cybersecurity"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-purple"
+                      ><i class="bi bi-list-ol"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">Rank the topics you want next</div>
+                      <div class="q-meta">
+                        Q7 · Ranked Choice · Lower average rank is better
+                      </div>
+                    </div>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">Ranked Choice</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="q-body">
+                  <div class="table-responsive">
+                    <table class="table rank-table">
+                      <thead>
+                        <tr>
+                          <th style="width: 70px">Rank</th>
+                          <th>Option</th>
+                          <th>Avg. Rank</th>
+                          <th>First-place votes</th>
+                          <th>Share</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span class="rank-badge">1</span></td>
+                          <td class="fw-bold">AI for Business Automation</td>
+                          <td>1.8</td>
+                          <td>782</td>
+                          <td>
+                            <div class="small-bar">
+                              <div class="bar purple">
+                                <span style="width: 63%"></span>
+                              </div>
+                              <span>63%</span>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><span class="rank-badge">2</span></td>
+                          <td class="fw-bold">Cloud Architecture</td>
+                          <td>2.4</td>
+                          <td>355</td>
+                          <td>
+                            <div class="small-bar">
+                              <div class="bar purple">
+                                <span style="width: 28%"></span>
+                              </div>
+                              <span>28%</span>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><span class="rank-badge">3</span></td>
+                          <td class="fw-bold">Cybersecurity Basics</td>
+                          <td>3.1</td>
+                          <td>111</td>
+                          <td>
+                            <div class="small-bar">
+                              <div class="bar purple">
+                                <span style="width: 9%"></span>
+                              </div>
+                              <span>9%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </article>
+
+              <article
+                class="question-card"
+                data-type="matrix"
+                data-group="choice"
+                data-search="matrix rating areas registration venue speakers food excellent good average poor"
+              >
+                <div class="q-head">
+                  <div class="q-left">
+                    <span class="q-icon soft-danger"
+                      ><i class="bi bi-grid-3x3-gap"></i
+                    ></span>
+                    <div>
+                      <div class="q-title">Rate each area of the event</div>
+                      <div class="q-meta">Q8 · Matrix · 1,248 responses</div>
+                    </div>
+                  </div>
+                  <div class="q-actions">
+                    <span class="type-pill">Matrix</span>
+                    <button class="btn btn-sm btn-outline-secondary js-toggle">
+                      <i class="bi bi-chevron-up"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="q-body">
+                  <div class="table-responsive">
+                    <table class="table matrix-table">
+                      <thead>
+                        <tr>
+                          <th>Area</th>
+                          <th>Top result</th>
+                          <th class="matrix-cell">Excellent</th>
+                          <th class="matrix-cell">Good</th>
+                          <th class="matrix-cell">Average</th>
+                          <th class="matrix-cell">Poor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="fw-bold">Registration</td>
+                          <td>
+                            <span class="badge text-bg-success">Excellent</span>
+                          </td>
+                          <td>
+                            <div class="small-bar">
+                              <div class="bar success">
+                                <span style="width: 72%"></span>
+                              </div>
+                              <span>72%</span>
+                            </div>
+                          </td>
+                          <td>20%</td>
+                          <td>6%</td>
+                          <td>2%</td>
+                        </tr>
+                        <tr>
+                          <td class="fw-bold">Venue</td>
+                          <td>
+                            <span class="badge text-bg-primary">Good</span>
+                          </td>
+                          <td>35%</td>
+                          <td>
+                            <div class="small-bar">
+                              <div class="bar">
+                                <span style="width: 48%"></span>
+                              </div>
+                              <span>48%</span>
+                            </div>
+                          </td>
+                          <td>14%</td>
+                          <td>3%</td>
+                        </tr>
+                        <tr>
+                          <td class="fw-bold">Speakers</td>
+                          <td>
+                            <span class="badge text-bg-success">Excellent</span>
+                          </td>
+                          <td>
+                            <div class="small-bar">
+                              <div class="bar success">
+                                <span style="width: 64%"></span>
+                              </div>
+                              <span>64%</span>
+                            </div>
+                          </td>
+                          <td>27%</td>
+                          <td>7%</td>
+                          <td>2%</td>
+                        </tr>
+                        <tr>
+                          <td class="fw-bold">Food</td>
+                          <td>
+                            <span class="badge text-bg-warning">Average</span>
+                          </td>
+                          <td>18%</td>
+                          <td>30%</td>
+                          <td>
+                            <div class="small-bar">
+                              <div class="bar warning">
+                                <span style="width: 39%"></span>
+                              </div>
+                              <span>39%</span>
+                            </div>
+                          </td>
+                          <td>13%</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div id="emptyState" class="empty">
+              <i class="bi bi-search fs-1 d-block mb-3"></i>
+              <div class="fw-bold text-dark">No matching poll results</div>
+              <div>Try changing the search text or question type filter.</div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      $(function () {
+        let activeGroup = "all";
 
         function applyFilters() {
-            const search = $("#searchInput").val().toLowerCase().trim();
-            let visible = 0;
+          const search = $("#searchInput").val().toLowerCase().trim();
+          const type = $("#typeFilter").val();
+          let visible = 0;
 
-            $(".question-card").each(function () {
-                const $card = $(this);
-                const cardType = $card.data("type");
-                const group = $card.data("group");
-                const haystack = ($card.data("search") + " " + $card.text()).toLowerCase();
+          $(".question-card").each(function () {
+            const $card = $(this);
+            const cardType = $card.data("type");
+            const group = $card.data("group");
+            const haystack = (
+              $card.data("search") +
+              " " +
+              $card.text()
+            ).toLowerCase();
 
-                const matchesType = !activeType || cardType === activeType;
-                const matchesSearch = !search || haystack.indexOf(search) >= 0;
-                const matchesGroup = activeGroup === "all" || group === activeGroup;
+            const matchesType = !type || cardType === type;
+            const matchesSearch = !search || haystack.indexOf(search) >= 0;
+            const matchesGroup = activeGroup === "all" || group === activeGroup;
 
-                const show = matchesType && matchesSearch && matchesGroup;
-                $card.toggle(show);
-                if (show) visible++;
-            });
+            const show = matchesType && matchesSearch && matchesGroup;
+            $card.toggle(show);
+            if (show) visible++;
+          });
 
-            $("#emptyState").toggle(visible === 0);
+          $("#emptyState").toggle(visible === 0);
         }
 
-        renderTypePills();
-
-        $("#searchInput").on("input", applyFilters);
-
-        $("#typePills").on("click", "button", function () {
-            activeType = String($(this).data("type") || "");
-            $("#typePills .type-filter-pill").removeClass("active");
-            $(this).addClass("active");
-            applyFilters();
-        });
+        $("#searchInput, #typeFilter").on("input change", applyFilters);
 
         $("[data-view]").on("click", function () {
-            $("[data-view]").removeClass("active");
-            $(this).addClass("active");
-            activeGroup = $(this).data("view");
-            applyFilters();
+          $("[data-view]").removeClass("active");
+          $(this).addClass("active");
+          activeGroup = $(this).data("view");
+          applyFilters();
         });
 
         $(".js-toggle").on("click", function () {
-            const $btn = $(this);
-            const $card = $btn.closest(".question-card");
-            $card.find(".q-body").first().slideToggle(140);
-            $btn.find("i").toggleClass("bi-chevron-up bi-chevron-down");
+          const $btn = $(this);
+          const $card = $btn.closest(".question-card");
+          $card.find(".q-body").first().slideToggle(140);
+          $btn.find("i").toggleClass("bi-chevron-up bi-chevron-down");
         });
 
         $(".nav-link[data-tab]").on("click", function () {
-            $(".nav-link[data-tab]").removeClass("active");
-            $(this).addClass("active");
+          $(".nav-link[data-tab]").removeClass("active");
+          $(this).addClass("active");
         });
-    });
-</script>
-
-</body>
+      });
+    </script>
+  </body>
 </html>

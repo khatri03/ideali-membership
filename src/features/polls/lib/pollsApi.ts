@@ -365,6 +365,15 @@ export async function fetchOrganizerPollReviewSummary(pollUniqueId: string, sign
         npsPassiveCount: readNumber(question?.NpsPassiveCount ?? question?.npsPassiveCount, 0),
         npsDetractorCount: readNumber(question?.NpsDetractorCount ?? question?.npsDetractorCount, 0),
         npsScore: (question?.NpsScore ?? question?.npsScore ?? null) as number | null,
+        starRatingSummaries: readArray(question?.StarRatingSummaries ?? question?.starRatingSummaries).map((rating) => {
+          const ratingRecord = readRecord(rating);
+          return {
+            ratingValue: readNumber(ratingRecord?.RatingValue ?? ratingRecord?.ratingValue, 0),
+            label: String(ratingRecord?.Label ?? ratingRecord?.label ?? ""),
+            count: readNumber(ratingRecord?.Count ?? ratingRecord?.count, 0),
+            percentage: readNumber(ratingRecord?.Percentage ?? ratingRecord?.percentage, 0),
+          };
+        }),
         optionSummaries: readArray(question?.OptionSummaries ?? question?.optionSummaries).map((option) => {
           const optionRecord = readRecord(option);
           return {
