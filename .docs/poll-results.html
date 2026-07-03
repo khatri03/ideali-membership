@@ -276,6 +276,14 @@
         overflow: hidden;
       }
 
+      .questions-scroll {
+        max-height: clamp(420px, 72vh, 760px);
+        overflow-y: auto;
+        padding-right: 6px;
+        scrollbar-gutter: stable;
+        overscroll-behavior: contain;
+      }
+
       .question-card {
         border-bottom: 1px solid var(--border);
         padding: 20px;
@@ -791,6 +799,7 @@
             </div>
 
             <div id="resultsContainer">
+              <div class="questions-scroll">
               <article
                 class="question-card"
                 data-type="single"
@@ -1381,6 +1390,7 @@
                   </div>
                 </div>
               </article>
+              </div>
             </div>
 
             <div id="emptyState" class="empty">

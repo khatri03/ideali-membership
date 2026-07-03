@@ -297,17 +297,17 @@ export function PollReviewsPage() {
           </div>
         </div>
 
-        {filteredQuestions.length === 0 ? (
-          <div className="mt-6">
+        <div className="mt-6">
+          {filteredQuestions.length === 0 ? (
             <EmptyReviewsState />
-          </div>
-        ) : (
-          <div className="mt-6 grid gap-4">
-            {filteredQuestions.map((question) => (
-              <QuestionSummaryCard key={question.questionUniqueId} question={question} totalResponses={summary.totalResponses} />
-            ))}
-          </div>
-        )}
+          ) : (
+            <div className="max-h-[min(72vh,760px)] space-y-4 overflow-y-auto pr-2 overscroll-contain">
+              {filteredQuestions.map((question) => (
+                <QuestionSummaryCard key={question.questionUniqueId} question={question} totalResponses={summary.totalResponses} />
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <details
