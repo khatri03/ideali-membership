@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useQuery } from "@tanstack/react-query";
 import { BadgeInfo, Check, ChevronRight, FileText, GripVertical, Info, Link2, UserPlus, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -13,7 +12,6 @@ import {
   buildMembershipRegisterPath,
   buildMembershipWizardStepPath,
 } from "../routes";
-import { fetchActiveMemberCount, fetchPendingApprovalCount } from "../lib/membershipMembers";
 import { saveMembershipReviewStep } from "../lib/membershipWizard";
 import type { MembershipTypeListItem, MembershipTypeOrderListItem } from "../types/membership";
 import {
@@ -183,23 +181,17 @@ export function MembershipMetaPill({
   );
 }
 
-export function PendingApprovalCountCell({ membershipTypeUniqueId }: { membershipTypeUniqueId: unknown }) {
-  const uniqueId = readMembershipTypeUniqueId(membershipTypeUniqueId);
-  const pendingApprovalCountQuery = useQuery({
-    queryKey: ["membership-pending-approval-count", uniqueId],
-    queryFn: () => fetchPendingApprovalCount(uniqueId),
-    staleTime: 60 * 1000,
-    enabled: uniqueId.length > 0,
-  });
+export function PendingApprovalCountCell({
+  membershipTypeUniqueId,
+  count,
+}: {
+  membershipTypeUniqueId: string;
+  count: number | null;
+}) {
+  const pendingApprovalCount = count;
 
-  const pendingApprovalCount = pendingApprovalCountQuery.data ?? 0;
-
-  if (pendingApprovalCountQuery.isLoading || pendingApprovalCountQuery.isFetching) {
+  if (pendingApprovalCount === null) {
     return <CountCellSkeleton />;
-  }
-
-  if (!uniqueId) {
-    return <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">-</span>;
   }
 
   if (pendingApprovalCount > 0) {
@@ -207,7 +199,7 @@ export function PendingApprovalCountCell({ membershipTypeUniqueId }: { membershi
       <Link
         to={buildMembershipMembersPath({
           membershipStatuses: ["PendingApproval"],
-          membershipTypeUniqueIds: [uniqueId],
+          membershipTypeUniqueIds: [membershipTypeUniqueId],
         })}
         className="inline-flex min-w-10 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
       >
@@ -223,23 +215,17 @@ export function PendingApprovalCountCell({ membershipTypeUniqueId }: { membershi
   );
 }
 
-export function ActiveMemberCountCell({ membershipTypeUniqueId }: { membershipTypeUniqueId: unknown }) {
-  const uniqueId = readMembershipTypeUniqueId(membershipTypeUniqueId);
-  const activeMemberCountQuery = useQuery({
-    queryKey: ["membership-active-member-count", uniqueId],
-    queryFn: () => fetchActiveMemberCount(uniqueId),
-    staleTime: 60 * 1000,
-    enabled: uniqueId.length > 0,
-  });
+export function ActiveMemberCountCell({
+  membershipTypeUniqueId,
+  count,
+}: {
+  membershipTypeUniqueId: string;
+  count: number | null;
+}) {
+  const activeMemberCount = count;
 
-  const activeMemberCount = activeMemberCountQuery.data ?? 0;
-
-  if (activeMemberCountQuery.isLoading || activeMemberCountQuery.isFetching) {
+  if (activeMemberCount === null) {
     return <CountCellSkeleton />;
-  }
-
-  if (!uniqueId) {
-    return <span className="inline-flex min-w-10 items-center justify-center text-sm font-semibold text-slate-400">-</span>;
   }
 
   if (activeMemberCount > 0) {
@@ -247,7 +233,7 @@ export function ActiveMemberCountCell({ membershipTypeUniqueId }: { membershipTy
       <Link
         to={buildMembershipMembersPath({
           membershipStatuses: ["Active"],
-          membershipTypeUniqueIds: [uniqueId],
+          membershipTypeUniqueIds: [membershipTypeUniqueId],
         })}
         className="inline-flex min-w-10 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
       >
@@ -924,10 +910,10 @@ export function MembershipTypeRow({
         <p className="text-sm font-semibold tabular-nums text-slate-900">{price}</p>
       </td>
       <td className="border-r border-slate-200 px-4 py-4 text-center align-middle">
-        <ActiveMemberCountCell membershipTypeUniqueId={item.value} />
+        <ActiveMemberCountCell membershipTypeUniqueId={item.value} count={item.activeMemberCount} />
       </td>
       <td className="border-r border-slate-200 px-4 py-4 text-center align-middle">
-        <PendingApprovalCountCell membershipTypeUniqueId={item.value} />
+        <PendingApprovalCountCell membershipTypeUniqueId={item.value} count={item.pendingApprovalCount} />
       </td>
       <td className="px-4 py-4 align-middle">
         <div className="flex flex-col gap-1">

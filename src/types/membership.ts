@@ -2,6 +2,8 @@ export interface MembershipTypeListItem {
   text: string;
   value: string;
   displayOrder: number;
+  activeMemberCount: number | null;
+  pendingApprovalCount: number | null;
   hasDiscountCoupons: boolean;
   discountsEnabled: boolean;
   availableForSignUp: boolean;
@@ -18,6 +20,13 @@ export interface MembershipTypeListItem {
   annualExpiryMonth: number | null;
   annualExpiryDay: number | null;
 }
+
+export type MembershipTypeSortBy =
+  | "membershipName"
+  | "pricing"
+  | "activeMembers"
+  | "pendingApprovals"
+  | "tenure";
 
 export interface MembershipTypeOrderListItem {
   uniqueId: string;

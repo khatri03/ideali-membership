@@ -19,6 +19,7 @@ import type {
   MembershipTypeOrderListItem,
   MembershipTitleInfo,
   MembershipTypeListItem,
+  PageResult,
   MembershipTypeUpgradePathListItem,
   OrganizerPaymentAccountSelectionItem,
 } from "../types/membership";
@@ -114,6 +115,43 @@ function normalizeListResponseItems(value: unknown): Array<Record<string, unknow
   }
 
   return [];
+}
+
+function readMembershipTypePageResponse(payload: unknown): PageResult<MembershipTypeListItem> {
+  const responseData = readResponseData(payload) as Record<string, unknown> | null;
+  const items = normalizeListResponseItems(responseData);
+
+  return {
+    pageNo: readNumber(responseData?.PageNo ?? responseData?.pageNo) ?? 1,
+    pageSize: readNumber(responseData?.PageSize ?? responseData?.pageSize) ?? items.length,
+    pageCount: readNumber(responseData?.PageCount ?? responseData?.pageCount) ?? 0,
+    totalRecordsCount: readNumber(responseData?.TotalRecordsCount ?? responseData?.totalRecordsCount) ?? items.length,
+    pageData: items
+      .map((item): MembershipTypeListItem => ({
+        text: readText(item.Text ?? item.text ?? item.Name ?? item.name),
+        value: readText(item.Value ?? item.value ?? item.UniqueId ?? item.uniqueId),
+        displayOrder: readNumber(item.DisplayOrder ?? item.displayOrder) ?? 0,
+        activeMemberCount: readNumber(item.ActiveMemberCount ?? item.activeMemberCount),
+        pendingApprovalCount: readNumber(item.PendingApprovalCount ?? item.pendingApprovalCount),
+        hasDiscountCoupons: readBoolean(item.HasDiscountCoupons ?? item.hasDiscountCoupons) ?? false,
+        discountsEnabled: readBoolean(item.DiscountsEnabled ?? item.discountsEnabled) ?? false,
+        availableForSignUp: readBoolean(item.AvailableForSignUp ?? item.availableForSignUp) ?? false,
+        setupState: readText(item.SetupState ?? item.setupState) || "Draft",
+        isFree: readBoolean(item.IsFree ?? item.isFree) ?? false,
+        membershipCharges: readNumber(item.MembershipCharges ?? item.membershipCharges) ?? 0,
+        paymentMerchant: readText(item.PaymentMerchant ?? item.paymentMerchant) || null,
+        paymentCurrencyCode: readText(item.PaymentCurrencyCode ?? item.paymentCurrencyCode) || null,
+        paymentCurrencySymbol: readText(item.PaymentCurrencySymbol ?? item.paymentCurrencySymbol) || null,
+        tenureText: readText(item.TenureText ?? item.tenureText) || null,
+        registrationStartDateUtc: readText(item.RegistrationStartDateUtc ?? item.registrationStartDateUtc) || null,
+        registrationEndDateUtc: readText(item.RegistrationEndDateUtc ?? item.registrationEndDateUtc) || null,
+        customExpiryDays: readNumber(item.CustomExpiryDays ?? item.customExpiryDays) ?? null,
+        annualExpiryMonth: readNumber(item.AnnualExpiryMonth ?? item.annualExpiryMonth) ?? null,
+        annualExpiryDay: readNumber(item.AnnualExpiryDay ?? item.annualExpiryDay) ?? null,
+      }))
+      .filter((item) => item.text && item.value)
+      .sort((left, right) => left.displayOrder - right.displayOrder || left.text.localeCompare(right.text)),
+  };
 }
 
 const wizardResponseCache = new Map<string, unknown>();
@@ -246,33 +284,64 @@ export async function saveMembershipTitleStep(
 }
 
 export async function getMembershipTypes() {
-  const payload = await getJson<unknown>("/api/organizer/membership/type/list");
-  const responseData = readResponseData(payload);
-  const items = normalizeListResponseItems(responseData);
+  const payload = await getJson<unknown>("/api/organizer/membership/type/list?pageNo=1&pageSize=5000");
+  return readMembershipTypePageResponse(payload).pageData;
+}
 
-  return items
-    .map((item): MembershipTypeListItem => ({
-      text: readText(item.Text ?? item.text ?? item.Name ?? item.name),
-      value: readText(item.Value ?? item.value ?? item.UniqueId ?? item.uniqueId),
-      displayOrder: readNumber(item.DisplayOrder ?? item.displayOrder) ?? 0,
-      hasDiscountCoupons: readBoolean(item.HasDiscountCoupons ?? item.hasDiscountCoupons) ?? false,
-      discountsEnabled: readBoolean(item.DiscountsEnabled ?? item.discountsEnabled) ?? false,
-      availableForSignUp: readBoolean(item.AvailableForSignUp ?? item.availableForSignUp) ?? false,
-      setupState: readText(item.SetupState ?? item.setupState) || "Draft",
-      isFree: readBoolean(item.IsFree ?? item.isFree) ?? false,
-      membershipCharges: readNumber(item.MembershipCharges ?? item.membershipCharges) ?? 0,
-      paymentMerchant: readText(item.PaymentMerchant ?? item.paymentMerchant) || null,
-      paymentCurrencyCode: readText(item.PaymentCurrencyCode ?? item.paymentCurrencyCode) || null,
-      paymentCurrencySymbol: readText(item.PaymentCurrencySymbol ?? item.paymentCurrencySymbol) || null,
-      tenureText: readText(item.TenureText ?? item.tenureText) || null,
-      registrationStartDateUtc: readText(item.RegistrationStartDateUtc ?? item.registrationStartDateUtc) || null,
-      registrationEndDateUtc: readText(item.RegistrationEndDateUtc ?? item.registrationEndDateUtc) || null,
-      customExpiryDays: readNumber(item.CustomExpiryDays ?? item.customExpiryDays) ?? null,
-      annualExpiryMonth: readNumber(item.AnnualExpiryMonth ?? item.annualExpiryMonth) ?? null,
-      annualExpiryDay: readNumber(item.AnnualExpiryDay ?? item.annualExpiryDay) ?? null,
-    }))
-    .filter((item) => item.text && item.value)
-    .sort((left, right) => left.displayOrder - right.displayOrder || left.text.localeCompare(right.text));
+export async function getMembershipTypesPage(
+  pageNo: number,
+  pageSize: number,
+  options?: {
+    searchTerm?: string | null;
+    sortBy?: string | null;
+    sortOrder?: string | null;
+    statuses?: string[];
+    paymentMerchants?: string[];
+    tenures?: string[];
+  },
+) {
+  const query = new URLSearchParams();
+  query.set("pageNo", String(pageNo));
+  query.set("pageSize", String(pageSize));
+
+  const normalizedSearchTerm = options?.searchTerm?.trim();
+  if (normalizedSearchTerm) {
+    query.set("searchTerm", normalizedSearchTerm);
+  }
+
+  const normalizedSortBy = options?.sortBy?.trim();
+  if (normalizedSortBy) {
+    query.set("sortBy", normalizedSortBy);
+  }
+
+  const normalizedSortOrder = options?.sortOrder?.trim();
+  if (normalizedSortOrder) {
+    query.set("sortOrder", normalizedSortOrder);
+  }
+
+  options?.statuses?.forEach((status) => {
+    const normalizedStatus = status.trim();
+    if (normalizedStatus) {
+      query.append("status", normalizedStatus);
+    }
+  });
+
+  options?.paymentMerchants?.forEach((paymentMerchant) => {
+    const normalizedPaymentMerchant = paymentMerchant.trim();
+    if (normalizedPaymentMerchant) {
+      query.append("paymentMerchant", normalizedPaymentMerchant);
+    }
+  });
+
+  options?.tenures?.forEach((tenure) => {
+    const normalizedTenure = tenure.trim();
+    if (normalizedTenure) {
+      query.append("tenure", normalizedTenure);
+    }
+  });
+
+  const payload = await getJson<unknown>(`/api/organizer/membership/type/list?${query.toString()}`);
+  return readMembershipTypePageResponse(payload);
 }
 
 export async function getMembershipTypeOrderList() {
