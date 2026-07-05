@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -6,19 +6,24 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronDown,
+  Code2,
+  Copy,
   Loader2,
   MessageSquareText,
   PieChart as PieChartIcon,
+  Share2,
   Star,
   Table2,
   Users,
   Vote,
+  Link2,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Cell, Pie, PieChart as RechartsPieChart, ResponsiveContainer } from "recharts";
 import { Pagination } from "../../../components/shared/DataTable/Pagination";
-import { buildMembershipPollDetailPath, buildPublicPollPath } from "../../../app/router/routes";
+import { buildMembershipPollDetailPath, buildMembershipPollReviewsPath, buildPublicPollPath } from "../../../app/router/routes";
 import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
+import { showToast } from "../../../shared/components/toast/Toast";
 import type {
   OrganizerPollDetail,
   OrganizerPollParticipationChart,
@@ -39,16 +44,21 @@ import {
 import { getPollQuestionTypeChoice, usesPollMatrix, usesPollOptionList } from "../lib/pollQuestionTypes";
 
 type ReviewTab = "results" | "responses";
+type ShareTarget =
+  | { kind: "poll" }
+  | { kind: "question"; questionUniqueId: string; questionLabel: string };
 
 const RESPONSE_PAGE_SIZE_OPTIONS: number[] = [10, 25, 50];
 
 export function PollReviewsPage() {
   const { pollUniqueId } = useParams<{ pollUniqueId?: string }>();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<ReviewTab>("results");
   const [responsesPageNo, setResponsesPageNo] = useState(1);
   const [responsesPageSize, setResponsesPageSize] = useState<number>(RESPONSE_PAGE_SIZE_OPTIONS[0]!);
   const [searchText, setSearchText] = useState("");
   const [selectedQuestionType, setSelectedQuestionType] = useState<PollQuestionType | "all">("all");
+  const [shareModalTarget, setShareModalTarget] = useState<ShareTarget | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["polls", "organizer", "detail", pollUniqueId],
@@ -75,6 +85,7 @@ export function PollReviewsPage() {
   const summary = summaryQuery.data ?? null;
   const votesPage = votesQuery.data ?? null;
   const votes = votesPage?.pageData ?? [];
+  const sharedQuestionUniqueId = searchParams.get("questionUniqueId")?.trim() || null;
 
   const questionMap = useMemo(() => {
     return new Map((detail?.questions ?? []).map((question) => [question.uniqueId, question] as const));
@@ -105,6 +116,10 @@ export function PollReviewsPage() {
       return [];
     }
 
+    if (sharedQuestionUniqueId) {
+      return summary.questions.filter((question) => question.questionUniqueId === sharedQuestionUniqueId);
+    }
+
     if (!normalizedSearchText) {
       return summary.questions.filter((question) =>
         selectedQuestionType === "all" ? true : question.questionType === selectedQuestionType,
@@ -123,7 +138,22 @@ export function PollReviewsPage() {
       const questionSearchText = buildQuestionSearchText(question, questionMap);
       return questionSearchText.includes(normalizedSearchText);
     });
-  }, [normalizedSearchText, questionMap, selectedQuestionType, summary]);
+  }, [normalizedSearchText, questionMap, selectedQuestionType, sharedQuestionUniqueId, summary]);
+
+  useEffect(() => {
+    if (!shareModalTarget) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShareModalTarget(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shareModalTarget]);
 
   if (!pollUniqueId) {
     return (
@@ -162,6 +192,41 @@ export function PollReviewsPage() {
     );
   }
 
+  const buildShareUrl = (target: ShareTarget) => {
+    const basePath = buildMembershipPollReviewsPath(detail.uniqueId);
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return target.kind === "poll"
+      ? `${origin}${basePath}`
+      : `${origin}${basePath}?questionUniqueId=${encodeURIComponent(target.questionUniqueId)}`;
+  };
+
+  const buildEmbedCode = (target: ShareTarget) => {
+    const url = buildShareUrl(target);
+    const buttonLabel = target.kind === "poll" ? "View poll results" : "View question results";
+
+    return `<a href="${url}" target="_blank" rel="noreferrer noopener" style="display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:9999px;background:#0f172a;color:#ffffff;text-decoration:none;font:600 14px/1.2 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">${buttonLabel}</a>`;
+  };
+
+  const copyTextToClipboard = async (text: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(successMessage, "success");
+    } catch {
+      showToast("Clipboard access is blocked by the browser.", "error");
+    }
+  };
+
+  const copyShareLink = async (target: ShareTarget) => {
+    await copyTextToClipboard(
+      buildShareUrl(target),
+      target.kind === "poll" ? "Poll URL copied to clipboard." : "Question URL copied to clipboard.",
+    );
+  };
+
+  const openEmbedModal = (target: ShareTarget) => {
+    setShareModalTarget(target);
+  };
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -184,7 +249,12 @@ export function PollReviewsPage() {
         </Link>
       </div>
 
-      <PollReviewHero detail={detail} summary={summary} />
+      <PollReviewHero
+        detail={detail}
+        summary={summary}
+        onCopyShareLink={() => copyShareLink({ kind: "poll" })}
+        onOpenEmbedModal={() => openEmbedModal({ kind: "poll" })}
+      />
 
       <ParticipationChartCard participationChart={summary.participationChart} />
 
@@ -307,7 +377,25 @@ export function PollReviewsPage() {
               ) : (
                 <div className="max-h-[min(72vh,760px)] space-y-4 overflow-y-auto pr-2 overscroll-contain">
                   {filteredQuestions.map((question) => (
-                    <QuestionSummaryCard key={question.questionUniqueId} question={question} totalResponses={summary.totalResponses} />
+                    <QuestionSummaryCard
+                      key={question.questionUniqueId}
+                      question={question}
+                      totalResponses={summary.totalResponses}
+                      onCopyShareLink={() =>
+                        copyShareLink({
+                          kind: "question",
+                          questionUniqueId: question.questionUniqueId,
+                          questionLabel: question.text,
+                        })
+                      }
+                      onOpenEmbedModal={() =>
+                        openEmbedModal({
+                          kind: "question",
+                          questionUniqueId: question.questionUniqueId,
+                          questionLabel: question.text,
+                        })
+                      }
+                    />
                   ))}
                 </div>
               )}
@@ -364,6 +452,22 @@ export function PollReviewsPage() {
           </div>
         )}
       </section>
+
+      {shareModalTarget ? (
+        <ShareCodeModal
+          title={shareModalTarget.kind === "poll" ? "Embed poll results" : `Embed ${shareModalTarget.questionLabel} results`}
+          description={
+            shareModalTarget.kind === "poll"
+              ? "Use this button snippet to surface the full poll review page."
+              : "Use this button snippet to surface the selected question review."
+          }
+          shareUrl={buildShareUrl(shareModalTarget)}
+          embedCode={buildEmbedCode(shareModalTarget)}
+          onCopyLink={() => copyShareLink(shareModalTarget)}
+          onCopyCode={() => copyTextToClipboard(buildEmbedCode(shareModalTarget), "Embed code copied to clipboard.")}
+          onClose={() => setShareModalTarget(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -466,9 +570,13 @@ function ParticipationChartCard({
 function PollReviewHero({
   detail,
   summary,
+  onCopyShareLink,
+  onOpenEmbedModal,
 }: {
   detail: OrganizerPollDetail;
   summary: OrganizerPollReviewSummary;
+  onCopyShareLink: () => void;
+  onOpenEmbedModal: () => void;
 }) {
   return (
     <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-cyan-50 p-6 shadow-xl shadow-slate-200/50">
@@ -505,11 +613,32 @@ function PollReviewHero({
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:w-[24rem] lg:flex-none">
-          <SummaryCard icon={Vote} label="Total responses" value={`${summary.totalResponses}`} tone="cyan" />
-          <SummaryCard icon={Users} label="Authenticated" value={`${summary.authenticatedResponses}`} tone="emerald" />
-          <SummaryCard icon={CheckCircle2} label="Anonymous" value={`${summary.anonymousResponses}`} tone="slate" />
-          <SummaryCard icon={CalendarClock} label="Questions" value={`${summary.questionCount}`} tone="rose" />
+        <div className="space-y-3 lg:w-[24rem] lg:flex-none">
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <button
+              type="button"
+              onClick={onCopyShareLink}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+            >
+              <Copy size={16} />
+              Copy link
+            </button>
+            <button
+              type="button"
+              onClick={onOpenEmbedModal}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-700 hover:border-cyan-700"
+            >
+              <Code2 size={16} />
+              Embed button
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SummaryCard icon={Vote} label="Total responses" value={`${summary.totalResponses}`} tone="cyan" />
+            <SummaryCard icon={Users} label="Authenticated" value={`${summary.authenticatedResponses}`} tone="emerald" />
+            <SummaryCard icon={CheckCircle2} label="Anonymous" value={`${summary.anonymousResponses}`} tone="slate" />
+            <SummaryCard icon={CalendarClock} label="Questions" value={`${summary.questionCount}`} tone="rose" />
+          </div>
         </div>
       </div>
     </div>
@@ -519,14 +648,18 @@ function PollReviewHero({
 function QuestionSummaryCard({
   question,
   totalResponses,
+  onCopyShareLink,
+  onOpenEmbedModal,
 }: {
   question: OrganizerPollQuestionReviewSummary;
   totalResponses: number;
+  onCopyShareLink: () => void;
+  onOpenEmbedModal: () => void;
 }) {
   const questionTypeChoice = getPollQuestionTypeChoice(question.questionType);
 
   return (
-    <details open className="group rounded-[2rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+    <details id={`question-${question.questionUniqueId}`} open className="group scroll-mt-24 rounded-[2rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
       <summary className="flex cursor-pointer list-none flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2 text-left">
           <div className="flex flex-wrap items-center gap-2">
@@ -541,6 +674,32 @@ function QuestionSummaryCard({
             <QuestionTypeIcon questionType={question.questionType} className="h-4 w-4 text-cyan-300" />
             {questionTypeChoice.label}
           </span>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onCopyShareLink();
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              Copy link
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onOpenEmbedModal();
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cyan-700 hover:border-cyan-700"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Embed
+            </button>
+          </div>
         </div>
 
         <div className="flex items-start gap-3">
@@ -587,6 +746,98 @@ function QuestionSummaryCard({
         )}
       </div>
     </details>
+  );
+}
+
+function ShareCodeModal({
+  title,
+  description,
+  shareUrl,
+  embedCode,
+  onCopyLink,
+  onCopyCode,
+  onClose,
+}: {
+  title: string;
+  description: string;
+  shareUrl: string;
+  embedCode: string;
+  onCopyLink: () => void;
+  onCopyCode: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+      onMouseDown={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-code-modal-title"
+        className="w-full max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/20"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Share tools</p>
+            <h2 id="share-code-modal-title" className="text-2xl font-bold tracking-tight text-slate-900">
+              {title}
+            </h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-5">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Share URL</p>
+                <p className="mt-1 break-all text-sm text-slate-700">{shareUrl}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onCopyLink}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+              >
+                <Copy className="h-4 w-4" />
+                Copy link
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 bg-slate-900 p-4 text-white">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Embed code</p>
+                <p className="mt-1 text-sm text-slate-300">Paste this button snippet into your site or dashboard.</p>
+              </div>
+              <button
+                type="button"
+                onClick={onCopyCode}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-50"
+              >
+                <Copy className="h-4 w-4" />
+                Copy code
+              </button>
+            </div>
+            <textarea
+              readOnly
+              value={embedCode}
+              className="mt-4 min-h-[11rem] w-full rounded-[1.25rem] border border-slate-700 bg-slate-950 px-4 py-3 font-mono text-sm leading-6 text-cyan-50 outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
