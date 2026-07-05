@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { Cell, Pie, PieChart as RechartsPieChart, ResponsiveContainer } from "recharts";
+import { Pagination } from "../../../components/shared/DataTable/Pagination";
 import { buildMembershipPollDetailPath, buildPublicPollPath } from "../../../app/router/routes";
 import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
 import type {
@@ -37,9 +38,15 @@ import {
 } from "../lib";
 import { getPollQuestionTypeChoice, usesPollMatrix, usesPollOptionList } from "../lib/pollQuestionTypes";
 
+type ReviewTab = "results" | "responses";
+
+const RESPONSE_PAGE_SIZE_OPTIONS: number[] = [10, 25, 50];
+
 export function PollReviewsPage() {
   const { pollUniqueId } = useParams<{ pollUniqueId?: string }>();
-  const [isResponsesOpen, setIsResponsesOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<ReviewTab>("results");
+  const [responsesPageNo, setResponsesPageNo] = useState(1);
+  const [responsesPageSize, setResponsesPageSize] = useState<number>(RESPONSE_PAGE_SIZE_OPTIONS[0]!);
   const [searchText, setSearchText] = useState("");
   const [selectedQuestionType, setSelectedQuestionType] = useState<PollQuestionType | "all">("all");
 
@@ -58,15 +65,16 @@ export function PollReviewsPage() {
   });
 
   const votesQuery = useQuery({
-    queryKey: ["polls", "organizer", "votes", pollUniqueId],
-    queryFn: ({ signal }) => fetchOrganizerPollVotes(pollUniqueId ?? "", signal),
-    enabled: Boolean(pollUniqueId) && isResponsesOpen,
+    queryKey: ["polls", "organizer", "votes", pollUniqueId, responsesPageNo, responsesPageSize],
+    queryFn: ({ signal }) => fetchOrganizerPollVotes(pollUniqueId ?? "", responsesPageNo, responsesPageSize, signal),
+    enabled: Boolean(pollUniqueId) && activeTab === "responses",
     staleTime: 30 * 1000,
   });
 
   const detail = detailQuery.data ?? null;
   const summary = summaryQuery.data ?? null;
-  const votes = votesQuery.data ?? [];
+  const votesPage = votesQuery.data ?? null;
+  const votes = votesPage?.pageData ?? [];
 
   const questionMap = useMemo(() => {
     return new Map((detail?.questions ?? []).map((question) => [question.uniqueId, question] as const));
@@ -108,55 +116,14 @@ export function PollReviewsPage() {
         return false;
       }
 
-      const questionSearchText = buildQuestionSearchText(question, questionMap);
-      const responseMatches = votes.some((vote) =>
-        vote.answers.some((answer) => {
-          if (answer.questionUniqueId !== question.questionUniqueId) {
-            return false;
-          }
-
-          return buildAnswerSearchText(questionMap.get(answer.questionUniqueId), answer, vote).includes(normalizedSearchText);
-        }),
-      );
-      return questionSearchText.includes(normalizedSearchText) || responseMatches;
-    });
-  }, [normalizedSearchText, questionMap, selectedQuestionType, summary, votes]);
-
-  const filteredVotes = useMemo(() => {
-    if (!votesQuery.isSuccess) {
-      return votes;
-    }
-
-    return votes.filter((vote) => {
-      if (selectedQuestionType === "all" && !normalizedSearchText) {
+      if (!normalizedSearchText) {
         return true;
       }
 
-      if (selectedQuestionType === "all") {
-        const voteSearchText = buildVoteSearchText(vote, questionMap);
-        return voteSearchText.includes(normalizedSearchText);
-      }
-
-      const matchingAnswers = vote.answers.filter((answer) => {
-        const question = questionMap.get(answer.questionUniqueId);
-        if (!question) {
-          return false;
-        }
-
-        if (question.questionType !== selectedQuestionType) {
-          return false;
-        }
-
-        if (!normalizedSearchText) {
-          return true;
-        }
-
-        return buildAnswerSearchText(question, answer, vote).includes(normalizedSearchText);
-      });
-
-      return matchingAnswers.length > 0;
+      const questionSearchText = buildQuestionSearchText(question, questionMap);
+      return questionSearchText.includes(normalizedSearchText);
     });
-  }, [normalizedSearchText, questionMap, selectedQuestionType, votes, votesQuery.isSuccess]);
+  }, [normalizedSearchText, questionMap, selectedQuestionType, summary]);
 
   if (!pollUniqueId) {
     return (
@@ -221,15 +188,47 @@ export function PollReviewsPage() {
 
       <ParticipationChartCard participationChart={summary.participationChart} />
 
-      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <section className="rounded-[2rem] border border-slate-200 bg-white/90 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Question insights</p>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Review by question</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Review workspace</p>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Poll results and responses</h2>
             <p className="max-w-2xl text-sm leading-6 text-slate-600">
-              The summary view keeps the page readable while still exposing completion, distribution, and response shape at a glance.
+              Results stay summary-driven. Full submissions load only when you switch to the responses tab.
             </p>
           </div>
+
+          <div className="inline-flex rounded-2xl bg-slate-100 p-1 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setActiveTab("results")}
+              aria-pressed={activeTab === "results"}
+              className={[
+                "rounded-xl px-4 py-2 text-sm font-semibold transition",
+                activeTab === "results"
+                  ? "bg-white text-cyan-800 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900",
+              ].join(" ")}
+            >
+              Results
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("responses")}
+              aria-pressed={activeTab === "responses"}
+              className={[
+                "rounded-xl px-4 py-2 text-sm font-semibold transition",
+                activeTab === "responses"
+                  ? "bg-white text-cyan-800 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900",
+              ].join(" ")}
+            >
+              Responses
+            </button>
+          </div>
+        </div>
+
+        <div className="border-b border-slate-200 px-6 py-4">
           <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{summary.requiredQuestionCount} required</span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{summary.optionalQuestionCount} optional</span>
@@ -237,126 +236,134 @@ export function PollReviewsPage() {
           </div>
         </div>
 
-        <div className="mt-5">
-          <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500" htmlFor="pollReviewSearch">
-            Filter questions, options, and responses
-          </label>
-          <div className="mt-2 flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm focus-within:border-cyan-300 focus-within:bg-white">
-            <MessageSquareText className="h-5 w-5 shrink-0 text-slate-400" />
-            <input
-              id="pollReviewSearch"
-              type="text"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              placeholder="Search question, option, or response..."
-              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
-            {searchText ? (
-              <button
-                type="button"
-                onClick={() => setSearchText("")}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-200 hover:text-cyan-700"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-
-          <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Question type</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedQuestionType("all")}
-                className={[
-                  "inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                  selectedQuestionType === "all"
-                    ? "border-cyan-900 bg-cyan-900 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800",
-                ].join(" ")}
-              >
-                All types
-              </button>
-              {availableQuestionTypes.map((questionType) => {
-                const choice = getPollQuestionTypeChoice(questionType);
-                const active = selectedQuestionType === questionType;
-
-                return (
-                  <button
-                    key={questionType}
-                    type="button"
-                    onClick={() => setSelectedQuestionType(questionType)}
-                    className={[
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                      active
-                        ? "border-cyan-900 bg-cyan-900 text-white shadow-sm"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800",
-                    ].join(" ")}
-                  >
-                    <QuestionTypeIcon questionType={questionType} className="h-3.5 w-3.5" />
-                    {choice.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {filteredQuestions.length === 0 ? (
-            <EmptyReviewsState />
-          ) : (
-            <div className="max-h-[min(72vh,760px)] space-y-4 overflow-y-auto pr-2 overscroll-contain">
-              {filteredQuestions.map((question) => (
-                <QuestionSummaryCard key={question.questionUniqueId} question={question} totalResponses={summary.totalResponses} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <details
-        className="group rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm"
-        onToggle={(event) => setIsResponsesOpen((event.currentTarget as HTMLDetailsElement).open)}
-      >
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Audit trail</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Individual submissions</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Keep this collapsed unless you need to inspect individual answers, moderation details, or edge-case feedback.
-            </p>
-          </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700">
-            <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
-            {votesQuery.isLoading ? "Loading..." : `${summary.totalResponses} responses`}
-          </span>
-        </summary>
-
-        <div className="mt-6 space-y-4">
-          {votesQuery.isLoading ? (
-            <div className="flex items-center gap-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600">
-              <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
-              Loading submissions...
-            </div>
-          ) : votesQuery.isError ? (
-            <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
-              Unable to load individual submissions.
-            </div>
-          ) : filteredVotes.length === 0 ? (
-            <EmptyReviewsState />
-          ) : (
-            filteredVotes.map((vote) => (
-              <PollResponseCard
-                key={vote.uniqueId}
-                vote={vote}
-                questionMap={questionMap}
-                searchText={normalizedSearchText}
+        {activeTab === "results" ? (
+          <div className="px-6 py-6">
+            <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500" htmlFor="pollReviewSearch">
+              Filter questions and options
+            </label>
+            <div className="mt-2 flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm focus-within:border-cyan-300 focus-within:bg-white">
+              <MessageSquareText className="h-5 w-5 shrink-0 text-slate-400" />
+              <input
+                id="pollReviewSearch"
+                type="text"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Search question or option..."
+                className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
               />
-            ))
-          )}
-        </div>
-      </details>
+              {searchText ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchText("")}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-200 hover:text-cyan-700"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Question type</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuestionType("all")}
+                  className={[
+                    "inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                    selectedQuestionType === "all"
+                      ? "border-cyan-900 bg-cyan-900 text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800",
+                  ].join(" ")}
+                >
+                  All types
+                </button>
+                {availableQuestionTypes.map((questionType) => {
+                  const choice = getPollQuestionTypeChoice(questionType);
+                  const active = selectedQuestionType === questionType;
+
+                  return (
+                    <button
+                      key={questionType}
+                      type="button"
+                      onClick={() => setSelectedQuestionType(questionType)}
+                      className={[
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                        active
+                          ? "border-cyan-900 bg-cyan-900 text-white shadow-sm"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800",
+                      ].join(" ")}
+                    >
+                      <QuestionTypeIcon questionType={questionType} className="h-3.5 w-3.5" />
+                      {choice.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6">
+              {filteredQuestions.length === 0 ? (
+                <EmptyReviewsState />
+              ) : (
+                <div className="max-h-[min(72vh,760px)] space-y-4 overflow-y-auto pr-2 overscroll-contain">
+                  {filteredQuestions.map((question) => (
+                    <QuestionSummaryCard key={question.questionUniqueId} question={question} totalResponses={summary.totalResponses} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="px-6 py-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Audit trail</p>
+                <h3 className="text-xl font-bold tracking-tight text-slate-900">Complete responses</h3>
+                <p className="text-sm leading-6 text-slate-600">
+                  Responses load on demand and page through the backend response set.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700">
+                {votesQuery.isLoading ? "Loading..." : `${votesPage?.totalRecordsCount ?? summary.totalResponses} responses`}
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {votesQuery.isLoading ? (
+                <div className="flex items-center gap-3 rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                  Loading submissions...
+                </div>
+              ) : votesQuery.isError ? (
+                <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+                  Unable to load individual submissions.
+                </div>
+              ) : votes.length === 0 ? (
+                <EmptyReviewsState />
+              ) : (
+                <>
+                  {votes.map((vote) => (
+                    <PollResponseCard key={vote.uniqueId} vote={vote} questionMap={questionMap} />
+                  ))}
+
+                  <Pagination
+                    currentPage={votesPage?.pageNo ?? responsesPageNo}
+                    totalPages={votesPage?.pageCount ?? 1}
+                    pageSize={votesPage?.pageSize ?? responsesPageSize}
+                    totalItems={votesPage?.totalRecordsCount ?? 0}
+                    onPageChange={setResponsesPageNo}
+                    onPageSizeChange={(nextPageSize) => {
+                      setResponsesPageSize(nextPageSize);
+                      setResponsesPageNo(1);
+                    }}
+                    pageSizeOptions={RESPONSE_PAGE_SIZE_OPTIONS}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
     </section>
   );
 }
@@ -797,21 +804,10 @@ function TextSamplesPanel({
 function PollResponseCard({
   vote,
   questionMap,
-  searchText,
 }: {
   vote: PollVoteListItem;
   questionMap: Map<string, OrganizerPollQuestion>;
-  searchText: string;
 }) {
-  const visibleAnswers = vote.answers.filter((answer) => {
-    if (!searchText) {
-      return true;
-    }
-
-    const question = questionMap.get(answer.questionUniqueId);
-    return buildAnswerSearchText(question, answer, vote).includes(searchText);
-  });
-
   return (
     <article className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -833,7 +829,7 @@ function PollResponseCard({
       </div>
 
       <div className="mt-5 space-y-3">
-        {visibleAnswers.map((answer) => {
+        {vote.answers.map((answer) => {
           const question = questionMap.get(answer.questionUniqueId);
           if (!question) {
             return null;
@@ -954,47 +950,6 @@ function buildQuestionSearchText(
   const matrixText = question.matrixCellSummaries.map((cell) => `${cell.rowLabel} ${cell.columnLabel}`).join(" ");
   const sampleText = question.textSamples.map((sample) => sample.value).join(" ");
   return [question.text, relatedQuestion?.text, optionText, matrixText, sampleText].filter(Boolean).join(" ").toLowerCase();
-}
-
-function buildVoteSearchText(vote: PollVoteListItem, questionMap: Map<string, OrganizerPollQuestion>) {
-  return vote.answers
-    .map((answer) => buildAnswerSearchText(questionMap.get(answer.questionUniqueId), answer, vote))
-    .join(" ")
-    .toLowerCase();
-}
-
-function buildAnswerSearchText(
-  question: OrganizerPollQuestion | undefined,
-  answer: PollVoteListItem["answers"][number],
-  vote?: PollVoteListItem,
-) {
-  const optionLabels = question?.options
-    .filter((option) => answer.optionUniqueIds.includes(option.uniqueId))
-    .map((option) => option.label)
-    .join(" ");
-  const matrixSelectionLabels = question?.matrixRows && question?.matrixColumns
-    ? answer.matrixSelections
-        .map((selection) => {
-          const rowLabel = question.matrixRows.find((row) => row.uniqueId === selection.rowUniqueId)?.label ?? selection.rowUniqueId;
-          const columnLabel = question.matrixColumns.find((column) => column.uniqueId === selection.columnUniqueId)?.label ?? selection.columnUniqueId;
-          return `${rowLabel} ${columnLabel}`;
-        })
-        .join(" ")
-    : "";
-
-  return [
-    question?.text,
-    question ? getPollQuestionTypeChoice(question.questionType).label : "",
-    optionLabels,
-    matrixSelectionLabels,
-    answer.textValue,
-    answer.numericValue !== null && answer.numericValue !== undefined ? String(answer.numericValue) : "",
-    answer.rankValue !== null && answer.rankValue !== undefined ? String(answer.rankValue) : "",
-    vote?.voteIdentity.voteIdentityType ?? "",
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
 }
 
 function SummaryCard({

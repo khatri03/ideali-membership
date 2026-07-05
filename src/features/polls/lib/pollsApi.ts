@@ -52,7 +52,7 @@ function buildPollVotesResponse(payload: unknown): PollVoteListResponse {
       responseData,
   ) as Array<Record<string, unknown>>;
 
-  return voteData.map((item) => {
+  const pageData = voteData.map((item) => {
     const voteIdentity = readRecord(item.VoteIdentity ?? item.voteIdentity);
     return {
       uniqueId: String(item.UniqueId ?? item.uniqueId ?? ""),
@@ -83,6 +83,14 @@ function buildPollVotesResponse(payload: unknown): PollVoteListResponse {
       canDelete: Boolean(item.CanDelete ?? item.canDelete),
     };
   });
+
+  return {
+    pageNo: readNumber(responseRecord?.PageNo ?? responseRecord?.pageNo, 1),
+    pageSize: readNumber(responseRecord?.PageSize ?? responseRecord?.pageSize, voteData.length),
+    pageCount: readNumber(responseRecord?.PageCount ?? responseRecord?.pageCount, voteData.length > 0 ? 1 : 0),
+    totalRecordsCount: readNumber(responseRecord?.TotalRecordsCount ?? responseRecord?.totalRecordsCount, voteData.length),
+    pageData,
+  };
 }
 
 function buildPollDetailResponse(payload: unknown): OrganizerPollDetail {
@@ -323,8 +331,13 @@ export async function submitPublicPollVote(pollUniqueId: string, request: PollVo
   return postJson<PollVoteResponse>(POLL_API_ROUTES.public.vote(pollUniqueId), request);
 }
 
-export async function fetchOrganizerPollVotes(pollUniqueId: string, signal?: AbortSignal) {
-  const payload = await getJson<unknown>(POLL_API_ROUTES.organizer.votes(pollUniqueId), { signal });
+export async function fetchOrganizerPollVotes(pollUniqueId: string, pageNo: number, pageSize: number, signal?: AbortSignal) {
+  const query = new URLSearchParams({
+    pageNo: String(pageNo),
+    pageSize: String(pageSize),
+  }).toString();
+  const path = `${POLL_API_ROUTES.organizer.votes(pollUniqueId)}?${query}`;
+  const payload = await getJson<unknown>(path, { signal });
   return buildPollVotesResponse(payload);
 }
 

@@ -99,5 +99,13 @@ export interface PollVoteListItem extends OrganizerPollVote {
   canDelete: boolean;
 }
 
-export type PollVoteListResponse = PollVoteListItem[];
+export interface PollVotePageResponse {
+  pageNo: number;
+  pageSize: number;
+  pageCount: number;
+  totalRecordsCount: number;
+  pageData: PollVoteListItem[];
+}
+
+export type PollVoteListResponse = PollVotePageResponse;
 export type PollReviewSummaryResponse = OrganizerPollReviewSummary;
