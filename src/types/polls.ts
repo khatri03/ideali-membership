@@ -148,7 +148,25 @@ export interface OrganizerPollReviewSummary {
   optionalQuestionCount: number;
   firstSubmittedAtUtc: string | null;
   lastSubmittedAtUtc: string | null;
+  participationChart: OrganizerPollParticipationChart;
   questions: OrganizerPollQuestionReviewSummary[];
+}
+
+export interface OrganizerPollParticipationChart {
+  totalResponses: number;
+  publicResponses: number;
+  publicResponsesPercentage: number;
+  slices: OrganizerPollParticipationSlice[];
+}
+
+export interface OrganizerPollParticipationSlice {
+  key: string;
+  label: string;
+  membershipTypeUniqueId: string | null;
+  count: number;
+  percentage: number;
+  color: string;
+  isPublic: boolean;
 }
 
 export interface OrganizerPollQuestionReviewSummary {

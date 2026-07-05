@@ -345,6 +345,26 @@ export async function fetchOrganizerPollReviewSummary(pollUniqueId: string, sign
     optionalQuestionCount: readNumber(responseData.OptionalQuestionCount ?? responseData.optionalQuestionCount, 0),
     firstSubmittedAtUtc: (responseData.FirstSubmittedAtUtc ?? responseData.firstSubmittedAtUtc ?? null) as string | null,
     lastSubmittedAtUtc: (responseData.LastSubmittedAtUtc ?? responseData.lastSubmittedAtUtc ?? null) as string | null,
+    participationChart: (() => {
+      const chart = readRecord(responseData.ParticipationChart ?? responseData.participationChart);
+      return {
+        totalResponses: readNumber(chart?.TotalResponses ?? chart?.totalResponses, 0),
+        publicResponses: readNumber(chart?.PublicResponses ?? chart?.publicResponses, 0),
+        publicResponsesPercentage: readNumber(chart?.PublicResponsesPercentage ?? chart?.publicResponsesPercentage, 0),
+        slices: readArray(chart?.Slices ?? chart?.slices).map((slice) => {
+          const sliceRecord = readRecord(slice);
+          return {
+            key: String(sliceRecord?.Key ?? sliceRecord?.key ?? ""),
+            label: String(sliceRecord?.Label ?? sliceRecord?.label ?? ""),
+            membershipTypeUniqueId: (sliceRecord?.MembershipTypeUniqueId ?? sliceRecord?.membershipTypeUniqueId ?? null) as string | null,
+            count: readNumber(sliceRecord?.Count ?? sliceRecord?.count, 0),
+            percentage: readNumber(sliceRecord?.Percentage ?? sliceRecord?.percentage, 0),
+            color: String(sliceRecord?.Color ?? sliceRecord?.color ?? ""),
+            isPublic: Boolean(sliceRecord?.IsPublic ?? sliceRecord?.isPublic),
+          };
+        }),
+      };
+    })(),
     questions: readArray(responseData.Questions ?? responseData.questions).map((item) => {
       const question = readRecord(item);
       return {

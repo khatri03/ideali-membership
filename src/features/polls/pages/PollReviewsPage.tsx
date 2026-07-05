@@ -8,16 +8,19 @@ import {
   ChevronDown,
   Loader2,
   MessageSquareText,
+  PieChart as PieChartIcon,
   Star,
   Table2,
   Users,
   Vote,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { Cell, Pie, PieChart as RechartsPieChart, ResponsiveContainer } from "recharts";
 import { buildMembershipPollDetailPath, buildPublicPollPath } from "../../../app/router/routes";
 import { formatUtcToLocalDateTime } from "../../../lib/dateTime";
 import type {
   OrganizerPollDetail,
+  OrganizerPollParticipationChart,
   OrganizerPollQuestion,
   OrganizerPollQuestionReviewSummary,
   OrganizerPollReviewSummary,
@@ -216,6 +219,8 @@ export function PollReviewsPage() {
 
       <PollReviewHero detail={detail} summary={summary} />
 
+      <ParticipationChartCard participationChart={summary.participationChart} />
+
       <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
@@ -352,6 +357,101 @@ export function PollReviewsPage() {
           )}
         </div>
       </details>
+    </section>
+  );
+}
+
+function ParticipationChartCard({
+  participationChart,
+}: {
+  participationChart: OrganizerPollParticipationChart;
+}) {
+  const hasData = participationChart.slices.length > 0;
+
+  return (
+    <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Participation mix</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Public and membership breakdown</h2>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">
+            The backend groups public responses separately and rolls membership participation into a fixed top-3 plus Other slice set.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{participationChart.publicResponses} public</span>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{participationChart.totalResponses} total</span>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+          {hasData ? (
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={participationChart.slices}
+                    dataKey="count"
+                    nameKey="label"
+                    innerRadius={72}
+                    outerRadius={104}
+                    paddingAngle={3}
+                    stroke="none"
+                  >
+                    {participationChart.slices.map((slice) => (
+                      <Cell key={slice.key} fill={slice.color} />
+                    ))}
+                  </Pie>
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex h-[280px] items-center justify-center rounded-[1.5rem] border border-dashed border-slate-200 bg-white text-sm text-slate-500">
+              No participation data yet.
+            </div>
+          )}
+          <div className="mt-4 text-center">
+            <div className="text-3xl font-bold tracking-tight text-slate-900">{participationChart.totalResponses}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">responses</div>
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          {hasData ? (
+            participationChart.slices.map((slice) => (
+              <div key={slice.key} className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{slice.label}</p>
+                      <p className="text-xs text-slate-500">
+                        {slice.isPublic ? "Public users" : slice.membershipTypeUniqueId ? "Membership type" : "Other memberships"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-slate-700">{slice.percentage}%</div>
+                    <div className="text-xs text-slate-500">{slice.count} responses</div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">No participation mix available.</div>
+          )}
+          <div className="rounded-[1.25rem] border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-xs leading-6 text-cyan-900">
+            <div className="flex items-center gap-2 font-semibold uppercase tracking-[0.22em]">
+              <PieChartIcon className="h-4 w-4" />
+              Legend rules
+            </div>
+            <p className="mt-2">
+              Public users always keep the same color. Membership colors are derived from the membership name hash, so the same name always maps to the same color.
+            </p>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
