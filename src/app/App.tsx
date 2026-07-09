@@ -18,6 +18,7 @@ import {
 import {
   CustomFormCreatePage,
   CustomFormsPage,
+  EventRegisterPage,
   DashboardPage,
   DnDGridSortExamplePage,
   MemberDetailPage,
@@ -91,6 +92,7 @@ function RouterApp() {
       <ToastContainer />
       <Suspense fallback={<PageSpinner />}>
         <Routes>
+          <Route path={APP_ROUTES.eventRegister} element={<EventRegisterPage />} />
           <Route path={APP_ROUTES.membershipRegisterCountdown} element={<MembershipRegisterCountdownPage />} />
           <Route path={APP_ROUTES.membershipRegister} element={<MembershipRegisterPage />} />
           <Route path={APP_ROUTES.publicMembershipInvoiceView} element={<MembershipInvoiceDetailPage isPublicView />} />

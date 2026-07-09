@@ -3,6 +3,9 @@ import React from "react";
 export const MembershipRegisterCountdownPage = React.lazy(() =>
   import("../../features/membership/pages/MembershipRegisterCountdownPage").then((m) => ({ default: m.MembershipRegisterCountdownPage })),
 );
+export const EventRegisterPage = React.lazy(() =>
+  import("../../features/events/pages").then((m) => ({ default: m.EventRegisterPage })),
+);
 export const DashboardPage = React.lazy(() =>
   import("../../features/membership/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 );

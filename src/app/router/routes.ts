@@ -4,6 +4,7 @@ export const APP_ROUTES = {
   root: "/",
   login: "/login",
   app: "/",
+  eventRegister: "/events/:eventUniqueId/register",
   membershipRegister: "/membership/:membershipTypeUniqueId/register",
   membershipRegisterCountdown: "/membership/:membershipTypeUniqueId/register/countdown",
   membership: "/organizer/membership/type",
@@ -73,6 +74,10 @@ export function buildMembershipRegisterPath(membershipTypeUniqueId: string) {
 
 export function buildMembershipRegisterCountdownPath(membershipTypeUniqueId: string) {
   return generatePath(APP_ROUTES.membershipRegisterCountdown as string, { membershipTypeUniqueId });
+}
+
+export function buildEventRegisterPath(eventUniqueId: string) {
+  return generatePath(APP_ROUTES.eventRegister as string, { eventUniqueId });
 }
 
 export function buildCustomFormEditPath(customFormUniqueId: string) {
